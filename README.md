@@ -1,4 +1,4 @@
-# unimarkup-rs [![UniMarkup-rs](https://github.com/Unimarkup/unimarkup-rs/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/Unimarkup/unimarkup-rs/actions/workflows/rust.yml)
+# unimarkup-rs [![UniMarkup Status](https://github.com/Unimarkup/unimarkup-rs/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/Unimarkup/unimarkup-rs/actions/workflows/rust.yml)
 
 Compiler implementation for the UniMarkup markup language written in [Rust](https://www.rust-lang.org/).
 
