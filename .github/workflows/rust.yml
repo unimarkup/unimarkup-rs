@@ -1,4 +1,4 @@
-name: UniMarkup Status
+name: UniMarkup Dev Workflow
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    name: Build Workflow
+    name: Run Build
     runs-on: ubuntu-latest
 
     steps:
@@ -20,7 +20,7 @@ jobs:
       run: cargo build --verbose
   
   test:
-    name: Test Workflow
+    name: Run Tests
     runs-on: ubuntu-latest
     
     steps:
@@ -29,7 +29,7 @@ jobs:
       run: cargo test --verbose
       
   lint:
-    name: Lint Workflow
+    name: Run Linter (clippy)
     runs-on: ubuntu-latest
     
     steps:
