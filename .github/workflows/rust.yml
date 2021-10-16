@@ -36,3 +36,12 @@ jobs:
     - uses: actions/checkout@v2
     - name: Run linter
       run: cargo clippy -- -D warnings
+
+  format:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run cargo fmt
+      run: cargo fmt -- --check
