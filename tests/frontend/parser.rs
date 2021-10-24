@@ -1,5 +1,5 @@
 use unicode_segmentation::UnicodeSegmentation;
-use unimarkup_rs::frontend::{blocks::heading_block::HeadingLevel, parser};
+use unimarkup_rs::{frontend::parser, um_elements::heading_block::HeadingLevel};
 
 #[test]
 fn parse_heading_level1() {
