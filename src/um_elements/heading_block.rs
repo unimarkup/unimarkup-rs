@@ -1,12 +1,12 @@
+use serde::{Deserialize, Serialize};
+use serde_json;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::frontend::{
-    ir::{IrBlock, IrLine, ParseForIr},
-    parser::CursorPos,
-    syntax_error::UmSyntaxError,
-};
+use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
+use crate::middleend::ir::{IrBlock, IrLine, ParseForIr};
+use crate::um_elements::types::UnimarkupType;
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub enum HeadingLevel {
     Level1,
     Level2,
@@ -116,6 +116,28 @@ impl ParseForIr for HeadingBlock {
     }
 
     fn generate_ir_lines(&self) -> Vec<IrLine> {
-        todo!()
+        // Right now, if json serialization fails, type will be empty.
+        // this should probably be handled in some other way
+
+        let level: String = if let Ok(json) = serde_json::to_string(&self.level) {
+            json
+        } else {
+            String::default()
+        };
+
+        let mut block_type = if let Ok(json) = serde_json::to_string(&UnimarkupType::Heading) {
+            json
+        } else {
+            String::default()
+        };
+
+        block_type.push('_');
+        block_type.push_str(&level);
+
+        // block_type now looks like this: \"Heading\"_\"LevelX"; where X stands for level number
+
+        let line = IrLine::new("", 0, 0, "", &self.content, "", block_type);
+
+        vec![line]
     }
 }

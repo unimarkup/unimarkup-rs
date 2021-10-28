@@ -1,6 +1,4 @@
-use crate::um_elements::types::UnimarkupType;
-
-use super::{parser::CursorPos, syntax_error::UmSyntaxError};
+use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 
 #[allow(dead_code)]
 pub struct IrLine {
@@ -10,7 +8,7 @@ pub struct IrLine {
     fallback_text: String,
     text: String,
     attributes: String,
-    block_type: UnimarkupType,
+    block_type: String,
 }
 
 impl Default for IrLine {
@@ -19,10 +17,10 @@ impl Default for IrLine {
             id: String::from("0"),
             flow_count: 0,
             sub_flow_count: 0,
-            fallback_text: String::from(""),
-            text: String::from(""),
-            attributes: String::from(""),
-            block_type: UnimarkupType::Paragraph,
+            fallback_text: String::default(),
+            text: String::default(),
+            attributes: String::default(),
+            block_type: String::default(),
         }
     }
 }
@@ -35,7 +33,7 @@ impl IrLine {
         fallback_text: impl Into<String>,
         text: impl Into<String>,
         attributes: impl Into<String>,
-        block_type: UnimarkupType,
+        block_type: impl Into<String>,
     ) -> Self {
         IrLine {
             id: id.into(),
@@ -44,7 +42,7 @@ impl IrLine {
             fallback_text: fallback_text.into(),
             text: text.into(),
             attributes: attributes.into(),
-            block_type,
+            block_type: block_type.into(),
         }
     }
 }
