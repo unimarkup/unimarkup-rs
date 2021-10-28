@@ -52,10 +52,10 @@ pub struct HeadingBlock {
 }
 
 impl ParseForIr for HeadingBlock {
-    fn parse_for_ir<'a>(
-        content: &'a [&str],
+    fn parse_for_ir(
+        content: &[&str],
         cursor_pos: &CursorPos,
-    ) -> Result<(IrBlock, CursorPos), UmSyntaxError<'a>> {
+    ) -> Result<(IrBlock, CursorPos), UmSyntaxError> {
         let mut curr_pos = *cursor_pos;
 
         let mut heading_block = HeadingBlock {
@@ -66,10 +66,14 @@ impl ParseForIr for HeadingBlock {
         while let Some(&line) = content.get(curr_pos.line) {
             if line.trim().is_empty() {
                 if heading_block.level == HeadingLevel::Invalid {
+                    let (start_line, current_line) =
+                        UmSyntaxError::extract_lines(content, cursor_pos, &curr_pos);
+
                     return Err(UmSyntaxError {
                         start_pos: *cursor_pos,
                         current_pos: curr_pos,
-                        lines: content,
+                        start_line,
+                        current_line,
                     });
                 } else {
                     break;
@@ -88,10 +92,14 @@ impl ParseForIr for HeadingBlock {
                     // to many hashtags, when heading expected
                     curr_pos.symbol = 6;
 
+                    let (start_line, current_line) =
+                        UmSyntaxError::extract_lines(content, cursor_pos, &curr_pos);
+
                     return Err(UmSyntaxError {
                         start_pos: *cursor_pos,
                         current_pos: curr_pos,
-                        lines: content,
+                        start_line,
+                        current_line,
                     });
                 }
 

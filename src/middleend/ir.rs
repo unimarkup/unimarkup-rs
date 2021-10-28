@@ -70,10 +70,10 @@ impl Default for IrBlock {
 }
 
 pub trait ParseForIr {
-    fn parse_for_ir<'a>(
-        content: &'a [&str],
+    fn parse_for_ir(
+        content: &[&str],
         cursor_pos: &CursorPos,
-    ) -> Result<(IrBlock, CursorPos), UmSyntaxError<'a>>;
+    ) -> Result<(IrBlock, CursorPos), UmSyntaxError>;
 
     fn generate_ir_lines(&self) -> Vec<IrLine>;
 }
