@@ -5,7 +5,7 @@ use unimarkup_rs::{
 
 #[test]
 fn parse_heading() {
-    let input = "###### This is a heading which should fail
+    let input = "###### This is a heading which passes
 
 	"
     .lines()
@@ -14,6 +14,11 @@ fn parse_heading() {
     let cursor_pos = CursorPos { line: 0, symbol: 0 };
 
     let res = HeadingBlock::parse_for_ir(&input, &cursor_pos);
+
+    match &res {
+        Ok(result) => println!("{:#?}", result),
+        Err(_) => (),
+    }
 
     assert!(res.is_ok());
 }

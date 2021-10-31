@@ -1,6 +1,7 @@
 use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct IrLine {
     id: String,
     flow_count: usize,
@@ -47,6 +48,7 @@ impl IrLine {
     }
 }
 
+#[derive(Debug)]
 pub struct IrBlock {
     pub lines: Vec<IrLine>,
 }

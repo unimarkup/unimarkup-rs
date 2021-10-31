@@ -1,10 +1,14 @@
 /// CursorPos struct is used to keep track of the cursor position while parsing input.
 /// Additionally it is useful as a way to show better error messages. Using CursorPos it
 /// is possible to show exact location in the input, where parsing error is recognized.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct CursorPos {
     /// Index of the line in the given input
     pub line: usize,
     /// index of the symbol in the given line
     pub symbol: usize,
+}
+
+pub fn is_blank_line(line: &str) -> bool {
+    line.trim().is_empty()
 }

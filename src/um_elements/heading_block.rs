@@ -8,11 +8,17 @@ use crate::um_elements::types::UnimarkupType;
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum HeadingLevel {
-    Level1,
+    #[strum(serialize = "level_1")]
+    Level1 = 1, // start counting from 0
+    #[strum(serialize = "level_2")]
     Level2,
+    #[strum(serialize = "level_3")]
     Level3,
+    #[strum(serialize = "level_4")]
     Level4,
+    #[strum(serialize = "level_5")]
     Level5,
+    #[strum(serialize = "level_6")]
     Level6,
     Invalid,
 }
@@ -88,9 +94,11 @@ impl ParseForIr for HeadingBlock {
                     .take_while(|&symbol| symbol == "#" && symbol != " ")
                     .count();
 
-                if heading_count > 6 {
+                if heading_count > HeadingLevel::Level6 as usize {
                     // to many hashtags, when heading expected
-                    curr_pos.symbol = 6;
+
+                    // index starts from 0, HeadingLevel from 1
+                    curr_pos.symbol = (HeadingLevel::Invalid as usize) - 1;
 
                     let (start_line, current_line) =
                         UmSyntaxError::extract_lines(content, cursor_pos, &curr_pos);
