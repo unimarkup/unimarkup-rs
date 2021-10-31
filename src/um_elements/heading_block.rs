@@ -89,7 +89,8 @@ impl ParseForIr for HeadingBlock {
             let mut heading_count = 0;
 
             if heading_block.level == HeadingLevel::Invalid {
-                let heading_symbols = line.split_word_bounds().take(7);
+                let heading_symbols = line.graphemes(true).take(HeadingLevel::Invalid as usize);
+
                 heading_count = heading_symbols
                     .take_while(|&symbol| symbol == "#" && symbol != " ")
                     .count();
@@ -115,7 +116,7 @@ impl ParseForIr for HeadingBlock {
             }
 
             heading_block.content.push_str(
-                line.split_word_bounds()
+                line.graphemes(true)
                     .skip(heading_count)
                     .collect::<String>()
                     .trim(),

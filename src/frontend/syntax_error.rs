@@ -48,7 +48,7 @@ impl Display for UmSyntaxError {
 
         let skip_length = self
             .start_line
-            .split_word_bounds()
+            .graphemes(true)
             .collect::<Vec<&str>>()
             .iter()
             .take(start_symbol)
@@ -69,7 +69,7 @@ impl Display for UmSyntaxError {
 
         let skip_length = self
             .current_line
-            .split_word_bounds()
+            .graphemes(true)
             .collect::<Vec<&str>>()
             .iter()
             .take(curr_symbol)
