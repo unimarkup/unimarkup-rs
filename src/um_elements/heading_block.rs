@@ -1,6 +1,7 @@
 use strum_macros::*;
 use unicode_segmentation::UnicodeSegmentation;
 
+use crate::frontend::parser::count_symbol_until;
 use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 use crate::middleend::ir::{IrBlock, IrLine, ParseForIr};
 use crate::um_elements::types::UnimarkupType;
@@ -72,15 +73,14 @@ impl ParseForIr for HeadingBlock {
         while let Some(&line) = content.get(curr_pos.line) {
             if line.trim().is_empty() {
                 if heading_block.level == HeadingLevel::Invalid {
-                    let (start_line, current_line) =
-                        UmSyntaxError::extract_lines(content, cursor_pos, &curr_pos);
-
-                    return Err(UmSyntaxError {
-                        start_pos: *cursor_pos,
-                        current_pos: curr_pos,
-                        start_line,
-                        current_line,
-                    });
+                    return Err(UmSyntaxError::generate_error(
+                        content,
+                        cursor_pos,
+                        &curr_pos,
+                        "Invalid heading syntax. \n".to_owned()
+                            + "Headings are defined as 1 to 6 '#' symbols, \n"
+                            + "followed by whitespace and Heading content.",
+                    ));
                 } else {
                     break;
                 }
@@ -89,11 +89,18 @@ impl ParseForIr for HeadingBlock {
             let mut heading_count = 0;
 
             if heading_block.level == HeadingLevel::Invalid {
-                let heading_symbols = line.graphemes(true).take(HeadingLevel::Invalid as usize);
+                let count_res = count_symbol_until(line, "#", char::is_whitespace);
 
-                heading_count = heading_symbols
-                    .take_while(|&symbol| symbol == "#" && symbol != " ")
-                    .count();
+                match count_res {
+                    Ok(count) => heading_count = count,
+                    Err((count, message)) => {
+                        curr_pos.symbol = count;
+
+                        return Err(UmSyntaxError::generate_error(
+                            content, cursor_pos, &curr_pos, message,
+                        ));
+                    }
+                }
 
                 if heading_count > HeadingLevel::Level6 as usize {
                     // to many hashtags, when heading expected
@@ -101,15 +108,12 @@ impl ParseForIr for HeadingBlock {
                     // index starts from 0, HeadingLevel from 1
                     curr_pos.symbol = (HeadingLevel::Invalid as usize) - 1;
 
-                    let (start_line, current_line) =
-                        UmSyntaxError::extract_lines(content, cursor_pos, &curr_pos);
-
-                    return Err(UmSyntaxError {
-                        start_pos: *cursor_pos,
-                        current_pos: curr_pos,
-                        start_line,
-                        current_line,
-                    });
+                    return Err(UmSyntaxError::generate_error(
+                        content,
+                        cursor_pos,
+                        &curr_pos,
+                        "Invalid number of '#' symbols.",
+                    ));
                 }
 
                 heading_block.level = HeadingLevel::from(heading_count);
