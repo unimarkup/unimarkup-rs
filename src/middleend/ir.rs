@@ -3,13 +3,13 @@ use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct IrLine {
-    id: String,
-    flow_count: usize,
-    sub_flow_count: usize,
-    fallback_text: String,
-    text: String,
-    attributes: String,
-    block_type: String,
+    pub id: String,
+    pub flow_count: usize,
+    pub sub_flow_count: usize,
+    pub fallback_text: String,
+    pub text: String,
+    pub attributes: String,
+    pub block_type: String,
 }
 
 impl Default for IrLine {
