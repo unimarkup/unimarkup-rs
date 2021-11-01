@@ -77,7 +77,7 @@ pub trait ParseForIr {
         cursor_pos: &CursorPos,
     ) -> Result<(IrBlock, CursorPos), UmSyntaxError>;
 
-    fn generate_ir_lines(&self) -> Vec<IrLine>;
+    fn generate_ir_lines(&self, line_nr: usize) -> Vec<IrLine>;
 }
 
 pub trait WriteToIr {}
