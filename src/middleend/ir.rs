@@ -32,14 +32,14 @@ impl IrLine {
         um_type: impl Into<String>,
         line_nr: usize,
         text: impl Into<String>,
-        fallback_text: impl Into<String>,  
+        fallback_text: impl Into<String>,
         attributes: impl Into<String>,
         fallback_attributes: impl Into<String>,
     ) -> Self {
         IrLine {
             id: id.into(),
             um_type: um_type.into(),
-            line_nr: line_nr,
+            line_nr,
             text: text.into(),
             fallback_text: fallback_text.into(),
             attributes: attributes.into(),

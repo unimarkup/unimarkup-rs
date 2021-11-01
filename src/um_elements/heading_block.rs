@@ -149,7 +149,15 @@ impl ParseForIr for HeadingBlock {
         um_type.push('_');
         um_type.push_str(&level);
 
-        let line = IrLine::new(&self.id, um_type, line_nr, &self.content, "", &self.attributes, "");
+        let line = IrLine::new(
+            &self.id,
+            um_type,
+            line_nr,
+            &self.content,
+            "",
+            &self.attributes,
+            "",
+        );
 
         vec![line]
     }
