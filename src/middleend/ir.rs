@@ -4,24 +4,24 @@ use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 #[derive(Debug)]
 pub struct IrLine {
     pub id: String,
-    pub flow_count: usize,
-    pub sub_flow_count: usize,
-    pub fallback_text: String,
+    pub um_type: String,
+    pub line_nr: usize,
     pub text: String,
+    pub fallback_text: String,
     pub attributes: String,
-    pub block_type: String,
+    pub fallback_attributes: String,
 }
 
 impl Default for IrLine {
     fn default() -> Self {
         IrLine {
             id: String::from("0"),
-            flow_count: 0,
-            sub_flow_count: 0,
-            fallback_text: String::default(),
+            um_type: String::default(),
+            line_nr: 0,
             text: String::default(),
+            fallback_text: String::default(),
             attributes: String::default(),
-            block_type: String::default(),
+            fallback_attributes: String::default(),
         }
     }
 }
@@ -29,21 +29,21 @@ impl Default for IrLine {
 impl IrLine {
     pub fn new(
         id: impl Into<String>,
-        flow_count: usize,
-        sub_flow_count: usize,
-        fallback_text: impl Into<String>,
+        um_type: impl Into<String>,
+        line_nr: usize,
         text: impl Into<String>,
+        fallback_text: impl Into<String>,  
         attributes: impl Into<String>,
-        block_type: impl Into<String>,
+        fallback_attributes: impl Into<String>,
     ) -> Self {
         IrLine {
             id: id.into(),
-            flow_count,
-            sub_flow_count,
-            fallback_text: fallback_text.into(),
+            um_type: um_type.into(),
+            line_nr: line_nr,
             text: text.into(),
+            fallback_text: fallback_text.into(),
             attributes: attributes.into(),
-            block_type: block_type.into(),
+            fallback_attributes: fallback_attributes.into(),
         }
     }
 }
