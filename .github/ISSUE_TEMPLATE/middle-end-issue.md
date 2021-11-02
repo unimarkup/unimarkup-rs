@@ -1,7 +1,7 @@
 ---
 name: Middle end issue
 about: General issue about middle end implementations
-title: "[Middle end]"
+title: "[Middle end] "
 labels: middle end
 assignees: ''
 
