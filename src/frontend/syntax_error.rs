@@ -97,10 +97,8 @@ impl Display for UmSyntaxError {
         let skip_length = self
             .current_line
             .graphemes(true)
-            .collect::<Vec<&str>>()
-            .iter()
             .take(curr_symbol)
-            .map(|&word| word.len())
+            .map(|grapheme| grapheme.len())
             .sum::<usize>()
             + info.len();
 
