@@ -1,6 +1,5 @@
 use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct ContentIrLine {
     pub id: String,
@@ -44,6 +43,41 @@ impl ContentIrLine {
             fallback_text: fallback_text.into(),
             attributes: attributes.into(),
             fallback_attributes: fallback_attributes.into(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct MacroIrLine {
+    pub name: String,
+    pub macro_type: String,
+    pub value: String,
+    pub fallback_value: String,
+}
+
+impl Default for MacroIrLine {
+    fn default() -> Self {
+        MacroIrLine {
+            name: String::default(),
+            macro_type: String::default(),
+            value: String::default(),
+            fallback_value: String::default(),
+        }
+    }
+}
+
+impl MacroIrLine {
+    pub fn new(
+        name: impl Into<String>,
+        macro_type: impl Into<String>,
+        value: impl Into<String>,
+        fallback_value: impl Into<String>,
+    ) -> Self {
+        MacroIrLine {
+            name: name.into(),
+            macro_type: macro_type.into(),
+            value: value.into(),
+            fallback_value: fallback_value.into(),
         }
     }
 }
