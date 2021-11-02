@@ -54,8 +54,10 @@ impl From<usize> for HeadingLevel {
 
 #[derive(Debug)]
 pub struct HeadingBlock {
+    pub id: String,
     pub level: HeadingLevel,
     pub content: String,
+    pub attributes: String,
 }
 
 impl ParseForIr for HeadingBlock {
@@ -64,10 +66,13 @@ impl ParseForIr for HeadingBlock {
         cursor_pos: &CursorPos,
     ) -> Result<(IrBlock, CursorPos), UmSyntaxError> {
         let mut curr_pos = *cursor_pos;
+        let start_line_nr = curr_pos.line;
 
         let mut heading_block = HeadingBlock {
+            id: "".to_string(),
             level: HeadingLevel::Invalid,
             content: "".to_string(),
+            attributes: "".to_string(),
         };
 
         while let Some(&line) = content.get(curr_pos.line) {
@@ -130,21 +135,29 @@ impl ParseForIr for HeadingBlock {
         }
 
         let ir_block = IrBlock {
-            lines: heading_block.generate_ir_lines(),
+            lines: heading_block.generate_ir_lines(start_line_nr),
         };
 
         Ok((ir_block, curr_pos))
     }
 
-    fn generate_ir_lines(&self) -> Vec<IrLine> {
+    fn generate_ir_lines(&self, line_nr: usize) -> Vec<IrLine> {
         let level = self.level.to_string();
 
-        let mut block_type = UnimarkupType::Heading.to_string();
+        let mut um_type = UnimarkupType::Heading.to_string();
 
-        block_type.push('_');
-        block_type.push_str(&level);
+        um_type.push('_');
+        um_type.push_str(&level);
 
-        let line = IrLine::new("", 0, 0, "", &self.content, "", block_type);
+        let line = IrLine::new(
+            &self.id,
+            um_type,
+            line_nr,
+            &self.content,
+            "",
+            &self.attributes,
+            "",
+        );
 
         vec![line]
     }
