@@ -23,9 +23,12 @@ fn parse_heading() {
         assert!(res.is_ok());
 
         if let Ok((block, _)) = res {
-            assert!(block.lines.len() == 1);
+            assert!(block.get_content_lines().len() == 1);
 
-            let line = block.lines.get(0).expect("Exactly one line expected");
+            let line = block
+                .get_content_lines()
+                .get(0)
+                .expect("Exactly one line expected");
 
             assert!(line.text == "This is a heading");
 

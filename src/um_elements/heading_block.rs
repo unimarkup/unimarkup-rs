@@ -134,9 +134,8 @@ impl ParseForIr for HeadingBlock {
             curr_pos.line += 1;
         }
 
-        let ir_block = IrBlock {
-            lines: heading_block.generate_ir_lines(start_line_nr),
-        };
+        let mut ir_block = IrBlock::new();
+        ir_block.append_content_lines(&mut heading_block.generate_ir_lines(start_line_nr));
 
         Ok((ir_block, curr_pos))
     }

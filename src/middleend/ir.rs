@@ -123,18 +123,56 @@ impl MacroIrLine {
 
 #[derive(Debug)]
 pub struct IrBlock {
-    pub lines: Vec<ContentIrLine>,
+    content_lines: Vec<ContentIrLine>,
+    variable_lines: Vec<VariableIrLine>,
+    macro_lines: Vec<MacroIrLine>,
 }
 
 impl IrBlock {
     pub fn new() -> Self {
-        let lines = vec![];
-
-        IrBlock { lines }
+        IrBlock {
+            // Vec::new() does not allocate on heap.
+            // First allocation occurs when first element is pushed into the Vec
+            content_lines: Vec::new(),
+            variable_lines: Vec::new(),
+            macro_lines: Vec::new(),
+        }
     }
 
-    pub fn push_line(&mut self, line: ContentIrLine) {
-        self.lines.push(line);
+    pub fn push_content_line(&mut self, line: ContentIrLine) {
+        self.content_lines.push(line);
+    }
+
+    pub fn append_content_lines(&mut self, lines: &mut Vec<ContentIrLine>) {
+        self.content_lines.append(lines);
+    }
+
+    pub fn get_content_lines(&self) -> &Vec<ContentIrLine> {
+        &self.content_lines
+    }
+
+    pub fn push_variable_line(&mut self, line: VariableIrLine) {
+        self.variable_lines.push(line);
+    }
+
+    pub fn append_variable_lines(&mut self, lines: &mut Vec<VariableIrLine>) {
+        self.variable_lines.append(lines);
+    }
+
+    pub fn get_variable_lines(&self) -> &Vec<VariableIrLine> {
+        &self.variable_lines
+    }
+
+    pub fn push_macro_line(&mut self, line: MacroIrLine) {
+        self.macro_lines.push(line);
+    }
+
+    pub fn append_macro_lines(&mut self, lines: &mut Vec<MacroIrLine>) {
+        self.macro_lines.append(lines);
+    }
+
+    pub fn get_macro_lines(&self) -> &Vec<MacroIrLine> {
+        &self.macro_lines
     }
 }
 
