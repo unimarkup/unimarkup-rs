@@ -54,6 +54,8 @@ fn parse_heading_no_hashes() {
 
     let error = res.unwrap_err();
     assert!(error.message == "Unexpected symbol found!");
+
+    println!("{}", error);
 }
 
 #[test]
