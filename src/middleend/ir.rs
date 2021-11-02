@@ -48,9 +48,45 @@ impl ContentIrLine {
 }
 
 #[derive(Debug)]
+pub struct VariableIrLine {
+    pub name: String,
+    pub macro_type: String,
+    pub value: String,
+    pub fallback_value: String,
+}
+
+impl Default for VariableIrLine {
+    fn default() -> Self {
+        VariableIrLine {
+            name: String::default(),
+            macro_type: String::default(),
+            value: String::default(),
+            fallback_value: String::default(),
+        }
+    }
+}
+
+impl VariableIrLine {
+    pub fn new(
+        name: impl Into<String>,
+        macro_type: impl Into<String>,
+        value: impl Into<String>,
+        fallback_value: impl Into<String>,
+    ) -> Self {
+        VariableIrLine {
+            name: name.into(),
+            macro_type: macro_type.into(),
+            value: value.into(),
+            fallback_value: fallback_value.into(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct MacroIrLine {
     pub name: String,
     pub macro_type: String,
+    pub parameters: String,
     pub value: String,
     pub fallback_value: String,
 }
@@ -60,6 +96,7 @@ impl Default for MacroIrLine {
         MacroIrLine {
             name: String::default(),
             macro_type: String::default(),
+            parameters: String::default(),
             value: String::default(),
             fallback_value: String::default(),
         }
@@ -70,12 +107,14 @@ impl MacroIrLine {
     pub fn new(
         name: impl Into<String>,
         macro_type: impl Into<String>,
+        parameters: impl Into<String>,
         value: impl Into<String>,
         fallback_value: impl Into<String>,
     ) -> Self {
         MacroIrLine {
             name: name.into(),
             macro_type: macro_type.into(),
+            parameters: parameters.into(),
             value: value.into(),
             fallback_value: fallback_value.into(),
         }
