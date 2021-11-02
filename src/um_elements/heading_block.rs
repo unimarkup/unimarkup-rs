@@ -3,7 +3,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::frontend::parser::count_symbol_until;
 use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
-use crate::middleend::ir::{IrBlock, IrLine, ParseForIr};
+use crate::middleend::ir::{ContentIrLine, IrBlock, ParseForIr};
 use crate::um_elements::types::UnimarkupType;
 
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString)]
@@ -141,7 +141,7 @@ impl ParseForIr for HeadingBlock {
         Ok((ir_block, curr_pos))
     }
 
-    fn generate_ir_lines(&self, line_nr: usize) -> Vec<IrLine> {
+    fn generate_ir_lines(&self, line_nr: usize) -> Vec<ContentIrLine> {
         let level = self.level.to_string();
 
         let mut um_type = UnimarkupType::Heading.to_string();
@@ -149,7 +149,7 @@ impl ParseForIr for HeadingBlock {
         um_type.push('_');
         um_type.push_str(&level);
 
-        let line = IrLine::new(
+        let line = ContentIrLine::new(
             &self.id,
             um_type,
             line_nr,

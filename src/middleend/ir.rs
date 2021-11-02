@@ -2,7 +2,7 @@ use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct IrLine {
+pub struct ContentIrLine {
     pub id: String,
     pub um_type: String,
     pub line_nr: usize,
@@ -12,9 +12,9 @@ pub struct IrLine {
     pub fallback_attributes: String,
 }
 
-impl Default for IrLine {
+impl Default for ContentIrLine {
     fn default() -> Self {
-        IrLine {
+        ContentIrLine {
             id: String::from("0"),
             um_type: String::default(),
             line_nr: 0,
@@ -26,7 +26,7 @@ impl Default for IrLine {
     }
 }
 
-impl IrLine {
+impl ContentIrLine {
     pub fn new(
         id: impl Into<String>,
         um_type: impl Into<String>,
@@ -36,7 +36,7 @@ impl IrLine {
         attributes: impl Into<String>,
         fallback_attributes: impl Into<String>,
     ) -> Self {
-        IrLine {
+        ContentIrLine {
             id: id.into(),
             um_type: um_type.into(),
             line_nr,
@@ -50,7 +50,7 @@ impl IrLine {
 
 #[derive(Debug)]
 pub struct IrBlock {
-    pub lines: Vec<IrLine>,
+    pub lines: Vec<ContentIrLine>,
 }
 
 impl IrBlock {
@@ -60,7 +60,7 @@ impl IrBlock {
         IrBlock { lines }
     }
 
-    pub fn push_line(&mut self, line: IrLine) {
+    pub fn push_line(&mut self, line: ContentIrLine) {
         self.lines.push(line);
     }
 }
@@ -77,7 +77,7 @@ pub trait ParseForIr {
         cursor_pos: &CursorPos,
     ) -> Result<(IrBlock, CursorPos), UmSyntaxError>;
 
-    fn generate_ir_lines(&self, line_nr: usize) -> Vec<IrLine>;
+    fn generate_ir_lines(&self, line_nr: usize) -> Vec<ContentIrLine>;
 }
 
 pub trait WriteToIr {}
