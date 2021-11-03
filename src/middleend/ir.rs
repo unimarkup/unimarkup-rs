@@ -1,4 +1,5 @@
 use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
+use serde_bytes::ByteBuf;
 
 #[derive(Debug)]
 pub struct ContentIrLine {
@@ -50,7 +51,7 @@ impl ContentIrLine {
 #[derive(Debug)]
 pub struct VariableIrLine {
     pub name: String,
-    pub macro_type: String,
+    pub um_type: String,
     pub value: String,
     pub fallback_value: String,
 }
@@ -59,7 +60,7 @@ impl Default for VariableIrLine {
     fn default() -> Self {
         VariableIrLine {
             name: String::default(),
-            macro_type: String::default(),
+            um_type: String::default(),
             value: String::default(),
             fallback_value: String::default(),
         }
@@ -69,13 +70,13 @@ impl Default for VariableIrLine {
 impl VariableIrLine {
     pub fn new(
         name: impl Into<String>,
-        macro_type: impl Into<String>,
+        um_type: impl Into<String>,
         value: impl Into<String>,
         fallback_value: impl Into<String>,
     ) -> Self {
         VariableIrLine {
             name: name.into(),
-            macro_type: macro_type.into(),
+            um_type: um_type.into(),
             value: value.into(),
             fallback_value: fallback_value.into(),
         }
@@ -85,7 +86,7 @@ impl VariableIrLine {
 #[derive(Debug)]
 pub struct MacroIrLine {
     pub name: String,
-    pub macro_type: String,
+    pub um_type: String,
     pub parameters: String,
     pub value: String,
     pub fallback_value: String,
@@ -95,7 +96,7 @@ impl Default for MacroIrLine {
     fn default() -> Self {
         MacroIrLine {
             name: String::default(),
-            macro_type: String::default(),
+            um_type: String::default(),
             parameters: String::default(),
             value: String::default(),
             fallback_value: String::default(),
@@ -106,17 +107,84 @@ impl Default for MacroIrLine {
 impl MacroIrLine {
     pub fn new(
         name: impl Into<String>,
-        macro_type: impl Into<String>,
+        um_type: impl Into<String>,
         parameters: impl Into<String>,
         value: impl Into<String>,
         fallback_value: impl Into<String>,
     ) -> Self {
         MacroIrLine {
             name: name.into(),
-            macro_type: macro_type.into(),
+            um_type: um_type.into(),
             parameters: parameters.into(),
             value: value.into(),
             fallback_value: fallback_value.into(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct MetadataIrLine {
+    pub filename: String,
+    pub filehash: ByteBuf,
+    pub path: String,
+    pub preamble: String,
+    pub fallback_preamble: String,
+    pub root: bool,
+}
+
+impl Default for MetadataIrLine {
+    fn default() -> Self {
+        MetadataIrLine {
+            filename: String::default(),
+            filehash: ByteBuf::new(),
+            path: String::default(),
+            preamble: String::default(),
+            fallback_preamble: String::default(),
+            root: false,
+        }
+    }
+}
+
+impl MetadataIrLine {
+    pub fn new(
+        filename: impl Into<String>,
+        filehash: ByteBuf,
+        path: impl Into<String>,
+        preamble: impl Into<String>,
+        fallback_preamble: impl Into<String>,
+        root: bool,
+    ) -> Self {
+        MetadataIrLine {
+            filename: filename.into(),
+            filehash,
+            path: path.into(),
+            preamble: preamble.into(),
+            fallback_preamble: fallback_preamble.into(),
+            root,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ResourceIrLine {
+    pub filename: String,
+    pub path: String,
+}
+
+impl Default for ResourceIrLine {
+    fn default() -> Self {
+        ResourceIrLine {
+            filename: String::default(),
+            path: String::default(),
+        }
+    }
+}
+
+impl ResourceIrLine {
+    pub fn new(filename: impl Into<String>, path: impl Into<String>) -> Self {
+        ResourceIrLine {
+            filename: filename.into(),
+            path: path.into(),
         }
     }
 }
@@ -126,6 +194,8 @@ pub struct IrBlock {
     content_lines: Vec<ContentIrLine>,
     variable_lines: Vec<VariableIrLine>,
     macro_lines: Vec<MacroIrLine>,
+    metadata_lines: Vec<MetadataIrLine>,
+    resource_lines: Vec<ResourceIrLine>,
 }
 
 impl IrBlock {
@@ -136,6 +206,8 @@ impl IrBlock {
             content_lines: Vec::new(),
             variable_lines: Vec::new(),
             macro_lines: Vec::new(),
+            metadata_lines: Vec::new(),
+            resource_lines: Vec::new(),
         }
     }
 
@@ -173,6 +245,30 @@ impl IrBlock {
 
     pub fn get_macro_lines(&self) -> &Vec<MacroIrLine> {
         &self.macro_lines
+    }
+
+    pub fn push_metadata_line(&mut self, line: MetadataIrLine) {
+        self.metadata_lines.push(line);
+    }
+
+    pub fn append_metadata_lines(&mut self, lines: &mut Vec<MetadataIrLine>) {
+        self.metadata_lines.append(lines);
+    }
+
+    pub fn get_metadata_lines(&self) -> &Vec<MetadataIrLine> {
+        &self.metadata_lines
+    }
+
+    pub fn push_resource_line(&mut self, line: ResourceIrLine) {
+        self.resource_lines.push(line);
+    }
+
+    pub fn append_resource_lines(&mut self, lines: &mut Vec<ResourceIrLine>) {
+        self.resource_lines.append(lines);
+    }
+
+    pub fn get_resource_lines(&self) -> &Vec<ResourceIrLine> {
+        &self.resource_lines
     }
 }
 
