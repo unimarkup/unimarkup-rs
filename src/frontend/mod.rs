@@ -1,2 +1,2 @@
-pub mod blocks;
 pub mod parser;
+pub mod syntax_error;

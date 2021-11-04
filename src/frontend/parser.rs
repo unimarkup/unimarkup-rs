@@ -1,34 +1,46 @@
-use super::blocks::heading_block::{HeadingBlock, HeadingLevel};
+use unicode_segmentation::UnicodeSegmentation;
 
-pub fn test_function() {
-    println!("Basic setup");
+/// CursorPos struct is used to keep track of the cursor position while parsing input.
+/// Additionally it is useful as a way to show better error messages. Using CursorPos it
+/// is possible to show exact location in the input, where parsing error is recognized.
+#[derive(Copy, Clone, Debug)]
+pub struct CursorPos {
+    /// Index of the line in the given input
+    pub line: usize,
+    /// index of the symbol in the given line
+    pub symbol: usize,
 }
 
-pub fn parse_heading(input: &[&str], index: &mut usize) -> HeadingBlock {
-    let mut content: String = "".into();
+pub fn is_blank_line(line: &str) -> bool {
+    line.trim().is_empty()
+}
 
-    let mut level = HeadingLevel::Invalid;
-    let mut level_counter = 0;
-    let mut level_set = false;
+pub fn count_symbol_until(
+    line: &str,
+    symbol: &str,
+    until: fn(char) -> bool,
+) -> Result<usize, (usize, String)> {
+    let mut symbols = line.graphemes(true);
 
-    while let Some(word) = input.get(*index) {
-        if word.matches('#').count() > 0 && !level_set {
-            level_counter += 1;
+    let count = symbols
+        .by_ref()
+        .peekable()
+        .take_while(|&current_symbol| current_symbol == symbol)
+        .count();
+
+    let error_message = "Unexpected symbol found!";
+
+    if let Some(symbol) = line.graphemes(true).nth(count) {
+        if symbol.contains(until) {
+            Ok(count)
         } else {
-            level_set = true;
-            level = HeadingLevel::from(level_counter);
+            let message = String::from(error_message);
+
+            Err((count, message))
         }
+    } else {
+        let message = String::from(error_message);
 
-        if level_set {
-            // read content
-            content.push_str(word);
-        }
-
-        *index += 1;
-    }
-
-    HeadingBlock {
-        level,
-        content: content.trim().to_string(),
+        Err((count, message))
     }
 }
