@@ -290,5 +290,5 @@ pub trait ParseForIr {
 }
 
 pub trait WriteToIr {
-    fn write_to_ir(ir_connection: &Connection) -> Result<usize, UmMiddleendError>;
+    fn write_to_ir(ir_connection: &Connection) -> Result<(), UmMiddleendError>;
 }
