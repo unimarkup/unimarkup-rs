@@ -1,5 +1,7 @@
 use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
+use crate::middleend::middleend_error::UmMiddleendError;
 use serde_bytes::ByteBuf;
+use rusqlite::Connection;
 
 #[derive(Debug)]
 pub struct ContentIrLine {
@@ -287,4 +289,6 @@ pub trait ParseForIr {
     fn generate_ir_lines(&self, line_nr: usize) -> Vec<ContentIrLine>;
 }
 
-pub trait WriteToIr {}
+pub trait WriteToIr {
+    fn write_to_ir(ir_connection: &Connection) -> Result<usize, UmMiddleendError>;
+}
