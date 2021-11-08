@@ -293,16 +293,24 @@ pub trait WriteToIr {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError>;
 }
 
+fn write_ir_lines(ir_lines: &Vec<impl WriteToIr>, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+    for ir_line in ir_lines {
+        let res = ir_line.write_to_ir(ir_transaction);
+        if res.is_err() {
+            return Err(res.err().unwrap());
+        }
+    }
+    return Ok(());
+}
 
 impl WriteToIr for IrBlock {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        &self.get_content_lines().iter().map(|content_ir_line| { content_ir_line.write_to_ir(ir_transaction)});
-        &self.get_macro_lines().iter().map(|macro_ir_line| { macro_ir_line.write_to_ir(ir_transaction)});
-        &self.get_variable_lines().iter().map(|variable_ir_line| { variable_ir_line.write_to_ir(ir_transaction)});
-        &self.get_metadata_lines().iter().map(|metadata_ir_line| { metadata_ir_line.write_to_ir(ir_transaction)});
-        &self.get_resource_lines().iter().map(|resource_ir_line| { resource_ir_line.write_to_ir(ir_transaction)});
+        write_ir_lines(self.get_content_lines(), ir_transaction)?;
+        write_ir_lines(self.get_macro_lines(), ir_transaction)?;
+        write_ir_lines(self.get_variable_lines(), ir_transaction)?;
+        write_ir_lines(self.get_metadata_lines(), ir_transaction)?;
+        write_ir_lines(self.get_resource_lines(), ir_transaction)?;
         
-        ir_transaction.commit();
         return Ok(());
     }
 }
@@ -311,7 +319,7 @@ impl WriteToIr for ContentIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql = "INSERT INTO content (id, um_type, text, fallback-text, attributes, fallback-attributes, line_nr) VALUES (?)";
         let params = params![self.id, self.um_type, self.text, self.fallback_text, self.attributes, self.fallback_attributes, self.line_nr];
-        let column_pk = String::new();
+        let mut column_pk = String::new();
         column_pk.push_str("id: ");
         column_pk.push_str(&self.id);
         column_pk.push_str(" at line: ");
@@ -328,7 +336,7 @@ impl WriteToIr for MacroIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql = "INSERT INTO macros (name, um_type, parameters, body, fallback-body) VALUES (?)";
         let params = params![self.name, self.um_type, self.parameters, self.body, self.fallback_body];
-        let column_pk = String::new();
+        let mut column_pk = String::new();
         column_pk.push_str("name: ");
         column_pk.push_str(&self.name);
         column_pk.push_str(" with parameters: ");
@@ -345,7 +353,7 @@ impl WriteToIr for VariableIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql = "INSERT INTO variables (name, um_type, value, fallback-value) VALUES (?)";
         let params = params![self.name, self.um_type, self.value, self.fallback_value];
-        let column_pk = String::new();
+        let mut column_pk = String::new();
         column_pk.push_str("name: ");
         column_pk.push_str(&self.name);
         
@@ -359,12 +367,13 @@ impl WriteToIr for VariableIrLine {
 impl WriteToIr for MetadataIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql = "INSERT INTO metadata (filename, filehash, path, preamble, fallback-preamble, root) VALUES (?)";
-        let params = params![self.filename, self.filehash, self.path, self.preamble, self.fallback_preamble, self.root];
-        let column_pk = String::new();
+        let params = params![self.filename, self.filehash.to_vec(), self.path, self.preamble, self.fallback_preamble, self.root];
+        
+        let mut column_pk = String::new();
         column_pk.push_str("filename: ");
         column_pk.push_str(&self.filename);
         column_pk.push_str(" with hash: ");
-        column_pk.push_str(&self.filehash);
+        column_pk.push_str(&String::from_utf8(self.filehash.to_vec()).unwrap());
         
         if ir_transaction.execute(sql, params).is_err() {
             return Err(UmMiddleendError { tablename: "metadata".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
@@ -377,7 +386,7 @@ impl WriteToIr for ResourceIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql = "INSERT INTO resources (filename, path) VALUES (?)";
         let params = params![self.filename, self.path];
-        let column_pk = String::new();
+        let mut column_pk = String::new();
         column_pk.push_str("filename: ");
         column_pk.push_str(&self.filename);
         column_pk.push_str(" with path: ");
