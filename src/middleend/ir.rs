@@ -293,14 +293,14 @@ pub trait WriteToIr {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError>;
 }
 
-fn write_ir_lines(ir_lines: &Vec<impl WriteToIr>, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+fn write_ir_lines(ir_lines: &[impl WriteToIr], ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
     for ir_line in ir_lines {
         let res = ir_line.write_to_ir(ir_transaction);
         if res.is_err() {
             return Err(res.err().unwrap());
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 impl WriteToIr for IrBlock {
@@ -310,8 +310,8 @@ impl WriteToIr for IrBlock {
         write_ir_lines(self.get_variable_lines(), ir_transaction)?;
         write_ir_lines(self.get_metadata_lines(), ir_transaction)?;
         write_ir_lines(self.get_resource_lines(), ir_transaction)?;
-        
-        return Ok(());
+
+        Ok(())
     }
 }
 
@@ -328,7 +328,7 @@ impl WriteToIr for ContentIrLine {
         if ir_transaction.execute(sql, params).is_err() {
             return Err(UmMiddleendError { tablename: "content".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
         }
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -345,7 +345,7 @@ impl WriteToIr for MacroIrLine {
         if ir_transaction.execute(sql, params).is_err() {
             return Err(UmMiddleendError { tablename: "macros".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
         }
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -360,7 +360,7 @@ impl WriteToIr for VariableIrLine {
         if ir_transaction.execute(sql, params).is_err() {
             return Err(UmMiddleendError { tablename: "variables".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
         }
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -378,7 +378,7 @@ impl WriteToIr for MetadataIrLine {
         if ir_transaction.execute(sql, params).is_err() {
             return Err(UmMiddleendError { tablename: "metadata".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
         }
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -395,6 +395,6 @@ impl WriteToIr for ResourceIrLine {
         if ir_transaction.execute(sql, params).is_err() {
             return Err(UmMiddleendError { tablename: "resources".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
         }
-        return Ok(());
+        Ok(())
     }
 }
