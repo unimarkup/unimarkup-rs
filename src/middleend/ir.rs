@@ -1,7 +1,7 @@
 use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 use crate::middleend::middleend_error::UmMiddleendError;
 use serde_bytes::ByteBuf;
-use rusqlite::Connection;
+use rusqlite::{params, Transaction};
 
 #[derive(Debug)]
 pub struct ContentIrLine {
@@ -90,8 +90,8 @@ pub struct MacroIrLine {
     pub name: String,
     pub um_type: String,
     pub parameters: String,
-    pub value: String,
-    pub fallback_value: String,
+    pub body: String,
+    pub fallback_body: String,
 }
 
 impl Default for MacroIrLine {
@@ -100,8 +100,8 @@ impl Default for MacroIrLine {
             name: String::default(),
             um_type: String::default(),
             parameters: String::default(),
-            value: String::default(),
-            fallback_value: String::default(),
+            body: String::default(),
+            fallback_body: String::default(),
         }
     }
 }
@@ -111,15 +111,15 @@ impl MacroIrLine {
         name: impl Into<String>,
         um_type: impl Into<String>,
         parameters: impl Into<String>,
-        value: impl Into<String>,
-        fallback_value: impl Into<String>,
+        body: impl Into<String>,
+        fallback_body: impl Into<String>,
     ) -> Self {
         MacroIrLine {
             name: name.into(),
             um_type: um_type.into(),
             parameters: parameters.into(),
-            value: value.into(),
-            fallback_value: fallback_value.into(),
+            body: body.into(),
+            fallback_body: fallback_body.into(),
         }
     }
 }
@@ -290,5 +290,102 @@ pub trait ParseForIr {
 }
 
 pub trait WriteToIr {
-    fn write_to_ir(ir_connection: &Connection) -> Result<(), UmMiddleendError>;
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError>;
+}
+
+
+impl WriteToIr for IrBlock {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+        &self.get_content_lines().iter().map(|content_ir_line| { content_ir_line.write_to_ir(ir_transaction)});
+        &self.get_macro_lines().iter().map(|macro_ir_line| { macro_ir_line.write_to_ir(ir_transaction)});
+        &self.get_variable_lines().iter().map(|variable_ir_line| { variable_ir_line.write_to_ir(ir_transaction)});
+        &self.get_metadata_lines().iter().map(|metadata_ir_line| { metadata_ir_line.write_to_ir(ir_transaction)});
+        &self.get_resource_lines().iter().map(|resource_ir_line| { resource_ir_line.write_to_ir(ir_transaction)});
+        
+        ir_transaction.commit();
+        return Ok(());
+    }
+}
+
+impl WriteToIr for ContentIrLine {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+        let sql = "INSERT INTO content (id, um_type, text, fallback-text, attributes, fallback-attributes, line_nr) VALUES (?)";
+        let params = params![self.id, self.um_type, self.text, self.fallback_text, self.attributes, self.fallback_attributes, self.line_nr];
+        let column_pk = String::new();
+        column_pk.push_str("id: ");
+        column_pk.push_str(&self.id);
+        column_pk.push_str(" at line: ");
+        column_pk.push_str(&self.line_nr.to_string());
+        
+        if ir_transaction.execute(sql, params).is_err() {
+            return Err(UmMiddleendError { tablename: "content".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
+        }
+        return Ok(());
+    }
+}
+
+impl WriteToIr for MacroIrLine {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+        let sql = "INSERT INTO macros (name, um_type, parameters, body, fallback-body) VALUES (?)";
+        let params = params![self.name, self.um_type, self.parameters, self.body, self.fallback_body];
+        let column_pk = String::new();
+        column_pk.push_str("name: ");
+        column_pk.push_str(&self.name);
+        column_pk.push_str(" with parameters: ");
+        column_pk.push_str(&self.parameters.to_string());
+        
+        if ir_transaction.execute(sql, params).is_err() {
+            return Err(UmMiddleendError { tablename: "macros".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
+        }
+        return Ok(());
+    }
+}
+
+impl WriteToIr for VariableIrLine {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+        let sql = "INSERT INTO variables (name, um_type, value, fallback-value) VALUES (?)";
+        let params = params![self.name, self.um_type, self.value, self.fallback_value];
+        let column_pk = String::new();
+        column_pk.push_str("name: ");
+        column_pk.push_str(&self.name);
+        
+        if ir_transaction.execute(sql, params).is_err() {
+            return Err(UmMiddleendError { tablename: "variables".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
+        }
+        return Ok(());
+    }
+}
+
+impl WriteToIr for MetadataIrLine {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+        let sql = "INSERT INTO metadata (filename, filehash, path, preamble, fallback-preamble, root) VALUES (?)";
+        let params = params![self.filename, self.filehash, self.path, self.preamble, self.fallback_preamble, self.root];
+        let column_pk = String::new();
+        column_pk.push_str("filename: ");
+        column_pk.push_str(&self.filename);
+        column_pk.push_str(" with hash: ");
+        column_pk.push_str(&self.filehash);
+        
+        if ir_transaction.execute(sql, params).is_err() {
+            return Err(UmMiddleendError { tablename: "metadata".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
+        }
+        return Ok(());
+    }
+}
+
+impl WriteToIr for ResourceIrLine {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+        let sql = "INSERT INTO resources (filename, path) VALUES (?)";
+        let params = params![self.filename, self.path];
+        let column_pk = String::new();
+        column_pk.push_str("filename: ");
+        column_pk.push_str(&self.filename);
+        column_pk.push_str(" with path: ");
+        column_pk.push_str(&self.path);
+        
+        if ir_transaction.execute(sql, params).is_err() {
+            return Err(UmMiddleendError { tablename: "resources".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
+        }
+        return Ok(());
+    }
 }
