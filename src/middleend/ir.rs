@@ -1,7 +1,7 @@
 use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 use crate::middleend::middleend_error::UmMiddleendError;
-use serde_bytes::ByteBuf;
 use rusqlite::{params, Transaction};
+use serde_bytes::ByteBuf;
 
 #[derive(Debug)]
 pub struct ContentIrLine {
@@ -293,7 +293,10 @@ pub trait WriteToIr {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError>;
 }
 
-fn write_ir_lines(ir_lines: &[impl WriteToIr], ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+fn write_ir_lines(
+    ir_lines: &[impl WriteToIr],
+    ir_transaction: &Transaction,
+) -> Result<(), UmMiddleendError> {
     for ir_line in ir_lines {
         let res = ir_line.write_to_ir(ir_transaction);
         if res.is_err() {
@@ -318,15 +321,27 @@ impl WriteToIr for IrBlock {
 impl WriteToIr for ContentIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql = "INSERT INTO content (id, um_type, text, fallback-text, attributes, fallback-attributes, line_nr) VALUES (?)";
-        let params = params![self.id, self.um_type, self.text, self.fallback_text, self.attributes, self.fallback_attributes, self.line_nr];
+        let params = params![
+            self.id,
+            self.um_type,
+            self.text,
+            self.fallback_text,
+            self.attributes,
+            self.fallback_attributes,
+            self.line_nr
+        ];
         let mut column_pk = String::new();
         column_pk.push_str("id: ");
         column_pk.push_str(&self.id);
         column_pk.push_str(" at line: ");
         column_pk.push_str(&self.line_nr.to_string());
-        
+
         if ir_transaction.execute(sql, params).is_err() {
-            return Err(UmMiddleendError { tablename: "content".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
+            return Err(UmMiddleendError {
+                tablename: "content".to_string(),
+                column: column_pk,
+                message: "Could not insert values on given database connection".to_string(),
+            });
         }
         Ok(())
     }
@@ -335,15 +350,25 @@ impl WriteToIr for ContentIrLine {
 impl WriteToIr for MacroIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql = "INSERT INTO macros (name, um_type, parameters, body, fallback-body) VALUES (?)";
-        let params = params![self.name, self.um_type, self.parameters, self.body, self.fallback_body];
+        let params = params![
+            self.name,
+            self.um_type,
+            self.parameters,
+            self.body,
+            self.fallback_body
+        ];
         let mut column_pk = String::new();
         column_pk.push_str("name: ");
         column_pk.push_str(&self.name);
         column_pk.push_str(" with parameters: ");
         column_pk.push_str(&self.parameters.to_string());
-        
+
         if ir_transaction.execute(sql, params).is_err() {
-            return Err(UmMiddleendError { tablename: "macros".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
+            return Err(UmMiddleendError {
+                tablename: "macros".to_string(),
+                column: column_pk,
+                message: "Could not insert values on given database connection".to_string(),
+            });
         }
         Ok(())
     }
@@ -356,9 +381,13 @@ impl WriteToIr for VariableIrLine {
         let mut column_pk = String::new();
         column_pk.push_str("name: ");
         column_pk.push_str(&self.name);
-        
+
         if ir_transaction.execute(sql, params).is_err() {
-            return Err(UmMiddleendError { tablename: "variables".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
+            return Err(UmMiddleendError {
+                tablename: "variables".to_string(),
+                column: column_pk,
+                message: "Could not insert values on given database connection".to_string(),
+            });
         }
         Ok(())
     }
@@ -367,16 +396,27 @@ impl WriteToIr for VariableIrLine {
 impl WriteToIr for MetadataIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql = "INSERT INTO metadata (filename, filehash, path, preamble, fallback-preamble, root) VALUES (?)";
-        let params = params![self.filename, self.filehash.to_vec(), self.path, self.preamble, self.fallback_preamble, self.root];
-        
+        let params = params![
+            self.filename,
+            self.filehash.to_vec(),
+            self.path,
+            self.preamble,
+            self.fallback_preamble,
+            self.root
+        ];
+
         let mut column_pk = String::new();
         column_pk.push_str("filename: ");
         column_pk.push_str(&self.filename);
         column_pk.push_str(" with hash: ");
         column_pk.push_str(&String::from_utf8(self.filehash.to_vec()).unwrap());
-        
+
         if ir_transaction.execute(sql, params).is_err() {
-            return Err(UmMiddleendError { tablename: "metadata".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
+            return Err(UmMiddleendError {
+                tablename: "metadata".to_string(),
+                column: column_pk,
+                message: "Could not insert values on given database connection".to_string(),
+            });
         }
         Ok(())
     }
@@ -391,9 +431,13 @@ impl WriteToIr for ResourceIrLine {
         column_pk.push_str(&self.filename);
         column_pk.push_str(" with path: ");
         column_pk.push_str(&self.path);
-        
+
         if ir_transaction.execute(sql, params).is_err() {
-            return Err(UmMiddleendError { tablename: "resources".to_string(), column: column_pk, message: "Could not insert values on given database connection".to_string() });
+            return Err(UmMiddleendError {
+                tablename: "resources".to_string(),
+                column: column_pk,
+                message: "Could not insert values on given database connection".to_string(),
+            });
         }
         Ok(())
     }
