@@ -89,3 +89,10 @@ The footer should contain any information about **Breaking Changes** and is also
 reference GitHub issues that this commit **Closes**.
 
 **Breaking Changes** should start with the word `BREAKING CHANGE:` with a space or two newlines. The rest of the commit message is then used for this.
+
+## Hooks
+Git hooks can help write commit message according to this convention. We provide our own commit-msg git hook pre-configured.
+
+To use our commit-msg git hook, copy it into your `.git/hooks/` directory.
+Alternatively set our `.hooks/` directory as your git hooks directory with the following shell command: 
+`git config core.hooksPath ./.hooks`
