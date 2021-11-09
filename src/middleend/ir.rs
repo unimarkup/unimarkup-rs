@@ -1,6 +1,6 @@
 use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 use crate::middleend::middleend_error::UmMiddleendError;
-use rusqlite::{params, Transaction};
+use rusqlite::{named_params, params, ToSql, Transaction};
 use serde_bytes::ByteBuf;
 
 #[derive(Debug)]
@@ -306,6 +306,44 @@ fn write_ir_lines(
     Ok(())
 }
 
+fn entry_already_exists(
+    ir_transaction: &Transaction,
+    sql_table: &str,
+    sql_condition: &str,
+    sql_values: &str,
+    params: &[(&str, &dyn ToSql)],
+) -> bool {
+    let sql = format!(
+        "SELECT count(*) FROM {} WHERE {} VALUES ({})",
+        sql_table, sql_condition, sql_values
+    );
+    let res: Result<usize, rusqlite::Error> =
+        ir_transaction.query_row(&sql, params, |row| row.get(0));
+    if res.is_ok() {
+        return true;
+    }
+    false
+}
+
+fn write_ir_line_execute(
+    ir_transaction: &Transaction,
+    sql_table: &str,
+    sql_columns: &str,
+    params: &[&dyn ToSql],
+    column: &str,
+) -> Result<(), UmMiddleendError> {
+    let sql = format!("INSERT INTO {} ({}) VALUES (?)", sql_table, sql_columns);
+
+    if ir_transaction.execute(&sql, params).is_err() {
+        return Err(UmMiddleendError {
+            tablename: sql_table.to_string(),
+            column: column.to_string(),
+            message: "Could not insert values on given database connection".to_string(),
+        });
+    }
+    Ok(())
+}
+
 impl WriteToIr for IrBlock {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         write_ir_lines(self.get_content_lines(), ir_transaction)?;
@@ -320,7 +358,24 @@ impl WriteToIr for IrBlock {
 
 impl WriteToIr for ContentIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        let sql = "INSERT INTO content (id, um_type, text, fallback-text, attributes, fallback-attributes, line_nr) VALUES (?)";
+        let sql_table = "content";
+        let sql_condition = "id = curr_id AND line_nr = curr_line_nr";
+        let sql_values = ":curr_id, :curr_line_nr";
+        let named_params = named_params! { ":curr_id" : self.id, ":curr_line_nr" : self.line_nr};
+
+        if entry_already_exists(
+            ir_transaction,
+            sql_table,
+            sql_condition,
+            sql_values,
+            named_params,
+        ) {
+            // TODO: set warning
+            return Ok(());
+        }
+
+        let sql_columns =
+            "id, um_type, text, fallback-text, attributes, fallback-attributes, line_nr";
         let params = params![
             self.id,
             self.um_type,
@@ -330,26 +385,32 @@ impl WriteToIr for ContentIrLine {
             self.fallback_attributes,
             self.line_nr
         ];
-        let mut column_pk = String::new();
-        column_pk.push_str("id: ");
-        column_pk.push_str(&self.id);
-        column_pk.push_str(" at line: ");
-        column_pk.push_str(&self.line_nr.to_string());
 
-        if ir_transaction.execute(sql, params).is_err() {
-            return Err(UmMiddleendError {
-                tablename: "content".to_string(),
-                column: column_pk,
-                message: "Could not insert values on given database connection".to_string(),
-            });
-        }
-        Ok(())
+        let column_pk = format!("id: {} at line: {}", self.id, self.line_nr);
+        write_ir_line_execute(ir_transaction, sql_table, sql_columns, params, &column_pk)
     }
 }
 
 impl WriteToIr for MacroIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        let sql = "INSERT INTO macros (name, um_type, parameters, body, fallback-body) VALUES (?)";
+        let sql_table = "macros";
+        let sql_condition = "name = curr_name AND parameters = curr_parameters";
+        let sql_values = ":curr_name, :curr_parameters";
+        let named_params =
+            named_params! { ":curr_name" : self.name, "curr_parameters" : self.parameters};
+
+        if entry_already_exists(
+            ir_transaction,
+            sql_table,
+            sql_condition,
+            sql_values,
+            named_params,
+        ) {
+            // TODO: set warning
+            return Ok(());
+        }
+
+        let sql_columns = "name, um_type, parameters, body, fallback-body";
         let params = params![
             self.name,
             self.um_type,
@@ -357,45 +418,57 @@ impl WriteToIr for MacroIrLine {
             self.body,
             self.fallback_body
         ];
-        let mut column_pk = String::new();
-        column_pk.push_str("name: ");
-        column_pk.push_str(&self.name);
-        column_pk.push_str(" with parameters: ");
-        column_pk.push_str(&self.parameters.to_string());
 
-        if ir_transaction.execute(sql, params).is_err() {
-            return Err(UmMiddleendError {
-                tablename: "macros".to_string(),
-                column: column_pk,
-                message: "Could not insert values on given database connection".to_string(),
-            });
-        }
-        Ok(())
+        let column_pk = format!("name: {} with parameters: {}", self.name, self.parameters);
+        write_ir_line_execute(ir_transaction, sql_table, sql_columns, params, &column_pk)
     }
 }
 
 impl WriteToIr for VariableIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        let sql = "INSERT INTO variables (name, um_type, value, fallback-value) VALUES (?)";
-        let params = params![self.name, self.um_type, self.value, self.fallback_value];
-        let mut column_pk = String::new();
-        column_pk.push_str("name: ");
-        column_pk.push_str(&self.name);
+        let sql_table = "variables";
+        let sql_condition = "name = curr_name";
+        let sql_values = ":curr_name";
+        let named_params = named_params! { ":curr_name" : self.name};
 
-        if ir_transaction.execute(sql, params).is_err() {
-            return Err(UmMiddleendError {
-                tablename: "variables".to_string(),
-                column: column_pk,
-                message: "Could not insert values on given database connection".to_string(),
-            });
+        if entry_already_exists(
+            ir_transaction,
+            sql_table,
+            sql_condition,
+            sql_values,
+            named_params,
+        ) {
+            // TODO: set warning
+            return Ok(());
         }
-        Ok(())
+
+        let sql_columns = "name, um_type, value, fallback-value";
+        let params = params![self.name, self.um_type, self.value, self.fallback_value];
+
+        let column_pk = format!("name: {}", self.name);
+        write_ir_line_execute(ir_transaction, sql_table, sql_columns, params, &column_pk)
     }
 }
 
 impl WriteToIr for MetadataIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        let sql = "INSERT INTO metadata (filename, filehash, path, preamble, fallback-preamble, root) VALUES (?)";
+        let sql_table = "metadata";
+        let sql_condition = "filehash = curr_filehash";
+        let sql_values = ":curr_filehash";
+        let named_params = named_params! { ":curr_filehash" : self.filehash.to_vec() };
+
+        if entry_already_exists(
+            ir_transaction,
+            sql_table,
+            sql_condition,
+            sql_values,
+            named_params,
+        ) {
+            // TODO: set warning
+            return Ok(());
+        }
+
+        let sql_columns = "filename, filehash, path, preamble, fallback-preamble, root";
         let params = params![
             self.filename,
             self.filehash.to_vec(),
@@ -405,40 +478,38 @@ impl WriteToIr for MetadataIrLine {
             self.root
         ];
 
-        let mut column_pk = String::new();
-        column_pk.push_str("filename: ");
-        column_pk.push_str(&self.filename);
-        column_pk.push_str(" with hash: ");
-        column_pk.push_str(&String::from_utf8(self.filehash.to_vec()).unwrap());
-
-        if ir_transaction.execute(sql, params).is_err() {
-            return Err(UmMiddleendError {
-                tablename: "metadata".to_string(),
-                column: column_pk,
-                message: "Could not insert values on given database connection".to_string(),
-            });
-        }
-        Ok(())
+        let column_pk = format!(
+            "filename: {} with hash: {}",
+            self.filename,
+            String::from_utf8(self.filehash.to_vec()).unwrap()
+        );
+        write_ir_line_execute(ir_transaction, sql_table, sql_columns, params, &column_pk)
     }
 }
 
 impl WriteToIr for ResourceIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        let sql = "INSERT INTO resources (filename, path) VALUES (?)";
-        let params = params![self.filename, self.path];
-        let mut column_pk = String::new();
-        column_pk.push_str("filename: ");
-        column_pk.push_str(&self.filename);
-        column_pk.push_str(" with path: ");
-        column_pk.push_str(&self.path);
+        let sql_table = "resources";
+        let sql_condition = "filename = curr_filename AND path = curr_path";
+        let sql_values = ":curr_filename, :curr_path";
+        let named_params =
+            named_params! { ":curr_filename" : self.filename, "curr_path" : self.path };
 
-        if ir_transaction.execute(sql, params).is_err() {
-            return Err(UmMiddleendError {
-                tablename: "resources".to_string(),
-                column: column_pk,
-                message: "Could not insert values on given database connection".to_string(),
-            });
+        if entry_already_exists(
+            ir_transaction,
+            sql_table,
+            sql_condition,
+            sql_values,
+            named_params,
+        ) {
+            // TODO: set warning
+            return Ok(());
         }
-        Ok(())
+
+        let sql_columns = "filename, path";
+        let params = params![self.filename, self.path];
+
+        let column_pk = format!("filename: {} with path: {}", self.filename, self.path);
+        write_ir_line_execute(ir_transaction, sql_table, sql_columns, params, &column_pk)
     }
 }
