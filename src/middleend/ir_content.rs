@@ -3,6 +3,7 @@ use crate::middleend::ir::{
 };
 use crate::middleend::middleend_error::UmMiddleendError;
 use rusqlite::{params, Transaction};
+use super::ir::IrTableName;
 
 #[derive(Debug)]
 pub struct ContentIrLine {
@@ -26,6 +27,12 @@ impl Default for ContentIrLine {
             attributes: String::default(),
             fallback_attributes: String::default(),
         }
+    }
+}
+
+impl IrTableName for ContentIrLine {
+    fn table_name() -> String {
+        "content".to_string()
     }
 }
 
@@ -67,7 +74,7 @@ impl ContentIrLine {
 
 impl WriteToIr for ContentIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        let sql_table = "content";
+        let sql_table = &ContentIrLine::table_name();
         let column_pk = format!("id: {} at line: {}", self.id, self.line_nr);
         let new_values = params![
             self.id,

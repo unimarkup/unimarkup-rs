@@ -1,6 +1,7 @@
 use crate::middleend::ir::{entry_already_exists, insert_ir_line_execute, WriteToIr};
 use crate::middleend::middleend_error::UmMiddleendError;
 use rusqlite::{params, Transaction};
+use super::ir::IrTableName;
 
 #[derive(Debug)]
 pub struct ResourceIrLine {
@@ -14,6 +15,12 @@ impl Default for ResourceIrLine {
             filename: String::default(),
             path: String::default(),
         }
+    }
+}
+
+impl IrTableName for ResourceIrLine {
+    fn table_name() -> String {
+        "resources".to_string()
     }
 }
 
@@ -37,7 +44,7 @@ impl ResourceIrLine {
 
 impl WriteToIr for ResourceIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        let sql_table = "resources";
+        let sql_table = &ResourceIrLine::table_name();
         let column_pk = format!("filename: {} with path: {}", self.filename, self.path);
         let new_values = params![self.filename, self.path];
 

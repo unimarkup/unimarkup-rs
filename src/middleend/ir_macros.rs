@@ -3,6 +3,7 @@ use crate::middleend::ir::{
 };
 use crate::middleend::middleend_error::UmMiddleendError;
 use rusqlite::{params, Transaction};
+use super::ir::IrTableName;
 
 #[derive(Debug)]
 pub struct MacroIrLine {
@@ -22,6 +23,12 @@ impl Default for MacroIrLine {
             body: String::default(),
             fallback_body: String::default(),
         }
+    }
+}
+
+impl IrTableName for MacroIrLine {
+    fn table_name() -> String {
+        "macros".to_string()
     }
 }
 
@@ -57,7 +64,7 @@ impl MacroIrLine {
 
 impl WriteToIr for MacroIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        let sql_table = "macros";
+        let sql_table = &MacroIrLine::table_name();
         let column_pk = format!("name: {} with parameters: {}", self.name, self.parameters);
         let new_values = params![
             self.name,

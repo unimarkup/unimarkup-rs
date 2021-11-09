@@ -3,6 +3,7 @@ use crate::middleend::ir::{
 };
 use crate::middleend::middleend_error::UmMiddleendError;
 use rusqlite::{params, Transaction};
+use super::ir::IrTableName;
 
 #[derive(Debug)]
 pub struct VariableIrLine {
@@ -20,6 +21,12 @@ impl Default for VariableIrLine {
             value: String::default(),
             fallback_value: String::default(),
         }
+    }
+}
+
+impl IrTableName for VariableIrLine {
+    fn table_name() -> String {
+        "variables".to_string()
     }
 }
 
@@ -52,7 +59,7 @@ impl VariableIrLine {
 
 impl WriteToIr for VariableIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        let sql_table = "variables";
+        let sql_table = &VariableIrLine::table_name();
         let column_pk = format!("name: {}", self.name);
         let new_values = params![self.name, self.um_type, self.value, self.fallback_value,];
 

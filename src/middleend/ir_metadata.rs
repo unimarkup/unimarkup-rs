@@ -4,6 +4,7 @@ use crate::middleend::ir::{
 use crate::middleend::middleend_error::UmMiddleendError;
 use rusqlite::{params, Transaction};
 use serde_bytes::ByteBuf;
+use super::ir::IrTableName;
 
 #[derive(Debug)]
 pub struct MetadataIrLine {
@@ -25,6 +26,12 @@ impl Default for MetadataIrLine {
             fallback_preamble: String::default(),
             root: false,
         }
+    }
+}
+
+impl IrTableName for MetadataIrLine {
+    fn table_name() -> String {
+        "metadata".to_string()
     }
 }
 
@@ -63,7 +70,7 @@ impl MetadataIrLine {
 
 impl WriteToIr for MetadataIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        let sql_table = "metadata";
+        let sql_table = &MetadataIrLine::table_name();
         let column_pk = format!(
             "filename: {} with hash: {}",
             self.filename,

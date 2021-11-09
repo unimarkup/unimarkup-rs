@@ -13,6 +13,10 @@ pub trait ParseForIr {
     fn generate_ir_lines(&self, line_nr: usize) -> Vec<ContentIrLine>;
 }
 
+pub trait IrTableName {
+    fn table_name() -> String;
+}
+
 pub trait WriteToIr {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError>;
 }
@@ -88,3 +92,4 @@ pub fn update_ir_line_execute(
     }
     Ok(())
 }
+
