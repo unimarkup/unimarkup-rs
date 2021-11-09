@@ -3,7 +3,9 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::frontend::parser::count_symbol_until;
 use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
-use crate::middleend::ir::{ContentIrLine, IrBlock, ParseForIr};
+use crate::middleend::ir::ParseForIr;
+use crate::middleend::ir_block::IrBlock;
+use crate::middleend::ir_content::ContentIrLine;
 use crate::um_elements::types::UnimarkupType;
 
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString)]

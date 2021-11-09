@@ -1,0 +1,72 @@
+use crate::middleend::ir::{
+    entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
+};
+use crate::middleend::middleend_error::UmMiddleendError;
+use rusqlite::{params, Transaction};
+
+#[derive(Debug)]
+pub struct VariableIrLine {
+    pub name: String,
+    pub um_type: String,
+    pub value: String,
+    pub fallback_value: String,
+}
+
+impl Default for VariableIrLine {
+    fn default() -> Self {
+        VariableIrLine {
+            name: String::default(),
+            um_type: String::default(),
+            value: String::default(),
+            fallback_value: String::default(),
+        }
+    }
+}
+
+impl VariableIrLine {
+    pub fn new(
+        name: impl Into<String>,
+        um_type: impl Into<String>,
+        value: impl Into<String>,
+        fallback_value: impl Into<String>,
+    ) -> Self {
+        VariableIrLine {
+            name: name.into(),
+            um_type: um_type.into(),
+            value: value.into(),
+            fallback_value: fallback_value.into(),
+        }
+    }
+}
+
+impl WriteToIr for VariableIrLine {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+        let sql_table = "variables";
+        let column_pk = format!("name: {}", self.name);
+        let new_values = params![self.name, self.um_type, self.value, self.fallback_value,];
+
+        let sql_exists_condition = "name = ?1";
+        let exists_params = params![self.name];
+
+        if entry_already_exists(
+            ir_transaction,
+            sql_table,
+            sql_exists_condition,
+            exists_params,
+        ) {
+            // TODO: set warning that values are overwritten
+            let sql_condition = "name = ?1";
+            let sql_set = "um_type = ?2, value = ?3, fallback_value = ?4";
+            update_ir_line_execute(
+                ir_transaction,
+                sql_table,
+                sql_set,
+                sql_condition,
+                new_values,
+                &column_pk,
+            )
+        } else {
+            insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
+        }
+    }
+}
