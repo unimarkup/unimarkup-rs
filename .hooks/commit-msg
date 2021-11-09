@@ -34,13 +34,17 @@ print_help() {
     echo -e "\nFor more, see: https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#-commit-message-guidelines and https://www.conventionalcommits.org/en/v1.0.0/" >&2
 }
 
+RED="\033[31m"
+YELLOW="\033[33m"
+CLEAR="\033[0m"
+
 if ! head -1 "$1" | grep -qE "^(feat|fix|ci|build|chore|docs|test|style|refactor|perf|revert)(\(.+?\))?: .{1,}$"; then
-    echo -e "ERROR: Given commit type is wrong!\n" >&2
+    echo -e "${RED}\nERROR: Given commit type is wrong!${CLEAR}\n" >&2
     print_help true
 
     exit 1
 fi
 if ! head -1 "$1" | grep -qE "^.{1,50}$"; then
-    echo -e "WARNING: '<type>[(<optional scope>)]: <description>' should not have more than 50 characters!\n" >&2
+    echo -e "${YELLOW}\nWARNING: '<type>[(<optional scope>)]: <description>' should not have more than 50 characters!${CLEAR}\n" >&2
     print_help false
 fi
