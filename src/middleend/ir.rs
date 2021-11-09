@@ -317,7 +317,7 @@ fn entry_already_exists(
         "SELECT count(*) FROM {} WHERE {} VALUES ({})",
         sql_table, sql_condition, sql_values
     );
-    let res: Result<usize, rusqlite::Error> =
+    let res: Result<i64, rusqlite::Error> =
         ir_transaction.query_row(&sql, params, |row| row.get(0));
     if res.is_ok() {
         return true;
