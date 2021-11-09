@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub struct UmMiddleendError {
     pub tablename: String,

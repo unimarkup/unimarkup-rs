@@ -1,6 +1,6 @@
 use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 use crate::middleend::middleend_error::UmMiddleendError;
-use rusqlite::{named_params, params, ToSql, Transaction};
+use rusqlite::{params, ToSql, Transaction};
 use serde_bytes::ByteBuf;
 
 #[derive(Debug)]
@@ -310,12 +310,11 @@ fn entry_already_exists(
     ir_transaction: &Transaction,
     sql_table: &str,
     sql_condition: &str,
-    sql_values: &str,
-    params: &[(&str, &dyn ToSql)],
+    params: &[&dyn ToSql],
 ) -> bool {
     let sql = format!(
-        "SELECT count(*) FROM {} WHERE {} VALUES ({})",
-        sql_table, sql_condition, sql_values
+        "SELECT count(*) FROM {} WHERE {} VALUES (?)",
+        sql_table, sql_condition
     );
     let res: Result<i64, rusqlite::Error> =
         ir_transaction.query_row(&sql, params, |row| row.get(0));
@@ -325,20 +324,42 @@ fn entry_already_exists(
     false
 }
 
-fn write_ir_line_execute(
+fn insert_ir_line_execute(
     ir_transaction: &Transaction,
     sql_table: &str,
-    sql_columns: &str,
     params: &[&dyn ToSql],
     column: &str,
 ) -> Result<(), UmMiddleendError> {
-    let sql = format!("INSERT INTO {} ({}) VALUES (?)", sql_table, sql_columns);
+    let sql = format!("INSERT INTO {} VALUES (?)", sql_table);
 
     if ir_transaction.execute(&sql, params).is_err() {
         return Err(UmMiddleendError {
             tablename: sql_table.to_string(),
             column: column.to_string(),
             message: "Could not insert values on given database connection".to_string(),
+        });
+    }
+    Ok(())
+}
+
+fn update_ir_line_execute(
+    ir_transaction: &Transaction,
+    sql_table: &str,
+    sql_set: &str,
+    sql_condition: &str,
+    params: &[&dyn ToSql],
+    column: &str,
+) -> Result<(), UmMiddleendError> {
+    let sql = format!(
+        "UPDATE {} SET {} WHERE {}",
+        sql_table, sql_set, sql_condition
+    );
+
+    if ir_transaction.execute(&sql, params).is_err() {
+        return Err(UmMiddleendError {
+            tablename: sql_table.to_string(),
+            column: column.to_string(),
+            message: "Could not update values on given database connection".to_string(),
         });
     }
     Ok(())
@@ -359,157 +380,169 @@ impl WriteToIr for IrBlock {
 impl WriteToIr for ContentIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql_table = "content";
-        let sql_condition = "id = curr_id AND line_nr = curr_line_nr";
-        let sql_values = ":curr_id, :curr_line_nr";
-        let named_params = named_params! { ":curr_id" : self.id, ":curr_line_nr" : self.line_nr};
-
-        if entry_already_exists(
-            ir_transaction,
-            sql_table,
-            sql_condition,
-            sql_values,
-            named_params,
-        ) {
-            // TODO: set warning
-            return Ok(());
-        }
-
-        let sql_columns =
-            "id, um_type, text, fallback-text, attributes, fallback-attributes, line_nr";
-        let params = params![
+        let column_pk = format!("id: {} at line: {}", self.id, self.line_nr);
+        let new_values = params![
             self.id,
+            self.line_nr,
             self.um_type,
             self.text,
             self.fallback_text,
             self.attributes,
             self.fallback_attributes,
-            self.line_nr
         ];
 
-        let column_pk = format!("id: {} at line: {}", self.id, self.line_nr);
-        write_ir_line_execute(ir_transaction, sql_table, sql_columns, params, &column_pk)
+        let sql_exists_condition = "id = ?1 AND line_nr = ?2";
+        let exists_params = params![self.id, self.line_nr];
+
+        if entry_already_exists(
+            ir_transaction,
+            sql_table,
+            sql_exists_condition,
+            exists_params,
+        ) {
+            // TODO: set warning that values are overwritten
+            let sql_condition = "id = ?1 AND line_nr = ?2";
+            let sql_set = "um_type = ?3, text = ?4, fallback_text = ?5, attributes = ?6, fallback_attributes = ?7";
+            update_ir_line_execute(
+                ir_transaction,
+                sql_table,
+                sql_set,
+                sql_condition,
+                new_values,
+                &column_pk,
+            )
+        } else {
+            insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
+        }
     }
 }
 
 impl WriteToIr for MacroIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql_table = "macros";
-        let sql_condition = "name = curr_name AND parameters = curr_parameters";
-        let sql_values = ":curr_name, :curr_parameters";
-        let named_params =
-            named_params! { ":curr_name" : self.name, "curr_parameters" : self.parameters};
+        let column_pk = format!("name: {} with parameters: {}", self.name, self.parameters);
+        let new_values = params![
+            self.name,
+            self.parameters,
+            self.um_type,
+            self.body,
+            self.fallback_body,
+        ];
+
+        let sql_exists_condition = "name = ?1 AND parameters = ?2";
+        let exists_params = params![self.name, self.parameters];
 
         if entry_already_exists(
             ir_transaction,
             sql_table,
-            sql_condition,
-            sql_values,
-            named_params,
+            sql_exists_condition,
+            exists_params,
         ) {
-            // TODO: set warning
-            return Ok(());
+            // TODO: set warning that values are overwritten
+            let sql_condition = "name = ?1 AND parameters = ?2";
+            let sql_set = "um_type = ?3, body = ?4, fallback_body = ?5";
+            update_ir_line_execute(
+                ir_transaction,
+                sql_table,
+                sql_set,
+                sql_condition,
+                new_values,
+                &column_pk,
+            )
+        } else {
+            insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
         }
-
-        let sql_columns = "name, um_type, parameters, body, fallback-body";
-        let params = params![
-            self.name,
-            self.um_type,
-            self.parameters,
-            self.body,
-            self.fallback_body
-        ];
-
-        let column_pk = format!("name: {} with parameters: {}", self.name, self.parameters);
-        write_ir_line_execute(ir_transaction, sql_table, sql_columns, params, &column_pk)
     }
 }
 
 impl WriteToIr for VariableIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql_table = "variables";
-        let sql_condition = "name = curr_name";
-        let sql_values = ":curr_name";
-        let named_params = named_params! { ":curr_name" : self.name};
+        let column_pk = format!("name: {}", self.name);
+        let new_values = params![self.name, self.um_type, self.value, self.fallback_value,];
+
+        let sql_exists_condition = "name = ?1";
+        let exists_params = params![self.name];
 
         if entry_already_exists(
             ir_transaction,
             sql_table,
-            sql_condition,
-            sql_values,
-            named_params,
+            sql_exists_condition,
+            exists_params,
         ) {
-            // TODO: set warning
-            return Ok(());
+            // TODO: set warning that values are overwritten
+            let sql_condition = "name = ?1";
+            let sql_set = "um_type = ?2, value = ?3, fallback_value = ?4";
+            update_ir_line_execute(
+                ir_transaction,
+                sql_table,
+                sql_set,
+                sql_condition,
+                new_values,
+                &column_pk,
+            )
+        } else {
+            insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
         }
-
-        let sql_columns = "name, um_type, value, fallback-value";
-        let params = params![self.name, self.um_type, self.value, self.fallback_value];
-
-        let column_pk = format!("name: {}", self.name);
-        write_ir_line_execute(ir_transaction, sql_table, sql_columns, params, &column_pk)
     }
 }
 
 impl WriteToIr for MetadataIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql_table = "metadata";
-        let sql_condition = "filehash = curr_filehash";
-        let sql_values = ":curr_filehash";
-        let named_params = named_params! { ":curr_filehash" : self.filehash.to_vec() };
-
-        if entry_already_exists(
-            ir_transaction,
-            sql_table,
-            sql_condition,
-            sql_values,
-            named_params,
-        ) {
-            // TODO: set warning
-            return Ok(());
-        }
-
-        let sql_columns = "filename, filehash, path, preamble, fallback-preamble, root";
-        let params = params![
-            self.filename,
-            self.filehash.to_vec(),
-            self.path,
-            self.preamble,
-            self.fallback_preamble,
-            self.root
-        ];
-
         let column_pk = format!(
             "filename: {} with hash: {}",
             self.filename,
             String::from_utf8(self.filehash.to_vec()).unwrap()
         );
-        write_ir_line_execute(ir_transaction, sql_table, sql_columns, params, &column_pk)
+        let new_values = params![
+            self.filehash.to_vec(),
+            self.filename,
+            self.path,
+            self.preamble,
+            self.fallback_preamble,
+            self.root,
+        ];
+
+        let sql_exists_condition = "filehash = ?1";
+        let exists_params = params![self.filehash.to_vec()];
+
+        if entry_already_exists(
+            ir_transaction,
+            sql_table,
+            sql_exists_condition,
+            exists_params,
+        ) {
+            // TODO: set warning that values are overwritten
+            let sql_condition = "filehash = ?1";
+            let sql_set =
+                "filename = ?2, path = ?3, preamble = ?4, fallback_preamble = ?5, root = ?6";
+            update_ir_line_execute(
+                ir_transaction,
+                sql_table,
+                sql_set,
+                sql_condition,
+                new_values,
+                &column_pk,
+            )
+        } else {
+            insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
+        }
     }
 }
 
 impl WriteToIr for ResourceIrLine {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
         let sql_table = "resources";
-        let sql_condition = "filename = curr_filename AND path = curr_path";
-        let sql_values = ":curr_filename, :curr_path";
-        let named_params =
-            named_params! { ":curr_filename" : self.filename, "curr_path" : self.path };
+        let column_pk = format!("filename: {} with path: {}", self.filename, self.path);
+        let new_values = params![self.filename, self.path];
 
-        if entry_already_exists(
-            ir_transaction,
-            sql_table,
-            sql_condition,
-            sql_values,
-            named_params,
-        ) {
-            // TODO: set warning
+        let sql_exists_condition = "filename = ?1 AND path = ?2";
+
+        if entry_already_exists(ir_transaction, sql_table, sql_exists_condition, new_values) {
+            // All resources columns are used for private key, no update needed
             return Ok(());
         }
-
-        let sql_columns = "filename, path";
-        let params = params![self.filename, self.path];
-
-        let column_pk = format!("filename: {} with path: {}", self.filename, self.path);
-        write_ir_line_execute(ir_transaction, sql_table, sql_columns, params, &column_pk)
+        insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
     }
 }
