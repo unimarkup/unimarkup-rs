@@ -1,0 +1,37 @@
+#!/bin/bash 
+
+print_help() {
+    echo -e "Aborting commit. Your commit message does not follow the Conventional Commits specification." >&2
+
+    echo -e "\nCommit message structure: \n" >&2
+
+    echo -e "\t<type>[(<optional scope>)]: <description>" >&2
+
+    echo -e "\n\t[<optional body>]" >&2
+
+    echo -e "\n\t[<optional footer>]" >&2
+
+    echo -e "\nWhere '<type>[(<optional scope>)]: <description>' is not longer than 50 characters and <type> is one of:" >&2
+
+    echo -e "- fix: Fix a code bug\n- feat: Add a new feature\n- ci: Changes to CI configuration files and scripts\n- chore: Miscellaneous (should only be used for automatically generated commits)" >&2
+    echo -e "- docs: Documentation only changes\n- style: Changes that do not affect the semantic of the code\n- refactor: A code change that neither fixes a bug nor adds a feature" >&2
+    echo -e "- perf: A code change that improves performance\n- test: Adding tests or correcting existing tests\n" >&2
+
+    echo -e "Examples: \n" >&2
+    echo -e "feat(logging): improve log message" >&2
+    echo -e "fix: fix some bug" >&2
+    echo -e "\nFor more, see: https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#-commit-message-guidelines and https://www.conventionalcommits.org/en/v1.0.0/" >&2
+}
+
+if ! head -1 "$1" | grep -qE "^(feat|fix|ci|chore|docs|test|style|refactor|perf)(\(.+?\))?: .{1,}$"; then
+    echo -e "ERROR: Given commit type is wrong!\n" >&2
+    print_help
+
+    exit 1
+fi
+if ! head -1 "$1" | grep -qE "^.{1,50}$"; then
+    echo -e "ERROR: '<type>[(<optional scope>)]: <description>' must not have more than 50 characters!\n" >&2
+    print_help
+
+    exit 1
+fi
