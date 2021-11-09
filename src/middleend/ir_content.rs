@@ -49,6 +49,20 @@ impl ContentIrLine {
             fallback_attributes: fallback_attributes.into(),
         }
     }
+
+    pub fn table_setup() -> String {
+        r#"CREATE TABLE IF NOT EXISTS "content" (
+					"id"	TEXT NOT NULL,
+					"line_nr"	INTEGER NOT NULL,
+					"um_type"	TEXT NOT NULL,
+					"text"	TEXT,
+					"fallback_text"	TEXT,
+					"attributes"	TEXT,
+					"fallback_attributes"	TEXT,
+					PRIMARY KEY("id","line_nr")
+				);"#
+        .to_string()
+    }
 }
 
 impl WriteToIr for ContentIrLine {

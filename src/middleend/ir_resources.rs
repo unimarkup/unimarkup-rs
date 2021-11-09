@@ -24,6 +24,15 @@ impl ResourceIrLine {
             path: path.into(),
         }
     }
+
+    pub fn table_setup() -> String {
+        r#"CREATE TABLE IF NOT EXISTS "resources" (
+					"filename"	TEXT NOT NULL,
+					"path"	TEXT NOT NULL,
+					PRIMARY KEY("path","filename")
+				);"#
+        .to_string()
+    }
 }
 
 impl WriteToIr for ResourceIrLine {

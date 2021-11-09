@@ -46,6 +46,19 @@ impl MetadataIrLine {
             root,
         }
     }
+
+    pub fn table_setup() -> String {
+        r#"CREATE TABLE IF NOT EXISTS "metadata" (
+					"filehash"	BLOB NOT NULL,
+					"filename"	TEXT NOT NULL,
+					"path"	TEXT NOT NULL,
+					"preamble"	TEXT,
+					"fallback_preamble"	TEXT,
+					"root"	INTEGER,
+					PRIMARY KEY("filehash")
+				);"#
+        .to_string()
+    }
 }
 
 impl WriteToIr for MetadataIrLine {

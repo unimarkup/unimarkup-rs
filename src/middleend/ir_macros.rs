@@ -41,6 +41,18 @@ impl MacroIrLine {
             fallback_body: fallback_body.into(),
         }
     }
+
+    pub fn table_setup() -> String {
+        r#"CREATE TABLE IF NOT EXISTS "macros" (
+					"name"	TEXT NOT NULL,
+					"parameters"	BLOB NOT NULL,
+					"um_type"	TEXT NOT NULL,
+					"body"	TEXT,
+					"fallback_body"	TEXT,
+					PRIMARY KEY("name","parameters")
+				);"#
+        .to_string()
+    }
 }
 
 impl WriteToIr for MacroIrLine {

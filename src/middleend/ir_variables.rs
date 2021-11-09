@@ -37,6 +37,17 @@ impl VariableIrLine {
             fallback_value: fallback_value.into(),
         }
     }
+
+    pub fn table_setup() -> String {
+        r#"CREATE TABLE IF NOT EXISTS "variables" (
+					"name"	TEXT NOT NULL,
+					"um_type"	TEXT NOT NULL,
+					"value"	TEXT,
+					"fallback_value"	TEXT,
+					PRIMARY KEY("name")
+				);"#
+        .to_string()
+    }
 }
 
 impl WriteToIr for VariableIrLine {
