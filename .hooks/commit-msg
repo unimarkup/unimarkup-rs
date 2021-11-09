@@ -13,9 +13,15 @@ print_help() {
 
     echo -e "\nWhere '<type>[(<optional scope>)]: <description>' is not longer than 50 characters and <type> is one of:" >&2
 
-    echo -e "- fix: Fix a code bug\n- feat: Add a new feature\n- ci: Changes to CI configuration files and scripts\n- chore: Miscellaneous (should only be used for automatically generated commits)" >&2
-    echo -e "- docs: Documentation only changes\n- style: Changes that do not affect the semantic of the code\n- refactor: A code change that neither fixes a bug nor adds a feature" >&2
-    echo -e "- perf: A code change that improves performance\n- test: Adding tests or correcting existing tests\n" >&2
+    echo -e "- fix: Fix a code bug" >&2
+    echo -e "- feat: Add a new feature" >&2
+    echo -e "- ci: Changes to CI configuration files and scripts" >&2
+    echo -e "- chore: Miscellaneous (should only be used for automatically generated commits)" >&2
+    echo -e "- docs: Documentation only changes" >&2
+    echo -e "- style: Changes that do not affect the semantic of the code" >&2
+    echo -e "- refactor: A code change that neither fixes a bug nor adds a feature" >&2
+    echo -e "- perf: A code change that improves performance" >&2
+    echo -e "- test: Adding tests or correcting existing tests\n" >&2
 
     echo -e "Examples: \n" >&2
     echo -e "feat(logging): improve log message" >&2
