@@ -85,10 +85,7 @@ impl WriteToIr for MetadataIrLine {
             self.root,
         ];
 
-        if entry_already_exists(
-            self,
-            ir_transaction
-        ) {
+        if entry_already_exists(self, ir_transaction) {
             // TODO: set warning that values are overwritten
             let sql_condition = "filehash = ?1";
             let sql_set =
@@ -108,8 +105,7 @@ impl WriteToIr for MetadataIrLine {
 }
 
 impl RetrieveFromIr for MetadataIrLine {
-
-    fn get_pk_values(&self) -> (String, Vec<& dyn ToSql>) {
+    fn get_pk_values(&self) -> (String, Vec<&dyn ToSql>) {
         let sql_exists_condition = "filehash = ?1";
         let exists_params = params![self.filehash];
         (sql_exists_condition.to_string(), exists_params.to_vec())

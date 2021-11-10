@@ -2,18 +2,12 @@ use rusqlite::params;
 use unimarkup_rs::middleend::ir::{get_single_ir_line, WriteToIr};
 use unimarkup_rs::middleend::ir_metadata::MetadataIrLine;
 
-use crate::middleend::ir_test_setup::{setup_test_ir, get_test_transaction};
+use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
 fn test_single_write_retrieve() {
-    let first_metadata = MetadataIrLine::new(
-        b"ccdec233ff78".to_vec(),
-        "test.um",
-        ".",
-        "{}",
-        "",
-        true,
-    );
+    let first_metadata =
+        MetadataIrLine::new(b"ccdec233ff78".to_vec(), "test.um", ".", "{}", "", true);
     let mut conn = setup_test_ir();
 
     //--- WRITE TO IR --------------------------------------------------------

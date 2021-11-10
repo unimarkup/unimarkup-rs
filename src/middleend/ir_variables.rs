@@ -64,12 +64,7 @@ impl WriteToIr for VariableIrLine {
         let column_pk = format!("name: {}", self.name);
         let new_values = params![self.name, self.um_type, self.value, self.fallback_value,];
 
-        
-
-        if entry_already_exists(
-            self,
-            ir_transaction
-        ) {
+        if entry_already_exists(self, ir_transaction) {
             // TODO: set warning that values are overwritten
             let sql_condition = "name = ?1";
             let sql_set = "um_type = ?2, value = ?3, fallback_value = ?4";
@@ -88,8 +83,7 @@ impl WriteToIr for VariableIrLine {
 }
 
 impl RetrieveFromIr for VariableIrLine {
-
-    fn get_pk_values(&self) -> (String, Vec<& dyn ToSql>) {
+    fn get_pk_values(&self) -> (String, Vec<&dyn ToSql>) {
         let sql_exists_condition = "name = '?1'";
         let exists_params = params![self.name];
         (sql_exists_condition.to_string(), exists_params.to_vec())

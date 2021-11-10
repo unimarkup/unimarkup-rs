@@ -2,7 +2,7 @@ use rusqlite::params;
 use unimarkup_rs::middleend::ir::{get_single_ir_line, WriteToIr};
 use unimarkup_rs::middleend::ir_variables::VariableIrLine;
 
-use crate::middleend::ir_test_setup::{setup_test_ir, get_test_transaction};
+use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
 fn test_single_write_retrieve() {

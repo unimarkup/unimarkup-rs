@@ -88,10 +88,7 @@ impl WriteToIr for ContentIrLine {
             self.fallback_attributes,
         ];
 
-        if entry_already_exists(
-            self,
-            &ir_transaction
-        ) {
+        if entry_already_exists(self, ir_transaction) {
             // TODO: set warning that values are overwritten
             let sql_condition = "id = ?1 AND line_nr = ?2";
             let sql_set = "um_type = ?3, text = ?4, fallback_text = ?5, attributes = ?6, fallback_attributes = ?7";
@@ -110,13 +107,12 @@ impl WriteToIr for ContentIrLine {
 }
 
 impl RetrieveFromIr for ContentIrLine {
-
-    fn get_pk_values(&self) -> (String, Vec<& dyn ToSql>) {
+    fn get_pk_values(&self) -> (String, Vec<&dyn ToSql>) {
         let sql_exists_condition = "id = ?1 AND line_nr = ?2";
         let exists_params = params![self.id, self.line_nr];
         (sql_exists_condition.to_string(), exists_params.to_vec())
     }
-    
+
     fn from_ir(row: &Row) -> Result<Self, Error>
     where
         Self: Sized,

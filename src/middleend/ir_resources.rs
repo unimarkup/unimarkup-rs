@@ -58,8 +58,7 @@ impl WriteToIr for ResourceIrLine {
 }
 
 impl RetrieveFromIr for ResourceIrLine {
-
-    fn get_pk_values(&self) -> (String, Vec<& dyn ToSql>) {
+    fn get_pk_values(&self) -> (String, Vec<&dyn ToSql>) {
         let sql_exists_condition = "filename = ?1 AND path = ?2";
         let exists_params = params![self.filename, self.path];
         (sql_exists_condition.to_string(), exists_params.to_vec())

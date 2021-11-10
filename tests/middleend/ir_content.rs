@@ -1,5 +1,5 @@
 use rusqlite::params;
-use unimarkup_rs::middleend::ir::{WriteToIr, entry_already_exists, get_single_ir_line};
+use unimarkup_rs::middleend::ir::{entry_already_exists, get_single_ir_line, WriteToIr};
 use unimarkup_rs::middleend::ir_content::ContentIrLine;
 
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
@@ -46,10 +46,8 @@ fn test_entry_exists() {
     //--- ENTRY EXISTS IN IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
 
-    assert!(entry_already_exists(
-            &first_content,
-            &transaction
-        ) == false,
+    assert!(
+        !entry_already_exists(&first_content, &transaction),
         "FAIL: Entry can not be in IR"
     );
 
@@ -67,15 +65,13 @@ fn test_entry_exists() {
     //--- ENTRY EXISTS IN IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
 
-    assert!(entry_already_exists(
-            &first_content,
-            &transaction
-        ),
+    assert!(
+        entry_already_exists(&first_content, &transaction),
         "FAIL: Entry not in IR"
     );
 
     let commit_res = transaction.commit();
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());    
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
 }
 
 #[test]
@@ -92,7 +88,15 @@ fn test_write_update() {
     assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
 
     //--- SECOND: WRITE TO IR -------------------------------------------------------
-    let updated_content = ContentIrLine::new(&first_content.id, first_content.line_nr, "paragraph", "overwritten test", "", "{ }", "");
+    let updated_content = ContentIrLine::new(
+        &first_content.id,
+        first_content.line_nr,
+        "paragraph",
+        "overwritten test",
+        "",
+        "{ }",
+        "",
+    );
     let transaction = get_test_transaction(&mut conn);
     let write_res = updated_content.write_to_ir(&transaction);
     let commit_res = transaction.commit();
@@ -105,7 +109,7 @@ fn test_write_update() {
     let retrieved_content_res = get_single_ir_line::<ContentIrLine>(
         &transaction,
         "id = ?1 AND line_nr = ?2",
-        params![first_content.id, first_content.line_nr],   // primary key unchanged
+        params![first_content.id, first_content.line_nr], // primary key unchanged
     );
     let commit_res = transaction.commit();
 

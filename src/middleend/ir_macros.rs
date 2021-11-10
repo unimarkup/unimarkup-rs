@@ -75,10 +75,7 @@ impl WriteToIr for MacroIrLine {
             self.fallback_body,
         ];
 
-        if entry_already_exists(
-            self,
-            ir_transaction
-        ) {
+        if entry_already_exists(self, ir_transaction) {
             // TODO: set warning that values are overwritten
             let sql_condition = "name = ?1 AND parameters = ?2";
             let sql_set = "um_type = ?3, body = ?4, fallback_body = ?5";
@@ -97,8 +94,7 @@ impl WriteToIr for MacroIrLine {
 }
 
 impl RetrieveFromIr for MacroIrLine {
-
-    fn get_pk_values(&self) -> (String, Vec<& dyn ToSql>) {
+    fn get_pk_values(&self) -> (String, Vec<&dyn ToSql>) {
         let sql_exists_condition = "name = ?1 AND parameters = ?2";
         let exists_params = params![self.name, self.parameters];
         (sql_exists_condition.to_string(), exists_params.to_vec())

@@ -22,7 +22,7 @@ pub trait WriteToIr {
 }
 
 pub trait RetrieveFromIr {
-    fn get_pk_values(&self) -> (String, Vec<& dyn ToSql>);
+    fn get_pk_values(&self) -> (String, Vec<&dyn ToSql>);
     fn from_ir(row: &Row) -> Result<Self, Error>
     where
         Self: Sized + WriteToIr;
@@ -41,9 +41,9 @@ pub fn write_ir_lines(
     Ok(())
 }
 
-pub fn entry_already_exists<T : IrTableName + RetrieveFromIr>(
+pub fn entry_already_exists<T: IrTableName + RetrieveFromIr>(
     ir_line: &T,
-    ir_transaction: &Transaction
+    ir_transaction: &Transaction,
 ) -> bool {
     let (pk_condition, pk_values) = ir_line.get_pk_values();
     let sql = format!(
@@ -51,16 +51,11 @@ pub fn entry_already_exists<T : IrTableName + RetrieveFromIr>(
         T::table_name(),
         pk_condition
     );
-    let params : &[&dyn ToSql] = &pk_values;
-    let res: Result<i64, Error> =
-        ir_transaction.query_row(&sql, params, |row| row.get(0));
-    if res.is_ok() {
-        if res.unwrap() > 0 {
-            return true;
-        }
-        return false;
+    let params: &[&dyn ToSql] = &pk_values;
+    let res: Result<i64, Error> = ir_transaction.query_row(&sql, params, |row| row.get(0));
+    if let Ok(cnt) = res {
+        return cnt > 0;
     }
-    print!("Entry Err: {:?}", res.err());
     false
 }
 
