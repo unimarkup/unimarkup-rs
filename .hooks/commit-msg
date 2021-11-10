@@ -1,0 +1,53 @@
+#!/bin/bash 
+
+# first (and only) argument is whether we abort commit or not
+print_help() {
+    if $1; then
+        echo -e "Aborting commit. Your commit message does not follow the Conventional Commits specification.\n" >&2
+    fi
+
+    echo -e "Commit message structure: \n" >&2
+
+    echo -e "\t<type>[(<optional scope>)]: <description>" >&2
+
+    echo -e "\n\t[<optional body>]" >&2
+
+    echo -e "\n\t[<optional footer>]" >&2
+
+    echo -e "\nWhere '<type>[(<optional scope>)]: <description>' is not longer than 50 characters and <type> is one of:\n" >&2
+
+    echo -e "- fix: Fix a code bug" >&2
+    echo -e "- feat: Add a new feature" >&2
+    echo -e "- ci: Changes to CI configuration files and scripts" >&2
+    echo -e "- build: Changes that affect the build system or external dependencies" >&2
+    echo -e "- chore: Miscellaneous (should only be used for automatically generated commits)" >&2
+    echo -e "- docs: Documentation only changes" >&2
+    echo -e "- style: Changes that do not affect the semantic of the code" >&2
+    echo -e "- refactor: A code change that neither fixes a bug nor adds a feature" >&2
+    echo -e "- perf: A code change that improves performance" >&2
+    echo -e "- test: Adding tests or correcting existing tests" >&2
+    echo -e "- revert: Revert a commit. <description> should be header of reverted commit\n" >&2
+
+    echo -e "NOTE: <type>[(<optional scope)] can be followed by a '!' to indicate breaking change.\n" >&2
+
+    echo -e "Examples: \n" >&2
+    echo -e "feat(frontend): improve log message" >&2
+    echo -e "feat(backend)!: indicate a breaking change" >&2
+    echo -e "fix: fix some bug" >&2
+    echo -e "\nFor more, see: \nhttps://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#-commit-message-guidelines and \nhttps://www.conventionalcommits.org/en/v1.0.0/" >&2
+}
+
+RED="\033[31m"
+YELLOW="\033[33m"
+CLEAR="\033[0m"
+
+if ! head -1 "$1" | grep -qE "^(feat|fix|ci|build|chore|docs|test|style|refactor|perf|revert)(\(.+?\))?[!]?: .{1,}$"; then
+    echo -e "${RED}\nERROR: Given commit type is wrong!${CLEAR}\n" >&2
+    print_help true
+
+    exit 1
+fi
+if ! head -1 "$1" | grep -qE "^.{1,50}$"; then
+    echo -e "${YELLOW}\nWARNING: '<type>[(<optional scope>)]: <description>' should not have more than 50 characters!${CLEAR}\n" >&2
+    print_help false
+fi
