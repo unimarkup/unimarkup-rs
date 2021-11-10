@@ -11,12 +11,10 @@ fn table_exists(conn: &Connection, table: &str, columns: &str) -> bool {
 
     let err = res.err().unwrap();
     match err {
-        QueryReturnedNoRows => {
-            return true;
-        }
+        QueryReturnedNoRows => true,
         _ => {
             println!("ERROR: In table {}. Reason: {}", table, err);
-            return false;
+            false
         }
     }
 }
