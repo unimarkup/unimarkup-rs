@@ -1,6 +1,7 @@
 use super::ir::{IrTableName, RetrieveFromIr};
 use crate::middleend::ir::{entry_already_exists, insert_ir_line_execute, WriteToIr};
 use crate::middleend::middleend_error::UmMiddleendError;
+use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
 #[derive(Debug, PartialEq)]
@@ -48,9 +49,7 @@ impl WriteToIr for ResourceIrLine {
         let column_pk = format!("filename: {} with path: {}", self.filename, self.path);
         let new_values = params![self.filename, self.path];
 
-        let sql_exists_condition = "filename = ?1 AND path = ?2";
-
-        if entry_already_exists(ir_transaction, sql_table, sql_exists_condition, new_values) {
+        if entry_already_exists(self, ir_transaction) {
             // All resources columns are used for private key, no update needed
             return Ok(());
         }
@@ -59,6 +58,13 @@ impl WriteToIr for ResourceIrLine {
 }
 
 impl RetrieveFromIr for ResourceIrLine {
+
+    fn get_pk_values(&self) -> (String, Vec<& dyn ToSql>) {
+        let sql_exists_condition = "filename = ?1 AND path = ?2";
+        let exists_params = params![self.filename, self.path];
+        (sql_exists_condition.to_string(), exists_params.to_vec())
+    }
+
     fn from_ir(row: &Row) -> Result<Self, Error>
     where
         Self: Sized,

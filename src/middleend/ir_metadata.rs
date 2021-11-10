@@ -3,12 +3,12 @@ use crate::middleend::ir::{
     entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
 };
 use crate::middleend::middleend_error::UmMiddleendError;
+use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
-use serde_bytes::ByteBuf;
 
 #[derive(Debug, PartialEq)]
 pub struct MetadataIrLine {
-    pub filehash: ByteBuf,
+    pub filehash: Vec<u8>,
     pub filename: String,
     pub path: String,
     pub preamble: String,
@@ -19,7 +19,7 @@ pub struct MetadataIrLine {
 impl Default for MetadataIrLine {
     fn default() -> Self {
         MetadataIrLine {
-            filehash: ByteBuf::new(),
+            filehash: Vec::new(),
             filename: String::default(),
             path: String::default(),
             preamble: String::default(),
@@ -37,7 +37,7 @@ impl IrTableName for MetadataIrLine {
 
 impl MetadataIrLine {
     pub fn new(
-        filehash: ByteBuf,
+        filehash: Vec<u8>,
         filename: impl Into<String>,
         path: impl Into<String>,
         preamble: impl Into<String>,
@@ -85,14 +85,9 @@ impl WriteToIr for MetadataIrLine {
             self.root,
         ];
 
-        let sql_exists_condition = "filehash = ?1";
-        let exists_params = params![self.filehash.to_vec()];
-
         if entry_already_exists(
-            ir_transaction,
-            sql_table,
-            sql_exists_condition,
-            exists_params,
+            self,
+            ir_transaction
         ) {
             // TODO: set warning that values are overwritten
             let sql_condition = "filehash = ?1";
@@ -113,6 +108,13 @@ impl WriteToIr for MetadataIrLine {
 }
 
 impl RetrieveFromIr for MetadataIrLine {
+
+    fn get_pk_values(&self) -> (String, Vec<& dyn ToSql>) {
+        let sql_exists_condition = "filehash = ?1";
+        let exists_params = params![self.filehash];
+        (sql_exists_condition.to_string(), exists_params.to_vec())
+    }
+
     fn from_ir(row: &Row) -> Result<Self, Error>
     where
         Self: Sized,
@@ -121,7 +123,7 @@ impl RetrieveFromIr for MetadataIrLine {
             return Err(InvalidParameterCount(row.as_ref().column_count(), 6));
         } else {
             Ok(MetadataIrLine::new(
-                ByteBuf::from(row.get::<usize, Vec<u8>>(0)?),
+                row.get::<usize, Vec<u8>>(0)?,
                 row.get::<usize, String>(1)?,
                 row.get::<usize, String>(2)?,
                 row.get::<usize, String>(3)?,

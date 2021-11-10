@@ -3,6 +3,7 @@ use crate::middleend::ir::{
     entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
 };
 use crate::middleend::middleend_error::UmMiddleendError;
+use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 use std::convert::TryInto;
 
@@ -87,14 +88,9 @@ impl WriteToIr for ContentIrLine {
             self.fallback_attributes,
         ];
 
-        let sql_exists_condition = "id = ?1 AND line_nr = ?2";
-        let exists_params = params![self.id, self.line_nr];
-
         if entry_already_exists(
-            ir_transaction,
-            sql_table,
-            sql_exists_condition,
-            exists_params,
+            self,
+            &ir_transaction
         ) {
             // TODO: set warning that values are overwritten
             let sql_condition = "id = ?1 AND line_nr = ?2";
@@ -114,6 +110,13 @@ impl WriteToIr for ContentIrLine {
 }
 
 impl RetrieveFromIr for ContentIrLine {
+
+    fn get_pk_values(&self) -> (String, Vec<& dyn ToSql>) {
+        let sql_exists_condition = "id = ?1 AND line_nr = ?2";
+        let exists_params = params![self.id, self.line_nr];
+        (sql_exists_condition.to_string(), exists_params.to_vec())
+    }
+    
     fn from_ir(row: &Row) -> Result<Self, Error>
     where
         Self: Sized,

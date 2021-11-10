@@ -22,9 +22,10 @@ pub trait WriteToIr {
 }
 
 pub trait RetrieveFromIr {
+    fn get_pk_values(&self) -> (String, Vec<& dyn ToSql>);
     fn from_ir(row: &Row) -> Result<Self, Error>
     where
-        Self: Sized;
+        Self: Sized + WriteToIr;
 }
 
 pub fn write_ir_lines(
@@ -40,23 +41,26 @@ pub fn write_ir_lines(
     Ok(())
 }
 
-pub fn entry_already_exists(
-    ir_transaction: &Transaction,
-    sql_table: &str,
-    sql_condition: &str,
-    params: &[&dyn ToSql],
+pub fn entry_already_exists<T : IrTableName + RetrieveFromIr>(
+    ir_line: &T,
+    ir_transaction: &Transaction
 ) -> bool {
+    let (pk_condition, pk_values) = ir_line.get_pk_values();
     let sql = format!(
-        "SELECT count(*) FROM {} WHERE {} VALUES ({})",
-        sql_table,
-        sql_condition,
-        get_nr_values(params)
+        "SELECT count(*) FROM {} WHERE {}",
+        T::table_name(),
+        pk_condition
     );
-    let res: Result<i64, rusqlite::Error> =
+    let params : &[&dyn ToSql] = &pk_values;
+    let res: Result<i64, Error> =
         ir_transaction.query_row(&sql, params, |row| row.get(0));
     if res.is_ok() {
-        return true;
+        if res.unwrap() > 0 {
+            return true;
+        }
+        return false;
     }
+    print!("Entry Err: {:?}", res.err());
     false
 }
 
@@ -122,7 +126,7 @@ pub fn update_ir_line_execute(
     Ok(())
 }
 
-pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName>(
+pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName + WriteToIr>(
     ir_transaction: &Transaction,
     sql_pk_condition: &str,
     sql_pk_params: &[&dyn ToSql],
