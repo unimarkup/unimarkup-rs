@@ -8,6 +8,7 @@ mod middleend {
     mod ir_metadata;
     mod ir_resources;
     mod ir_setup;
+    mod ir_test_setup;
     mod ir_variables;
 }
 
