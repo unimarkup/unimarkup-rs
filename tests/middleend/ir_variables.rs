@@ -1,5 +1,5 @@
 use unimarkup_rs::middleend::ir::{get_single_ir_line, WriteToIr};
-use unimarkup_rs::middleend::ir_macros::MacroIrLine;
+use unimarkup_rs::middleend::ir_variables::VariableIrLine;
 use unimarkup_rs::middleend::ir_setup::{setup_ir, setup_ir_connection};
 
 #[test]
@@ -15,20 +15,20 @@ fn test_single_write_retrieve() {
     assert!(transaction_res.is_ok(), "Cause: {:?}", transaction_res.err());
     let transaction = transaction_res.unwrap();
 
-    let first_macro = MacroIrLine::new("test", "{%{ list }val1 %{ paragraph } val2}", "paragraph", "test", "");
+    let first_variable = VariableIrLine::new("test", "paragraph", "test paragraph", "");
 
-    let write_res = first_macro.write_to_ir(&transaction);
+    let write_res = first_variable.write_to_ir(&transaction);
     assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
 
-    let retrieved_macro_res = get_single_ir_line::<MacroIrLine>(
+    let retrieved_variable_res = get_single_ir_line::<VariableIrLine>(
         &transaction,
         &format!(
-            "name = '{}' AND parameters = '{}'",
-            first_macro.name, first_macro.parameters
+            "name = '{}'",
+            first_variable.name
         ),
     );
-    assert!(retrieved_macro_res.is_ok(), "Cause: {:?}", retrieved_macro_res.err());
+    assert!(retrieved_variable_res.is_ok(), "Cause: {:?}", retrieved_variable_res.err());
 
-    let retrieved_first_macro = retrieved_macro_res.unwrap();
-    assert_eq!(first_macro, retrieved_first_macro);
+    let retrieved_first_variable = retrieved_variable_res.unwrap();
+    assert_eq!(first_variable, retrieved_first_variable);
 }

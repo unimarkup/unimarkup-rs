@@ -1,11 +1,11 @@
-use super::ir::IrTableName;
+use super::ir::{IrTableName, RetrieveFromIr};
 use crate::middleend::ir::{
     entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
 };
 use crate::middleend::middleend_error::UmMiddleendError;
-use rusqlite::{params, Transaction};
+use rusqlite::{Error, Row, Transaction, params, Error::InvalidParameterCount};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct VariableIrLine {
     pub name: String,
     pub um_type: String,
@@ -63,7 +63,7 @@ impl WriteToIr for VariableIrLine {
         let column_pk = format!("name: {}", self.name);
         let new_values = params![self.name, self.um_type, self.value, self.fallback_value,];
 
-        let sql_exists_condition = "name = ?1";
+        let sql_exists_condition = "name = '?1'";
         let exists_params = params![self.name];
 
         if entry_already_exists(
@@ -73,8 +73,8 @@ impl WriteToIr for VariableIrLine {
             exists_params,
         ) {
             // TODO: set warning that values are overwritten
-            let sql_condition = "name = ?1";
-            let sql_set = "um_type = ?2, value = ?3, fallback_value = ?4";
+            let sql_condition = "name = '?1'";
+            let sql_set = "um_type = '?2', value = '?3', fallback_value = '?4'";
             update_ir_line_execute(
                 ir_transaction,
                 sql_table,
@@ -85,6 +85,24 @@ impl WriteToIr for VariableIrLine {
             )
         } else {
             insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
+        }
+    }
+}
+
+impl RetrieveFromIr for VariableIrLine {
+    fn from_ir(row: &Row) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        if row.as_ref().column_count() != 4 {
+            return Err(InvalidParameterCount(row.as_ref().column_count(), 4));
+        } else {
+            Ok(VariableIrLine::new(
+                row.get::<usize, String>(0)?,
+                row.get::<usize, String>(1)?,
+                row.get::<usize, String>(2)?,
+                row.get::<usize, String>(3)?              
+            ))
         }
     }
 }
