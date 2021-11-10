@@ -1,15 +1,16 @@
+use super::ir::{IrTableName, RetrieveFromIr};
 use crate::middleend::ir::{
     entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
 };
 use crate::middleend::middleend_error::UmMiddleendError;
-use rusqlite::{params, Transaction};
-use super::ir::IrTableName;
+use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
+use std::convert::TryInto;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ContentIrLine {
     pub id: String,
-    pub um_type: String,
     pub line_nr: usize,
+    pub um_type: String,
     pub text: String,
     pub fallback_text: String,
     pub attributes: String,
@@ -20,8 +21,8 @@ impl Default for ContentIrLine {
     fn default() -> Self {
         ContentIrLine {
             id: String::from("0"),
-            um_type: String::default(),
             line_nr: 0,
+            um_type: String::default(),
             text: String::default(),
             fallback_text: String::default(),
             attributes: String::default(),
@@ -39,8 +40,8 @@ impl IrTableName for ContentIrLine {
 impl ContentIrLine {
     pub fn new(
         id: impl Into<String>,
-        um_type: impl Into<String>,
         line_nr: usize,
+        um_type: impl Into<String>,
         text: impl Into<String>,
         fallback_text: impl Into<String>,
         attributes: impl Into<String>,
@@ -48,8 +49,8 @@ impl ContentIrLine {
     ) -> Self {
         ContentIrLine {
             id: id.into(),
-            um_type: um_type.into(),
             line_nr,
+            um_type: um_type.into(),
             text: text.into(),
             fallback_text: fallback_text.into(),
             attributes: attributes.into(),
@@ -86,7 +87,7 @@ impl WriteToIr for ContentIrLine {
             self.fallback_attributes,
         ];
 
-        let sql_exists_condition = "id = ?1 AND line_nr = ?2";
+        let sql_exists_condition = "id = '?1' AND line_nr = ?2";
         let exists_params = params![self.id, self.line_nr];
 
         if entry_already_exists(
@@ -96,8 +97,8 @@ impl WriteToIr for ContentIrLine {
             exists_params,
         ) {
             // TODO: set warning that values are overwritten
-            let sql_condition = "id = ?1 AND line_nr = ?2";
-            let sql_set = "um_type = ?3, text = ?4, fallback_text = ?5, attributes = ?6, fallback_attributes = ?7";
+            let sql_condition = "id = '?1' AND line_nr = ?2";
+            let sql_set = "um_type = '?3', text = '?4', fallback_text = '?5', attributes = '?6', fallback_attributes = '?7'";
             update_ir_line_execute(
                 ir_transaction,
                 sql_table,
@@ -108,6 +109,27 @@ impl WriteToIr for ContentIrLine {
             )
         } else {
             insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
+        }
+    }
+}
+
+impl RetrieveFromIr for ContentIrLine {
+    fn from_ir(row: &Row) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        if row.as_ref().column_count() != 7 {
+            return Err(InvalidParameterCount(row.as_ref().column_count(), 7));
+        } else {
+            Ok(ContentIrLine::new(
+                row.get::<usize, String>(0)?,
+                row.get::<usize, i64>(1)?.try_into().unwrap(),
+                row.get::<usize, String>(2)?,
+                row.get::<usize, String>(3)?,
+                row.get::<usize, String>(4)?,
+                row.get::<usize, String>(5)?,
+                row.get::<usize, String>(6)?,
+            ))
         }
     }
 }

@@ -152,8 +152,8 @@ impl ParseForIr for HeadingBlock {
 
         let line = ContentIrLine::new(
             &self.id,
-            um_type,
             line_nr,
+            um_type,
             &self.content,
             "",
             &self.attributes,

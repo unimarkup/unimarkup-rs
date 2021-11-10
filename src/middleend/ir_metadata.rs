@@ -1,10 +1,10 @@
+use super::ir::IrTableName;
 use crate::middleend::ir::{
     entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
 };
 use crate::middleend::middleend_error::UmMiddleendError;
 use rusqlite::{params, Transaction};
 use serde_bytes::ByteBuf;
-use super::ir::IrTableName;
 
 #[derive(Debug)]
 pub struct MetadataIrLine {

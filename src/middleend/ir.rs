@@ -2,7 +2,7 @@ use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
 use crate::middleend::ir_block::IrBlock;
 use crate::middleend::ir_content::ContentIrLine;
 use crate::middleend::middleend_error::UmMiddleendError;
-use rusqlite::{ToSql, Transaction};
+use rusqlite::{Error, Row, ToSql, Transaction};
 
 pub trait ParseForIr {
     fn parse_for_ir(
@@ -19,6 +19,12 @@ pub trait IrTableName {
 
 pub trait WriteToIr {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError>;
+}
+
+pub trait RetrieveFromIr {
+    fn from_ir(row: &Row) -> Result<Self, Error>
+    where
+        Self: Sized;
 }
 
 pub fn write_ir_lines(
@@ -41,8 +47,10 @@ pub fn entry_already_exists(
     params: &[&dyn ToSql],
 ) -> bool {
     let sql = format!(
-        "SELECT count(*) FROM {} WHERE {} VALUES (?)",
-        sql_table, sql_condition
+        "SELECT count(*) FROM {} WHERE {} VALUES ({})",
+        sql_table,
+        sql_condition,
+        get_nr_values(params)
     );
     let res: Result<i64, rusqlite::Error> =
         ir_transaction.query_row(&sql, params, |row| row.get(0));
@@ -52,19 +60,36 @@ pub fn entry_already_exists(
     false
 }
 
+fn get_nr_values(params: &[&dyn ToSql]) -> String {
+    let mut s = String::new();
+    for (i, _) in params.iter().enumerate() {
+        s.push_str(&format!("?{},", i + 1));
+    }
+    s.replace_range(s.len() - 1.., ""); // strip last ,
+    s
+}
+
 pub fn insert_ir_line_execute(
     ir_transaction: &Transaction,
     sql_table: &str,
     params: &[&dyn ToSql],
     column: &str,
 ) -> Result<(), UmMiddleendError> {
-    let sql = format!("INSERT INTO {} VALUES (?)", sql_table);
+    let sql = format!(
+        "INSERT INTO {} VALUES ({})",
+        sql_table,
+        get_nr_values(params)
+    );
 
-    if ir_transaction.execute(&sql, params).is_err() {
+    let execute_res = ir_transaction.execute(&sql, params);
+    if execute_res.is_err() {
         return Err(UmMiddleendError {
             tablename: sql_table.to_string(),
             column: column.to_string(),
-            message: "Could not insert values on given database connection".to_string(),
+            message: format!(
+                "Could not insert values on given database connection. Reason: {:?}",
+                execute_res.err()
+            ),
         });
     }
     Ok(())
@@ -83,13 +108,40 @@ pub fn update_ir_line_execute(
         sql_table, sql_set, sql_condition
     );
 
-    if ir_transaction.execute(&sql, params).is_err() {
+    let execute_res = ir_transaction.execute(&sql, params);
+    if execute_res.is_err() {
         return Err(UmMiddleendError {
             tablename: sql_table.to_string(),
             column: column.to_string(),
-            message: "Could not update values on given database connection".to_string(),
+            message: format!(
+                "Could not update values on given database connection. Reason: {:?}",
+                execute_res.err()
+            ),
         });
     }
     Ok(())
 }
 
+pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName>(
+    ir_transaction: &Transaction,
+    sql_pk_condition: &str,
+) -> Result<T, UmMiddleendError> {
+    let sql = format!(
+        "SELECT * FROM {} WHERE {}",
+        T::table_name(),
+        sql_pk_condition
+    );
+    let res_query = ir_transaction.query_row(&sql, [], |row| T::from_ir(row));
+
+    match res_query {
+        Ok(res) => Ok(res),
+        Err(err) => Err(UmMiddleendError {
+            tablename: T::table_name(),
+            column: sql_pk_condition.to_string(),
+            message: format!(
+                "Failed getting single IrLine from given database connection. Reason: {:?}",
+                err
+            ),
+        }),
+    }
+}

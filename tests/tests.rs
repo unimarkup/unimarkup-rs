@@ -3,6 +3,7 @@ mod frontend {
 }
 
 mod middleend {
+    mod ir_content;
     mod ir_setup;
 }
 
