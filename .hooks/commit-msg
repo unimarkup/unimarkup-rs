@@ -14,7 +14,7 @@ print_help() {
 
     echo -e "\n\t[<optional footer>]" >&2
 
-    echo -e "\nWhere '<type>[(<optional scope>)]: <description>' is not longer than 50 characters and <type> is one of:" >&2
+    echo -e "\nWhere '<type>[(<optional scope>)]: <description>' is not longer than 50 characters and <type> is one of:\n" >&2
 
     echo -e "- fix: Fix a code bug" >&2
     echo -e "- feat: Add a new feature" >&2
@@ -25,20 +25,23 @@ print_help() {
     echo -e "- style: Changes that do not affect the semantic of the code" >&2
     echo -e "- refactor: A code change that neither fixes a bug nor adds a feature" >&2
     echo -e "- perf: A code change that improves performance" >&2
-    echo -e "- test: Adding tests or correcting existing tests\n" >&2
+    echo -e "- test: Adding tests or correcting existing tests" >&2
     echo -e "- revert: Revert a commit. <description> should be header of reverted commit\n" >&2
 
+    echo -e "NOTE: <type>[(<optional scope)] can be followed by a '!' to indicate breaking change.\n" >&2
+
     echo -e "Examples: \n" >&2
-    echo -e "feat(logging): improve log message" >&2
+    echo -e "feat(frontend): improve log message" >&2
+    echo -e "feat(backend)!: indicate a breaking change" >&2
     echo -e "fix: fix some bug" >&2
-    echo -e "\nFor more, see: https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#-commit-message-guidelines and https://www.conventionalcommits.org/en/v1.0.0/" >&2
+    echo -e "\nFor more, see: \nhttps://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#-commit-message-guidelines and \nhttps://www.conventionalcommits.org/en/v1.0.0/" >&2
 }
 
 RED="\033[31m"
 YELLOW="\033[33m"
 CLEAR="\033[0m"
 
-if ! head -1 "$1" | grep -qE "^(feat|fix|ci|build|chore|docs|test|style|refactor|perf|revert)(\(.+?\))?: .{1,}$"; then
+if ! head -1 "$1" | grep -qE "^(feat|fix|ci|build|chore|docs|test|style|refactor|perf|revert)(\(.+?\))?[!]?: .{1,}$"; then
     echo -e "${RED}\nERROR: Given commit type is wrong!${CLEAR}\n" >&2
     print_help true
 
