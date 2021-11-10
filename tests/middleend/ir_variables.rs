@@ -1,7 +1,7 @@
 use rusqlite::params;
 use unimarkup_rs::middleend::ir::{get_single_ir_line, WriteToIr};
-use unimarkup_rs::middleend::ir_variables::VariableIrLine;
 use unimarkup_rs::middleend::ir_setup::{setup_ir, setup_ir_connection};
+use unimarkup_rs::middleend::ir_variables::VariableIrLine;
 
 #[test]
 fn test_single_write_retrieve() {
@@ -13,7 +13,11 @@ fn test_single_write_retrieve() {
     assert!(setup_res.is_ok(), "Cause: {:?}", setup_res.err());
 
     let transaction_res = conn.transaction();
-    assert!(transaction_res.is_ok(), "Cause: {:?}", transaction_res.err());
+    assert!(
+        transaction_res.is_ok(),
+        "Cause: {:?}",
+        transaction_res.err()
+    );
     let transaction = transaction_res.unwrap();
 
     let first_variable = VariableIrLine::new("test", "paragraph", "test paragraph", "");
@@ -26,7 +30,11 @@ fn test_single_write_retrieve() {
         "name = ?1",
         params![first_variable.name],
     );
-    assert!(retrieved_variable_res.is_ok(), "Cause: {:?}", retrieved_variable_res.err());
+    assert!(
+        retrieved_variable_res.is_ok(),
+        "Cause: {:?}",
+        retrieved_variable_res.err()
+    );
 
     let retrieved_first_variable = retrieved_variable_res.unwrap();
     assert_eq!(first_variable, retrieved_first_variable);

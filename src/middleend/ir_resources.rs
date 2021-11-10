@@ -1,9 +1,9 @@
-use super::ir::IrTableName;
+use super::ir::{IrTableName, RetrieveFromIr};
 use crate::middleend::ir::{entry_already_exists, insert_ir_line_execute, WriteToIr};
 use crate::middleend::middleend_error::UmMiddleendError;
-use rusqlite::{params, Transaction};
+use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ResourceIrLine {
     pub filename: String,
     pub path: String,
@@ -55,5 +55,21 @@ impl WriteToIr for ResourceIrLine {
             return Ok(());
         }
         insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
+    }
+}
+
+impl RetrieveFromIr for ResourceIrLine {
+    fn from_ir(row: &Row) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        if row.as_ref().column_count() != 2 {
+            return Err(InvalidParameterCount(row.as_ref().column_count(), 2));
+        } else {
+            Ok(ResourceIrLine::new(
+                row.get::<usize, String>(0)?,
+                row.get::<usize, String>(1)?,
+            ))
+        }
     }
 }

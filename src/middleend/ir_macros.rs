@@ -3,7 +3,7 @@ use crate::middleend::ir::{
     entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
 };
 use crate::middleend::middleend_error::UmMiddleendError;
-use rusqlite::{Error, Row, Transaction, params, Error::InvalidParameterCount};
+use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
 #[derive(Debug, PartialEq)]
 pub struct MacroIrLine {
@@ -113,7 +113,7 @@ impl RetrieveFromIr for MacroIrLine {
                 row.get::<usize, String>(1)?,
                 row.get::<usize, String>(2)?,
                 row.get::<usize, String>(3)?,
-                row.get::<usize, String>(4)?                
+                row.get::<usize, String>(4)?,
             ))
         }
     }

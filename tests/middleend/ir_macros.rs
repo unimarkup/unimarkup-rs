@@ -13,10 +13,20 @@ fn test_single_write_retrieve() {
     assert!(setup_res.is_ok(), "Cause: {:?}", setup_res.err());
 
     let transaction_res = conn.transaction();
-    assert!(transaction_res.is_ok(), "Cause: {:?}", transaction_res.err());
+    assert!(
+        transaction_res.is_ok(),
+        "Cause: {:?}",
+        transaction_res.err()
+    );
     let transaction = transaction_res.unwrap();
 
-    let first_macro = MacroIrLine::new("test", "{%{ list }val1 %{ paragraph } val2}", "paragraph", "test", "");
+    let first_macro = MacroIrLine::new(
+        "test",
+        "{%{ list }val1 %{ paragraph } val2}",
+        "paragraph",
+        "test",
+        "",
+    );
 
     let write_res = first_macro.write_to_ir(&transaction);
     assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
@@ -26,7 +36,11 @@ fn test_single_write_retrieve() {
         "name = ?1 AND parameters = ?2",
         params![first_macro.name, first_macro.parameters],
     );
-    assert!(retrieved_macro_res.is_ok(), "Cause: {:?}", retrieved_macro_res.err());
+    assert!(
+        retrieved_macro_res.is_ok(),
+        "Cause: {:?}",
+        retrieved_macro_res.err()
+    );
 
     let retrieved_first_macro = retrieved_macro_res.unwrap();
     assert_eq!(first_macro, retrieved_first_macro);

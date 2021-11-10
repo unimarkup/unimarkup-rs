@@ -5,9 +5,10 @@ mod frontend {
 mod middleend {
     mod ir_content;
     mod ir_macros;
-    mod ir_variables;
     mod ir_metadata;
+    mod ir_resources;
     mod ir_setup;
+    mod ir_variables;
 }
 
 mod um_elements {

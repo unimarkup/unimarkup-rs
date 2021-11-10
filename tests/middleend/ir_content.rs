@@ -13,7 +13,11 @@ fn test_single_write_retrieve() {
     assert!(setup_res.is_ok(), "Cause: {:?}", setup_res.err());
 
     let transaction_res = conn.transaction();
-    assert!(transaction_res.is_ok(), "Cause: {:?}", transaction_res.err());
+    assert!(
+        transaction_res.is_ok(),
+        "Cause: {:?}",
+        transaction_res.err()
+    );
     let transaction = transaction_res.unwrap();
 
     let first_content = ContentIrLine::new("1", 1, "paragraph", "test", "", "{}", "");
@@ -26,7 +30,11 @@ fn test_single_write_retrieve() {
         "id = ?1 AND line_nr = ?2",
         params![first_content.id, first_content.line_nr],
     );
-    assert!(retrieved_content_res.is_ok(), "Cause: {:?}", retrieved_content_res.err());
+    assert!(
+        retrieved_content_res.is_ok(),
+        "Cause: {:?}",
+        retrieved_content_res.err()
+    );
 
     let retrieved_first_content = retrieved_content_res.unwrap();
     assert_eq!(first_content, retrieved_first_content);
