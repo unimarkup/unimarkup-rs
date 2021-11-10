@@ -24,11 +24,11 @@ fn table_exists(conn: &Connection, table: &str, columns: &str) -> bool {
 #[test]
 fn test_ir_setup() {
     let res_conn = setup_ir_connection();
-    assert!(res_conn.is_ok());
+    assert!(res_conn.is_ok(), "Cause: {:?}", res_conn.err());
     let conn = res_conn.unwrap();
 
     let setup_res = setup_ir(&conn);
-    assert!(setup_res.is_ok());
+    assert!(setup_res.is_ok(), "Cause: {:?}", setup_res.err());
 
     let sql_content_columns =
         "id, line_nr, um_type, text, fallback_text, attributes, fallback_attributes";
@@ -47,5 +47,5 @@ fn test_ir_setup() {
     assert!(table_exists(&conn, "resources", sql_resources_columns));
 
     let res_close = conn.close();
-    assert!(res_close.is_ok());
+    assert!(res_close.is_ok(), "Cause: {:?}", res_close.err());
 }
