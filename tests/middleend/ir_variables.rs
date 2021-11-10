@@ -1,3 +1,4 @@
+use rusqlite::params;
 use unimarkup_rs::middleend::ir::{get_single_ir_line, WriteToIr};
 use unimarkup_rs::middleend::ir_variables::VariableIrLine;
 use unimarkup_rs::middleend::ir_setup::{setup_ir, setup_ir_connection};
@@ -22,10 +23,8 @@ fn test_single_write_retrieve() {
 
     let retrieved_variable_res = get_single_ir_line::<VariableIrLine>(
         &transaction,
-        &format!(
-            "name = '{}'",
-            first_variable.name
-        ),
+        "name = ?1",
+        params![first_variable.name],
     );
     assert!(retrieved_variable_res.is_ok(), "Cause: {:?}", retrieved_variable_res.err());
 

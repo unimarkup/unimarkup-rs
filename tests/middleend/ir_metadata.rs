@@ -1,7 +1,8 @@
 use rusqlite::params;
 use unimarkup_rs::middleend::ir::{get_single_ir_line, WriteToIr};
-use unimarkup_rs::middleend::ir_macros::MacroIrLine;
+use unimarkup_rs::middleend::ir_metadata::MetadataIrLine;
 use unimarkup_rs::middleend::ir_setup::{setup_ir, setup_ir_connection};
+use serde_bytes::ByteBuf;
 
 #[test]
 fn test_single_write_retrieve() {
@@ -16,15 +17,15 @@ fn test_single_write_retrieve() {
     assert!(transaction_res.is_ok(), "Cause: {:?}", transaction_res.err());
     let transaction = transaction_res.unwrap();
 
-    let first_macro = MacroIrLine::new("test", "{%{ list }val1 %{ paragraph } val2}", "paragraph", "test", "");
+    let first_macro = MetadataIrLine::new(ByteBuf::from(b"ccdec233ff78".to_vec()), "test.um", ".", "{}", "", true);
 
     let write_res = first_macro.write_to_ir(&transaction);
     assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
 
-    let retrieved_macro_res = get_single_ir_line::<MacroIrLine>(
+    let retrieved_macro_res = get_single_ir_line::<MetadataIrLine>(
         &transaction,
-        "name = ?1 AND parameters = ?2",
-        params![first_macro.name, first_macro.parameters],
+        "filehash = ?1",
+				params![first_macro.filehash.to_vec()],
     );
     assert!(retrieved_macro_res.is_ok(), "Cause: {:?}", retrieved_macro_res.err());
 

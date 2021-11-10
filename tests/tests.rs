@@ -6,6 +6,7 @@ mod middleend {
     mod ir_content;
     mod ir_macros;
     mod ir_variables;
+    mod ir_metadata;
     mod ir_setup;
 }
 

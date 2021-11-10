@@ -73,8 +73,8 @@ impl WriteToIr for VariableIrLine {
             exists_params,
         ) {
             // TODO: set warning that values are overwritten
-            let sql_condition = "name = '?1'";
-            let sql_set = "um_type = '?2', value = '?3', fallback_value = '?4'";
+            let sql_condition = "name = ?1";
+            let sql_set = "um_type = ?2, value = ?3, fallback_value = ?4";
             update_ir_line_execute(
                 ir_transaction,
                 sql_table,

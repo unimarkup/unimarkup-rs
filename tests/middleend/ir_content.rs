@@ -1,3 +1,4 @@
+use rusqlite::params;
 use unimarkup_rs::middleend::ir::{get_single_ir_line, WriteToIr};
 use unimarkup_rs::middleend::ir_content::ContentIrLine;
 use unimarkup_rs::middleend::ir_setup::{setup_ir, setup_ir_connection};
@@ -22,10 +23,8 @@ fn test_single_write_retrieve() {
 
     let retrieved_content_res = get_single_ir_line::<ContentIrLine>(
         &transaction,
-        &format!(
-            "id = '{}' AND line_nr = {}",
-            first_content.id, first_content.line_nr
-        ),
+        "id = ?1 AND line_nr = ?2",
+        params![first_content.id, first_content.line_nr],
     );
     assert!(retrieved_content_res.is_ok(), "Cause: {:?}", retrieved_content_res.err());
 

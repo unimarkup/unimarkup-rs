@@ -87,7 +87,7 @@ impl WriteToIr for ContentIrLine {
             self.fallback_attributes,
         ];
 
-        let sql_exists_condition = "id = '?1' AND line_nr = ?2";
+        let sql_exists_condition = "id = ?1 AND line_nr = ?2";
         let exists_params = params![self.id, self.line_nr];
 
         if entry_already_exists(
@@ -97,8 +97,8 @@ impl WriteToIr for ContentIrLine {
             exists_params,
         ) {
             // TODO: set warning that values are overwritten
-            let sql_condition = "id = '?1' AND line_nr = ?2";
-            let sql_set = "um_type = '?3', text = '?4', fallback_text = '?5', attributes = '?6', fallback_attributes = '?7'";
+            let sql_condition = "id = ?1 AND line_nr = ?2";
+            let sql_set = "um_type = ?3, text = ?4, fallback_text = ?5, attributes = ?6, fallback_attributes = ?7";
             update_ir_line_execute(
                 ir_transaction,
                 sql_table,

@@ -74,7 +74,7 @@ impl WriteToIr for MacroIrLine {
             self.fallback_body,
         ];
 
-        let sql_exists_condition = "name = '?1' AND parameters = '?2'";
+        let sql_exists_condition = "name = ?1 AND parameters = ?2";
         let exists_params = params![self.name, self.parameters];
 
         if entry_already_exists(
@@ -84,8 +84,8 @@ impl WriteToIr for MacroIrLine {
             exists_params,
         ) {
             // TODO: set warning that values are overwritten
-            let sql_condition = "name = '?1' AND parameters = '?2'";
-            let sql_set = "um_type = '?3', body = '?4', fallback_body = '?5'";
+            let sql_condition = "name = ?1 AND parameters = ?2";
+            let sql_set = "um_type = ?3, body = ?4, fallback_body = ?5";
             update_ir_line_execute(
                 ir_transaction,
                 sql_table,

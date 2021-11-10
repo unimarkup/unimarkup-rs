@@ -125,13 +125,14 @@ pub fn update_ir_line_execute(
 pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName>(
     ir_transaction: &Transaction,
     sql_pk_condition: &str,
+    sql_pk_params: &[&dyn ToSql],
 ) -> Result<T, UmMiddleendError> {
     let sql = format!(
         "SELECT * FROM {} WHERE {}",
         T::table_name(),
         sql_pk_condition
     );
-    let res_query = ir_transaction.query_row(&sql, [], |row| T::from_ir(row));
+    let res_query = ir_transaction.query_row(&sql, sql_pk_params, |row| T::from_ir(row));
 
     match res_query {
         Ok(res) => Ok(res),

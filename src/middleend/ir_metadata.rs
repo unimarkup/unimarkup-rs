@@ -1,15 +1,15 @@
-use super::ir::IrTableName;
+use super::ir::{IrTableName, RetrieveFromIr};
 use crate::middleend::ir::{
     entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
 };
 use crate::middleend::middleend_error::UmMiddleendError;
-use rusqlite::{params, Transaction};
+use rusqlite::{Error, Row, Transaction, params, Error::InvalidParameterCount};
 use serde_bytes::ByteBuf;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct MetadataIrLine {
-    pub filename: String,
     pub filehash: ByteBuf,
+    pub filename: String,
     pub path: String,
     pub preamble: String,
     pub fallback_preamble: String,
@@ -19,8 +19,8 @@ pub struct MetadataIrLine {
 impl Default for MetadataIrLine {
     fn default() -> Self {
         MetadataIrLine {
-            filename: String::default(),
             filehash: ByteBuf::new(),
+            filename: String::default(),
             path: String::default(),
             preamble: String::default(),
             fallback_preamble: String::default(),
@@ -37,16 +37,16 @@ impl IrTableName for MetadataIrLine {
 
 impl MetadataIrLine {
     pub fn new(
-        filename: impl Into<String>,
         filehash: ByteBuf,
+        filename: impl Into<String>,
         path: impl Into<String>,
         preamble: impl Into<String>,
         fallback_preamble: impl Into<String>,
         root: bool,
     ) -> Self {
         MetadataIrLine {
-            filename: filename.into(),
             filehash,
+            filename: filename.into(),
             path: path.into(),
             preamble: preamble.into(),
             fallback_preamble: fallback_preamble.into(),
@@ -108,6 +108,26 @@ impl WriteToIr for MetadataIrLine {
             )
         } else {
             insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
+        }
+    }
+}
+
+impl RetrieveFromIr for MetadataIrLine {
+    fn from_ir(row: &Row) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        if row.as_ref().column_count() != 6 {
+            return Err(InvalidParameterCount(row.as_ref().column_count(), 6));
+        } else {
+            Ok(MetadataIrLine::new(
+                ByteBuf::from(row.get::<usize, Vec<u8>>(0)?),
+                row.get::<usize, String>(1)?,  
+                row.get::<usize, String>(2)?,
+                row.get::<usize, String>(3)?,
+                row.get::<usize, String>(4)?,
+                row.get::<usize, bool>(5)?     
+            ))
         }
     }
 }
