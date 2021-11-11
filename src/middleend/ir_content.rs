@@ -4,8 +4,8 @@ use crate::middleend::ir::{
 };
 use crate::middleend::middleend_error::UmMiddleendError;
 use log::warn;
-use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
+use rusqlite::{Connection, Statement, ToSql};
 use std::convert::TryInto;
 
 #[derive(Debug, PartialEq)]
@@ -135,4 +135,17 @@ impl RetrieveFromIr for ContentIrLine {
             ))
         }
     }
+}
+
+pub fn prepare_content_rows(ir_connection: &Connection, order: bool) -> Result<Statement, Error> {
+    let mut sql_order = "";
+    if order {
+        sql_order = "ORDER BY line_nr ASC";
+    }
+    let sql = format!(
+        "SELECT * FROM {} {}",
+        ContentIrLine::table_name(),
+        sql_order
+    );
+    ir_connection.prepare(&sql)
 }
