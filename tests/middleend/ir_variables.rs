@@ -1,5 +1,4 @@
-use rusqlite::params;
-use unimarkup_rs::middleend::ir::{get_single_ir_line, WriteToIr};
+use unimarkup_rs::middleend::ir::{get_single_ir_line, RetrieveFromIr, WriteToIr};
 use unimarkup_rs::middleend::ir_variables::VariableIrLine;
 
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
@@ -19,11 +18,8 @@ fn test_single_write_retrieve() {
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
-    let retrieved_variable_res = get_single_ir_line::<VariableIrLine>(
-        &transaction,
-        "name = ?1",
-        params![first_variable.name],
-    );
+    let retrieved_variable_res =
+        get_single_ir_line::<VariableIrLine>(&transaction, first_variable.get_pk_values());
     let commit_res = transaction.commit();
 
     assert!(

@@ -1,5 +1,4 @@
-use rusqlite::params;
-use unimarkup_rs::middleend::ir::{get_single_ir_line, WriteToIr};
+use unimarkup_rs::middleend::ir::{get_single_ir_line, RetrieveFromIr, WriteToIr};
 use unimarkup_rs::middleend::ir_metadata::MetadataIrLine;
 
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
@@ -20,11 +19,8 @@ fn test_single_write_retrieve() {
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
-    let retrieved_metadata_res = get_single_ir_line::<MetadataIrLine>(
-        &transaction,
-        "filehash = ?1",
-        params![first_metadata.filehash.to_vec()],
-    );
+    let retrieved_metadata_res =
+        get_single_ir_line::<MetadataIrLine>(&transaction, first_metadata.get_pk_values());
     let commit_res = transaction.commit();
 
     assert!(

@@ -1,5 +1,6 @@
-use rusqlite::params;
-use unimarkup_rs::middleend::ir::{entry_already_exists, get_single_ir_line, WriteToIr};
+use unimarkup_rs::middleend::ir::{
+    entry_already_exists, get_single_ir_line, RetrieveFromIr, WriteToIr,
+};
 use unimarkup_rs::middleend::ir_content::ContentIrLine;
 
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
@@ -19,11 +20,8 @@ fn test_single_write_retrieve() {
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
-    let retrieved_content_res = get_single_ir_line::<ContentIrLine>(
-        &transaction,
-        "id = ?1 AND line_nr = ?2",
-        params![first_content.id, first_content.line_nr],
-    );
+    let retrieved_content_res =
+        get_single_ir_line::<ContentIrLine>(&transaction, first_content.get_pk_values());
     let commit_res = transaction.commit();
 
     assert!(
@@ -106,11 +104,8 @@ fn test_write_update() {
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
-    let retrieved_content_res = get_single_ir_line::<ContentIrLine>(
-        &transaction,
-        "id = ?1 AND line_nr = ?2",
-        params![first_content.id, first_content.line_nr], // primary key unchanged
-    );
+    let retrieved_content_res =
+        get_single_ir_line::<ContentIrLine>(&transaction, first_content.get_pk_values());
     let commit_res = transaction.commit();
 
     assert!(

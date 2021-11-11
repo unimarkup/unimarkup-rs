@@ -84,7 +84,7 @@ impl WriteToIr for VariableIrLine {
 
 impl RetrieveFromIr for VariableIrLine {
     fn get_pk_values(&self) -> (String, Vec<&dyn ToSql>) {
-        let sql_exists_condition = "name = '?1'";
+        let sql_exists_condition = "name = ?1";
         let exists_params = params![self.name];
         (sql_exists_condition.to_string(), exists_params.to_vec())
     }
