@@ -41,7 +41,7 @@ fn test_entry_exists() {
     let mut conn = setup_test_ir();
     let first_content = ContentIrLine::new("1", 1, "paragraph", "test", "", "{}", "");
 
-    //--- ENTRY EXISTS IN IR --------------------------------------------------------
+    //--- ENTRY NOT IN IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
 
     assert!(
