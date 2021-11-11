@@ -3,6 +3,7 @@ use crate::middleend::ir::{
     entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
 };
 use crate::middleend::middleend_error::UmMiddleendError;
+use log::info;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
@@ -65,7 +66,7 @@ impl WriteToIr for VariableIrLine {
         let new_values = params![self.name, self.um_type, self.value, self.fallback_value,];
 
         if entry_already_exists(self, ir_transaction) {
-            // TODO: set warning that values are overwritten
+            info!("Variable '{}' is overwritten.", self.name);
             let sql_condition = "name = ?1";
             let sql_set = "um_type = ?2, value = ?3, fallback_value = ?4";
             update_ir_line_execute(

@@ -3,6 +3,7 @@ use crate::middleend::ir::{
     entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
 };
 use crate::middleend::middleend_error::UmMiddleendError;
+use log::info;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
@@ -76,7 +77,10 @@ impl WriteToIr for MacroIrLine {
         ];
 
         if entry_already_exists(self, ir_transaction) {
-            // TODO: set warning that values are overwritten
+            info!(
+                "Macro with name: '{}' and parameters: '{}' is overwritten.",
+                self.name, self.parameters
+            );
             let sql_condition = "name = ?1 AND parameters = ?2";
             let sql_set = "um_type = ?3, body = ?4, fallback_body = ?5";
             update_ir_line_execute(

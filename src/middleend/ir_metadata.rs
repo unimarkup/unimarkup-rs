@@ -3,6 +3,7 @@ use crate::middleend::ir::{
     entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
 };
 use crate::middleend::middleend_error::UmMiddleendError;
+use log::warn;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
@@ -86,7 +87,10 @@ impl WriteToIr for MetadataIrLine {
         ];
 
         if entry_already_exists(self, ir_transaction) {
-            // TODO: set warning that values are overwritten
+            warn!(
+                "Metadata with filename: '{}' and path: '{}' is overwritten.",
+                self.filename, self.path
+            );
             let sql_condition = "filehash = ?1";
             let sql_set =
                 "filename = ?2, path = ?3, preamble = ?4, fallback_preamble = ?5, root = ?6";

@@ -3,6 +3,7 @@ use crate::middleend::ir::{
     entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
 };
 use crate::middleend::middleend_error::UmMiddleendError;
+use log::warn;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 use std::convert::TryInto;
@@ -89,7 +90,10 @@ impl WriteToIr for ContentIrLine {
         ];
 
         if entry_already_exists(self, ir_transaction) {
-            // TODO: set warning that values are overwritten
+            warn!(
+                "Content with id: '{}' at line nr: '{}' is overwritten.",
+                self.id, self.line_nr
+            );
             let sql_condition = "id = ?1 AND line_nr = ?2";
             let sql_set = "um_type = ?3, text = ?4, fallback_text = ?5, attributes = ?6, fallback_attributes = ?7";
             update_ir_line_execute(
