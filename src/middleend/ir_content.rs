@@ -4,7 +4,7 @@ use crate::middleend::middleend_error::UmMiddleendError;
 use log::warn;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 use rusqlite::{Connection, Statement, ToSql};
-use std::convert::TryInto;
+use std::convert::{TryInto};
 
 #[derive(Debug, PartialEq)]
 pub struct ContentIrLine {
@@ -122,11 +122,10 @@ impl RetrieveFromIr for ContentIrLine {
         if row.as_ref().column_count() != 7 {
             return Err(InvalidParameterCount(row.as_ref().column_count(), 7));
         } else {
+            let line_nr = row.get::<usize, i64>(1)?;
             Ok(ContentIrLine::new(
                 row.get::<usize, String>(0)?,
-                row.get::<usize, i64>(1)?
-                    .try_into()
-                    .expect("Line number could not be converted to i64"),
+                line_nr.try_into().map_err(|_| rusqlite::Error::IntegralValueOutOfRange(1, line_nr))?,
                 row.get::<usize, String>(2)?,
                 row.get::<usize, String>(3)?,
                 row.get::<usize, String>(4)?,
