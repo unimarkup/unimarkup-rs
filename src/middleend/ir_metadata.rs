@@ -73,7 +73,7 @@ impl WriteToIr for MetadataIrLine {
         let column_pk = format!(
             "filename: {} with hash: {}",
             self.filename,
-            String::from_utf8(self.filehash.to_vec()).unwrap()
+            String::from_utf8(self.filehash.to_vec()).expect("Could not convert filehash into its utf8 representation")
         );
         let new_values = params![
             self.filehash.to_vec(),
