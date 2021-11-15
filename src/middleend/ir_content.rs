@@ -136,10 +136,7 @@ impl RetrieveFromIr for ContentIrLine {
 }
 
 pub fn prepare_content_rows(ir_connection: &Connection, order: bool) -> Result<Statement, Error> {
-    let mut sql_order = "";
-    if order {
-        sql_order = "ORDER BY line_nr ASC";
-    }
+    let sql_order = if order { "ORDER BY line_nr ASC" } else { "" };
     let sql = format!(
         "SELECT * FROM {} {}",
         ContentIrLine::table_name(),
