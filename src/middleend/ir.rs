@@ -133,15 +133,12 @@ pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName + WriteToIr>(
     let params: &[&dyn ToSql] = &pk_condition_params.1;
     let res_query = ir_transaction.query_row(&sql, params, |row| T::from_ir(row));
 
-    match res_query {
-        Ok(res) => Ok(res),
-        Err(err) => Err(UmMiddleendError {
-            tablename: T::table_name(),
-            column: pk_condition_params.0,
-            message: format!(
-                "Failed getting single IrLine from given database connection. Reason: {:?}",
-                err
-            ),
-        }),
-    }
+    res_query.map_err(|err| UmMiddleendError {
+        tablename: T::table_name(),
+        column: pk_condition_params.0,
+        message: format!(
+            "Failed getting single IrLine from given database connection. Reason: {:?}",
+            err
+        ),
+    })
 }
