@@ -21,14 +21,11 @@ pub fn setup_ir(ir_connection: &Connection) -> Result<(), UmMiddleendError> {
         MetadataIrLine::table_setup(),
         ResourceIrLine::table_setup()
     );
-    let setup_res = ir_connection.execute_batch(&sql);
-
-    if setup_res.is_err() {
-        return Err(UmMiddleendError {
+    ir_connection
+        .execute_batch(&sql)
+        .map_err(|_| UmMiddleendError {
             tablename: "-".to_string(),
             column: "-".to_string(),
             message: "Could not setup tables on given database connection".to_string(),
-        });
-    }
-    Ok(())
+        })
 }
