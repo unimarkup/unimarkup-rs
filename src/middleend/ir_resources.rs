@@ -1,7 +1,7 @@
 use super::ir::{IrTableName, RetrieveFromIr};
 use crate::middleend::ir::{self, WriteToIr};
 use crate::middleend::middleend_error::UmMiddleendError;
-use log::info;
+use log::debug;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
@@ -52,7 +52,7 @@ impl WriteToIr for ResourceIrLine {
 
         if ir::entry_already_exists(self, ir_transaction) {
             // All resources columns are used for private key, no update needed
-            info!(
+            debug!(
                 "Resource with filename: '{}' and path: '{}' already in IR.",
                 self.filename, self.path
             );
