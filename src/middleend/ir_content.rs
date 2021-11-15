@@ -124,7 +124,9 @@ impl RetrieveFromIr for ContentIrLine {
         } else {
             Ok(ContentIrLine::new(
                 row.get::<usize, String>(0)?,
-                row.get::<usize, i64>(1)?.try_into().expect("Line number could not be converted to i64"),
+                row.get::<usize, i64>(1)?
+                    .try_into()
+                    .expect("Line number could not be converted to i64"),
                 row.get::<usize, String>(2)?,
                 row.get::<usize, String>(3)?,
                 row.get::<usize, String>(4)?,

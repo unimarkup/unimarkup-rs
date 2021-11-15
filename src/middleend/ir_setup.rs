@@ -26,6 +26,9 @@ pub fn setup_ir(ir_connection: &Connection) -> Result<(), UmMiddleendError> {
         .map_err(|err| UmMiddleendError {
             tablename: "-".to_string(),
             column: "-".to_string(),
-            message: format!("Could not setup tables on given database connection. Reason: {:?}", err),
+            message: format!(
+                "Could not setup tables on given database connection. Reason: {:?}",
+                err
+            ),
         })
 }

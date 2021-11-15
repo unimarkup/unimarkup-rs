@@ -73,7 +73,8 @@ impl WriteToIr for MetadataIrLine {
         let column_pk = format!(
             "filename: {} with hash: {}",
             self.filename,
-            String::from_utf8(self.filehash.to_vec()).expect("Could not convert filehash into its utf8 representation")
+            String::from_utf8(self.filehash.to_vec())
+                .expect("Could not convert filehash into its utf8 representation")
         );
         let new_values = params![
             self.filehash.to_vec(),
@@ -92,7 +93,7 @@ impl WriteToIr for MetadataIrLine {
             let sql_condition = "filehash = ?1";
             let sql_set =
                 "filename = ?2, path = ?3, preamble = ?4, fallback_preamble = ?5, root = ?6";
-                ir::update_ir_line_execute(
+            ir::update_ir_line_execute(
                 ir_transaction,
                 sql_table,
                 sql_set,
