@@ -1,7 +1,5 @@
 use super::ir::{IrTableName, RetrieveFromIr};
-use crate::middleend::ir::{
-    entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
-};
+use crate::middleend::ir::{self, WriteToIr};
 use crate::middleend::middleend_error::UmMiddleendError;
 use log::info;
 use rusqlite::ToSql;
@@ -76,14 +74,14 @@ impl WriteToIr for MacroIrLine {
             self.fallback_body,
         ];
 
-        if entry_already_exists(self, ir_transaction) {
+        if ir::entry_already_exists(self, ir_transaction) {
             info!(
                 "Macro with name: '{}' and parameters: '{}' is overwritten.",
                 self.name, self.parameters
             );
             let sql_condition = "name = ?1 AND parameters = ?2";
             let sql_set = "um_type = ?3, body = ?4, fallback_body = ?5";
-            update_ir_line_execute(
+            ir::update_ir_line_execute(
                 ir_transaction,
                 sql_table,
                 sql_set,
@@ -92,7 +90,7 @@ impl WriteToIr for MacroIrLine {
                 &column_pk,
             )
         } else {
-            insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
+            ir::insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
         }
     }
 }

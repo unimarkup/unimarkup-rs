@@ -1,4 +1,4 @@
-use crate::middleend::ir::{write_ir_lines, WriteToIr};
+use crate::middleend::ir::{self, WriteToIr};
 use crate::middleend::ir_content::ContentIrLine;
 use crate::middleend::ir_macros::MacroIrLine;
 use crate::middleend::ir_metadata::MetadataIrLine;
@@ -98,11 +98,11 @@ impl Default for IrBlock {
 
 impl WriteToIr for IrBlock {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
-        write_ir_lines(self.get_content_lines(), ir_transaction)?;
-        write_ir_lines(self.get_macro_lines(), ir_transaction)?;
-        write_ir_lines(self.get_variable_lines(), ir_transaction)?;
-        write_ir_lines(self.get_metadata_lines(), ir_transaction)?;
-        write_ir_lines(self.get_resource_lines(), ir_transaction)?;
+        ir::write_ir_lines(self.get_content_lines(), ir_transaction)?;
+        ir::write_ir_lines(self.get_macro_lines(), ir_transaction)?;
+        ir::write_ir_lines(self.get_variable_lines(), ir_transaction)?;
+        ir::write_ir_lines(self.get_metadata_lines(), ir_transaction)?;
+        ir::write_ir_lines(self.get_resource_lines(), ir_transaction)?;
 
         Ok(())
     }

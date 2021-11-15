@@ -1,7 +1,5 @@
 use super::ir::{IrTableName, RetrieveFromIr};
-use crate::middleend::ir::{
-    entry_already_exists, insert_ir_line_execute, update_ir_line_execute, WriteToIr,
-};
+use crate::middleend::ir::{self, WriteToIr};
 use crate::middleend::middleend_error::UmMiddleendError;
 use log::warn;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
@@ -89,14 +87,14 @@ impl WriteToIr for ContentIrLine {
             self.fallback_attributes,
         ];
 
-        if entry_already_exists(self, ir_transaction) {
+        if ir::entry_already_exists(self, ir_transaction) {
             warn!(
                 "Content with id: '{}' at line nr: '{}' is overwritten.",
                 self.id, self.line_nr
             );
             let sql_condition = "id = ?1 AND line_nr = ?2";
             let sql_set = "um_type = ?3, text = ?4, fallback_text = ?5, attributes = ?6, fallback_attributes = ?7";
-            update_ir_line_execute(
+            ir::update_ir_line_execute(
                 ir_transaction,
                 sql_table,
                 sql_set,
@@ -105,7 +103,7 @@ impl WriteToIr for ContentIrLine {
                 &column_pk,
             )
         } else {
-            insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
+            ir::insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
         }
     }
 }
