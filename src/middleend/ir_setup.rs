@@ -5,10 +5,10 @@ use crate::middleend::{
 use rusqlite::Connection;
 
 pub fn setup_ir_connection() -> Result<Connection, UmMiddleendError> {
-    Connection::open_in_memory().map_err(|_| UmMiddleendError {
+    Connection::open_in_memory().map_err(|err| UmMiddleendError {
         tablename: "-".to_string(),
         column: "-".to_string(),
-        message: "Could not create a database connection".to_string(),
+        message: format!("Could not create a database connection. Reason: {:?}", err),
     })
 }
 
@@ -23,9 +23,9 @@ pub fn setup_ir(ir_connection: &Connection) -> Result<(), UmMiddleendError> {
     );
     ir_connection
         .execute_batch(&sql)
-        .map_err(|_| UmMiddleendError {
+        .map_err(|err| UmMiddleendError {
             tablename: "-".to_string(),
             column: "-".to_string(),
-            message: "Could not setup tables on given database connection".to_string(),
+            message: format!("Could not setup tables on given database connection. Reason: {:?}", err),
         })
 }
