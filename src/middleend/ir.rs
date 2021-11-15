@@ -64,7 +64,7 @@ fn get_nr_values(params: &[&dyn ToSql]) -> String {
     for (i, _) in params.iter().enumerate() {
         s.push_str(&format!("?{},", i + 1));
     }
-    s.replace_range(s.len() - 1.., ""); // strip last ,
+    s.pop(); // strip last ,
     s
 }
 
