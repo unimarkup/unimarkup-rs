@@ -14,15 +14,15 @@ jobs:
           release-type: rust
           package-name: unimarkup-rs
           changelog-types: >
-                            [
-                            {"type":"feat","section":"Features","hidden":false},
-                            {"type":"fix","section":"Bug Fixes","hidden":false},
-                            {"type":"ci","section":"CI","hidden":false},
-                            {"type":"build","section":"BUILD","hidden":false},
-                            {"type":"chore","section":"Miscellaneous","hidden":false},
-                            {"type":"docs","section":"Documentation","hidden":false},
-                            {"type":"style","section":"Style","hidden":false},
-                            {"type":"refactor","section":"Refactors","hidden":false},
-                            {"type":"perf","section":"Performance","hidden":false},
-                            {"type":"test","section":"Testing","hidden":false}
-                            ]
+            [
+            {"type":"feat","section":"Features","hidden":false},
+            {"type":"fix","section":"Bug Fixes","hidden":false},
+            {"type":"ci","section":"CI","hidden":false},
+            {"type":"build","section":"Build","hidden":false},
+            {"type":"chore","section":"Miscellaneous","hidden":true},
+            {"type":"docs","section":"Documentation","hidden":false},
+            {"type":"style","section":"Code Style","hidden":true},
+            {"type":"refactor","section":"Refactoring","hidden":true},
+            {"type":"perf","section":"Performance","hidden":false},
+            {"type":"test","section":"Testing","hidden":false}
+            ]
