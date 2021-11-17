@@ -1,6 +1,6 @@
 use super::ir::{IrTableName, RetrieveFromIr};
 use crate::middleend::ir::{self, WriteToIr};
-use crate::middleend::middleend_error::UmMiddleendError;
+use crate::middleend::IrError;
 use log::debug;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
@@ -45,7 +45,7 @@ impl ResourceIrLine {
 }
 
 impl WriteToIr for ResourceIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), IrError> {
         let sql_table = &ResourceIrLine::table_name();
         let column_pk = format!("filename: {} with path: {}", self.filename, self.path);
         let new_values = params![self.filename, self.path];

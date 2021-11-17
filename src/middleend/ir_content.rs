@@ -1,6 +1,6 @@
 use super::ir::{IrTableName, RetrieveFromIr};
 use crate::middleend::ir::{self, WriteToIr};
-use crate::middleend::middleend_error::UmMiddleendError;
+use crate::middleend::IrError;
 use log::warn;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 use rusqlite::{Connection, Statement, ToSql};
@@ -74,7 +74,7 @@ impl ContentIrLine {
 }
 
 impl WriteToIr for ContentIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), IrError> {
         let sql_table = &ContentIrLine::table_name();
         let column_pk = format!("id: {} at line: {}", self.id, self.line_nr);
         let new_values = params![

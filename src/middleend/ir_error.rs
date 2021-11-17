@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub struct UmMiddleendError {
+pub struct IrError {
     pub tablename: String,
     pub column: String,
     pub message: String,

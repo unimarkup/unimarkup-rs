@@ -1,7 +1,7 @@
 use crate::frontend::{parser::CursorPos, SyntaxError};
 use crate::middleend::ir_block::IrBlock;
 use crate::middleend::ir_content::ContentIrLine;
-use crate::middleend::middleend_error::UmMiddleendError;
+use crate::middleend::IrError;
 use rusqlite::{Error, Row, ToSql, Transaction};
 
 pub trait ParseForIr {
@@ -18,7 +18,7 @@ pub trait IrTableName {
 }
 
 pub trait WriteToIr {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError>;
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), IrError>;
 }
 
 pub trait RetrieveFromIr {
@@ -31,7 +31,7 @@ pub trait RetrieveFromIr {
 pub fn write_ir_lines(
     ir_lines: &[impl WriteToIr],
     ir_transaction: &Transaction,
-) -> Result<(), UmMiddleendError> {
+) -> Result<(), IrError> {
     for ir_line in ir_lines {
         let res = ir_line.write_to_ir(ir_transaction);
         if res.is_err() {
@@ -73,7 +73,7 @@ pub fn insert_ir_line_execute(
     sql_table: &str,
     params: &[&dyn ToSql],
     column: &str,
-) -> Result<(), UmMiddleendError> {
+) -> Result<(), IrError> {
     let sql = format!(
         "INSERT INTO {} VALUES ({})",
         sql_table,
@@ -82,7 +82,7 @@ pub fn insert_ir_line_execute(
 
     let execute_res = ir_transaction.execute(&sql, params);
     if execute_res.is_err() {
-        return Err(UmMiddleendError {
+        return Err(IrError {
             tablename: sql_table.to_string(),
             column: column.to_string(),
             message: format!(
@@ -101,7 +101,7 @@ pub fn update_ir_line_execute(
     sql_condition: &str,
     params: &[&dyn ToSql],
     column: &str,
-) -> Result<(), UmMiddleendError> {
+) -> Result<(), IrError> {
     let sql = format!(
         "UPDATE {} SET {} WHERE {}",
         sql_table, sql_set, sql_condition
@@ -109,7 +109,7 @@ pub fn update_ir_line_execute(
 
     let execute_res = ir_transaction.execute(&sql, params);
     if execute_res.is_err() {
-        return Err(UmMiddleendError {
+        return Err(IrError {
             tablename: sql_table.to_string(),
             column: column.to_string(),
             message: format!(
@@ -124,7 +124,7 @@ pub fn update_ir_line_execute(
 pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName + WriteToIr>(
     ir_transaction: &Transaction,
     pk_condition_params: (String, Vec<&dyn ToSql>),
-) -> Result<T, UmMiddleendError> {
+) -> Result<T, IrError> {
     let sql = format!(
         "SELECT * FROM {} WHERE {}",
         T::table_name(),
@@ -133,7 +133,7 @@ pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName + WriteToIr>(
     let params: &[&dyn ToSql] = &pk_condition_params.1;
     let res_query = ir_transaction.query_row(&sql, params, |row| T::from_ir(row));
 
-    res_query.map_err(|err| UmMiddleendError {
+    res_query.map_err(|err| IrError {
         tablename: T::table_name(),
         column: pk_condition_params.0,
         message: format!(
