@@ -7,6 +7,7 @@ use crate::middleend::ir::ParseForIr;
 use crate::middleend::ir_block::IrBlock;
 use crate::middleend::ir_content::ContentIrLine;
 use crate::um_elements::types::UnimarkupType;
+use crate::um_error::UmError;
 
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
@@ -66,7 +67,7 @@ impl ParseForIr for HeadingBlock {
     fn parse_for_ir(
         content: &[&str],
         cursor_pos: &CursorPos,
-    ) -> Result<(IrBlock, CursorPos), SyntaxError> {
+    ) -> Result<(IrBlock, CursorPos), UmError> {
         let mut curr_pos = *cursor_pos;
         let start_line_nr = curr_pos.line;
 
@@ -87,7 +88,8 @@ impl ParseForIr for HeadingBlock {
                         "Invalid heading syntax. \n".to_owned()
                             + "Headings are defined as 1 to 6 '#' symbols, \n"
                             + "followed by whitespace and Heading content.",
-                    ));
+                    )
+                    .into());
                 } else {
                     break;
                 }
@@ -105,7 +107,8 @@ impl ParseForIr for HeadingBlock {
 
                         return Err(SyntaxError::generate_error(
                             content, cursor_pos, &curr_pos, message,
-                        ));
+                        )
+                        .into());
                     }
                 }
 
@@ -120,7 +123,8 @@ impl ParseForIr for HeadingBlock {
                         cursor_pos,
                         &curr_pos,
                         "Invalid number of '#' symbols.",
-                    ));
+                    )
+                    .into());
                 }
 
                 heading_block.level = HeadingLevel::from(heading_count);

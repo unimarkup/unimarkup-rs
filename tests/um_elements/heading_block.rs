@@ -2,6 +2,7 @@ use unimarkup_rs::{
     frontend::parser::CursorPos,
     middleend::ir::ParseForIr,
     um_elements::heading_block::{HeadingBlock, HeadingLevel},
+    um_error::UmError,
 };
 
 #[test]
@@ -55,10 +56,12 @@ fn parse_heading_no_hashes() {
 
     assert!(res.is_err());
 
-    let error = res.unwrap_err();
-    assert!(error.message == "Unexpected symbol found!");
-
-    println!("{}", error);
+    if let UmError::Syntax(error) = res.unwrap_err() {
+        assert!(error.message == "Unexpected symbol found!");
+        println!("{}", error);
+    } else {
+        panic!("Some other error instead of UmError::Syntax(...) found");
+    }
 }
 
 #[test]
@@ -74,8 +77,11 @@ fn parse_heading_no_whitespace() {
 
     assert!(res.is_err());
 
-    let error = res.unwrap_err();
-    assert!(error.message == "Unexpected symbol found!");
+    if let UmError::Syntax(error) = res.unwrap_err() {
+        assert!(error.message == "Unexpected symbol found!");
+    } else {
+        panic!("Some other error instead of UmError::Syntax(...) found");
+    }
 
     let heading_content = "#######Heading '#' symbols not followed by a whitespace
 
@@ -88,10 +94,13 @@ fn parse_heading_no_whitespace() {
 
     assert!(res.is_err());
 
-    let error = res.unwrap_err();
-    assert!(error.message == "Unexpected symbol found!");
+    if let UmError::Syntax(error) = res.unwrap_err() {
+        assert!(error.message == "Unexpected symbol found!");
 
-    println!("{}", error);
+        println!("{}", error);
+    } else {
+        panic!("Some other error instead of UmError::Syntax(...) found");
+    }
 }
 
 #[test]
@@ -107,10 +116,13 @@ fn parse_heading_too_many_symbols() {
 
     assert!(res.is_err());
 
-    let error = res.unwrap_err();
-    assert!(error.message == "Invalid number of '#' symbols.");
+    if let UmError::Syntax(error) = res.unwrap_err() {
+        assert!(error.message == "Invalid number of '#' symbols.");
 
-    println!("{}", error);
+        println!("{}", error);
+    } else {
+        panic!("Error should be syntax error, but other error type found...");
+    }
 }
 
 #[test]
@@ -126,13 +138,16 @@ fn parse_heading_empty() {
 
     assert!(res.is_err());
 
-    let error = res.unwrap_err();
-    assert!(
-        error.message
-            == "Invalid heading syntax. \n".to_owned()
-                + "Headings are defined as 1 to 6 '#' symbols, \n"
-                + "followed by whitespace and Heading content."
-    );
+    if let UmError::Syntax(error) = res.unwrap_err() {
+        assert!(
+            error.message
+                == "Invalid heading syntax. \n".to_owned()
+                    + "Headings are defined as 1 to 6 '#' symbols, \n"
+                    + "followed by whitespace and Heading content."
+        );
 
-    println!("{}", error);
+        println!("{}", error);
+    } else {
+        panic!("Error should be syntax error, but other error type found...");
+    }
 }

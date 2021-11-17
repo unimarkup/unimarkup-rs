@@ -1,14 +1,15 @@
-use crate::frontend::{parser::CursorPos, SyntaxError};
+use crate::frontend::parser::CursorPos;
 use crate::middleend::ir_block::IrBlock;
 use crate::middleend::ir_content::ContentIrLine;
 use crate::middleend::IrError;
+use crate::um_error::UmError;
 use rusqlite::{Error, Row, ToSql, Transaction};
 
 pub trait ParseForIr {
     fn parse_for_ir(
         content: &[&str],
         cursor_pos: &CursorPos,
-    ) -> Result<(IrBlock, CursorPos), SyntaxError>;
+    ) -> Result<(IrBlock, CursorPos), UmError>;
 
     fn generate_ir_lines(&self, line_nr: usize) -> Vec<ContentIrLine>;
 }

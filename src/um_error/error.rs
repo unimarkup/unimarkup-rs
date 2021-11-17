@@ -3,7 +3,7 @@ use core::fmt;
 use crate::frontend::SyntaxError;
 use crate::middleend::IrError;
 
-enum UmError {
+pub enum UmError {
     Syntax(SyntaxError),
     Ir(IrError),
 }
