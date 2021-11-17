@@ -2,7 +2,7 @@ use strum_macros::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::frontend::parser::count_symbol_until;
-use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
+use crate::frontend::{parser::CursorPos, SyntaxError};
 use crate::middleend::ir::ParseForIr;
 use crate::middleend::ir_block::IrBlock;
 use crate::middleend::ir_content::ContentIrLine;
@@ -66,7 +66,7 @@ impl ParseForIr for HeadingBlock {
     fn parse_for_ir(
         content: &[&str],
         cursor_pos: &CursorPos,
-    ) -> Result<(IrBlock, CursorPos), UmSyntaxError> {
+    ) -> Result<(IrBlock, CursorPos), SyntaxError> {
         let mut curr_pos = *cursor_pos;
         let start_line_nr = curr_pos.line;
 
@@ -80,7 +80,7 @@ impl ParseForIr for HeadingBlock {
         while let Some(&line) = content.get(curr_pos.line) {
             if line.trim().is_empty() {
                 if heading_block.level == HeadingLevel::Invalid {
-                    return Err(UmSyntaxError::generate_error(
+                    return Err(SyntaxError::generate_error(
                         content,
                         cursor_pos,
                         &curr_pos,
@@ -103,7 +103,7 @@ impl ParseForIr for HeadingBlock {
                     Err((count, message)) => {
                         curr_pos.symbol = count;
 
-                        return Err(UmSyntaxError::generate_error(
+                        return Err(SyntaxError::generate_error(
                             content, cursor_pos, &curr_pos, message,
                         ));
                     }
@@ -115,7 +115,7 @@ impl ParseForIr for HeadingBlock {
                     // index starts from 0, HeadingLevel from 1
                     curr_pos.symbol = (HeadingLevel::Invalid as usize) - 1;
 
-                    return Err(UmSyntaxError::generate_error(
+                    return Err(SyntaxError::generate_error(
                         content,
                         cursor_pos,
                         &curr_pos,

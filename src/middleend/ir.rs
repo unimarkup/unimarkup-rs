@@ -1,4 +1,4 @@
-use crate::frontend::{parser::CursorPos, syntax_error::UmSyntaxError};
+use crate::frontend::{parser::CursorPos, SyntaxError};
 use crate::middleend::ir_block::IrBlock;
 use crate::middleend::ir_content::ContentIrLine;
 use crate::middleend::middleend_error::UmMiddleendError;
@@ -8,7 +8,7 @@ pub trait ParseForIr {
     fn parse_for_ir(
         content: &[&str],
         cursor_pos: &CursorPos,
-    ) -> Result<(IrBlock, CursorPos), UmSyntaxError>;
+    ) -> Result<(IrBlock, CursorPos), SyntaxError>;
 
     fn generate_ir_lines(&self, line_nr: usize) -> Vec<ContentIrLine>;
 }
