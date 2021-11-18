@@ -1,6 +1,6 @@
 use rusqlite::Connection;
 use rusqlite::Error::QueryReturnedNoRows;
-use unimarkup_rs::middleend::ir_setup::{setup_ir, setup_ir_connection};
+use unimarkup_rs::middleend::{setup_ir, setup_ir_connection};
 
 fn table_exists(conn: &Connection, table: &str, columns: &str) -> bool {
     let sql = format!("SELECT {} FROM {}", columns, table);
