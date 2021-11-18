@@ -1,10 +1,11 @@
-use std::fmt::Display;
+use std::fmt;
 
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::parser::CursorPos;
 
-pub struct UmSyntaxError {
+#[derive(Debug)]
+pub struct SyntaxError {
     pub start_pos: CursorPos,
     pub current_pos: CursorPos,
     pub start_line: String,
@@ -12,8 +13,8 @@ pub struct UmSyntaxError {
     pub message: String,
 }
 
-impl UmSyntaxError {
-    pub fn extract_lines(
+impl SyntaxError {
+    fn extract_lines(
         content: &[&str],
         start_pos: &CursorPos,
         current_pos: &CursorPos,
@@ -33,7 +34,7 @@ impl UmSyntaxError {
         (String::from(start_line), String::from(current_line))
     }
 
-    pub fn generate_error(
+    pub fn new(
         content: &[&str],
         start_pos: &CursorPos,
         current_pos: &CursorPos,
@@ -41,7 +42,7 @@ impl UmSyntaxError {
     ) -> Self {
         let (start_line, current_line) = Self::extract_lines(content, start_pos, current_pos);
 
-        UmSyntaxError {
+        SyntaxError {
             start_pos: *start_pos,
             current_pos: *current_pos,
             start_line,
@@ -51,7 +52,7 @@ impl UmSyntaxError {
     }
 }
 
-impl Display for UmSyntaxError {
+impl fmt::Display for SyntaxError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let start_line_number = self.start_pos.line;
         let start_symbol = self.start_pos.symbol;

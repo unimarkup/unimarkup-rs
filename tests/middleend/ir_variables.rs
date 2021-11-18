@@ -1,7 +1,7 @@
-use unimarkup_rs::middleend::ir::{
+use unimarkup_rs::middleend::VariableIrLine;
+use unimarkup_rs::middleend::{
     entry_already_exists, get_single_ir_line, RetrieveFromIr, WriteToIr,
 };
-use unimarkup_rs::middleend::ir_variables::VariableIrLine;
 
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 

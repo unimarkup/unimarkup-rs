@@ -1,5 +1,5 @@
 use rusqlite::{Connection, Transaction};
-use unimarkup_rs::middleend::ir_setup::{setup_ir, setup_ir_connection};
+use unimarkup_rs::middleend::{setup_ir, setup_ir_connection};
 
 pub fn setup_test_ir() -> Connection {
     let res_conn = setup_ir_connection();

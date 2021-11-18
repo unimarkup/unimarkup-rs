@@ -1,6 +1,8 @@
-use super::ir::{IrTableName, RetrieveFromIr};
-use crate::middleend::ir::{self, WriteToIr};
-use crate::middleend::middleend_error::UmMiddleendError;
+use crate::middleend::{
+    ir::{self, IrTableName, RetrieveFromIr, WriteToIr},
+    IrError,
+};
+use crate::um_error::UmError;
 use log::warn;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
@@ -68,19 +70,19 @@ impl MetadataIrLine {
 }
 
 impl WriteToIr for MetadataIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmMiddleendError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
         let sql_table = &MetadataIrLine::table_name();
         let column_pk = format!(
             "filename: {} with hash: {}",
             self.filename,
-            String::from_utf8(self.filehash.to_vec()).map_err(|err| UmMiddleendError {
-                tablename: "-".to_string(),
-                column: "-".to_string(),
-                message: format!(
+            String::from_utf8(self.filehash.to_vec()).map_err(|err| IrError::new(
+                "-".to_string(),
+                "-".to_string(),
+                format!(
                     "Could not convert filehash into its utf8 representation. Reason: {:?}",
                     err
                 )
-            })?
+            ))?
         );
         let new_values = params![
             self.filehash.to_vec(),
