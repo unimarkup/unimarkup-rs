@@ -83,14 +83,14 @@ pub fn insert_ir_line_execute(
 
     let execute_res = ir_transaction.execute(&sql, params);
     if execute_res.is_err() {
-        return Err(IrError {
-            tablename: sql_table.to_string(),
-            column: column.to_string(),
-            message: format!(
+        return Err(IrError::new(
+            sql_table.to_string(),
+            column.to_string(),
+            format!(
                 "Could not insert values on given database connection. Reason: {:?}",
                 execute_res.err()
             ),
-        }
+        )
         .into());
     }
     Ok(())
@@ -111,14 +111,14 @@ pub fn update_ir_line_execute(
 
     let execute_res = ir_transaction.execute(&sql, params);
     if execute_res.is_err() {
-        return Err(IrError {
-            tablename: sql_table.to_string(),
-            column: column.to_string(),
-            message: format!(
+        return Err(IrError::new(
+            sql_table.to_string(),
+            column.to_string(),
+            format!(
                 "Could not update values on given database connection. Reason: {:?}",
                 execute_res.err()
             ),
-        }
+        )
         .into());
     }
     Ok(())
@@ -127,7 +127,7 @@ pub fn update_ir_line_execute(
 pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName + WriteToIr>(
     ir_transaction: &Transaction,
     pk_condition_params: (String, Vec<&dyn ToSql>),
-) -> Result<T, IrError> {
+) -> Result<T, UmError> {
     let sql = format!(
         "SELECT * FROM {} WHERE {}",
         T::table_name(),
@@ -136,12 +136,15 @@ pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName + WriteToIr>(
     let params: &[&dyn ToSql] = &pk_condition_params.1;
     let res_query = ir_transaction.query_row(&sql, params, |row| T::from_ir(row));
 
-    res_query.map_err(|err| IrError {
-        tablename: T::table_name(),
-        column: pk_condition_params.0,
-        message: format!(
-            "Failed getting single IrLine from given database connection. Reason: {:?}",
-            err
-        ),
+    res_query.map_err(|err| {
+        IrError::new(
+            T::table_name(),
+            pk_condition_params.0,
+            format!(
+                "Failed getting single IrLine from given database connection. Reason: {:?}",
+                err
+            ),
+        )
+        .into()
     })
 }
