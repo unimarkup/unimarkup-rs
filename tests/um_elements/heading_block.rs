@@ -1,6 +1,6 @@
 use unimarkup_rs::{
     frontend::parser::CursorPos,
-    middleend::ir::ParseForIr,
+    middleend::ParseForIr,
     um_elements::heading_block::{HeadingBlock, HeadingLevel},
     um_error::UmError,
 };

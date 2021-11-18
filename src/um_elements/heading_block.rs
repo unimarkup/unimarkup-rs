@@ -3,9 +3,9 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::frontend::parser::count_symbol_until;
 use crate::frontend::{parser::CursorPos, SyntaxError};
-use crate::middleend::ir::ParseForIr;
 use crate::middleend::ir_block::IrBlock;
 use crate::middleend::ir_content::ContentIrLine;
+use crate::middleend::ParseForIr;
 use crate::um_elements::types::UnimarkupType;
 use crate::um_error::UmError;
 
