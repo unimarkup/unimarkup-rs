@@ -1,4 +1,4 @@
-use unimarkup_rs::middleend::ir_macros::MacroIrLine;
+use unimarkup_rs::middleend::MacroIrLine;
 use unimarkup_rs::middleend::{
     entry_already_exists, get_single_ir_line, RetrieveFromIr, WriteToIr,
 };
