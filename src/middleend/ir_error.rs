@@ -7,6 +7,20 @@ pub struct IrError {
     pub message: String,
 }
 
+impl IrError {
+    pub fn new(
+        tablename: impl Into<String>,
+        column: impl Into<String>,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            tablename: tablename.into(),
+            column: column.into(),
+            message: message.into(),
+        }
+    }
+}
+
 impl fmt::Display for IrError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("Error in communication with IR."))?;
