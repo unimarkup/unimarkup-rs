@@ -4,7 +4,7 @@ use crate::middleend::ir_macros::MacroIrLine;
 use crate::middleend::ir_metadata::MetadataIrLine;
 use crate::middleend::ir_resources::ResourceIrLine;
 use crate::middleend::ir_variables::VariableIrLine;
-use crate::middleend::IrError;
+use crate::um_error::UmError;
 use rusqlite::Transaction;
 
 #[derive(Debug)]
@@ -97,7 +97,7 @@ impl Default for IrBlock {
 }
 
 impl WriteToIr for IrBlock {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), IrError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
         ir::write_ir_lines(self.get_content_lines(), ir_transaction)?;
         ir::write_ir_lines(self.get_macro_lines(), ir_transaction)?;
         ir::write_ir_lines(self.get_variable_lines(), ir_transaction)?;

@@ -19,7 +19,7 @@ pub trait IrTableName {
 }
 
 pub trait WriteToIr {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), IrError>;
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError>;
 }
 
 pub trait RetrieveFromIr {
@@ -32,7 +32,7 @@ pub trait RetrieveFromIr {
 pub fn write_ir_lines(
     ir_lines: &[impl WriteToIr],
     ir_transaction: &Transaction,
-) -> Result<(), IrError> {
+) -> Result<(), UmError> {
     for ir_line in ir_lines {
         let res = ir_line.write_to_ir(ir_transaction);
         if res.is_err() {
@@ -74,7 +74,7 @@ pub fn insert_ir_line_execute(
     sql_table: &str,
     params: &[&dyn ToSql],
     column: &str,
-) -> Result<(), IrError> {
+) -> Result<(), UmError> {
     let sql = format!(
         "INSERT INTO {} VALUES ({})",
         sql_table,
@@ -90,7 +90,8 @@ pub fn insert_ir_line_execute(
                 "Could not insert values on given database connection. Reason: {:?}",
                 execute_res.err()
             ),
-        });
+        }
+        .into());
     }
     Ok(())
 }
@@ -102,7 +103,7 @@ pub fn update_ir_line_execute(
     sql_condition: &str,
     params: &[&dyn ToSql],
     column: &str,
-) -> Result<(), IrError> {
+) -> Result<(), UmError> {
     let sql = format!(
         "UPDATE {} SET {} WHERE {}",
         sql_table, sql_set, sql_condition
@@ -117,7 +118,8 @@ pub fn update_ir_line_execute(
                 "Could not update values on given database connection. Reason: {:?}",
                 execute_res.err()
             ),
-        });
+        }
+        .into());
     }
     Ok(())
 }
