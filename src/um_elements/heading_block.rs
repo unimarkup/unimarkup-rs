@@ -81,7 +81,7 @@ impl ParseForIr for HeadingBlock {
         while let Some(&line) = content.get(curr_pos.line) {
             if line.trim().is_empty() {
                 if heading_block.level == HeadingLevel::Invalid {
-                    return Err(SyntaxError::generate_error(
+                    return Err(SyntaxError::new(
                         content,
                         cursor_pos,
                         &curr_pos,
@@ -105,10 +105,9 @@ impl ParseForIr for HeadingBlock {
                     Err((count, message)) => {
                         curr_pos.symbol = count;
 
-                        return Err(SyntaxError::generate_error(
-                            content, cursor_pos, &curr_pos, message,
-                        )
-                        .into());
+                        return Err(
+                            SyntaxError::new(content, cursor_pos, &curr_pos, message).into()
+                        );
                     }
                 }
 
@@ -118,7 +117,7 @@ impl ParseForIr for HeadingBlock {
                     // index starts from 0, HeadingLevel from 1
                     curr_pos.symbol = (HeadingLevel::Invalid as usize) - 1;
 
-                    return Err(SyntaxError::generate_error(
+                    return Err(SyntaxError::new(
                         content,
                         cursor_pos,
                         &curr_pos,

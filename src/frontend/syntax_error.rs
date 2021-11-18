@@ -13,7 +13,7 @@ pub struct SyntaxError {
 }
 
 impl SyntaxError {
-    pub fn extract_lines(
+    fn extract_lines(
         content: &[&str],
         start_pos: &CursorPos,
         current_pos: &CursorPos,
@@ -33,7 +33,7 @@ impl SyntaxError {
         (String::from(start_line), String::from(current_line))
     }
 
-    pub fn generate_error(
+    pub fn new(
         content: &[&str],
         start_pos: &CursorPos,
         current_pos: &CursorPos,
