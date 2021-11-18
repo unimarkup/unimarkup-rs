@@ -103,7 +103,7 @@ impl WriteToIr for ContentIrLine {
                 &column_pk,
             )
         } else {
-            ir::insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk).into()
+            ir::insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
         }
     }
 }
