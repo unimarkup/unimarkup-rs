@@ -1,7 +1,5 @@
 use crate::frontend::parser::CursorPos;
-use crate::middleend::ir_block::IrBlock;
-use crate::middleend::ir_content::ContentIrLine;
-use crate::middleend::IrError;
+use crate::middleend::{ContentIrLine, IrBlock, IrError};
 use crate::um_error::UmError;
 use rusqlite::{Error, Row, ToSql, Transaction};
 

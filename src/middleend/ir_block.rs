@@ -1,9 +1,9 @@
 use crate::middleend::ir::{self, WriteToIr};
-use crate::middleend::ir_content::ContentIrLine;
-use crate::middleend::ir_macros::MacroIrLine;
-use crate::middleend::ir_metadata::MetadataIrLine;
-use crate::middleend::ir_resources::ResourceIrLine;
-use crate::middleend::ir_variables::VariableIrLine;
+use crate::middleend::ContentIrLine;
+use crate::middleend::MacroIrLine;
+use crate::middleend::MetadataIrLine;
+use crate::middleend::ResourceIrLine;
+use crate::middleend::VariableIrLine;
 use crate::um_error::UmError;
 use rusqlite::Transaction;
 

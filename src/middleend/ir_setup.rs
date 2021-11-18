@@ -1,7 +1,6 @@
 use crate::{
     middleend::{
-        ir_content::ContentIrLine, ir_macros::MacroIrLine, ir_metadata::MetadataIrLine,
-        ir_resources::ResourceIrLine, ir_variables::VariableIrLine, IrError,
+        ContentIrLine, IrError, MacroIrLine, MetadataIrLine, ResourceIrLine, VariableIrLine,
     },
     um_error::UmError,
 };
