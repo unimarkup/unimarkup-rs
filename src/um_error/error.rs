@@ -28,3 +28,12 @@ impl fmt::Display for UmError {
         }
     }
 }
+
+impl fmt::Debug for UmError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UmError::Syntax(err) => err.fmt(f),
+            UmError::Ir(err) => err.fmt(f),
+        }
+    }
+}

@@ -1,9 +1,10 @@
-use std::fmt::Display;
+use std::fmt;
 
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::parser::CursorPos;
 
+#[derive(Debug)]
 pub struct SyntaxError {
     pub start_pos: CursorPos,
     pub current_pos: CursorPos,
@@ -51,7 +52,7 @@ impl SyntaxError {
     }
 }
 
-impl Display for SyntaxError {
+impl fmt::Display for SyntaxError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let start_line_number = self.start_pos.line;
         let start_symbol = self.start_pos.symbol;
