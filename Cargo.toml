@@ -20,3 +20,4 @@ strum = "0.22.0"
 strum_macros = "0.22.0"
 log = "0.4"
 simple_logger = "1.13"
+clap = { version = "2.33", features = ["yaml"] }

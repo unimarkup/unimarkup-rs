@@ -1,0 +1,245 @@
+name: unimarkup-rs
+about: Unimarkup implementation written in rust
+
+args:
+
+# ----------- Options -------------------------------------------------------------------------
+## General options 
+
+    - outputs:
+        display_order: 1
+        short: o
+        long: outputs
+        help: Set output formats the Unimarkup document should be rendered to. Set outputs are also treated as flags inside the Unimarkup document.
+        takes_value: true
+        use_delimiter: true
+        possible_values:
+            - pdf
+            - html
+            - markdown
+            - revealjs
+            - intermediate
+  
+    - insert_paths:
+        display_order: 2
+        short: i
+        long: insert-paths
+        help: Set paths that are searched for relative file and image inserts.
+        takes_value: true
+        use_delimiter: true
+
+    - theme:
+        display_order: 5
+        short: t
+        long: theme
+        help: Set a Unimarkup theme file to be used for rendering.
+        takes_value: true
+
+    - flags:
+        display_order: 6
+        short: f
+        long: flags
+        help: Set flags that will be set for rendering.
+        takes_value: true
+        use_delimiter: true
+
+    - enable_elements:
+        display_order: 7
+        long: enable-elements
+        help: |
+          Explicitly set Unimarkup block elements that can be used inside the given Unimarkup document.
+          If this option is set, all Unimarkup elements that are not given are disabled.
+        takes_value: true
+        use_delimiter: true
+        possible_values:
+            - paragraph
+            - heading
+            - bullet-list
+            - numbered-list
+            - task-list
+            - definition-list
+            - table
+            - verbatim-block
+            - render-block
+            - math-block
+            - figure-insert
+            - verbatim-block-file-insert
+            - rendered-block-file-insert
+            - text-block
+            - quotation-block
+            - line-block
+            - definition-block
+            - explicit-column-block
+            - implicit-column-block
+            - field-block
+            - output-block
+            - media-block-insert
+            - form-block
+            - macros
+            - variables
+
+    - disable_elements:
+        display_order: 8
+        long: disable-elements
+        help: |
+          Explicitly set Unimarkup block elements that can NOT be used inside the given Unimarkup document.
+          If this option is set, all Unimarkup elements that are not given are enabled.
+        takes_value: true
+        use_delimiter: true
+        possible_values:
+            - paragraph
+            - heading
+            - bullet-list
+            - numbered-list
+            - task-list
+            - definition-list
+            - table
+            - verbatim-block
+            - render-block
+            - math-block
+            - figure-insert
+            - verbatim-block-file-insert
+            - rendered-block-file-insert
+            - text-block
+            - quotation-block
+            - line-block
+            - definition-block
+            - explicit-column-block
+            - implicit-column-block
+            - field-block
+            - output-block
+            - media-block-insert
+            - form-block
+            - macros
+            - variables
+
+## Reference options
+
+    - citation_style:
+        display_order: 30
+        long: citation-style
+        alias: csl
+        help: Set citation style sheet that is used to process referenced literature
+        takes_value: true
+        requires:
+            - references
+
+    - references:
+        display_order: 31
+        long: references
+        alias: refs
+        help: Set one or more reference files in bibtex or JSON format to use them with literature referencing.
+        takes_value: true
+        use_delimiter: true
+        requires:
+            - citation_style
+
+## HTML options
+
+    - html_root_path:
+        display_order: 40
+        long: html-root
+        help: Set the root path that will be set before relative file and image inserts.
+        takes_value: true
+
+    - html_mathmode:
+        display_order: 41
+        long: html-mathmode
+        help: Set the mathmode to be used for rendered html documents
+        takes_value: true
+        possible_values:
+            - svg
+            - embed
+            - cdn
+
+## PDF options
+
+    - pdf_layout:
+        display_order: 50
+        long: pdf-layout
+        help: Set the pdf layout of the rendered document. The custom format must be set with the options `--pdf-custom-height` and `--pdf-custom-width`.
+        takes_value: true
+        possible_values:
+            - A5
+            - A4
+            - A3
+            - A2
+            - A1
+            - A0
+            - Custom
+
+    - pdf_orientation:
+        display_order: 51
+        long: pdf-orientation
+        help: Set the pdf orientation of the rendered document.
+        takes_value: true
+        possible_values:
+            - vertical
+            - horizontal
+        requires:
+            - pdf_layout
+
+    - ttf:
+        display_order: 52
+        long: true-type-font
+        alias: ttf
+        help: Set true type fonts to be able to use them for rendering
+        takes_value: true
+        use_delimiter: true
+
+    - pdf_custom_height:
+        display_order: 53
+        long: pdf-custom-height
+        help: Set a custom height [in mm] for the rendered pdf document.
+        takes_value: true
+        requires:
+            - pdf_layout
+
+    - pdf_custom_width:
+        display_order: 54
+        long: pdf-custom-width
+        help: Set a custom width [in mm] for the rendered pdf document.
+        takes_value: true
+        requires:
+            - pdf_layout
+
+
+# ----------- Flags ---------------------------------------------------------------------------
+## General flags
+
+    - overwrite_existing:
+        display_order: 1
+        short: w
+        long: overwrite-existing
+        help: Overwrites files with set `filename` if already existing. 
+
+    - replace_preamble:
+        display_order: 20
+        long: replace-preamble
+        help: |
+          Set if preamble of given Unimarkup file is replaced with the given arguments.
+          If not set, given arguments overwrite the corresponding preamble settings, but other settings
+          are still used.
+        requires:
+            - outputs
+
+## HTML flags
+
+    - html_embed_svg:
+        display_order: 40
+        long: html-embed-svg
+        help: Set if svgs should be embedded into html instead of inserted as regular images.
+
+
+# --------- Positionals -------------------------------------------------------------------------
+
+    - um_file:
+        index: 1
+        help: The filename of the Unimarkup file that is used as root for rendering.
+        value_name: UM-FILE
+        required: true
+
+    - out_file:
+        index: 2 
+        help: The filename without filetype to be used for output filenames. If a path is part of the filename, output files are saved at the given path.
+        value_name: OUTPUT-FILE
