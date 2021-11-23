@@ -28,6 +28,16 @@ args:
         takes_value: true
         use_delimiter: true
 
+    - dot_unimarkup:
+        display_order: 3
+        long: dot-unimarkup
+        alias: config
+        env: UNIMARKUP_CONFIG
+        help: |
+          Set the path to a directory that is used for default preamble and theme settings.
+          The intermediate form of rendered documents will also be stored at this path.
+        takes_value: true
+
     - theme:
         display_order: 5
         short: t
@@ -212,6 +222,18 @@ args:
         short: w
         long: overwrite-existing
         help: Overwrites files with set `filename` if already existing. 
+
+    - clean:
+        display_order: 2
+        short: c
+        long: clean
+        help: Deletes all previously rendered documents stored inside the UNIMARKUP_CONFIG path.
+
+    - rebuild:
+        display_order: 3
+        short: r
+        long: rebuild
+        help: Ignores all previously rendered documents stored inside the UNIMARKUP_CONFIG path and renders the given Unimarkup file.
 
     - replace_preamble:
         display_order: 20
