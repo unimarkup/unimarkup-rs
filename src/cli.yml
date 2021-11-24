@@ -252,6 +252,12 @@ args:
         long: html-embed-svg
         help: Set if svgs should be embedded into html instead of inserted as regular images.
 
+    - html_standalone:
+        display_order: 41
+        long: html-standalone
+        help: |
+          Set to get a HTML5 compliant rendered html document with head and body elements.
+          Otherwise, only elements of the Unimarkup document are rendered for the html document. 
 
 # --------- Positionals -------------------------------------------------------------------------
 
