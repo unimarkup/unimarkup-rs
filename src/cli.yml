@@ -85,8 +85,8 @@ args:
             - output-block
             - media-block-insert
             - form-block
-            - macros
-            - variables
+            - macro-definition
+            - variable-definition
 
     - disable_elements:
         display_order: 8
@@ -120,8 +120,8 @@ args:
             - output-block
             - media-block-insert
             - form-block
-            - macros
-            - variables
+            - macro-definition
+            - variable-definition
 
     - fonts:
         display_order: 10
