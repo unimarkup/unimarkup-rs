@@ -73,14 +73,14 @@ args:
             - render-block
             - math-block
             - figure-insert
-            - verbatim-block-file-insert
-            - rendered-block-file-insert
+            - verbatim-block-insert
+            - render-block-insert
             - text-block
             - quotation-block
             - line-block
             - definition-block
-            - explicit-column-block
-            - implicit-column-block
+            - explicit-column
+            - implicit-column
             - field-block
             - output-block
             - media-block-insert
@@ -108,20 +108,38 @@ args:
             - render-block
             - math-block
             - figure-insert
-            - verbatim-block-file-insert
-            - rendered-block-file-insert
+            - verbatim-block-insert
+            - render-block-insert
             - text-block
             - quotation-block
             - line-block
             - definition-block
-            - explicit-column-block
-            - implicit-column-block
+            - explicit-column
+            - implicit-column
             - field-block
             - output-block
             - media-block-insert
             - form-block
             - macros
             - variables
+
+    - fonts:
+        display_order: 10
+        long: fonts
+        alias: ttf
+        alias: woff
+        help: Set ttf or woff fonts to be able to use them for rendering
+        takes_value: true
+        use_delimiter: true
+
+    - relative_insert_prefix:
+        display_order: 20
+        long: relative-insert-prefix
+        alias: insert-prefix
+        help: |
+          This prefix will be set before inserts in the rendered document to inserts that use relative paths.
+          Note: During rendering, the original relative path is taken.
+        takes_value: true
 
 ## Reference options
 
@@ -146,73 +164,24 @@ args:
 
 ## HTML options
 
-    - html_root_path:
+    - html_template:
         display_order: 40
-        long: html-root
-        help: Set the root path that will be set before relative file and image inserts.
+        long: html-template
+        help: |
+          Set a template html file with `{{ head }}` set inside the `head` element and `{{ body }}` set inside the body element.
+          Styling, fonts and scripts will be inserted at `{{ head }}` and the rendered Unimarkup content is placed inside `{{ body }}`.
+          Optionally, `{{ toc }}` can be set to get the table of contents (Note: This will not remove a rendered table of contents inside the rendered Unimarkup content if present).
         takes_value: true
 
     - html_mathmode:
         display_order: 41
         long: html-mathmode
-        help: Set the mathmode to be used for rendered html documents
+        help: Set the mathmode of MathJax to be used for rendered html documents.
         takes_value: true
         possible_values:
             - svg
             - embed
             - cdn
-
-## PDF options
-
-    - pdf_layout:
-        display_order: 50
-        long: pdf-layout
-        help: Set the pdf layout of the rendered document. The custom format must be set with the options `--pdf-custom-height` and `--pdf-custom-width`.
-        takes_value: true
-        possible_values:
-            - A5
-            - A4
-            - A3
-            - A2
-            - A1
-            - A0
-            - Custom
-
-    - pdf_orientation:
-        display_order: 51
-        long: pdf-orientation
-        help: Set the pdf orientation of the rendered document.
-        takes_value: true
-        possible_values:
-            - vertical
-            - horizontal
-        requires:
-            - pdf_layout
-
-    - ttf:
-        display_order: 52
-        long: true-type-font
-        alias: ttf
-        help: Set true type fonts to be able to use them for rendering
-        takes_value: true
-        use_delimiter: true
-
-    - pdf_custom_height:
-        display_order: 53
-        long: pdf-custom-height
-        help: Set a custom height [in mm] for the rendered pdf document.
-        takes_value: true
-        requires:
-            - pdf_layout
-
-    - pdf_custom_width:
-        display_order: 54
-        long: pdf-custom-width
-        help: Set a custom width [in mm] for the rendered pdf document.
-        takes_value: true
-        requires:
-            - pdf_layout
-
 
 # ----------- Flags ---------------------------------------------------------------------------
 ## General flags
@@ -251,13 +220,6 @@ args:
         display_order: 40
         long: html-embed-svg
         help: Set if svgs should be embedded into html instead of inserted as regular images.
-
-    - html_standalone:
-        display_order: 41
-        long: html-standalone
-        help: |
-          Set to get a HTML5 compliant rendered html document with head and body elements.
-          Otherwise, only elements of the Unimarkup document are rendered for the html document. 
 
 # --------- Positionals -------------------------------------------------------------------------
 
