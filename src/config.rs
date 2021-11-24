@@ -66,8 +66,8 @@ pub enum UmBlockElements {
     OUTPUT_BLOCK,
     MEDIA_BLOCK_INSERT,
     FORM_BLOCK,
-    MACROS,
-    VARIABLES,
+    MACRO_DEFINITION,
+    VARIABLE_DEFINITION,
 }
 
 
