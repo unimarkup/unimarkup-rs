@@ -1,6 +1,7 @@
 use strum_macros::*;
 use unicode_segmentation::UnicodeSegmentation;
 
+use crate::backend::Render;
 use crate::frontend::parser::count_symbol_until;
 use crate::frontend::{parser::CursorPos, SyntaxError};
 use crate::middleend::ContentIrLine;
@@ -9,7 +10,7 @@ use crate::middleend::ParseForIr;
 use crate::um_elements::types::UnimarkupType;
 use crate::um_error::UmError;
 
-#[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString)]
+#[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
 #[strum(serialize_all = "snake_case")]
 pub enum HeadingLevel {
     #[strum(serialize = "level_1")]
@@ -164,5 +165,26 @@ impl ParseForIr for HeadingBlock {
         );
 
         vec![line]
+    }
+}
+
+impl Render for HeadingBlock {
+    fn render_html(&self) -> Result<String, UmError> {
+        let mut html = String::default();
+
+        let tag_level = usize::from(self.level).to_string();
+
+        html.push_str("<h");
+        html.push_str(&tag_level);
+        html.push_str(" id='");
+        html.push_str(&self.id);
+        html.push_str("'>");
+
+        html.push_str(&self.content);
+        html.push_str("</h");
+        html.push_str(&tag_level);
+        html.push('>');
+
+        Ok(html)
     }
 }
