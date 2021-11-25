@@ -102,6 +102,18 @@ pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, UmError> {
             acc
         });
 
+    let type_string = if type_string.contains("_level") {
+        if let Some(val) = type_string.split("_level").next() {
+            val.into()
+        } else {
+            return Err(
+                BackErr::new(format!("Invalid type string provided: {}", type_string)).into(),
+            );
+        }
+    } else {
+        type_string
+    };
+
     UnimarkupType::from_str(&type_string).map_err(|err| {
         BackErr::new(format!(
             "Failed to resolve unimarkup type. \nMore info: {}",
@@ -122,6 +134,11 @@ mod loader_tests {
         let um_type = super::parse_um_type("paragraph_start")?;
 
         assert!(um_type == UnimarkupType::Paragraph);
+
+        // heading test
+        let um_type = super::parse_um_type("heading_level_1")?;
+
+        assert!(um_type == UnimarkupType::Heading);
 
         Ok(())
     }
