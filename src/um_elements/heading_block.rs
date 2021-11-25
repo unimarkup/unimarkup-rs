@@ -188,3 +188,35 @@ impl Render for HeadingBlock {
         Ok(html)
     }
 }
+
+#[cfg(test)]
+mod heading_render_tests {
+    use crate::{backend::Render, um_elements::heading_block::HeadingLevel, um_error::UmError};
+
+    use super::HeadingBlock;
+
+    #[test]
+    fn render_heading() -> Result<(), UmError> {
+        let lowest_level = HeadingLevel::Level1 as usize;
+        let highest_level = HeadingLevel::Level6 as usize;
+
+        for level in lowest_level..=highest_level {
+            let heading_content = String::from("This is a heading");
+            let id = format!("heading-id-{}", level);
+
+            let heading = HeadingBlock {
+                id: String::from(&id),
+                level: HeadingLevel::from(level),
+                content: heading_content,
+                attributes: String::default(),
+            };
+
+            let html = heading.render_html()?;
+
+            let expected = format!("<h{} id='{}'>This is a heading</h{}>", level, id, level);
+            assert_eq!(html, expected);
+        }
+
+        Ok(())
+    }
+}
