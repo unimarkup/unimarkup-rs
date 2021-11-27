@@ -120,9 +120,8 @@ pub struct Config {
 /// Parse a single output config 
 fn parse_output_config(s: &str) -> Result<(String, OutputConfig), clap::Error>
 {
-    let args : Vec<String> = shlex::Shlex::new(s).collect(); // s.trim().split_whitespace().collect();
-    //let mut params = vec![UNIMARKUP_NAME];
-    //params.extend(args);
+    let args : Vec<String> = shlex::Shlex::new(s).collect();
+
     if args.is_empty() {
         error!("No output config name was given! Every output config must start with a unique name!");
         process::exit(1)
