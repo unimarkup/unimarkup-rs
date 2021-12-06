@@ -26,7 +26,7 @@ fn single_output_format() -> Result<(), UmError> {
 
   let cfg: Config = Config::parse_from(get_args(options, um_filename));
 
-  assert_eq!(cfg.out_formats[0], OutputFormat::Html, "Unimarkup html output format not set correctly");
+  assert_eq!(cfg.out_formats.unwrap()[0], OutputFormat::Html, "Unimarkup html output format not set correctly");
   assert_eq!(cfg.um_file.to_str().unwrap(), um_filename, "Unimarkup filename not set correctly");
 
   Ok(())
@@ -38,10 +38,11 @@ fn multiple_output_formats() -> Result<(), UmError> {
   let options = "--output-formats=html,pdf";
 
   let cfg: Config = Config::parse_from(get_args(options, um_filename));
+  let formats = cfg.out_formats.unwrap();
 
-  assert_eq!(cfg.out_formats[0], OutputFormat::Html, "Unimarkup html output format not set correctly");
-  assert_eq!(cfg.out_formats[1], OutputFormat::Pdf, "Unimarkup html output format not set correctly");
-  assert!(cfg.out_formats.len() == 2, "Too many Unimarkup output formats set");
+  assert_eq!(formats[0], OutputFormat::Html, "Unimarkup html output format not set correctly");
+  assert_eq!(formats[1], OutputFormat::Pdf, "Unimarkup html output format not set correctly");
+  assert!(formats.len() == 2, "Too many Unimarkup output formats set");
 
   assert_eq!(cfg.um_file.to_str().unwrap(), um_filename, "Unimarkup filename not set correctly");
 

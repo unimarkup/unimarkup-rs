@@ -18,7 +18,7 @@ pub struct Config {
 
     /// Set output formats the Unimarkup document should be rendered to. Set outputs are also treated as flags inside the Unimarkup document.
     #[clap(name = "output-formats", display_order = 1, long = "output-formats", alias = "formats", takes_value = true, use_delimiter = true, arg_enum)]
-    pub out_formats: Vec<OutputFormat>,
+    pub out_formats: Option<Vec<OutputFormat>>,
 
     /// Set paths that are searched for relative file and image inserts.
     #[clap(display_order = 2, long = "insert-paths", takes_value = true, use_delimiter = true, parse(from_os_str))]
