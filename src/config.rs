@@ -60,21 +60,21 @@ pub struct Config {
     pub fonts: Option<Vec<PathBuf>>,
 
     /// Overwrites files set with `out-file` if already existing.
-    #[clap(display_order = 1, short = 'e', long = "overwrite-out-files")]
-    pub overwrite_out_files: Option<bool>,
+    #[clap(display_order = 1, short = 'w', long = "overwrite-out-files", takes_value = false)]
+    pub overwrite_out_files: bool,
 
     /// Deletes all previously rendered documents stored inside the UNIMARKUP_CONFIG path.
-    #[clap(display_order = 2, short = 'c', long = "clean")]
-    pub clean: Option<bool>,
+    #[clap(display_order = 2, short = 'c', long = "clean", takes_value = false)]
+    pub clean: bool,
 
     /// Ignores all previously rendered documents stored inside the UNIMARKUP_CONFIG path and renders the given Unimarkup file.
-    #[clap(display_order = 3, short = 'r', long = "rebuild")]
-    pub rebuild: Option<bool>,
+    #[clap(display_order = 3, short = 'r', long = "rebuild", takes_value = false)]
+    pub rebuild: bool,
 
     /// Set if preamble of given Unimarkup file is replaced with the given arguments.
     /// If not set, given arguments overwrite the corresponding preamble settings, but other settings are still used.
-    #[clap(display_order = 20, long = "replace-preamble", requires = "output-formats")]
-    pub replace_preamble: Option<bool>,
+    #[clap(display_order = 20, long = "replace-preamble", requires = "output-formats", takes_value = false)]
+    pub replace_preamble: bool,
 
     /// This prefix will be set before inserts in the rendered document to inserts that use relative paths.
     /// Note: During rendering, the original relative path is taken.
@@ -92,11 +92,11 @@ pub struct Config {
     pub html_mathmode: Option<HtmlMathmode>,
 
     /// Set if svgs should be embedded into html instead of inserted as regular images.
-    #[clap(display_order = 40, long = "html-embed-svg")]
-    pub html_embed_svg: Option<bool>,
+    #[clap(display_order = 40, long = "html-embed-svg", takes_value = false)]
+    pub html_embed_svg: bool,
 }
 
-#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum)]
+#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
 pub enum OutputFormat {
     #[strum(ascii_case_insensitive)]
     Pdf,
@@ -109,7 +109,7 @@ pub enum OutputFormat {
     Intermediate,
 }
 
-#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum)]
+#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
 pub enum HtmlMathmode {
     #[strum(ascii_case_insensitive)]
     Svg,
@@ -119,7 +119,7 @@ pub enum HtmlMathmode {
     Cdn,
 }
 
-#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum)]
+#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
 pub enum UmBlockElements {
     #[strum(ascii_case_insensitive)]
     Paragraph,
