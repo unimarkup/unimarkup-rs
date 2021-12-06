@@ -7,7 +7,7 @@ use crate::um_error::UmError;
 pub fn compile(config: Config) -> Result<(), UmError> { 
   let mut connection = middleend::setup_ir_connection()?;
 
-  // frontend::run(&connection, &config)?;
+  // frontend::run(&connection, &mut config)?;
   // backend::run(&connection, &config)?;
   Ok(())
 }
