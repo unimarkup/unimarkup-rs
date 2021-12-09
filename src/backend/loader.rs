@@ -4,7 +4,7 @@ use std::str::FromStr;
 use rusqlite::Connection;
 
 use crate::{
-    backend::{BackErr, Render},
+    backend::{BackendError, Render},
     middleend::{prepare_content_rows, ContentIrLine, RetrieveFromIr},
     um_elements::{heading_block::HeadingBlock, types::UnimarkupType},
     um_error::UmError,
@@ -69,17 +69,17 @@ pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock
 /// * `connection` - [`rusqlite::Connection`] for interacting with IR
 fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLine>, UmError> {
     let mut rows_statement = prepare_content_rows(connection, true)
-        .map_err(|err| BackErr::new(format!("Failed to prepare rows. \nReason: {}", err)))?;
+        .map_err(|err| BackendError::new(format!("Failed to prepare rows. \nReason: {}", err)))?;
 
-    let mut rows = rows_statement
-        .query([])
-        .map_err(|err| BackErr::new(format!("Failed to query rows in backend. \nReason{}", err)))?;
+    let mut rows = rows_statement.query([]).map_err(|err| {
+        BackendError::new(format!("Failed to query rows in backend. \nReason{}", err))
+    })?;
 
     let mut lines: Vec<ContentIrLine> = Vec::new();
 
     while let Ok(Some(row)) = rows.next() {
         let content_ir = ContentIrLine::from_ir(row).map_err(|err| {
-            BackErr::new(format!(
+            BackendError::new(format!(
                 "Failed to fetch content ir lines. \nReason: {}",
                 err
             ))
@@ -117,20 +117,28 @@ pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, UmError> {
             acc
         });
 
+    // heading_level...
+    // paragraph...
+    // list_start
+    // list_end
+    // verbatim_start
+
     let type_string = if type_string.contains("_level") {
         if let Some(val) = type_string.split("_level").next() {
             val.into()
         } else {
-            return Err(
-                BackErr::new(format!("Invalid type string provided: {}", type_string)).into(),
-            );
+            return Err(BackendError::new(format!(
+                "Invalid type string provided: {}",
+                type_string
+            ))
+            .into());
         }
     } else {
         type_string
     };
 
     UnimarkupType::from_str(&type_string).map_err(|err| {
-        BackErr::new(format!(
+        BackendError::new(format!(
             "Failed to resolve unimarkup type. \nMore info: {}",
             err
         ))

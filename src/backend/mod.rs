@@ -5,7 +5,7 @@ mod backend_error;
 mod loader;
 mod renderer;
 
-pub use backend_error::BackErr;
+pub use backend_error::BackendError;
 pub use loader::ParseFromIr;
 pub use renderer::Render;
 

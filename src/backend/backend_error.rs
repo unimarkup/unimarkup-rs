@@ -1,19 +1,19 @@
 use core::fmt;
 
 #[derive(Debug)]
-pub struct BackErr {
+pub struct BackendError {
     message: String,
 }
 
-impl BackErr {
+impl BackendError {
     pub fn new(msg: impl Into<String>) -> Self {
-        BackErr {
+        BackendError {
             message: msg.into(),
         }
     }
 }
 
-impl fmt::Display for BackErr {
+impl fmt::Display for BackendError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let prefix = "Error: ";
 
