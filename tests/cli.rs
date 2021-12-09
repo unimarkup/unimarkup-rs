@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use clap::Parser;
 use shlex::Shlex;
 use unimarkup_rs::{
-    config::{Config, OutputFormat, UmBlockElements},
+    config::{Config, OutputFormat},
+    um_elements::types::UnimarkupType,
     um_error::UmError,
 };
 
@@ -197,10 +198,7 @@ fn flags_option_set() -> Result<(), UmError> {
 #[test]
 fn enable_elements_option_set() -> Result<(), UmError> {
     let um_filename = "file.um";
-    let elements = vec![
-        UmBlockElements::VerbatimBlock,
-        UmBlockElements::DefinitionList,
-    ];
+    let elements = vec![UnimarkupType::VerbatimBlock, UnimarkupType::DefinitionList];
 
     let options = format!(
         "--enable-elements={},{}",
@@ -227,10 +225,7 @@ fn enable_elements_option_set() -> Result<(), UmError> {
 #[test]
 fn disable_elements_option_set() -> Result<(), UmError> {
     let um_filename = "file.um";
-    let elements = vec![
-        UmBlockElements::VerbatimBlock,
-        UmBlockElements::DefinitionList,
-    ];
+    let elements = vec![UnimarkupType::VerbatimBlock, UnimarkupType::DefinitionList];
 
     let options = format!(
         "--disable-elements={},{}",

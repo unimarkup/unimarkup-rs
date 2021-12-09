@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use clap::{crate_version, ArgEnum, Parser};
 use strum_macros::EnumString;
 
+use crate::um_elements::types::UnimarkupType;
+
 const UNIMARKUP_NAME: &str = "Unimarkup";
 
 #[derive(Debug, PartialEq, Clone, Parser)]
@@ -90,7 +92,7 @@ pub struct Config {
         use_delimiter = true,
         arg_enum
     )]
-    pub enable_elements: Option<Vec<UmBlockElements>>,
+    pub enable_elements: Option<Vec<UnimarkupType>>,
 
     /// Explicitly set Unimarkup block elements that can NOT be used inside the given Unimarkup document.
     /// If this option is set, all Unimarkup elements that are not given are enabled.
@@ -101,7 +103,7 @@ pub struct Config {
         use_delimiter = true,
         arg_enum
     )]
-    pub disable_elements: Option<Vec<UmBlockElements>>,
+    pub disable_elements: Option<Vec<UnimarkupType>>,
 
     /// Set citation style sheet that is used to process referenced literature
     #[clap(
@@ -222,82 +224,4 @@ pub enum HtmlMathmode {
     Embed,
     #[strum(ascii_case_insensitive)]
     Cdn,
-}
-
-#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
-pub enum UmBlockElements {
-    #[strum(ascii_case_insensitive)]
-    Paragraph,
-
-    #[strum(ascii_case_insensitive)]
-    Heading,
-
-    #[strum(ascii_case_insensitive, serialize = "bullet-list")]
-    BulletList,
-
-    #[strum(ascii_case_insensitive, serialize = "numbered-list")]
-    NumberedList,
-
-    #[strum(ascii_case_insensitive, serialize = "task-list")]
-    TaskList,
-
-    #[strum(ascii_case_insensitive, serialize = "definition-list")]
-    DefinitionList,
-
-    #[strum(ascii_case_insensitive)]
-    Table,
-
-    #[strum(ascii_case_insensitive, serialize = "verbatim-block")]
-    VerbatimBlock,
-
-    #[strum(ascii_case_insensitive, serialize = "render-block")]
-    RenderBlock,
-
-    #[strum(ascii_case_insensitive, serialize = "math-block")]
-    MathBlock,
-
-    #[strum(ascii_case_insensitive, serialize = "figure-insert")]
-    FigureInsert,
-
-    #[strum(ascii_case_insensitive, serialize = "verbatim-block-insert")]
-    VerbatimBlockInsert,
-
-    #[strum(ascii_case_insensitive, serialize = "render-block-insert")]
-    RenderBlockInsert,
-
-    #[strum(ascii_case_insensitive, serialize = "text-block")]
-    TextBlock,
-
-    #[strum(ascii_case_insensitive, serialize = "quotation-block")]
-    QuotationBlock,
-
-    #[strum(ascii_case_insensitive, serialize = "line-block")]
-    LineBlock,
-
-    #[strum(ascii_case_insensitive, serialize = "definition-block")]
-    DefinitionBlock,
-
-    #[strum(ascii_case_insensitive, serialize = "explicit-column")]
-    ExplicitColumn,
-
-    #[strum(ascii_case_insensitive, serialize = "implicit-column")]
-    ImplicitColumn,
-
-    #[strum(ascii_case_insensitive, serialize = "field-block")]
-    FieldBlock,
-
-    #[strum(ascii_case_insensitive, serialize = "output-block")]
-    OutputBlock,
-
-    #[strum(ascii_case_insensitive, serialize = "media-block-insert")]
-    MediaBlockInsert,
-
-    #[strum(ascii_case_insensitive, serialize = "form-block")]
-    FormBlock,
-
-    #[strum(ascii_case_insensitive, serialize = "macro-definition")]
-    MacroDefinition,
-
-    #[strum(ascii_case_insensitive, serialize = "variable-definition")]
-    VariableDefinition,
 }
