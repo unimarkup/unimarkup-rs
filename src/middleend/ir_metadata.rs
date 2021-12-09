@@ -7,7 +7,7 @@ use log::warn;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct MetadataIrLine {
     pub filehash: Vec<u8>,
     pub filename: String,
@@ -15,19 +15,6 @@ pub struct MetadataIrLine {
     pub preamble: String,
     pub fallback_preamble: String,
     pub root: bool,
-}
-
-impl Default for MetadataIrLine {
-    fn default() -> Self {
-        MetadataIrLine {
-            filehash: Vec::new(),
-            filename: String::default(),
-            path: String::default(),
-            preamble: String::default(),
-            fallback_preamble: String::default(),
-            root: false,
-        }
-    }
 }
 
 impl IrTableName for MetadataIrLine {

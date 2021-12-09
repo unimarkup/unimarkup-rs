@@ -4,19 +4,10 @@ use log::debug;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct ResourceIrLine {
     pub filename: String,
     pub path: String,
-}
-
-impl Default for ResourceIrLine {
-    fn default() -> Self {
-        ResourceIrLine {
-            filename: String::default(),
-            path: String::default(),
-        }
-    }
 }
 
 impl IrTableName for ResourceIrLine {
