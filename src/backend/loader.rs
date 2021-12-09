@@ -5,7 +5,7 @@ use rusqlite::Connection;
 
 use crate::{
     backend::{BackendError, Render},
-    middleend::{prepare_content_rows, ContentIrLine, RetrieveFromIr},
+    middleend::{self, ContentIrLine},
     um_elements::{heading_block::HeadingBlock, types, types::UnimarkupType},
     um_error::UmError,
 };
@@ -35,7 +35,8 @@ pub trait ParseFromIr {
 /// * `connection` - [`rusqlite::Connection`] used for interaction with IR
 pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock>, UmError> {
     let mut blocks: Vec<Box<dyn Render>> = vec![];
-    let mut content_lines: VecDeque<ContentIrLine> = get_content_lines(connection)?.into();
+    let mut content_lines: VecDeque<ContentIrLine> =
+        middleend::get_content_lines(connection)?.into();
 
     while let Some(line) = content_lines.get(0) {
         let um_type = parse_um_type(&line.um_type)?;
@@ -55,33 +56,6 @@ pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock
     }
 
     Ok(blocks)
-}
-
-/// Loads the [`ContentIrLine`]s from IR and gives them contained in a vector
-///
-/// # Arguments
-/// * `connection` - [`rusqlite::Connection`] for interacting with IR
-fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLine>, UmError> {
-    let mut rows_statement = prepare_content_rows(connection, true)
-        .map_err(|err| BackendError::new(format!("Failed to prepare rows. \nReason: {}", err)))?;
-
-    let mut rows = rows_statement.query([]).map_err(|err| {
-        BackendError::new(format!("Failed to query rows in backend. \nReason{}", err))
-    })?;
-
-    let mut lines: Vec<ContentIrLine> = Vec::new();
-
-    while let Ok(Some(row)) = rows.next() {
-        let content_ir = ContentIrLine::from_ir(row).map_err(|err| {
-            BackendError::new(format!(
-                "Failed to fetch content ir lines. \nReason: {}",
-                err
-            ))
-        })?;
-        lines.push(content_ir);
-    }
-
-    Ok(lines)
 }
 
 /// # Parses the [UnimarkupType] from String
