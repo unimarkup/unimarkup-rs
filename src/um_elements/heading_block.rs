@@ -219,11 +219,23 @@ impl ParseFromIr for HeadingBlock {
                 .into());
             }
 
+            let content = if !ir_line.text.is_empty() {
+                mem::take(&mut ir_line.text)
+            } else {
+                mem::take(&mut ir_line.fallback_text)
+            };
+
+            let attributes = if !ir_line.attributes.is_empty() {
+                mem::take(&mut ir_line.attributes)
+            } else {
+                mem::take(&mut ir_line.fallback_attributes)
+            };
+
             let block = HeadingBlock {
                 id: mem::take(&mut ir_line.id),
                 level,
-                content: mem::take(&mut ir_line.text),
-                attributes: mem::take(&mut ir_line.attributes),
+                content,
+                attributes,
             };
 
             return Ok(block);
