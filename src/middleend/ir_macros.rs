@@ -5,25 +5,13 @@ use log::info;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct MacroIrLine {
     pub name: String,
     pub parameters: String,
     pub um_type: String,
     pub body: String,
     pub fallback_body: String,
-}
-
-impl Default for MacroIrLine {
-    fn default() -> Self {
-        MacroIrLine {
-            name: String::default(),
-            parameters: String::default(),
-            um_type: String::default(),
-            body: String::default(),
-            fallback_body: String::default(),
-        }
-    }
 }
 
 impl IrTableName for MacroIrLine {
