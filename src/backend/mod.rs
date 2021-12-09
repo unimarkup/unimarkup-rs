@@ -6,6 +6,7 @@ mod loader;
 mod renderer;
 
 pub use backend_error::BackErr;
+pub use loader::ParseFromIr;
 pub use renderer::Render;
 
 type RenderBlock = Box<dyn Render>;
@@ -15,7 +16,7 @@ pub fn run(
 ) -> Result<(), UmError> {
     let blocks: Vec<RenderBlock> = loader::get_blocks_from_ir(connection)?;
 
-    let html = render_html(&blocks);
+    let _html = render_html(&blocks)?;
 
     Ok(())
 }
