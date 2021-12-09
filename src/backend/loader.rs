@@ -1,3 +1,4 @@
+#![deny(missing_docs)]
 use std::str::FromStr;
 
 use rusqlite::Connection;
@@ -5,53 +6,67 @@ use rusqlite::Connection;
 use crate::{
     backend::{BackErr, Render},
     middleend::{prepare_content_rows, ContentIrLine, RetrieveFromIr},
-    um_elements::{
-        heading_block::{HeadingBlock, HeadingLevel},
-        types::UnimarkupType,
-    },
+    um_elements::{heading_block::HeadingBlock, types::UnimarkupType},
     um_error::UmError,
 };
 
 use super::RenderBlock;
 
+/// Trait which should be implemented by any [`UnimarkupType`] which can be stored in IR
 pub trait ParseFromIr {
-    fn parse_from_ir(content_lines: &[ContentIrLine]) -> Self;
+    /// Parses a Unimarkup Block Element from Intermediate Representation (SQL Database)
+    ///
+    /// # Arguments
+    /// * `content_lines` - reference to a slice containing all [`ContentIrLine`] lines
+    /// * `line_index` - index of the [`ContentIrLine`] which is currently read
+    ///
+    /// As part of the return value is `usize`, which represents
+    /// the index of the next Content Line which should be read.
+    fn parse_from_ir(
+        content_lines: &mut [ContentIrLine],
+        line_index: usize,
+    ) -> Result<(Self, usize), UmError>
+    where
+        Self: Sized;
 }
 
+/// Parses the `[ContentIrLine]s`, creates Unimarkup Block Elements and gives them back.
+/// The actual blocks are stored in `Vec` as trait objects of trait [`Render`] since different types
+/// are needed.
+///
+/// # Arguments
+/// * `connection` - [`rusqlite::Connection`] used for interaction with IR
 pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock>, UmError> {
     let mut blocks: Vec<Box<dyn Render>> = vec![];
-    let content_lines = get_content_lines(connection)?;
+    let mut line_index = 0;
+    let mut content_lines = get_content_lines(connection)?;
 
-    for line in content_lines {
-        if line.um_type.contains("start") {
-            // is start of a block. parse the block
-            let um_type = parse_um_type(&line.um_type)?;
+    while let Some(line) = content_lines.get(line_index) {
+        let um_type = parse_um_type(&line.um_type)?;
 
-            let block = match um_type {
-                UnimarkupType::Heading => HeadingBlock {
-                    id: "first-heading".into(),
-                    level: HeadingLevel::Level1,
-                    content: "This is a heading".into(),
-                    attributes: String::default(),
-                },
-                UnimarkupType::Paragraph => todo!(),
-                UnimarkupType::List => todo!(),
-                UnimarkupType::Verbatim => todo!(),
-            };
+        let (block, new_line_index) = match um_type {
+            // UnimarkupType::List => todo!(),
+            // UnimarkupType::Verbatim => todo!(),
+            _ => HeadingBlock::parse_from_ir(&mut content_lines, line_index)?,
+        };
 
-            blocks.push(Box::new(block));
+        if new_line_index == line_index {
+            line_index += 1;
         } else {
-            return Err(BackErr::new(format!(
-                "expected content ir line with a start of a block. \nInstead got a: {}",
-                line.um_type
-            ))
-            .into());
+            line_index = new_line_index;
         }
+
+        blocks.push(Box::new(block));
+        line_index += 1;
     }
 
     Ok(blocks)
 }
 
+/// Loads the [`ContentIrLine`]s from IR and gives them contained in a vector
+///
+/// # Arguments
+/// * `connection` - [`rusqlite::Connection`] for interacting with IR
 fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLine>, UmError> {
     let mut rows_statement = prepare_content_rows(connection, true)
         .map_err(|err| BackErr::new(format!("Failed to prepare rows. \nReason: {}", err)))?;
