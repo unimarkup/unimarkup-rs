@@ -1,5 +1,5 @@
 #![deny(missing_docs)]
-use std::str::FromStr;
+use std::{collections::VecDeque, str::FromStr};
 
 use rusqlite::Connection;
 
@@ -22,10 +22,7 @@ pub trait ParseFromIr {
     ///
     /// As part of the return value is `usize`, which represents
     /// the index of the next Content Line which should be read.
-    fn parse_from_ir(
-        content_lines: &mut [ContentIrLine],
-        line_index: usize,
-    ) -> Result<(Self, usize), UmError>
+    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, UmError>
     where
         Self: Sized;
 }
@@ -38,26 +35,23 @@ pub trait ParseFromIr {
 /// * `connection` - [`rusqlite::Connection`] used for interaction with IR
 pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock>, UmError> {
     let mut blocks: Vec<Box<dyn Render>> = vec![];
-    let mut line_index = 0;
-    let mut content_lines = get_content_lines(connection)?;
+    let mut content_lines: VecDeque<ContentIrLine> = get_content_lines(connection)?.into();
 
-    while let Some(line) = content_lines.get(line_index) {
+    while let Some(line) = content_lines.get(0) {
         let um_type = parse_um_type(&line.um_type)?;
 
-        let (block, new_line_index) = match um_type {
+        let block = match um_type {
             // UnimarkupType::List => todo!(),
             // UnimarkupType::Verbatim => todo!(),
-            _ => HeadingBlock::parse_from_ir(&mut content_lines, line_index)?,
+            UnimarkupType::Heading => HeadingBlock::parse_from_ir(&mut content_lines)?,
+            _ => {
+                let _ = content_lines.pop_front();
+
+                HeadingBlock::default()
+            }
         };
 
-        if new_line_index == line_index {
-            line_index += 1;
-        } else {
-            line_index = new_line_index;
-        }
-
         blocks.push(Box::new(block));
-        line_index += 1;
     }
 
     Ok(blocks)

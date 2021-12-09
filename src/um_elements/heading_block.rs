@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::mem;
 
 use strum_macros::*;
@@ -28,6 +29,12 @@ pub enum HeadingLevel {
     #[strum(serialize = "level-6")]
     Level6,
     Invalid,
+}
+
+impl Default for HeadingLevel {
+    fn default() -> Self {
+        Self::Invalid
+    }
 }
 
 impl From<HeadingLevel> for usize {
@@ -72,7 +79,7 @@ impl From<usize> for HeadingLevel {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct HeadingBlock {
     pub id: String,
     pub level: HeadingLevel,
@@ -185,13 +192,10 @@ impl ParseForIr for HeadingBlock {
 }
 
 impl ParseFromIr for HeadingBlock {
-    fn parse_from_ir(
-        content_lines: &mut [ContentIrLine],
-        line_index: usize,
-    ) -> Result<(Self, usize), UmError> {
+    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, UmError> {
         let mut level = HeadingLevel::Invalid;
 
-        if let Some(ir_line) = content_lines.get_mut(line_index) {
+        if let Some(mut ir_line) = content_lines.pop_front() {
             let heading_pattern = format!("heading{delim}level{delim}", delim = types::DELIMITER);
 
             if ir_line.um_type.contains(&heading_pattern) {
@@ -222,7 +226,7 @@ impl ParseFromIr for HeadingBlock {
                 attributes: mem::take(&mut ir_line.attributes),
             };
 
-            return Ok((block, line_index + 1));
+            return Ok(block);
         }
 
         Err(BackendError::new("ContentIrLines are empty, could not construct HeadingBlock!").into())
@@ -252,6 +256,8 @@ impl Render for HeadingBlock {
 
 #[cfg(test)]
 mod heading_tests {
+    use std::collections::VecDeque;
+
     use crate::{
         backend::{ParseFromIr, Render},
         middleend::ContentIrLine,
@@ -291,7 +297,7 @@ mod heading_tests {
         let lowest_level = HeadingLevel::Level1 as usize;
         let highest_level = HeadingLevel::Level6 as usize;
 
-        let mut ir_lines = vec![];
+        let mut ir_lines: VecDeque<ContentIrLine> = vec![].into();
 
         for heading_level in lowest_level..=highest_level {
             let ir_line = ContentIrLine::new(
@@ -308,23 +314,21 @@ mod heading_tests {
                 "{}",
             );
 
-            ir_lines.push(ir_line);
+            ir_lines.push_back(ir_line);
         }
 
         // parse multiple heading blocks
 
-        let mut line_index = 0;
-
         let mut iterations = 0;
 
-        while ir_lines.get(line_index).is_some() {
+        while ir_lines.get(0).is_some() {
             // in case something goes wrong
             iterations += 1;
             if iterations > HeadingLevel::Level6 as usize {
                 break;
             }
 
-            let (block, new_line_index) = HeadingBlock::parse_from_ir(&mut ir_lines, line_index)?;
+            let block = HeadingBlock::parse_from_ir(&mut ir_lines)?;
 
             let (id, level, content, attr);
 
@@ -337,10 +341,6 @@ mod heading_tests {
             assert_eq!(level, HeadingLevel::from(iterations));
             assert_eq!(content, String::from("This is a heading"));
             assert_eq!(attr, String::from("{}"));
-
-            assert_eq!(new_line_index, line_index + 1);
-
-            line_index = new_line_index;
         }
 
         Ok(())
@@ -348,7 +348,7 @@ mod heading_tests {
 
     #[test]
     fn parse_from_ir_bad() {
-        let mut ir_lines = vec![];
+        let mut ir_lines: VecDeque<ContentIrLine> = vec![].into();
 
         let bad_ir_line = ContentIrLine::new(
             "some_id",
@@ -360,10 +360,10 @@ mod heading_tests {
             "{}",
         );
 
-        ir_lines.push(bad_ir_line);
+        ir_lines.push_back(bad_ir_line);
 
         // should panic because error is expected!
-        let result = HeadingBlock::parse_from_ir(&mut ir_lines, 0);
+        let result = HeadingBlock::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
         println!("{}", result.err().unwrap());
@@ -378,10 +378,10 @@ mod heading_tests {
             "{}",
         );
 
-        ir_lines.push(bad_ir_line);
+        ir_lines.push_back(bad_ir_line);
 
         // should panic because error is expected
-        let result = HeadingBlock::parse_from_ir(&mut ir_lines, 1);
+        let result = HeadingBlock::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
         println!("{}", result.err().unwrap());
@@ -399,9 +399,9 @@ mod heading_tests {
             "{}",
         );
 
-        ir_lines.push(bad_ir_line);
+        ir_lines.push_back(bad_ir_line);
 
-        let result = HeadingBlock::parse_from_ir(&mut ir_lines, 2);
+        let result = HeadingBlock::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
         println!("{}", result.err().unwrap());
