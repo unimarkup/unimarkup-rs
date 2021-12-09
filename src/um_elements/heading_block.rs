@@ -1,7 +1,9 @@
+use std::mem;
+
 use strum_macros::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::backend::Render;
+use crate::backend::{BackErr, ParseFromIr, Render};
 use crate::frontend::parser::count_symbol_until;
 use crate::frontend::{parser::CursorPos, SyntaxError};
 use crate::middleend::ContentIrLine;
@@ -38,6 +40,20 @@ impl From<HeadingLevel> for usize {
             HeadingLevel::Level5 => 5,
             HeadingLevel::Level6 => 6,
             _ => 7,
+        }
+    }
+}
+
+impl From<&str> for HeadingLevel {
+    fn from(input: &str) -> Self {
+        match input {
+            "1" => HeadingLevel::Level1,
+            "2" => HeadingLevel::Level2,
+            "3" => HeadingLevel::Level3,
+            "4" => HeadingLevel::Level4,
+            "5" => HeadingLevel::Level5,
+            "6" => HeadingLevel::Level6,
+            _ => HeadingLevel::Invalid,
         }
     }
 }
@@ -168,6 +184,49 @@ impl ParseForIr for HeadingBlock {
     }
 }
 
+impl ParseFromIr for HeadingBlock {
+    fn parse_from_ir(
+        content_lines: &mut [ContentIrLine],
+        line_index: usize,
+    ) -> Result<(Self, usize), UmError> {
+        let mut level = HeadingLevel::Invalid;
+
+        if let Some(ir_line) = content_lines.get_mut(line_index) {
+            if ir_line.um_type.contains("heading_level_") {
+                let mut split = ir_line.um_type.split("heading_level_");
+
+                // first element should be empty
+                if let Some("") = split.next() {
+                    let level_num = split.next();
+
+                    if let (Some(num_as_str), None) = (level_num, split.next()) {
+                        level = HeadingLevel::from(num_as_str);
+                    }
+                }
+            }
+
+            if level == HeadingLevel::Invalid {
+                return Err(BackErr::new(format!(
+                    "Provided heading level is invalid: {}",
+                    ir_line.um_type
+                ))
+                .into());
+            }
+
+            let block = HeadingBlock {
+                id: mem::take(&mut ir_line.id),
+                level,
+                content: mem::take(&mut ir_line.text),
+                attributes: mem::take(&mut ir_line.attributes),
+            };
+
+            return Ok((block, line_index + 1));
+        }
+
+        Err(BackErr::new("ContentIrLines are empty, could not construct HeadingBlock!").into())
+    }
+}
+
 impl Render for HeadingBlock {
     fn render_html(&self) -> Result<String, UmError> {
         let mut html = String::default();
@@ -190,8 +249,13 @@ impl Render for HeadingBlock {
 }
 
 #[cfg(test)]
-mod heading_render_tests {
-    use crate::{backend::Render, um_elements::heading_block::HeadingLevel, um_error::UmError};
+mod heading_tests {
+    use crate::{
+        backend::{ParseFromIr, Render},
+        middleend::ContentIrLine,
+        um_elements::heading_block::HeadingLevel,
+        um_error::UmError,
+    };
 
     use super::HeadingBlock;
 
@@ -218,5 +282,119 @@ mod heading_render_tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn parse_from_ir_test() -> Result<(), UmError> {
+        let lowest_level = HeadingLevel::Level1 as usize;
+        let highest_level = HeadingLevel::Level6 as usize;
+
+        let mut ir_lines = vec![];
+
+        for heading_level in lowest_level..=highest_level {
+            let ir_line = ContentIrLine::new(
+                "some_id",
+                42 + heading_level,
+                format!("heading_level_{}", heading_level),
+                "This is a heading",
+                "",
+                "{}",
+                "{}",
+            );
+
+            ir_lines.push(ir_line);
+        }
+
+        // parse multiple heading blocks
+
+        let mut line_index = 0;
+
+        let mut iterations = 0;
+
+        while ir_lines.get(line_index).is_some() {
+            // in case something goes wrong
+            iterations += 1;
+            if iterations > HeadingLevel::Level6 as usize {
+                break;
+            }
+
+            let (block, new_line_index) = HeadingBlock::parse_from_ir(&mut ir_lines, line_index)?;
+
+            let (id, level, content, attr);
+
+            id = block.id;
+            level = block.level;
+            content = block.content;
+            attr = block.attributes;
+
+            assert_eq!(id, String::from("some_id"));
+            assert_eq!(level, HeadingLevel::from(iterations));
+            assert_eq!(content, String::from("This is a heading"));
+            assert_eq!(attr, String::from("{}"));
+
+            assert_eq!(new_line_index, line_index + 1);
+
+            line_index = new_line_index;
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn parse_from_ir_bad() {
+        let mut ir_lines = vec![];
+
+        let bad_ir_line = ContentIrLine::new(
+            "some_id",
+            42,
+            "heading_level_0",
+            "This is a heading",
+            "",
+            "{}",
+            "{}",
+        );
+
+        ir_lines.push(bad_ir_line);
+
+        // should panic because error is expected!
+        let result = HeadingBlock::parse_from_ir(&mut ir_lines, 0);
+
+        assert!(result.is_err());
+        println!("{}", result.err().unwrap());
+
+        let bad_ir_line = ContentIrLine::new(
+            "some_id",
+            42,
+            "heading_level_7",
+            "This is a heading",
+            "",
+            "{}",
+            "{}",
+        );
+
+        ir_lines.push(bad_ir_line);
+
+        // should panic because error is expected
+        let result = HeadingBlock::parse_from_ir(&mut ir_lines, 1);
+
+        assert!(result.is_err());
+        println!("{}", result.err().unwrap());
+
+        let bad_ir_line = ContentIrLine::new(
+            "some_id",
+            42,
+            "some_other_type_level_2",
+            "This is a heading",
+            "",
+            "{}",
+            "{}",
+        );
+
+        ir_lines.push(bad_ir_line);
+
+        let result = HeadingBlock::parse_from_ir(&mut ir_lines, 2);
+
+        assert!(result.is_err());
+        println!("{}", result.err().unwrap());
     }
 }
