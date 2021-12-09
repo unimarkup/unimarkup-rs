@@ -2,6 +2,7 @@ use unimarkup_rs::middleend::VariableIrLine;
 use unimarkup_rs::middleend::{
     entry_already_exists, get_single_ir_line, RetrieveFromIr, WriteToIr,
 };
+use unimarkup_rs::um_elements::types;
 
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 
@@ -86,7 +87,12 @@ fn test_write_update() {
     assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
 
     //--- SECOND: WRITE TO IR -------------------------------------------------------
-    let updated_macro = VariableIrLine::new(&first_macro.name, "heading_level_2", "head", "");
+    let updated_macro = VariableIrLine::new(
+        &first_macro.name,
+        format!("heading{delim}level{delim}2", delim = types::DELIMITER),
+        "head",
+        "",
+    );
     let transaction = get_test_transaction(&mut conn);
     let write_res = updated_macro.write_to_ir(&transaction);
     let commit_res = transaction.commit();

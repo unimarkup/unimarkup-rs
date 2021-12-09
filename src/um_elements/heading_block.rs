@@ -3,29 +3,29 @@ use std::mem;
 use strum_macros::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::backend::{BackErr, ParseFromIr, Render};
+use crate::backend::{BackendError, ParseFromIr, Render};
 use crate::frontend::parser::count_symbol_until;
 use crate::frontend::{parser::CursorPos, SyntaxError};
 use crate::middleend::ContentIrLine;
 use crate::middleend::IrBlock;
 use crate::middleend::ParseForIr;
-use crate::um_elements::types::UnimarkupType;
+use crate::um_elements::types::{self, UnimarkupType};
 use crate::um_error::UmError;
 
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
-#[strum(serialize_all = "snake_case")]
+#[strum(serialize_all = "kebab-case")]
 pub enum HeadingLevel {
-    #[strum(serialize = "level_1")]
+    #[strum(serialize = "level-1")]
     Level1 = 1, // start counting from 0
-    #[strum(serialize = "level_2")]
+    #[strum(serialize = "level-2")]
     Level2,
-    #[strum(serialize = "level_3")]
+    #[strum(serialize = "level-3")]
     Level3,
-    #[strum(serialize = "level_4")]
+    #[strum(serialize = "level-4")]
     Level4,
-    #[strum(serialize = "level_5")]
+    #[strum(serialize = "level-5")]
     Level5,
-    #[strum(serialize = "level_6")]
+    #[strum(serialize = "level-6")]
     Level6,
     Invalid,
 }
@@ -167,7 +167,7 @@ impl ParseForIr for HeadingBlock {
 
         let mut um_type = UnimarkupType::Heading.to_string();
 
-        um_type.push('_');
+        um_type.push(types::DELIMITER);
         um_type.push_str(&level);
 
         let line = ContentIrLine::new(
@@ -192,8 +192,10 @@ impl ParseFromIr for HeadingBlock {
         let mut level = HeadingLevel::Invalid;
 
         if let Some(ir_line) = content_lines.get_mut(line_index) {
-            if ir_line.um_type.contains("heading_level_") {
-                let mut split = ir_line.um_type.split("heading_level_");
+            let heading_pattern = format!("heading{delim}level{delim}", delim = types::DELIMITER);
+
+            if ir_line.um_type.contains(&heading_pattern) {
+                let mut split = ir_line.um_type.split(&heading_pattern);
 
                 // first element should be empty
                 if let Some("") = split.next() {
@@ -206,7 +208,7 @@ impl ParseFromIr for HeadingBlock {
             }
 
             if level == HeadingLevel::Invalid {
-                return Err(BackErr::new(format!(
+                return Err(BackendError::new(format!(
                     "Provided heading level is invalid: {}",
                     ir_line.um_type
                 ))
@@ -223,7 +225,7 @@ impl ParseFromIr for HeadingBlock {
             return Ok((block, line_index + 1));
         }
 
-        Err(BackErr::new("ContentIrLines are empty, could not construct HeadingBlock!").into())
+        Err(BackendError::new("ContentIrLines are empty, could not construct HeadingBlock!").into())
     }
 }
 
@@ -253,7 +255,7 @@ mod heading_tests {
     use crate::{
         backend::{ParseFromIr, Render},
         middleend::ContentIrLine,
-        um_elements::heading_block::HeadingLevel,
+        um_elements::{heading_block::HeadingLevel, types},
         um_error::UmError,
     };
 
@@ -295,7 +297,11 @@ mod heading_tests {
             let ir_line = ContentIrLine::new(
                 "some_id",
                 42 + heading_level,
-                format!("heading_level_{}", heading_level),
+                format!(
+                    "heading{delim}level{delim}{level}",
+                    delim = types::DELIMITER,
+                    level = heading_level
+                ),
                 "This is a heading",
                 "",
                 "{}",
@@ -347,7 +353,7 @@ mod heading_tests {
         let bad_ir_line = ContentIrLine::new(
             "some_id",
             42,
-            "heading_level_0",
+            format!("heading{delim}level{delim}0", delim = types::DELIMITER),
             "This is a heading",
             "",
             "{}",
@@ -365,7 +371,7 @@ mod heading_tests {
         let bad_ir_line = ContentIrLine::new(
             "some_id",
             42,
-            "heading_level_7",
+            format!("heading{delim}level{delim}7", delim = types::DELIMITER),
             "This is a heading",
             "",
             "{}",
@@ -383,7 +389,10 @@ mod heading_tests {
         let bad_ir_line = ContentIrLine::new(
             "some_id",
             42,
-            "some_other_type_level_2",
+            format!(
+                "some{delim}other{delim}type{delim}level{delim}2",
+                delim = types::DELIMITER
+            ),
             "This is a heading",
             "",
             "{}",

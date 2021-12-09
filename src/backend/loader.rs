@@ -6,7 +6,7 @@ use rusqlite::Connection;
 use crate::{
     backend::{BackendError, Render},
     middleend::{prepare_content_rows, ContentIrLine, RetrieveFromIr},
-    um_elements::{heading_block::HeadingBlock, types::UnimarkupType},
+    um_elements::{heading_block::HeadingBlock, types, types::UnimarkupType},
     um_error::UmError,
 };
 
@@ -97,18 +97,18 @@ fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLine>, 
 /// ## Accepted formats
 /// This function accepts all formats produced by the unimarkup parser:
 /// - `"paragraph"`
-/// - `"paragraph_start"`
-/// - `"heading_level_1"`
-/// - `"heading_level_1_start"` etc.
+/// - `"paragraph-start"`
+/// - `"heading-level-1"`
+/// - `"heading-level-1-start"` etc.
 pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, UmError> {
     let type_string = type_as_str
-        .split('_')
+        .split(types::DELIMITER)
         .map(|part| if part != "start" { part } else { "" })
         .enumerate()
         .fold(String::new(), |mut acc, (i, new)| {
             if !new.is_empty() {
                 if i > 0 {
-                    acc.push('_');
+                    acc.push(types::DELIMITER);
                 }
 
                 acc.push_str(new);
@@ -117,14 +117,10 @@ pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, UmError> {
             acc
         });
 
-    // heading_level...
-    // paragraph...
-    // list_start
-    // list_end
-    // verbatim_start
+    let level_delim = format!("{}level", types::DELIMITER);
 
-    let type_string = if type_string.contains("_level") {
-        if let Some(val) = type_string.split("_level").next() {
+    let type_string = if type_string.contains(&level_delim) {
+        if let Some(val) = type_string.split(&level_delim).next() {
             val.into()
         } else {
             return Err(BackendError::new(format!(
@@ -154,12 +150,12 @@ mod loader_tests {
     #[test]
     fn parse_type() -> Result<(), UmError> {
         // paragraph test
-        let um_type = super::parse_um_type("paragraph_start")?;
+        let um_type = super::parse_um_type("paragraph-start")?;
 
         assert!(um_type == UnimarkupType::Paragraph);
 
         // heading test
-        let um_type = super::parse_um_type("heading_level_1")?;
+        let um_type = super::parse_um_type("heading-level-1")?;
 
         assert!(um_type == UnimarkupType::Heading);
 
