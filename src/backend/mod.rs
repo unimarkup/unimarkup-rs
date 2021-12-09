@@ -10,7 +10,7 @@ mod renderer;
 
 pub use backend_error::BackendError;
 pub use loader::ParseFromIr;
-pub use renderer::Render;
+pub use renderer::*;
 
 type RenderBlock = Box<dyn Render>;
 
@@ -30,7 +30,7 @@ pub fn run(connection: &mut Connection, config: &Config) -> Result<(), UmError> 
 
     if let Some(ref output_formats) = config.out_formats {
         if output_formats.contains(&OutputFormat::Html) {
-            let html = render_html(&blocks)?;
+            let html = renderer::render_html(&blocks)?;
 
             let mut out_path_html = out_path;
             out_path_html.set_extension("html");
@@ -48,14 +48,4 @@ pub fn run(connection: &mut Connection, config: &Config) -> Result<(), UmError> 
     }
 
     Ok(())
-}
-
-fn render_html(blocks: &[RenderBlock]) -> Result<String, UmError> {
-    let mut html = String::default();
-
-    for block in blocks {
-        html.push_str(&block.render_html()?);
-    }
-
-    Ok(html)
 }
