@@ -3,6 +3,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::frontend::parser::count_symbol_until;
 use crate::frontend::{parser::CursorPos, SyntaxError};
+use crate::frontend::parser_pest::Rule;
 use crate::middleend::ContentIrLine;
 use crate::middleend::IrBlock;
 use crate::middleend::ParseForIr;
@@ -55,6 +56,20 @@ impl From<usize> for HeadingLevel {
     }
 }
 
+impl From<Rule> for HeadingLevel {
+    fn from(level_depth: Rule) -> Self {
+        match level_depth {
+            Rule::heading1 => Self::Level1,
+            Rule::heading2 => Self::Level2,
+            Rule::heading3 => Self::Level3,
+            Rule::heading4 => Self::Level4,
+            Rule::heading5 => Self::Level5,
+            Rule::heading6 => Self::Level6,
+            _ => Self::Invalid,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct HeadingBlock {
     pub id: String,
@@ -65,7 +80,7 @@ pub struct HeadingBlock {
 
 pub struct HeadingBlock2 {
     pub id: String,
-    pub level: u32,
+    pub level: HeadingLevel,
     pub content: String,
     pub attributes: String,
     pub line_number: usize

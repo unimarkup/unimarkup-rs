@@ -42,8 +42,8 @@ pub fn parser_pest(ir_connection: &mut Connection) -> Result<(), UmError> {
 pub fn detect_heading(parsed_src: Pair<Rule>, headings_vec: & mut Vec<HeadingBlock2>) {
 
     for rule in parsed_src.into_inner() {
-        println!("{}", rule);
-        println!("------------");
+        // println!("{}", rule);
+        // println!("------------");
 
         if rule.as_rule().eq(&Rule::heading1)
             | rule.as_rule().eq(&Rule::heading2)
@@ -53,8 +53,7 @@ pub fn detect_heading(parsed_src: Pair<Rule>, headings_vec: & mut Vec<HeadingBlo
             | rule.as_rule().eq(&Rule::heading6)
         {
             //TODO Juls: nicht wirklich elegant, noch zu ändern
-            let level_heading = rule.to_string().chars().nth(7).unwrap().to_digit(10).unwrap(); //if rule headingx, get the 7th char and convert to u32
-
+            let level_heading = rule.as_rule().into();
             let mut id = "".to_string();
             let mut content = "".to_string();
             let (line_number,_) = rule.as_span().start_pos().line_col();
@@ -84,10 +83,10 @@ pub fn detect_heading(parsed_src: Pair<Rule>, headings_vec: & mut Vec<HeadingBlo
                 line_number
             };
 
-            println!();
-            println!("id: {}", parser_heading.id);
-            println!("heading level: {}", parser_heading.level);
-            println!("content: {}", parser_heading.content);
+            // println!();
+            // println!("id: {}", parser_heading.id);
+            // println!("heading level: {}", parser_heading.level);
+            // println!("content: {}", parser_heading.content);
 
             headings_vec.push(parser_heading);
             
