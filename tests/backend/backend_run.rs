@@ -2,7 +2,7 @@ use clap::StructOpt;
 use unimarkup_rs::{
     backend::{self, BackendError, Render},
     config::Config,
-    middleend::{self, ContentIrLine, ParseForIr},
+    middleend::{self, ContentIrLine},
     um_elements::heading_block::{HeadingBlock, HeadingLevel},
     um_error::UmError,
 };
