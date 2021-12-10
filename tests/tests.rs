@@ -8,10 +8,14 @@ mod middleend {
     mod ir_metadata;
     mod ir_resources;
     mod ir_setup;
-    mod ir_test_setup;
+    pub mod ir_test_setup;
     mod ir_variables;
 }
 
 mod um_elements {
     mod heading_block;
+}
+
+mod backend {
+    mod backend_run;
 }

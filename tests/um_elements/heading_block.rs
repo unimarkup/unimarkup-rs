@@ -33,7 +33,7 @@ fn parse_heading() {
 
             assert!(line.text == "This is a heading");
 
-            let mut heading_type: String = String::from("heading_");
+            let mut heading_type: String = String::from("heading-");
             heading_type.push_str(&HeadingLevel::from(level).to_string());
 
             assert!(line.um_type == heading_type);

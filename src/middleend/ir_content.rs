@@ -1,4 +1,5 @@
 use super::ir::{IrTableName, RetrieveFromIr};
+use super::IrError;
 use crate::middleend::ir::{self, WriteToIr};
 use crate::um_error::UmError;
 use log::warn;
@@ -146,4 +147,32 @@ pub fn prepare_content_rows(ir_connection: &Connection, order: bool) -> Result<S
         sql_order
     );
     ir_connection.prepare(&sql)
+}
+
+/// Loads the [`ContentIrLine`]s from IR and gives them contained in a vector
+///
+/// # Arguments
+/// * `connection` - [`rusqlite::Connection`] for interacting with IR
+pub fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLine>, UmError> {
+    let convert_err = |err| -> UmError {
+        IrError::new(
+            ContentIrLine::table_name(),
+            "unknown",
+            format!("Failed to query row from IR. \nReason: {}", err),
+        )
+        .into()
+    };
+
+    let mut rows_statement = prepare_content_rows(connection, true).map_err(convert_err)?;
+
+    let mut rows = rows_statement.query([]).map_err(convert_err)?;
+
+    let mut lines: Vec<ContentIrLine> = Vec::new();
+
+    while let Ok(Some(row)) = rows.next() {
+        let content_ir = ContentIrLine::from_ir(row).map_err(convert_err)?;
+        lines.push(content_ir);
+    }
+
+    Ok(lines)
 }
