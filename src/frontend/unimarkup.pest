@@ -2,6 +2,7 @@
 // --------------------
 text = { ( word ~ " "* )+ }
 word = _{ ( ASCII_ALPHA | ASCII_DIGIT )+ }
+blank_line = { NEWLINE ~ NEWLINE }
 //---------------------------------------------------------------
 
 // ------READING FILE
@@ -12,12 +13,12 @@ file = { heading }
 // ------HEADING
 // --------------------
 heading = { heading1 | heading2 | heading3 | heading4 | heading5 | heading6 }
-heading1 = { "#" ~ " " ~ text ~ NEWLINE ~ body_heading1 }
-heading2 = { "##" ~ " " ~ text ~ NEWLINE ~ body_heading2}
-heading3 = { "###" ~ " " ~ text ~ NEWLINE ~ body_heading3}
-heading4 = { "####" ~ " " ~ text ~ NEWLINE ~ body_heading4}
-heading5 = { "#####" ~ " " ~ text ~ NEWLINE ~ body_heading5}
-heading6 = { "######" ~ " " ~ text ~ NEWLINE ~ body_heading6}
+heading1 = { "#" ~ " " ~ text ~ blank_line ~ body_heading1 }
+heading2 = { "##" ~ " " ~ text ~ blank_line ~ body_heading2}
+heading3 = { "###" ~ " " ~ text ~ blank_line ~ body_heading3}
+heading4 = { "####" ~ " " ~ text ~ blank_line ~ body_heading4}
+heading5 = { "#####" ~ " " ~ text ~ blank_line ~ body_heading5}
+heading6 = { "######" ~ " " ~ text ~ blank_line ~ body_heading6}
 
 body_heading1 = { ( text | ( heading2 | heading3 | heading4 | heading5 | heading6 ) | NEWLINE)* }
 body_heading2 = { ( text | ( heading3 | heading4 | heading5 | heading6 ) | NEWLINE )* }

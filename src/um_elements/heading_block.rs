@@ -68,6 +68,7 @@ pub struct HeadingBlock2 {
     pub level: u32,
     pub content: String,
     pub attributes: String,
+    pub line_number: usize
 }
 
 impl ParseForIr for HeadingBlock {
@@ -167,6 +168,29 @@ impl ParseForIr for HeadingBlock {
             &self.content,
             "",
             &self.attributes,
+            "",
+        );
+
+        vec![line]
+    }
+}
+
+impl From<HeadingBlock2> for Vec<ContentIrLine> {
+    fn from(heading_block: HeadingBlock2) -> Self {
+        let level = heading_block.level.to_string();
+
+        let mut um_type = UnimarkupType::Heading.to_string();
+
+        um_type.push('_');
+        um_type.push_str(&level);
+
+        let line = ContentIrLine::new(
+            &heading_block.id,
+            heading_block.line_number,
+            um_type,
+            &heading_block.content,
+            "",
+            &heading_block.attributes,
             "",
         );
 
