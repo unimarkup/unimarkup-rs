@@ -1,5 +1,5 @@
 use super::super::middleend::ir_test_setup;
-use unimarkup_rs::{frontend::parser_pest::parser_pest, um_error::UmError};
+use unimarkup_rs::{frontend::parser::*, um_error::UmError};
 
 #[test]
 fn test_file() -> Result<(), UmError> {

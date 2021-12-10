@@ -2,7 +2,7 @@ use std::fmt;
 
 use unicode_segmentation::UnicodeSegmentation;
 
-use super::parser::CursorPos;
+type CursorPos = (usize, usize);
 
 #[derive(Debug)]
 pub struct SyntaxError {
@@ -19,13 +19,13 @@ impl SyntaxError {
         start_pos: &CursorPos,
         current_pos: &CursorPos,
     ) -> (String, String) {
-        let start_line = if let Some(line) = content.get(start_pos.line) {
+        let start_line = if let Some(line) = content.get(start_pos.0) {
             line
         } else {
             "Invalid line access!"
         };
 
-        let current_line = if let Some(line) = content.get(current_pos.line) {
+        let current_line = if let Some(line) = content.get(current_pos.0) {
             line
         } else {
             "Invalid line access!"
@@ -54,8 +54,7 @@ impl SyntaxError {
 
 impl fmt::Display for SyntaxError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let start_line_number = self.start_pos.line;
-        let start_symbol = self.start_pos.symbol;
+        let (start_line_number, start_symbol) = self.start_pos;
 
         let prefix = "Syntax Error: ";
 
@@ -86,8 +85,7 @@ impl fmt::Display for SyntaxError {
 
         f.write_fmt(format_args!("{}^", " ".repeat(skip_length)))?;
 
-        let curr_line_number = self.current_pos.line;
-        let curr_symbol = self.current_pos.symbol;
+        let (curr_line_number, curr_symbol) = self.current_pos;
 
         f.write_fmt(format_args!("\nError occured at: \n\n"))?;
 

@@ -4,7 +4,7 @@ use std::mem;
 use strum_macros::*;
 
 use crate::backend::{BackendError, ParseFromIr, Render};
-use crate::frontend::parser_pest::Rule;
+use crate::frontend::parser::Rule;
 use crate::middleend::ContentIrLine;
 use crate::um_elements::types::{self, UnimarkupType};
 use crate::um_error::UmError;
