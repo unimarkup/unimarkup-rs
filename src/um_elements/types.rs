@@ -1,12 +1,34 @@
-use serde::{Deserialize, Serialize};
-use strum_macros::{Display, EnumString};
+use clap::ArgEnum;
+use strum_macros::EnumString;
 
-#[derive(Serialize, Deserialize, EnumString, Display)]
-#[strum(serialize_all = "snake_case")]
+pub const DELIMITER: char = '-';
+
+#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
+#[strum(ascii_case_insensitive, serialize_all = "kebab-case")]
 pub enum UnimarkupType {
-    Heading,
     Paragraph,
-    List,
-    Verbatim,
-    // ... many more to come
+    Heading,
+    BulletList,
+    NumberedList,
+    TaskList,
+    DefinitionList,
+    Table,
+    VerbatimBlock,
+    RenderBlock,
+    MathBlock,
+    FigureInsert,
+    VerbatimBlockInsert,
+    RenderBlockInsert,
+    TextBlock,
+    QuotationBlock,
+    LineBlock,
+    DefinitionBlock,
+    ExplicitColumn,
+    ImplicitColumn,
+    FieldBlock,
+    OutputBlock,
+    MediaBlockInsert,
+    FormBlock,
+    MacroDefinition,
+    VariableDefinition,
 }

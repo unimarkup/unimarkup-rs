@@ -1,11 +1,13 @@
 use core::fmt;
 
+use crate::backend::BackendError;
 use crate::frontend::SyntaxError;
 use crate::middleend::IrError;
 
 pub enum UmError {
     Syntax(SyntaxError),
     Ir(IrError),
+    Backend(BackendError),
 }
 
 impl From<SyntaxError> for UmError {
@@ -20,11 +22,18 @@ impl From<IrError> for UmError {
     }
 }
 
+impl From<BackendError> for UmError {
+    fn from(back_err: BackendError) -> Self {
+        UmError::Backend(back_err)
+    }
+}
+
 impl fmt::Display for UmError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             UmError::Syntax(err) => err.fmt(f),
             UmError::Ir(err) => err.fmt(f),
+            UmError::Backend(err) => err.fmt(f),
         }
     }
 }
@@ -34,6 +43,7 @@ impl fmt::Debug for UmError {
         match self {
             UmError::Syntax(err) => err.fmt(f),
             UmError::Ir(err) => err.fmt(f),
+            UmError::Backend(err) => err.fmt(f),
         }
     }
 }
