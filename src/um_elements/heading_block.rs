@@ -63,6 +63,13 @@ pub struct HeadingBlock {
     pub attributes: String,
 }
 
+pub struct HeadingBlock2 {
+    pub id: String,
+    pub level: u32,
+    pub content: String,
+    pub attributes: String,
+}
+
 impl ParseForIr for HeadingBlock {
     fn parse_for_ir(
         content: &[&str],

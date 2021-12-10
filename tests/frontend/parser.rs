@@ -1,4 +1,4 @@
-use unimarkup_rs::frontend::parser_pest;
+use unimarkup_rs::frontend::parser_pest::parser_pest;
 
 #[test]
 fn test_file() {
