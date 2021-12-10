@@ -2,15 +2,10 @@ use std::collections::VecDeque;
 use std::mem;
 
 use strum_macros::*;
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::backend::{BackendError, ParseFromIr, Render};
-use crate::frontend::parser::count_symbol_until;
 use crate::frontend::parser_pest::Rule;
-use crate::frontend::{parser::CursorPos, SyntaxError};
 use crate::middleend::ContentIrLine;
-use crate::middleend::IrBlock;
-use crate::middleend::ParseForIr;
 use crate::um_elements::types::{self, UnimarkupType};
 use crate::um_error::UmError;
 
@@ -100,122 +95,11 @@ pub struct HeadingBlock {
     pub level: HeadingLevel,
     pub content: String,
     pub attributes: String,
+    pub line_nr: usize,
 }
 
-pub struct HeadingBlock2 {
-    pub id: String,
-    pub level: HeadingLevel,
-    pub content: String,
-    pub attributes: String,
-    pub line_number: usize,
-}
-
-impl ParseForIr for HeadingBlock {
-    fn parse_for_ir(
-        content: &[&str],
-        cursor_pos: &CursorPos,
-    ) -> Result<(IrBlock, CursorPos), UmError> {
-        let mut curr_pos = *cursor_pos;
-        let start_line_nr = curr_pos.line;
-
-        let mut heading_block = HeadingBlock {
-            id: "".to_string(),
-            level: HeadingLevel::Invalid,
-            content: "".to_string(),
-            attributes: "".to_string(),
-        };
-
-        while let Some(&line) = content.get(curr_pos.line) {
-            if line.trim().is_empty() {
-                if heading_block.level == HeadingLevel::Invalid {
-                    return Err(SyntaxError::new(
-                        content,
-                        cursor_pos,
-                        &curr_pos,
-                        "Invalid heading syntax. \n".to_owned()
-                            + "Headings are defined as 1 to 6 '#' symbols, \n"
-                            + "followed by whitespace and Heading content.",
-                    )
-                    .into());
-                } else {
-                    break;
-                }
-            }
-
-            let mut heading_count = 0;
-
-            if heading_block.level == HeadingLevel::Invalid {
-                let count_res = count_symbol_until(line, "#", char::is_whitespace);
-
-                match count_res {
-                    Ok(count) => heading_count = count,
-                    Err((count, message)) => {
-                        curr_pos.symbol = count;
-
-                        return Err(
-                            SyntaxError::new(content, cursor_pos, &curr_pos, message).into()
-                        );
-                    }
-                }
-
-                if heading_count > HeadingLevel::Level6 as usize {
-                    // to many hashtags, when heading expected
-
-                    // index starts from 0, HeadingLevel from 1
-                    curr_pos.symbol = (HeadingLevel::Invalid as usize) - 1;
-
-                    return Err(SyntaxError::new(
-                        content,
-                        cursor_pos,
-                        &curr_pos,
-                        "Invalid number of '#' symbols.",
-                    )
-                    .into());
-                }
-
-                heading_block.level = HeadingLevel::from(heading_count);
-            }
-
-            heading_block.content.push_str(
-                line.graphemes(true)
-                    .skip(heading_count)
-                    .collect::<String>()
-                    .trim(),
-            );
-
-            curr_pos.line += 1;
-        }
-
-        let mut ir_block = IrBlock::new();
-        ir_block.append_content_lines(&mut heading_block.generate_ir_lines(start_line_nr));
-
-        Ok((ir_block, curr_pos))
-    }
-
-    fn generate_ir_lines(&self, line_nr: usize) -> Vec<ContentIrLine> {
-        let level = self.level.to_string();
-
-        let mut um_type = UnimarkupType::Heading.to_string();
-
-        um_type.push(types::DELIMITER);
-        um_type.push_str(&level);
-
-        let line = ContentIrLine::new(
-            &self.id,
-            line_nr,
-            um_type,
-            &self.content,
-            "",
-            &self.attributes,
-            "",
-        );
-
-        vec![line]
-    }
-}
-
-impl From<HeadingBlock2> for Vec<ContentIrLine> {
-    fn from(heading_block: HeadingBlock2) -> Self {
+impl From<HeadingBlock> for Vec<ContentIrLine> {
+    fn from(heading_block: HeadingBlock) -> Self {
         let level = heading_block.level.to_string();
 
         let mut um_type = UnimarkupType::Heading.to_string();
@@ -225,7 +109,7 @@ impl From<HeadingBlock2> for Vec<ContentIrLine> {
 
         let line = ContentIrLine::new(
             &heading_block.id,
-            heading_block.line_number,
+            heading_block.line_nr,
             um_type,
             &heading_block.content,
             "",
@@ -282,6 +166,7 @@ impl ParseFromIr for HeadingBlock {
                 level,
                 content,
                 attributes,
+                line_nr: ir_line.line_nr,
             };
 
             return Ok(block);
@@ -339,6 +224,7 @@ mod heading_tests {
                 level: HeadingLevel::from(level),
                 content: heading_content,
                 attributes: String::default(),
+                line_nr: level as usize,
             };
 
             let html = heading.render_html()?;
