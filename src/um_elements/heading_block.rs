@@ -98,13 +98,13 @@ pub struct HeadingBlock {
     pub line_nr: usize,
 }
 
-impl From<HeadingBlock> for Vec<ContentIrLine> {
-    fn from(heading_block: HeadingBlock) -> Self {
+impl From<&HeadingBlock> for Vec<ContentIrLine> {
+    fn from(heading_block: &HeadingBlock) -> Self {
         let level = heading_block.level.to_string();
 
         let mut um_type = UnimarkupType::Heading.to_string();
 
-        um_type.push('_');
+        um_type.push(types::DELIMITER);
         um_type.push_str(&level);
 
         let line = ContentIrLine::new(
@@ -118,6 +118,12 @@ impl From<HeadingBlock> for Vec<ContentIrLine> {
         );
 
         vec![line]
+    }
+}
+
+impl AsRef<Self> for HeadingBlock {
+    fn as_ref(&self) -> &Self {
+        self
     }
 }
 

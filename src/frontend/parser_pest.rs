@@ -3,18 +3,18 @@ use pest_derive::Parser;
 use rusqlite::Connection;
 use std::fs;
 
-use crate::{um_elements::heading_block::{HeadingBlock2, HeadingBlock}, middleend::{WriteToIr, ContentIrLine}, um_error::UmError};
+use crate::{
+    middleend::{ContentIrLine, WriteToIr},
+    um_elements::heading_block::HeadingBlock,
+    um_error::UmError,
+};
 
-extern crate pest;
-extern crate pest_derive;
-#[macro_use]
 #[derive(Parser)]
 #[grammar = "frontend/unimarkup.pest"]
 pub struct UnimarkupParser;
 
 pub fn parser_pest(ir_connection: &mut Connection) -> Result<(), UmError> {
-
-    let mut headings_vec: Vec<HeadingBlock2> = Vec::new();
+    let mut headings_vec: Vec<HeadingBlock> = Vec::new();
     let ir_transaction = ir_connection.transaction();
 
     let src = fs::read_to_string("src/frontend/textfiles/test.txt").expect("cannot read file");
@@ -23,12 +23,11 @@ pub fn parser_pest(ir_connection: &mut Connection) -> Result<(), UmError> {
         .next()
         .unwrap();
 
-    detect_heading(parsed_src, & mut headings_vec);
-
+    detect_heading(parsed_src, &mut headings_vec);
 
     if let Ok(transaction) = ir_transaction {
         for element in headings_vec {
-            let ir_lines : Vec<ContentIrLine> = element.into();
+            let ir_lines: Vec<ContentIrLine> = element.as_ref().into();
             for ir_line in ir_lines {
                 ir_line.write_to_ir(&transaction)?;
             }
@@ -39,8 +38,7 @@ pub fn parser_pest(ir_connection: &mut Connection) -> Result<(), UmError> {
     Ok(())
 }
 
-pub fn detect_heading(parsed_src: Pair<Rule>, headings_vec: & mut Vec<HeadingBlock2>) {
-
+pub fn detect_heading(parsed_src: Pair<Rule>, headings_vec: &mut Vec<HeadingBlock>) {
     for rule in parsed_src.into_inner() {
         // println!("{}", rule);
         // println!("------------");
@@ -56,31 +54,30 @@ pub fn detect_heading(parsed_src: Pair<Rule>, headings_vec: & mut Vec<HeadingBlo
             let level_heading = rule.as_rule().into();
             let mut id = "".to_string();
             let mut content = "".to_string();
-            let (line_number,_) = rule.as_span().start_pos().line_col();
+            let (line_nr, _) = rule.as_span().start_pos().line_col();
 
             for inner_rule in rule.into_inner() {
-                
                 if inner_rule.as_rule().eq(&Rule::text) {
                     id = inner_rule.as_str().to_string();
                 } else if inner_rule.as_rule().eq(&Rule::body_heading1)
-                | inner_rule.as_rule().eq(&Rule::body_heading2)
-                | inner_rule.as_rule().eq(&Rule::body_heading3)
-                | inner_rule.as_rule().eq(&Rule::body_heading4)
-                | inner_rule.as_rule().eq(&Rule::body_heading5)
-                | inner_rule.as_rule().eq(&Rule::body_heading6) {
-
+                    | inner_rule.as_rule().eq(&Rule::body_heading2)
+                    | inner_rule.as_rule().eq(&Rule::body_heading3)
+                    | inner_rule.as_rule().eq(&Rule::body_heading4)
+                    | inner_rule.as_rule().eq(&Rule::body_heading5)
+                    | inner_rule.as_rule().eq(&Rule::body_heading6)
+                {
                     content = inner_rule.as_str().to_string();
                     //detect_heading(inner_rule, headings_vec);
                 }
             }
-            
+
             //detect_heading(rule);
-            let parser_heading = HeadingBlock2 {
+            let parser_heading = HeadingBlock {
                 id,
                 level: level_heading,
                 content,
                 attributes: "".to_string(),
-                line_number
+                line_nr,
             };
 
             // println!();
@@ -89,7 +86,6 @@ pub fn detect_heading(parsed_src: Pair<Rule>, headings_vec: & mut Vec<HeadingBlo
             // println!("content: {}", parser_heading.content);
 
             headings_vec.push(parser_heading);
-            
         } else if rule.as_rule().eq(&Rule::heading) {
             detect_heading(rule, headings_vec);
         }
