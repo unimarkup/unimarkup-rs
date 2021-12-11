@@ -1,4 +1,5 @@
 use core::fmt;
+use std::error::Error;
 
 use crate::backend::BackendError;
 use crate::frontend::SyntaxError;
@@ -8,6 +9,7 @@ pub enum UmError {
     Syntax(SyntaxError),
     Ir(IrError),
     Backend(BackendError),
+    General { msg: String, error: Box<dyn Error> },
 }
 
 impl From<SyntaxError> for UmError {
@@ -34,6 +36,7 @@ impl fmt::Display for UmError {
             UmError::Syntax(err) => err.fmt(f),
             UmError::Ir(err) => err.fmt(f),
             UmError::Backend(err) => err.fmt(f),
+            UmError::General { msg, error } => f.write_fmt(format_args!("{}: {}", msg, error)),
         }
     }
 }
@@ -44,6 +47,7 @@ impl fmt::Debug for UmError {
             UmError::Syntax(err) => err.fmt(f),
             UmError::Ir(err) => err.fmt(f),
             UmError::Backend(err) => err.fmt(f),
+            UmError::General { msg, error } => f.write_fmt(format_args!("{}: {}", msg, error)),
         }
     }
 }
