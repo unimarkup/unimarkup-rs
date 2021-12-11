@@ -1,7 +1,7 @@
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
 use rusqlite::Connection;
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use crate::{
     middleend::{ContentIrLine, WriteToIr},
@@ -9,9 +9,15 @@ use crate::{
     um_error::UmError,
 };
 
+use super::UnimarkupBlocks;
+
 #[derive(Parser)]
 #[grammar = "frontend/unimarkup.pest"]
 pub struct UnimarkupParser;
+
+pub fn parse_unimarkup(um_file: PathBuf) -> Result<UnimarkupBlocks, UmError> {
+    Ok(vec![])
+}
 
 pub fn parser_pest(ir_connection: &mut Connection) -> Result<(), UmError> {
     let mut headings_vec: Vec<HeadingBlock> = Vec::new();

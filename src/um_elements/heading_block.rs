@@ -5,7 +5,7 @@ use strum_macros::*;
 
 use crate::backend::{BackendError, ParseFromIr, Render};
 use crate::frontend::parser::Rule;
-use crate::middleend::ContentIrLine;
+use crate::middleend::{AsIrLines, ContentIrLine};
 use crate::um_elements::types::{self, UnimarkupType};
 use crate::um_error::UmError;
 
@@ -118,6 +118,12 @@ impl From<&HeadingBlock> for Vec<ContentIrLine> {
         );
 
         vec![line]
+    }
+}
+
+impl AsIrLines for HeadingBlock {
+    fn as_ir_lines(&self) -> Vec<ContentIrLine> {
+        self.into()
     }
 }
 
