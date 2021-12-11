@@ -1,0 +1,18 @@
+blank_line = @{ NEWLINE ~ SPACE_SEPARATOR* ~ NEWLINE }
+
+// --------- ATOMIC BLOCKS --------- \\ 
+atomic_block = { (!(NEWLINE ~ SPACE_SEPARATOR* ~ NEWLINE) ~ ANY)+ }
+
+// --------- NESTED BLOCK DELIMITER --------- \\ 
+verbatim_delimiter = { !"~~~[" ~ "~"{3,} }
+renderer_delimiter = { !"'''[" ~ "'"{3,} }
+preamble_delimiter = { ";;;" }
+
+// --------- NESTED BLOCKS --------- \\ 
+delimiter = _{ verbatim_delimiter | renderer_delimiter | preamble_delimiter }
+nested_body = { (!PEEK ~ ANY)+ }
+nested_block = { PUSH(delimiter) ~ nested_body ~ POP }
+
+unimarkup_block = _{ nested_block | atomic_block }
+
+unimarkup = { SOI ~ (unimarkup_block ~ (blank_line | EOI))+ }
