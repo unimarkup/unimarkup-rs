@@ -1,0 +1,14 @@
+blank_line = @{ NEWLINE ~ SPACE_SEPARATOR* ~ NEWLINE }
+
+atomic_block = { (!(NEWLINE ~ SPACE_SEPARATOR* ~ NEWLINE) ~ ANY)+ }
+
+verbatim_delimiter = { !"~~~[" ~ "~"{3,} }
+renderer_delimiter = { !"'''[" ~ "'"{3,} }
+
+delimiter = _{ verbatim_delimiter | renderer_delimiter }
+delimiter_body = { (!PEEK ~ ANY)+ }
+delimiter_block = { PUSH(delimiter) ~ delimiter_body ~ POP }
+
+unimarkup_block = _{ delimiter_block | atomic_block }
+
+unimarkup = { SOI ~ (unimarkup_block ~ (blank_line | EOI))+ }
