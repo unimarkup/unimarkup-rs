@@ -5,6 +5,6 @@ use unimarkup_rs::{frontend::parser::*, um_error::UmError};
 fn test_file() -> Result<(), UmError> {
     let mut connection = ir_test_setup::setup_test_ir();
 
-    parser_pest(&mut connection)?;
+    // parser_pest(&mut connection)?;
     Ok(())
 }

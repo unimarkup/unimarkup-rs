@@ -75,19 +75,19 @@ impl From<usize> for HeadingLevel {
     }
 }
 
-impl From<Rule> for HeadingLevel {
-    fn from(level_depth: Rule) -> Self {
-        match level_depth {
-            Rule::heading1 => Self::Level1,
-            Rule::heading2 => Self::Level2,
-            Rule::heading3 => Self::Level3,
-            Rule::heading4 => Self::Level4,
-            Rule::heading5 => Self::Level5,
-            Rule::heading6 => Self::Level6,
-            _ => Self::Invalid,
-        }
-    }
-}
+// impl From<Rule> for HeadingLevel {
+//     fn from(level_depth: Rule) -> Self {
+//         match level_depth {
+//             Rule::heading1 => Self::Level1,
+//             Rule::heading2 => Self::Level2,
+//             Rule::heading3 => Self::Level3,
+//             Rule::heading4 => Self::Level4,
+//             Rule::heading5 => Self::Level5,
+//             Rule::heading6 => Self::Level6,
+//             _ => Self::Invalid,
+//         }
+//     }
+// }
 
 #[derive(Debug, Default)]
 pub struct HeadingBlock {

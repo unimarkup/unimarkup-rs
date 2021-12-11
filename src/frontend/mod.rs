@@ -9,6 +9,8 @@ pub mod parser;
 
 type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;
 
-pub fn run(_connection: &mut Connection, _config: &mut Config) -> Result<(), UmError> {
+pub fn run(_connection: &mut Connection, config: &mut Config) -> Result<(), UmError> {
+    let _ = parser::parse_unimarkup(&config.um_file);
+
     Ok(())
 }
