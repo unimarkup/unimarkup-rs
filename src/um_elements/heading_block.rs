@@ -1,13 +1,18 @@
 use std::collections::VecDeque;
 use std::mem;
 
+use pest::iterators::{Pair, Pairs};
+use pest::Span;
 use strum_macros::*;
 
 use crate::backend::{BackendError, ParseFromIr, Render};
-use crate::frontend::parser::Rule;
+use crate::frontend::parser::{Rule, UmParse};
+use crate::frontend::UnimarkupBlocks;
 use crate::middleend::{AsIrLines, ContentIrLine};
 use crate::um_elements::types::{self, UnimarkupType};
 use crate::um_error::UmError;
+
+use super::types::UnimarkupBlock;
 
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
 #[strum(serialize_all = "kebab-case")]
@@ -50,12 +55,12 @@ impl From<HeadingLevel> for usize {
 impl From<&str> for HeadingLevel {
     fn from(input: &str) -> Self {
         match input {
-            "1" => HeadingLevel::Level1,
-            "2" => HeadingLevel::Level2,
-            "3" => HeadingLevel::Level3,
-            "4" => HeadingLevel::Level4,
-            "5" => HeadingLevel::Level5,
-            "6" => HeadingLevel::Level6,
+            "1" | "#" => HeadingLevel::Level1,
+            "2" | "##" => HeadingLevel::Level2,
+            "3" | "###" => HeadingLevel::Level3,
+            "4" | "####" => HeadingLevel::Level4,
+            "5" | "#####" => HeadingLevel::Level5,
+            "6" | "######" => HeadingLevel::Level6,
             _ => HeadingLevel::Invalid,
         }
     }
@@ -75,20 +80,6 @@ impl From<usize> for HeadingLevel {
     }
 }
 
-// impl From<Rule> for HeadingLevel {
-//     fn from(level_depth: Rule) -> Self {
-//         match level_depth {
-//             Rule::heading1 => Self::Level1,
-//             Rule::heading2 => Self::Level2,
-//             Rule::heading3 => Self::Level3,
-//             Rule::heading4 => Self::Level4,
-//             Rule::heading5 => Self::Level5,
-//             Rule::heading6 => Self::Level6,
-//             _ => Self::Invalid,
-//         }
-//     }
-// }
-
 #[derive(Debug, Default)]
 pub struct HeadingBlock {
     pub id: String,
@@ -96,6 +87,71 @@ pub struct HeadingBlock {
     pub content: String,
     pub attributes: String,
     pub line_nr: usize,
+}
+
+impl UmParse for HeadingBlock {
+    fn parse_multiple(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, UmError>
+    where
+        Self: Sized,
+    {
+        let heading_pairs = pairs
+            .next()
+            .expect("At least one pair available")
+            .into_inner();
+
+        let mut headings: UnimarkupBlocks = Vec::new();
+
+        let (line_nr, _column_nr) = span.start_pos().line_col();
+
+        for pair in heading_pairs {
+            let mut heading = Self::parse(pair);
+            heading.line_nr += line_nr;
+            headings.push(Box::new(heading));
+        }
+
+        Ok(headings)
+    }
+
+    fn parse(pair: Pair<Rule>) -> Self
+    where
+        Self: Sized,
+    {
+        let mut heading_data = pair.into_inner();
+
+        // heading_start
+        let heading_start = heading_data.next().expect("heading rule has heading_start");
+
+        let heading_content = heading_data
+            .next()
+            .expect("heading rule has heading_content");
+
+        let level = heading_start.as_str().trim().into();
+        let (line_nr, _) = heading_start.as_span().start_pos().line_col();
+
+        let mut content_lowercase = heading_content.as_str().to_lowercase();
+        content_lowercase.retain(|c| c.is_alphanumeric() | c.is_whitespace());
+        let content_split = content_lowercase.split_whitespace();
+
+        let id: String = {
+            let mut id = String::new();
+            for word in content_split.into_iter() {
+                id.push_str(word);
+                id.push('-');
+            }
+
+            id.strip_suffix('-')
+                .expect("We added the suffix")
+                .to_string()
+        };
+
+        HeadingBlock {
+            id,
+            level,
+            content: heading_content.as_str().into(),
+            attributes: "{}".into(),
+            line_nr,
+        }
+    }
 }
 
 impl From<&HeadingBlock> for Vec<ContentIrLine> {
@@ -208,6 +264,8 @@ impl Render for HeadingBlock {
         Ok(html)
     }
 }
+
+impl UnimarkupBlock for HeadingBlock {}
 
 #[cfg(test)]
 mod heading_tests {

@@ -2,6 +2,7 @@ use crate::{
     config::{Config, OutputFormat},
     um_error::UmError,
 };
+use log::info;
 use rusqlite::Connection;
 
 mod backend_error;
@@ -35,13 +36,14 @@ pub fn run(connection: &mut Connection, config: &Config) -> Result<(), UmError> 
             let mut out_path_html = out_path;
             out_path_html.set_extension("html");
 
+            let out_path = out_path_html.to_str().expect("Validation done in config");
+
+            info!("Writing to {}", out_path);
+
             std::fs::write(&out_path_html, &html).map_err(|err| {
                 BackendError::new(format!(
                     "Could not write to file '{}'.\nReason: {}",
-                    out_path_html
-                        .to_str()
-                        .expect("Output path is valid UTF-8 String"),
-                    err
+                    out_path, err
                 ))
             })?;
         }

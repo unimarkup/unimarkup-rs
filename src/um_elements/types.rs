@@ -1,13 +1,13 @@
 use clap::ArgEnum;
 use strum_macros::EnumString;
 
-use crate::{backend::Render, middleend::AsIrLines};
+use crate::{backend::Render, frontend::parser::UmParse, middleend::AsIrLines};
 
 use super::heading_block::HeadingBlock;
 
 pub const DELIMITER: char = '-';
 
-pub trait UnimarkupBlock: Render + AsIrLines {}
+pub trait UnimarkupBlock: Render + AsIrLines + UmParse + std::fmt::Debug {}
 
 #[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
 #[strum(ascii_case_insensitive, serialize_all = "kebab-case")]
