@@ -16,3 +16,16 @@ nested_block = { PUSH(delimiter) ~ nested_body ~ POP }
 unimarkup_block = _{ nested_block | atomic_block }
 
 unimarkup = { SOI ~ (unimarkup_block ~ (blank_line | EOI))+ }
+
+paragraph = { !heading_start ~ ml_text }
+
+// ****************************
+// ********* BLOCKS ***********
+// ****************************
+
+// ******** HEADING ******** \\
+
+heading_start = @{ NEWLINE* ~ "#"{1,6} ~ SPACE_SEPARATOR }
+heading_content = { ( !( NEWLINE ~ heading_start ) ~ ANY )+ ~ NEWLINE* }
+heading = { heading_start ~ heading_content }
+headings = { heading+ }
