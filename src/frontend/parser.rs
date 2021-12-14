@@ -2,7 +2,7 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::{fs, path::Path};
 
-use crate::{um_elements::heading_block::HeadingBlock, um_error::UmError};
+use crate::{um_elements::heading_block::HeadingBlock, um_elements::paragraph_block::ParagraphBlock, um_error::UmError};
 
 use super::UnimarkupBlocks;
 
@@ -48,6 +48,8 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
 fn parse_atomic_block(input: &Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::headings, input.as_str()) {
         return HeadingBlock::parse_multiple(pairs, input.as_span());
+    } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraphs, input.as_str()) {
+        return ParagraphBlock::parse_multiple(pairs, input.as_span());
     }
 
     Ok(vec![])

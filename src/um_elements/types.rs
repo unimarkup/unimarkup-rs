@@ -3,7 +3,7 @@ use strum_macros::EnumString;
 
 use crate::{backend::Render, frontend::parser::UmParse, middleend::AsIrLines};
 
-use super::heading_block::HeadingBlock;
+use super::{heading_block::HeadingBlock, paragraph_block::ParagraphBlock};
 
 pub const DELIMITER: char = '-';
 
@@ -69,6 +69,7 @@ macro_rules! impl_from {
 }
 
 impl_from!(Heading from HeadingBlock);
+impl_from!(Paragraph from ParagraphBlock);
 
 #[test]
 fn check_if_converted() {

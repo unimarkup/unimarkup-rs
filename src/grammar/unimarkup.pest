@@ -30,4 +30,6 @@ headings = { heading+ }
 
 // ******** PARAGRAPH ******** \\
 
-paragraph = { (!( (NEWLINE | SOI) ~ heading_start) ~ ANY)+ }
+paragraph_content = { ((LETTER)+ ~ SPACE_SEPARATOR*)+ }
+paragraph = { (!( (NEWLINE | SOI) ~ heading_start) ~  paragraph_content )+ }
+paragraphs = { paragraph+ }
