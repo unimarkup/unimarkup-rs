@@ -9,6 +9,8 @@ pub const DELIMITER: char = '-';
 
 pub trait UnimarkupBlock: Render + AsIrLines + UmParse + std::fmt::Debug {}
 
+impl<T> UnimarkupBlock for T where T: Render + AsIrLines + UmParse + std::fmt::Debug {}
+
 #[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
 #[strum(ascii_case_insensitive, serialize_all = "kebab-case")]
 pub enum UnimarkupType {

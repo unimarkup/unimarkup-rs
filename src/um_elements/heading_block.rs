@@ -12,8 +12,6 @@ use crate::middleend::{AsIrLines, ContentIrLine};
 use crate::um_elements::types::{self, UnimarkupType};
 use crate::um_error::UmError;
 
-use super::types::UnimarkupBlock;
-
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
 #[strum(serialize_all = "kebab-case")]
 pub enum HeadingLevel {
@@ -264,8 +262,6 @@ impl Render for HeadingBlock {
         Ok(html)
     }
 }
-
-impl UnimarkupBlock for HeadingBlock {}
 
 #[cfg(test)]
 mod heading_tests {
