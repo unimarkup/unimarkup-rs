@@ -2,15 +2,15 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::{fs, path::Path};
 
-use crate::{um_elements::heading_block::HeadingBlock, um_elements::paragraph_block::ParagraphBlock, um_error::UmError};
+use crate::{
+    um_elements::heading_block::HeadingBlock, um_elements::paragraph_block::ParagraphBlock,
+    um_error::UmError,
+};
 
 use super::UnimarkupBlocks;
 
 pub trait UmParse {
-    fn parse_multiple(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, UmError>
-    where
-        Self: Sized;
-    fn parse(pair: Pair<Rule>) -> Self
+    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, UmError>
     where
         Self: Sized;
 }
@@ -36,7 +36,7 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
     if let Some(unimarkup) = rule_pairs.next() {
         for pair in unimarkup.into_inner() {
             if pair.as_rule() == Rule::atomic_block {
-                let mut atomic_blocks = parse_atomic_block(&pair)?;
+                let mut atomic_blocks = parse_atomic_block(pair)?;
                 blocks.append(&mut atomic_blocks);
             }
         }
@@ -45,11 +45,11 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
     Ok(blocks)
 }
 
-fn parse_atomic_block(input: &Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
+fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::headings, input.as_str()) {
-        return HeadingBlock::parse_multiple(pairs, input.as_span());
-    } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraphs, input.as_str()) {
-        return ParagraphBlock::parse_multiple(pairs, input.as_span());
+        return HeadingBlock::parse(pairs, input.as_span());
+    } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
+        return ParagraphBlock::parse(pairs, input.as_span());
     }
 
     Ok(vec![])

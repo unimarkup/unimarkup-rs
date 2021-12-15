@@ -1,35 +1,45 @@
-blank_line = @{ NEWLINE ~ SPACE_SEPARATOR* ~ NEWLINE }
+// *****************************
+// ***** UNIMARKUP GENERAL *****
+// *****************************
 
-// --------- ATOMIC BLOCKS --------- \\ 
-atomic_block = { (!(NEWLINE ~ SPACE_SEPARATOR* ~ NEWLINE) ~ ANY)+ }
+// ***** SPACING *****
+um_newline = _{ NEWLINE }
+um_nbsp = _{ SPACE_SEPARATOR }
+blank_line = @{ um_newline ~ um_nbsp* ~ um_newline }
 
-// --------- NESTED BLOCK DELIMITER --------- \\ 
-verbatim_delimiter = { !"~~~[" ~ "~"{3,} }
-renderer_delimiter = { !"'''[" ~ "'"{3,} }
-preamble_delimiter = { ";;;" }
-
-// --------- NESTED BLOCKS --------- \\ 
-delimiter = _{ verbatim_delimiter | renderer_delimiter | preamble_delimiter }
-nested_body = { (!PEEK ~ ANY)+ }
-nested_block = { PUSH(delimiter) ~ nested_body ~ POP }
-
-unimarkup_block = _{ nested_block | atomic_block }
-
+// ***** UNIMARKUP *****
+unimarkup_block = _{ enclosed_block | atomic_block }
 unimarkup = { SOI ~ (unimarkup_block ~ (blank_line | EOI))+ }
 
-// ****************************
-// ********* BLOCKS ***********
-// ****************************
 
-// ******** HEADING ******** \\
+// *****************************
+// ****** ENCLOSED BLOCKS ******
+// *****************************
 
-heading_start = @{ NEWLINE? ~ "#"{1,6} ~ SPACE_SEPARATOR }
-heading_content = { ( !( NEWLINE ~ heading_start ) ~ ANY )+ ~ NEWLINE? }
+// ****** ENCLOSED BLOCK DELIMITERS ******
+verbatim_delimiter = @{ !"~~~[" ~ "~"{3,} }
+renderer_delimiter = @{ !"'''[" ~ "'"{3,} }
+preamble_delimiter = @{ ";;;" }
+
+// ****** ENCLOSED BLOCK ******
+delimiter = _{ verbatim_delimiter | renderer_delimiter | preamble_delimiter }
+enclosed_body = { (!(um_newline ~PEEK) ~ ANY)+ }
+enclosed_end = @{ um_newline ~ POP }
+enclosed_block = { PUSH(delimiter) ~ enclosed_body ~ enclosed_end }
+
+
+// ***************************
+// ****** ATOMIC BLOCKS ******
+// ***************************
+
+// ****** ATOMIC BLOCK ******
+atomic_block = { (!blank_line ~ ANY)+ }
+
+// ****** HEADINGS ******
+heading_start = @{ um_newline? ~ "#"{1,6} ~ um_nbsp }
+heading_content = { ( !( um_newline ~ heading_start ) ~ ANY )+ ~ um_newline? }
 heading = { heading_start ~ heading_content }
 headings = { heading+ }
 
-// ******** PARAGRAPH ******** \\
-
-paragraph_content = { ((LETTER)+ ~ SPACE_SEPARATOR*)+ }
-paragraph = { (!( (NEWLINE | SOI) ~ heading_start) ~  paragraph_content )+ }
-paragraphs = { paragraph+ }
+// ****** PARAGRAPH ******
+paragraph = { ANY+ }

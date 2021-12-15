@@ -19,6 +19,7 @@ pub fn run(connection: &mut Connection, config: &mut Config) -> Result<(), UmErr
     if let Ok(transaction) = transaction {
         for block in blocks {
             for ir_line in block.as_ir_lines() {
+                //TODO: add filename to id
                 ir_line.write_to_ir(&transaction)?;
             }
         }

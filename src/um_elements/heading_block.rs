@@ -87,34 +87,9 @@ pub struct HeadingBlock {
     pub line_nr: usize,
 }
 
-impl UmParse for HeadingBlock {
-    fn parse_multiple(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, UmError>
-    where
-        Self: Sized,
-    {
-        let heading_pairs = pairs
-            .next()
-            .expect("At least one pair available")
-            .into_inner();
-
-        let mut headings: UnimarkupBlocks = Vec::new();
-
-        let (line_nr, _column_nr) = span.start_pos().line_col();
-
-        for pair in heading_pairs {
-            let mut heading = Self::parse(pair);
-            heading.line_nr += line_nr;
-            headings.push(Box::new(heading));
-        }
-
-        Ok(headings)
-    }
-
-    fn parse(pair: Pair<Rule>) -> Self
-    where
-        Self: Sized,
-    {
-        let mut heading_data = pair.into_inner();
+impl HeadingBlock {
+    fn parse_single(pair: &Pair<Rule>) -> Self {
+        let mut heading_data = pair.clone().into_inner();
 
         // heading_start
         let heading_start = heading_data.next().expect("heading rule has heading_start");
@@ -149,6 +124,30 @@ impl UmParse for HeadingBlock {
             attributes: "{}".into(),
             line_nr,
         }
+    }
+}
+
+impl UmParse for HeadingBlock {
+    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, UmError>
+    where
+        Self: Sized,
+    {
+        let heading_pairs = pairs
+            .next()
+            .expect("At least one pair available")
+            .into_inner();
+
+        let mut headings: UnimarkupBlocks = Vec::new();
+
+        let (line_nr, _column_nr) = span.start_pos().line_col();
+
+        for pair in heading_pairs {
+            let mut heading = Self::parse_single(&pair);
+            heading.line_nr += line_nr;
+            headings.push(Box::new(heading));
+        }
+
+        Ok(headings)
     }
 }
 
