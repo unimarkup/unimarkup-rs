@@ -2,7 +2,7 @@ use clap::StructOpt;
 use unimarkup_rs::{
     backend::{self, BackendError, Render},
     config::Config,
-    middleend::{self, ContentIrLine},
+    middleend::{self, AsIrLines, ContentIrLine},
     um_elements::heading_block::{HeadingBlock, HeadingLevel},
     um_error::UmError,
 };
@@ -21,7 +21,7 @@ fn run() -> Result<(), UmError> {
         line_nr: 0,
     };
 
-    let lines: Vec<ContentIrLine> = block.as_ref().into();
+    let lines: Vec<ContentIrLine> = block.as_ir_lines();
 
     {
         let transaction = ir_test_setup::get_test_transaction(&mut connection);

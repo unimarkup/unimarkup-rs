@@ -109,10 +109,10 @@ impl HeadingBlock {
             let mut id = String::new();
             for word in content_split.into_iter() {
                 id.push_str(word);
-                id.push('-');
+                id.push(types::DELIMITER);
             }
 
-            id.strip_suffix('-')
+            id.strip_suffix(types::DELIMITER)
                 .expect("We added the suffix")
                 .to_string()
         };
@@ -151,9 +151,9 @@ impl UmParse for HeadingBlock {
     }
 }
 
-impl From<&HeadingBlock> for Vec<ContentIrLine> {
-    fn from(heading_block: &HeadingBlock) -> Self {
-        let level = heading_block.level.to_string();
+impl AsIrLines for HeadingBlock {
+    fn as_ir_lines(&self) -> Vec<ContentIrLine> {
+        let level = self.level.to_string();
 
         let mut um_type = UnimarkupType::Heading.to_string();
 
@@ -161,22 +161,16 @@ impl From<&HeadingBlock> for Vec<ContentIrLine> {
         um_type.push_str(&level);
 
         let line = ContentIrLine::new(
-            &heading_block.id,
-            heading_block.line_nr,
+            &self.id,
+            self.line_nr,
             um_type,
-            &heading_block.content,
+            &self.content,
             "",
-            &heading_block.attributes,
+            &self.attributes,
             "",
         );
 
         vec![line]
-    }
-}
-
-impl AsIrLines for HeadingBlock {
-    fn as_ir_lines(&self) -> Vec<ContentIrLine> {
-        self.into()
     }
 }
 

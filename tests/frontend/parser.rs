@@ -2,7 +2,7 @@ use super::super::middleend::ir_test_setup;
 use clap::StructOpt;
 use unimarkup_rs::{
     config::Config,
-    frontend::{self, parser::*},
+    frontend::{self},
     um_error::UmError,
 };
 
