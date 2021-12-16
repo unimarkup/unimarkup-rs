@@ -1,7 +1,7 @@
-use std::fmt::Debug;
+use std::{collections::VecDeque, fmt::Debug};
 
 use crate::{
-    backend::Render,
+    backend::{BackendError, ParseFromIr, Render},
     frontend::{
         parser::{Rule, UmParse},
         UnimarkupBlocks,
@@ -47,6 +47,29 @@ impl UmParse for ParagraphBlock {
     }
 }
 
+impl ParseFromIr for ParagraphBlock {
+    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, UmError>
+    where
+        Self: Sized,
+    {
+        if let Some(ir_line) = content_lines.pop_front() {
+            let block = ParagraphBlock {
+                id: ir_line.id,
+                content: ir_line.text,
+                attributes: ir_line.attributes,
+                line_nr: ir_line.line_nr,
+            };
+
+            Ok(block)
+        } else {
+            Err(BackendError::new(
+                "Could not construct ParagraphBlock. \nReason: No content ir lines available.",
+            )
+            .into())
+        }
+    }
+}
+
 impl Render for ParagraphBlock {
     fn render_html(&self) -> Result<String, UmError> {
         let mut html = String::default();
@@ -76,5 +99,42 @@ impl AsIrLines for ParagraphBlock {
         );
 
         vec![line]
+    }
+}
+
+#[cfg(test)]
+mod paragraph_tests {
+    use std::collections::VecDeque;
+
+    use crate::{
+        backend::ParseFromIr, middleend::ContentIrLine, um_elements::types::UnimarkupType,
+        um_error::UmError,
+    };
+
+    use super::ParagraphBlock;
+
+    #[test]
+    fn parse_from_ir() -> Result<(), UmError> {
+        let mut lines: VecDeque<_> = vec![ContentIrLine {
+            id: String::from("test-par-id"),
+            line_nr: 0,
+            um_type: UnimarkupType::Paragraph.to_string(),
+            text: String::from("This is an example paragraph\nwhich spans multiple lines"),
+            attributes: String::from("{}"),
+            ..Default::default()
+        }]
+        .into();
+
+        let paragraph = ParagraphBlock::parse_from_ir(&mut lines)?;
+
+        assert_eq!(paragraph.id, String::from("test-par-id"));
+        assert_eq!(paragraph.line_nr, 0);
+        assert_eq!(
+            paragraph.content,
+            String::from("This is an example paragraph\nwhich spans multiple lines"),
+        );
+        assert_eq!(paragraph.attributes, String::from("{}"));
+
+        Ok(())
     }
 }
