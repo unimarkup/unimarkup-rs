@@ -63,10 +63,22 @@ impl ParseFromIr for ParagraphBlock {
                 .into());
             }
 
+            let content = if !ir_line.text.is_empty() {
+                ir_line.text
+            } else {
+                ir_line.fallback_text
+            };
+
+            let attributes = if !ir_line.attributes.is_empty() {
+                ir_line.attributes
+            } else {
+                ir_line.fallback_attributes
+            };
+
             let block = ParagraphBlock {
                 id: ir_line.id,
-                content: ir_line.text,
-                attributes: ir_line.attributes,
+                content,
+                attributes,
                 line_nr: ir_line.line_nr,
             };
 
