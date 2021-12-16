@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-use std::mem;
 
 use pest::iterators::{Pair, Pairs};
 use pest::Span;
