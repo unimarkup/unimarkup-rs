@@ -1,46 +1,56 @@
-use unicode_segmentation::UnicodeSegmentation;
+use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
+use pest_derive::Parser;
+use std::{fs, path::Path};
 
-/// CursorPos struct is used to keep track of the cursor position while parsing input.
-/// Additionally it is useful as a way to show better error messages. Using CursorPos it
-/// is possible to show exact location in the input, where parsing error is recognized.
-#[derive(Copy, Clone, Debug)]
-pub struct CursorPos {
-    /// Index of the line in the given input
-    pub line: usize,
-    /// index of the symbol in the given line
-    pub symbol: usize,
+use crate::{
+    um_elements::heading_block::HeadingBlock, um_elements::paragraph_block::ParagraphBlock,
+    um_error::UmError,
+};
+
+use super::UnimarkupBlocks;
+
+pub trait UmParse {
+    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, UmError>
+    where
+        Self: Sized;
 }
 
-pub fn is_blank_line(line: &str) -> bool {
-    line.trim().is_empty()
-}
+#[derive(Parser)]
+#[grammar = "grammar/unimarkup.pest"]
+pub struct UnimarkupParser;
 
-pub fn count_symbol_until(
-    line: &str,
-    symbol: &str,
-    until: fn(char) -> bool,
-) -> Result<usize, (usize, String)> {
-    let mut symbols = line.graphemes(true);
+pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
+    let source = fs::read_to_string(um_file).map_err(|err| UmError::General {
+        msg: String::from("Could not read file."),
+        error: Box::new(err),
+    })?;
 
-    let count = symbols
-        .by_ref()
-        .peekable()
-        .take_while(|&current_symbol| current_symbol == symbol)
-        .count();
+    let mut rule_pairs =
+        UnimarkupParser::parse(Rule::unimarkup, &source).map_err(|err| UmError::General {
+            msg: String::from("Could not parse file!"),
+            error: Box::new(err),
+        })?;
 
-    let error_message = "Unexpected symbol found!";
+    let mut blocks: UnimarkupBlocks = Vec::new();
 
-    if let Some(symbol) = line.graphemes(true).nth(count) {
-        if symbol.contains(until) {
-            Ok(count)
-        } else {
-            let message = String::from(error_message);
-
-            Err((count, message))
+    if let Some(unimarkup) = rule_pairs.next() {
+        for pair in unimarkup.into_inner() {
+            if pair.as_rule() == Rule::atomic_block {
+                let mut atomic_blocks = parse_atomic_block(pair)?;
+                blocks.append(&mut atomic_blocks);
+            }
         }
-    } else {
-        let message = String::from(error_message);
-
-        Err((count, message))
     }
+
+    Ok(blocks)
+}
+
+fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
+    if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::headings, input.as_str()) {
+        return HeadingBlock::parse(pairs, input.as_span());
+    } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
+        return ParagraphBlock::parse(pairs, input.as_span());
+    }
+
+    Ok(vec![])
 }

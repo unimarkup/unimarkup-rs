@@ -176,3 +176,7 @@ pub fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLin
 
     Ok(lines)
 }
+
+pub trait AsIrLines {
+    fn as_ir_lines(&self) -> Vec<ContentIrLine>;
+}

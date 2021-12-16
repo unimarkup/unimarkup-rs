@@ -1,15 +1,14 @@
 use std::collections::VecDeque;
 use std::mem;
 
+use pest::iterators::{Pair, Pairs};
+use pest::Span;
 use strum_macros::*;
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::backend::{BackendError, ParseFromIr, Render};
-use crate::frontend::parser::count_symbol_until;
-use crate::frontend::{parser::CursorPos, SyntaxError};
-use crate::middleend::ContentIrLine;
-use crate::middleend::IrBlock;
-use crate::middleend::ParseForIr;
+use crate::frontend::parser::{Rule, UmParse};
+use crate::frontend::UnimarkupBlocks;
+use crate::middleend::{AsIrLines, ContentIrLine};
 use crate::um_elements::types::{self, UnimarkupType};
 use crate::um_error::UmError;
 
@@ -54,12 +53,12 @@ impl From<HeadingLevel> for usize {
 impl From<&str> for HeadingLevel {
     fn from(input: &str) -> Self {
         match input {
-            "1" => HeadingLevel::Level1,
-            "2" => HeadingLevel::Level2,
-            "3" => HeadingLevel::Level3,
-            "4" => HeadingLevel::Level4,
-            "5" => HeadingLevel::Level5,
-            "6" => HeadingLevel::Level6,
+            "1" | "#" => HeadingLevel::Level1,
+            "2" | "##" => HeadingLevel::Level2,
+            "3" | "###" => HeadingLevel::Level3,
+            "4" | "####" => HeadingLevel::Level4,
+            "5" | "#####" => HeadingLevel::Level5,
+            "6" | "######" => HeadingLevel::Level6,
             _ => HeadingLevel::Invalid,
         }
     }
@@ -85,91 +84,75 @@ pub struct HeadingBlock {
     pub level: HeadingLevel,
     pub content: String,
     pub attributes: String,
+    pub line_nr: usize,
 }
 
-impl ParseForIr for HeadingBlock {
-    fn parse_for_ir(
-        content: &[&str],
-        cursor_pos: &CursorPos,
-    ) -> Result<(IrBlock, CursorPos), UmError> {
-        let mut curr_pos = *cursor_pos;
-        let start_line_nr = curr_pos.line;
+impl HeadingBlock {
+    fn parse_single(pair: &Pair<Rule>) -> Self {
+        let mut heading_data = pair.clone().into_inner();
 
-        let mut heading_block = HeadingBlock {
-            id: "".to_string(),
-            level: HeadingLevel::Invalid,
-            content: "".to_string(),
-            attributes: "".to_string(),
+        // heading_start
+        let heading_start = heading_data.next().expect("heading rule has heading_start");
+
+        let heading_content = heading_data
+            .next()
+            .expect("heading rule has heading_content");
+
+        let level = heading_start.as_str().trim().into();
+        let (line_nr, _) = heading_start.as_span().start_pos().line_col();
+
+        let mut content_lowercase = heading_content.as_str().to_lowercase();
+        content_lowercase.retain(|c| c.is_alphanumeric() | c.is_whitespace());
+        let content_split = content_lowercase.split_whitespace();
+
+        let id: String = {
+            let mut id = String::new();
+            for word in content_split.into_iter() {
+                id.push_str(word);
+                id.push(types::DELIMITER);
+            }
+
+            id.strip_suffix(types::DELIMITER)
+                .expect("We added the suffix")
+                .to_string()
         };
 
-        while let Some(&line) = content.get(curr_pos.line) {
-            if line.trim().is_empty() {
-                if heading_block.level == HeadingLevel::Invalid {
-                    return Err(SyntaxError::new(
-                        content,
-                        cursor_pos,
-                        &curr_pos,
-                        "Invalid heading syntax. \n".to_owned()
-                            + "Headings are defined as 1 to 6 '#' symbols, \n"
-                            + "followed by whitespace and Heading content.",
-                    )
-                    .into());
-                } else {
-                    break;
-                }
-            }
+        HeadingBlock {
+            id,
+            level,
+            content: heading_content.as_str().into(),
+            attributes: "{}".into(),
+            line_nr,
+        }
+    }
+}
 
-            let mut heading_count = 0;
+impl UmParse for HeadingBlock {
+    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, UmError>
+    where
+        Self: Sized,
+    {
+        let heading_pairs = pairs
+            .next()
+            .expect("At least one pair available")
+            .into_inner();
 
-            if heading_block.level == HeadingLevel::Invalid {
-                let count_res = count_symbol_until(line, "#", char::is_whitespace);
+        let mut headings: UnimarkupBlocks = Vec::new();
 
-                match count_res {
-                    Ok(count) => heading_count = count,
-                    Err((count, message)) => {
-                        curr_pos.symbol = count;
+        let (line_nr, _column_nr) = span.start_pos().line_col();
 
-                        return Err(
-                            SyntaxError::new(content, cursor_pos, &curr_pos, message).into()
-                        );
-                    }
-                }
-
-                if heading_count > HeadingLevel::Level6 as usize {
-                    // to many hashtags, when heading expected
-
-                    // index starts from 0, HeadingLevel from 1
-                    curr_pos.symbol = (HeadingLevel::Invalid as usize) - 1;
-
-                    return Err(SyntaxError::new(
-                        content,
-                        cursor_pos,
-                        &curr_pos,
-                        "Invalid number of '#' symbols.",
-                    )
-                    .into());
-                }
-
-                heading_block.level = HeadingLevel::from(heading_count);
-            }
-
-            heading_block.content.push_str(
-                line.graphemes(true)
-                    .skip(heading_count)
-                    .collect::<String>()
-                    .trim(),
-            );
-
-            curr_pos.line += 1;
+        for pair in heading_pairs {
+            let mut heading = Self::parse_single(&pair);
+            heading.line_nr += line_nr;
+            headings.push(Box::new(heading));
         }
 
-        let mut ir_block = IrBlock::new();
-        ir_block.append_content_lines(&mut heading_block.generate_ir_lines(start_line_nr));
-
-        Ok((ir_block, curr_pos))
+        Ok(headings)
     }
+}
 
-    fn generate_ir_lines(&self, line_nr: usize) -> Vec<ContentIrLine> {
+impl AsIrLines for HeadingBlock {
+    fn as_ir_lines(&self) -> Vec<ContentIrLine> {
         let level = self.level.to_string();
 
         let mut um_type = UnimarkupType::Heading.to_string();
@@ -179,7 +162,7 @@ impl ParseForIr for HeadingBlock {
 
         let line = ContentIrLine::new(
             &self.id,
-            line_nr,
+            self.line_nr,
             um_type,
             &self.content,
             "",
@@ -188,6 +171,12 @@ impl ParseForIr for HeadingBlock {
         );
 
         vec![line]
+    }
+}
+
+impl AsRef<Self> for HeadingBlock {
+    fn as_ref(&self) -> &Self {
+        self
     }
 }
 
@@ -236,6 +225,7 @@ impl ParseFromIr for HeadingBlock {
                 level,
                 content,
                 attributes,
+                line_nr: ir_line.line_nr,
             };
 
             return Ok(block);
@@ -293,6 +283,7 @@ mod heading_tests {
                 level: HeadingLevel::from(level),
                 content: heading_content,
                 attributes: String::default(),
+                line_nr: level as usize,
             };
 
             let html = heading.render_html()?;
