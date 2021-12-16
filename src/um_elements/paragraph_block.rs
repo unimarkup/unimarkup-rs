@@ -57,7 +57,7 @@ impl ParseFromIr for ParagraphBlock {
 
             if ir_line.um_type != expected_type {
                 return Err(BackendError::new(format!(
-                    "Could not parse the given paragraph type: '{}'",
+                    "Expected paragraph type to parse, instead got: '{}'",
                     ir_line.um_type
                 ))
                 .into());
@@ -73,7 +73,7 @@ impl ParseFromIr for ParagraphBlock {
             Ok(block)
         } else {
             Err(BackendError::new(
-                "Could not construct ParagraphBlock. \nReason: No content ir lines available.",
+                "Could not construct ParagraphBlock. \nReason: No content ir line available.",
             )
             .into())
         }
@@ -125,8 +125,10 @@ mod paragraph_tests {
 
     #[test]
     fn parse_from_ir() -> Result<(), UmError> {
+        let test_id = String::from("test-par-id");
+
         let mut lines: VecDeque<_> = vec![ContentIrLine {
-            id: String::from("test-par-id"),
+            id: test_id.clone(),
             line_nr: 0,
             um_type: UnimarkupType::Paragraph.to_string(),
             text: String::from("This is an example paragraph\nwhich spans multiple lines"),
@@ -137,7 +139,7 @@ mod paragraph_tests {
 
         let paragraph = ParagraphBlock::parse_from_ir(&mut lines)?;
 
-        assert_eq!(paragraph.id, String::from("test-par-id"));
+        assert_eq!(paragraph.id, test_id);
         assert_eq!(paragraph.line_nr, 0);
         assert_eq!(
             paragraph.content,
