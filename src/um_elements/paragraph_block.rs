@@ -126,12 +126,13 @@ mod paragraph_tests {
     #[test]
     fn parse_from_ir() -> Result<(), UmError> {
         let test_id = String::from("test-par-id");
+        let content = String::from("This is an example paragraph\nwhich spans multiple lines");
 
         let mut lines: VecDeque<_> = vec![ContentIrLine {
             id: test_id.clone(),
             line_nr: 0,
             um_type: UnimarkupType::Paragraph.to_string(),
-            text: String::from("This is an example paragraph\nwhich spans multiple lines"),
+            text: content.clone(),
             attributes: String::from("{}"),
             ..Default::default()
         }]
@@ -141,10 +142,7 @@ mod paragraph_tests {
 
         assert_eq!(paragraph.id, test_id);
         assert_eq!(paragraph.line_nr, 0);
-        assert_eq!(
-            paragraph.content,
-            String::from("This is an example paragraph\nwhich spans multiple lines"),
-        );
+        assert_eq!(paragraph.content, content);
         assert_eq!(paragraph.attributes, String::from("{}"));
 
         Ok(())
