@@ -183,7 +183,7 @@ impl ParseFromIr for HeadingBlock {
     fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, UmError> {
         let mut level = HeadingLevel::Invalid;
 
-        if let Some(mut ir_line) = content_lines.pop_front() {
+        if let Some(ir_line) = content_lines.pop_front() {
             let heading_pattern = format!("heading{delim}level{delim}", delim = types::DELIMITER);
 
             if ir_line.um_type.contains(&heading_pattern) {
