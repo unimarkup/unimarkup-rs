@@ -221,7 +221,7 @@ impl ParseFromIr for HeadingBlock {
             };
 
             let block = HeadingBlock {
-                id: mem::take(&mut ir_line.id),
+                id: ir_line.id,
                 level,
                 content,
                 attributes,
