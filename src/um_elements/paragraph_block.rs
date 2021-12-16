@@ -53,6 +53,16 @@ impl ParseFromIr for ParagraphBlock {
         Self: Sized,
     {
         if let Some(ir_line) = content_lines.pop_front() {
+            let expected_type = UnimarkupType::Paragraph.to_string();
+
+            if ir_line.um_type != expected_type {
+                return Err(BackendError::new(format!(
+                    "Could not parse the given paragraph type: '{}'",
+                    ir_line.um_type
+                ))
+                .into());
+            }
+
             let block = ParagraphBlock {
                 id: ir_line.id,
                 content: ir_line.text,
