@@ -137,4 +137,27 @@ mod paragraph_tests {
 
         Ok(())
     }
+
+    #[test]
+    fn parse_from_ir_bad() {
+        let mut lines = vec![].into();
+
+        let block_res = ParagraphBlock::parse_from_ir(&mut lines);
+
+        assert!(block_res.is_err());
+
+        let ir_line_bad_type = ContentIrLine {
+            id: String::from("some-id"),
+            line_nr: 2,
+            um_type: format!("{}-more-info", UnimarkupType::Paragraph.to_string()),
+            text: String::from("This is the text of this paragraph"),
+            ..Default::default()
+        };
+
+        lines.push_front(ir_line_bad_type);
+
+        let block_res = ParagraphBlock::parse_from_ir(&mut lines);
+
+        assert!(block_res.is_err());
+    }
 }
