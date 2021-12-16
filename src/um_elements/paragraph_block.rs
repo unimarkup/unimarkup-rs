@@ -65,14 +65,10 @@ impl Render for ParagraphBlock {
 
 impl AsIrLines for ParagraphBlock {
     fn as_ir_lines(&self) -> Vec<ContentIrLine> {
-        let mut um_type = UnimarkupType::Paragraph.to_string();
-
-        um_type.push(types::DELIMITER);
-
         let line = ContentIrLine::new(
             &self.id,
             self.line_nr,
-            um_type,
+            UnimarkupType::Paragraph.to_string(),
             &self.content,
             "",
             &self.attributes,
