@@ -100,7 +100,7 @@ impl HeadingBlock {
         let level = heading_start.as_str().trim().into();
         let (line_nr, _) = heading_start.as_span().start_pos().line_col();
 
-        let mut content_lowercase = heading_content.as_str().to_lowercase();
+        let mut content_lowercase = heading_content.as_str().trim().to_lowercase();
         content_lowercase.retain(|c| c.is_alphanumeric() | c.is_whitespace());
         let content_split = content_lowercase.split_whitespace();
 
@@ -119,7 +119,7 @@ impl HeadingBlock {
         HeadingBlock {
             id,
             level,
-            content: heading_content.as_str().into(),
+            content: heading_content.as_str().trim().into(),
             attributes: "{}".into(),
             line_nr,
         }
@@ -142,7 +142,10 @@ impl UmParse for HeadingBlock {
 
         for pair in heading_pairs {
             let mut heading = Self::parse_single(&pair);
-            heading.line_nr += line_nr;
+            // child line number starts with 1
+            // which leads to off by 1 error
+            // hence minus 1
+            heading.line_nr += line_nr - 1;
             headings.push(Box::new(heading));
         }
 

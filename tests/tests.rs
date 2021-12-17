@@ -1,5 +1,6 @@
 mod frontend {
-    mod parser;
+    mod frontend_run;
+    mod umblock_tests;
 }
 
 mod middleend {
