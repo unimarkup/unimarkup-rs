@@ -50,13 +50,21 @@ fn ir_lines_assert_eq(line: ContentIrLine, heading_ir_line: ContentIrLine) {
     assert_eq!(line.id, heading_ir_line.id);
     assert_eq!(line.line_nr, heading_ir_line.line_nr);
     assert_eq!(line.um_type, heading_ir_line.um_type);
-    assert_eq!(line.text, heading_ir_line.text);
     assert_eq!(line.fallback_text, heading_ir_line.fallback_text);
     assert_eq!(line.attributes, heading_ir_line.attributes);
     assert_eq!(
         line.fallback_attributes,
         heading_ir_line.fallback_attributes
     );
+    ir_lines_text_eq(line.text, heading_ir_line.text);
+}
+
+fn ir_lines_text_eq(line_text: String, heading_ir_line_text: String) {
+    let mut ir_lines = heading_ir_line_text.lines();
+
+    for line in line_text.lines() {
+        assert_eq!(line, ir_lines.next().expect("predefined text"));
+    }
 }
 
 fn heading1_expected_result() -> Vec<ContentIrLine> {
