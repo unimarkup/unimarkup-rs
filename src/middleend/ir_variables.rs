@@ -4,23 +4,12 @@ use log::info;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct VariableIrLine {
     pub name: String,
     pub um_type: String,
     pub value: String,
     pub fallback_value: String,
-}
-
-impl Default for VariableIrLine {
-    fn default() -> Self {
-        VariableIrLine {
-            name: String::default(),
-            um_type: String::default(),
-            value: String::default(),
-            fallback_value: String::default(),
-        }
-    }
 }
 
 impl IrTableName for VariableIrLine {
