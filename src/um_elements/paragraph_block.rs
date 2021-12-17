@@ -129,11 +129,32 @@ mod paragraph_tests {
     use std::collections::VecDeque;
 
     use crate::{
-        backend::ParseFromIr, middleend::ContentIrLine, um_elements::types::UnimarkupType,
+        backend::{ParseFromIr, Render},
+        middleend::ContentIrLine,
+        um_elements::types::UnimarkupType,
         um_error::UmError,
     };
 
     use super::ParagraphBlock;
+
+    #[test]
+    fn render_paragraph_html() -> Result<(), UmError> {
+        let id = String::from("paragraph-id");
+        let content = String::from("This is the content of the heading");
+
+        let block = ParagraphBlock {
+            id: id.clone(),
+            content: content.clone(),
+            attributes: "{}".into(),
+            line_nr: 0,
+        };
+
+        let expected_html = format!("<p id='{}'>{}</p>", id, content);
+
+        assert_eq!(expected_html, block.render_html()?);
+
+        Ok(())
+    }
 
     #[test]
     fn parse_from_ir() -> Result<(), UmError> {
