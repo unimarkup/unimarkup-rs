@@ -20,6 +20,11 @@ fn umblock_tests() -> Result<(), UmError> {
     ))?;
     loop_through_ir_lines(&um_blocks, heading_line_number_expected_result());
 
+    //multiline_headings.um
+    um_blocks =
+        parser::parse_unimarkup(Path::new("tests/test_files/frontend/multiline_headings.um"))?;
+    loop_through_ir_lines(&um_blocks, multiline_headings_expected_result());
+
     //paragraph1.um
     um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph1.um"))?;
     loop_through_ir_lines(&um_blocks, paragraph1_expected_result());
@@ -172,6 +177,40 @@ fn heading_line_number_expected_result() -> Vec<ContentIrLine> {
         10,
         format!("heading{delim}level{delim}3", delim = types::DELIMITER),
         "subsubhead 311",
+        "",
+        "{}",
+        "",
+    ));
+    blocks_vector.reverse();
+    blocks_vector
+}
+
+fn multiline_headings_expected_result() -> Vec<ContentIrLine> {
+    let mut blocks_vector: Vec<ContentIrLine> = Vec::new();
+    blocks_vector.push(ContentIrLine::new(
+        "head1-multiline",
+        1,
+        format!("heading{delim}level{delim}1", delim = types::DELIMITER),
+        "head1\nmultiline",
+        "",
+        "{}",
+        "",
+    ));
+
+    blocks_vector.push(ContentIrLine::new(
+        "subhead2-multiline",
+        3,
+        format!("heading{delim}level{delim}2", delim = types::DELIMITER),
+        "subhead2\nmultiline",
+        "",
+        "{}",
+        "",
+    ));
+    blocks_vector.push(ContentIrLine::new(
+        "paragraph-6",
+        6,
+        "paragraph",
+        "paragraph 2",
         "",
         "{}",
         "",
