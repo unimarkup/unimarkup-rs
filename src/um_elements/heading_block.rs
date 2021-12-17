@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-use std::mem;
 
 use pest::iterators::{Pair, Pairs};
 use pest::Span;
@@ -184,7 +183,7 @@ impl ParseFromIr for HeadingBlock {
     fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, UmError> {
         let mut level = HeadingLevel::Invalid;
 
-        if let Some(mut ir_line) = content_lines.pop_front() {
+        if let Some(ir_line) = content_lines.pop_front() {
             let heading_pattern = format!("heading{delim}level{delim}", delim = types::DELIMITER);
 
             if ir_line.um_type.contains(&heading_pattern) {
@@ -209,19 +208,19 @@ impl ParseFromIr for HeadingBlock {
             }
 
             let content = if !ir_line.text.is_empty() {
-                mem::take(&mut ir_line.text)
+                ir_line.text
             } else {
-                mem::take(&mut ir_line.fallback_text)
+                ir_line.fallback_text
             };
 
             let attributes = if !ir_line.attributes.is_empty() {
-                mem::take(&mut ir_line.attributes)
+                ir_line.attributes
             } else {
-                mem::take(&mut ir_line.fallback_attributes)
+                ir_line.fallback_attributes
             };
 
             let block = HeadingBlock {
-                id: mem::take(&mut ir_line.id),
+                id: ir_line.id,
                 level,
                 content,
                 attributes,

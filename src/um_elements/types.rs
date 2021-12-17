@@ -1,15 +1,21 @@
+use std::fmt;
+
 use clap::ArgEnum;
 use strum_macros::EnumString;
 
-use crate::{backend::Render, frontend::parser::UmParse, middleend::AsIrLines};
+use crate::{
+    backend::{ParseFromIr, Render},
+    frontend::parser::UmParse,
+    middleend::AsIrLines,
+};
 
 use super::{heading_block::HeadingBlock, paragraph_block::ParagraphBlock};
 
 pub const DELIMITER: char = '-';
 
-pub trait UnimarkupBlock: Render + AsIrLines + UmParse + std::fmt::Debug {}
+pub trait UnimarkupBlock: Render + AsIrLines + UmParse + ParseFromIr + fmt::Debug {}
 
-impl<T> UnimarkupBlock for T where T: Render + AsIrLines + UmParse + std::fmt::Debug {}
+impl<T> UnimarkupBlock for T where T: Render + AsIrLines + UmParse + ParseFromIr + fmt::Debug {}
 
 #[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
 #[strum(ascii_case_insensitive, serialize_all = "kebab-case")]
