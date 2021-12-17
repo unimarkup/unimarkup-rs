@@ -9,22 +9,27 @@ use unimarkup_rs::{
 
 #[test]
 fn umblock_tests() -> Result<(), UmError> {
+    //heading1.um
     let mut um_blocks =
         parser::parse_unimarkup(Path::new("tests/test_files/frontend/heading1.um"))?;
-    //heading1.um
     loop_through_ir_lines(&um_blocks, heading1_expected_result());
 
-    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph1.um"))?;
+    //heading_line_number.um
+    um_blocks = parser::parse_unimarkup(Path::new(
+        "tests/test_files/frontend/heading_line_number.um",
+    ))?;
+    loop_through_ir_lines(&um_blocks, heading_line_number_expected_result());
 
     //paragraph1.um
+    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph1.um"))?;
     loop_through_ir_lines(&um_blocks, paragraph1_expected_result());
 
-    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph2.um"))?;
     //paragraph2.um
+    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph2.um"))?;
     loop_through_ir_lines(&um_blocks, paragraph2_expected_result());
 
-    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph3.um"))?;
     //paragraph3.um
+    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph3.um"))?;
     loop_through_ir_lines(&um_blocks, paragraph3_expected_result());
 
     Ok(())
@@ -93,6 +98,80 @@ fn heading1_expected_result() -> Vec<ContentIrLine> {
         3,
         format!("heading{delim}level{delim}3", delim = types::DELIMITER),
         "subhead 1",
+        "",
+        "{}",
+        "",
+    ));
+    blocks_vector.reverse();
+    blocks_vector
+}
+
+fn heading_line_number_expected_result() -> Vec<ContentIrLine> {
+    let mut blocks_vector: Vec<ContentIrLine> = Vec::new();
+    blocks_vector.push(ContentIrLine::new(
+        "head1",
+        1,
+        format!("heading{delim}level{delim}1", delim = types::DELIMITER),
+        "head1",
+        "",
+        "{}",
+        "",
+    ));
+
+    blocks_vector.push(ContentIrLine::new(
+        "subhead-11",
+        2,
+        format!("heading{delim}level{delim}2", delim = types::DELIMITER),
+        "subhead 11",
+        "",
+        "{}",
+        "",
+    ));
+    blocks_vector.push(ContentIrLine::new(
+        "head2",
+        4,
+        format!("heading{delim}level{delim}1", delim = types::DELIMITER),
+        "head2",
+        "",
+        "{}",
+        "",
+    ));
+
+    blocks_vector.push(ContentIrLine::new(
+        "subhead-21",
+        5,
+        format!("heading{delim}level{delim}2", delim = types::DELIMITER),
+        "subhead 21",
+        "",
+        "{}",
+        "",
+    ));
+
+    blocks_vector.push(ContentIrLine::new(
+        "head3",
+        8,
+        format!("heading{delim}level{delim}1", delim = types::DELIMITER),
+        "head3",
+        "",
+        "{}",
+        "",
+    ));
+
+    blocks_vector.push(ContentIrLine::new(
+        "subhead-31",
+        9,
+        format!("heading{delim}level{delim}2", delim = types::DELIMITER),
+        "subhead 31",
+        "",
+        "{}",
+        "",
+    ));
+
+    blocks_vector.push(ContentIrLine::new(
+        "subsubhead-311",
+        10,
+        format!("heading{delim}level{delim}3", delim = types::DELIMITER),
+        "subsubhead 311",
         "",
         "{}",
         "",

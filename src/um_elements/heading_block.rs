@@ -142,6 +142,9 @@ impl UmParse for HeadingBlock {
 
         for pair in heading_pairs {
             let mut heading = Self::parse_single(&pair);
+            // child line number starts with 1
+            // which leads to off by 1 error
+            // hence minus 1
             heading.line_nr += line_nr - 1;
             headings.push(Box::new(heading));
         }
