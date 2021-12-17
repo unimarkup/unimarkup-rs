@@ -53,6 +53,8 @@ fn run() -> Result<(), UmError> {
         }
     }
 
+    assert!(out_path.exists());
+
     if out_path.exists() {
         let _ = std::fs::remove_file(out_path);
     }
