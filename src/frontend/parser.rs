@@ -1,3 +1,6 @@
+#![deny(missing_docs)]
+//! [`parser`] is the module which implements the parsing of the unimarkup syntax
+
 use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::{fs, path::Path};
@@ -9,16 +12,61 @@ use crate::{
 
 use super::UnimarkupBlocks;
 
+/// Used to parse one specific block from unimarkup syntax
 pub trait UmParse {
+    /// Parses the [`UnimarkupBlocks`] from given data returned from the pest parser.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if given Pairs of Rules contain non-valid unimarkup syntax.
     fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, UmError>
     where
         Self: Sized;
 }
 
-#[derive(Parser)]
-#[grammar = "grammar/unimarkup.pest"]
-pub struct UnimarkupParser;
+/// The purpose of this module is to derive pest Parser for unimarkup grammar
+mod parser_derivation {
+    #![allow(missing_docs)]
 
+    use super::*;
+
+    /// UnimarkupParser which can parse unimarkup file into either atomic or enclosed blocks.
+    ///
+    /// - Atomic block is every block which is constructed of one or more lines of text which
+    /// aren't separated by a blank line. Note that this means that enclosed block can also
+    /// be parsed as atomic, if it doesn't contain any blank lines.
+    ///
+    /// - Enclosed blocks are blocks which are enclosed in some kind of delimiters.
+    ///
+    /// i.e.:
+    /// ```unimarkup
+    /// ~~~
+    ///
+    /// this would be a verbatim block
+    ///
+    /// ~~~
+    /// ```
+    ///
+    /// # Rule enum
+    /// The pest crate provides a proc-macro which generates an implementation for the Parser
+    /// and creates an enum Rule. Both the parser and the enum are generated according to
+    /// the provided pest grammar. The Rule enum is made of variants which correspond the
+    /// the individual rules in pest grammar.
+    #[derive(Parser)]
+    #[allow(missing_docs)]
+    #[grammar = "grammar/unimarkup.pest"]
+    pub struct UnimarkupParser;
+}
+
+pub use parser_derivation::*;
+
+/// Parses the given unimarkup file.
+///
+/// Returns Result with either [`UnimarkupBlocks`] or [`UmError`].
+///
+/// # Errors
+///
+/// This function will return an [`UmError`] if unimarkup file contains invalid unimarkup syntax.
 pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
     let source = fs::read_to_string(um_file).map_err(|err| UmError::General {
         msg: String::from("Could not read file."),
