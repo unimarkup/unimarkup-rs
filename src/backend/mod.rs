@@ -24,7 +24,7 @@ type RenderBlock = Box<dyn Render>;
 /// UnimarkupBlocks from IR, renders them and writes the resulting output
 /// to the wanted output format (if any).
 ///
-/// This function will return an error if
+/// This function will return an [`UmError`] if
 /// - connection to the IR fails
 /// - reconstructing of UnimarkupBlocks fails, or
 /// - error occuers when writing to the output file
