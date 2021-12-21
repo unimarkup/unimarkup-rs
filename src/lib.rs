@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+
 pub mod backend;
 pub mod config;
 pub mod frontend;
