@@ -1,4 +1,4 @@
-//! Config module has an important role in interaction with the user.
+//! Structs and functions for parsing and generating compiler configuration.
 //!
 //! All user interaction with [`unimarkup-rs`] at the end boils down to
 //! creating a [`Config`] struct containing all relevant information for
