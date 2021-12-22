@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 use std::{collections::VecDeque, str::FromStr};
 
 use rusqlite::Connection;

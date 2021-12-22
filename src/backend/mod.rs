@@ -1,7 +1,9 @@
-//! # Backend
+//! Backend functionality of [`unimarkup-rs`](crate) compiler.
 //!
-//! Backend is module of unimarkup-rs tasked with (re)constructing UnimarkupBlocks
-//! from IR and, rendering the wanted output formats and writing them to file
+//! Tasked with (re)construction of [`UnimarkupBlocks`] from IR and, rendering the wanted output
+//! formats and writing them to file.
+//!
+//! [`UnimarkupBlocks`]: crate::frontend::UnimarkupBlocks
 
 use crate::{
     config::{Config, OutputFormat},
@@ -20,7 +22,7 @@ pub use renderer::*;
 
 type RenderBlock = Box<dyn Render>;
 
-/// This is the entry function for the [`backend`] module. It fetches the
+/// This is the entry function for the [`backend`](crate::backend) module. It fetches the
 /// UnimarkupBlocks from IR, renders them and writes the resulting output
 /// to the wanted output format (if any).
 ///
