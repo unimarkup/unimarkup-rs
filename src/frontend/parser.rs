@@ -1,5 +1,4 @@
-#![deny(missing_docs)]
-//! [`parser`] is the module which implements the parsing of the unimarkup syntax
+//! [`parser`](crate::frontend::parser) is the module which implements the parsing of the unimarkup syntax
 
 use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;

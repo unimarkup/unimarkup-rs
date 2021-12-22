@@ -1,8 +1,7 @@
-//! # Frontend
+//! Frontend functionality of [`unimarkup-rs`](crate) compiler.
 //!
-//! [`frontend`] is unimarkup-rs module tasked with parsing of valid
-//! unimarkup-rs files, generating corresponding UnimarkupBlocks and
-//! sending them to the IR.
+//! It's tasked with parsing of unimarkup-rs files, generating corresponding
+//! UnimarkupBlocks and sending them to the IR.
 
 mod syntax_error;
 
@@ -15,15 +14,18 @@ use crate::{
 
 pub mod parser;
 
-pub(crate) type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;
+/// Type alias for a vector of elements which implement [`UnimarkupBlock`] trait.
+pub type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;
 
-/// [`frontend::run`] is the entry function of the [`frontend`] module.
+/// `frontend::run` is the entry function of the [`frontend`] module.
 /// It parses the unimarkup file and sends the data to the IR.
 ///
 /// # Errors
 ///
 /// This function will return an error if the given unimarkup file contains invalid syntax,
 /// or if communication with IR fails.
+///
+/// [`frontend`]: crate::frontend
 pub fn run(connection: &mut Connection, config: &mut Config) -> Result<(), UmError> {
     let blocks = parser::parse_unimarkup(&config.um_file)?;
 

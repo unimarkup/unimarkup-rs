@@ -4,12 +4,21 @@ use unicode_segmentation::UnicodeSegmentation;
 
 type CursorPos = (usize, usize);
 
+/// SyntaxError is the [`UmError::Syntax`] variant of [`UmError`].
+///
+/// [`UmError::Syntax`]: crate::um_error::UmError::Syntax
+/// [`UmError`]: crate::um_error::UmError
 #[derive(Debug)]
 pub struct SyntaxError {
+    /// Start position in unimarkup document of span where [`SyntaxError`] occured.
     pub start_pos: CursorPos,
+    /// Position in unimarkup document where [`SyntaxError`] occured.
     pub current_pos: CursorPos,
+    /// Start line in unimarkup document of span where [`SyntaxError`] occured.
     pub start_line: String,
+    /// The line in unimarkup document where [`SyntaxError`] occured.
     pub current_line: String,
+    /// Custom message to provide details to the user.
     pub message: String,
 }
 
@@ -34,6 +43,14 @@ impl SyntaxError {
         (String::from(start_line), String::from(current_line))
     }
 
+    /// Constructs a new [`SyntaxError`]
+    ///
+    /// # Arguments
+    ///
+    /// * `content` - Lines of &str from unimarkup document
+    /// * `start_pos` - Start position in unimarkup document of span where [`SyntaxError`] occured.
+    /// * `current_pos` -  Position in unimarkup document where [`SyntaxError`] occured.
+    /// * `message` - Custom message to provide details to the user.
     pub fn new(
         content: &[&str],
         start_pos: &CursorPos,
