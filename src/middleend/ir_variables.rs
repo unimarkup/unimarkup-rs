@@ -4,11 +4,18 @@ use log::info;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
+/// IR compatible representation of unimarkup variables.
 #[derive(Debug, PartialEq, Default)]
 pub struct VariableIrLine {
+    /// Name of the variable, the identifier.
     pub name: String,
+    /// [`UnimarkupType`] of the variable.
+    ///
+    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
     pub um_type: String,
+    /// The value of the variable.
     pub value: String,
+    /// Alternative value of the variable.
     pub fallback_value: String,
 }
 
@@ -19,6 +26,16 @@ impl IrTableName for VariableIrLine {
 }
 
 impl VariableIrLine {
+    /// Constructs a new [`VariableIrLine`]
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - Name of the variable, the identifier.
+    /// * `um_type` - [`UnimarkupType`] of the variable.
+    /// * `value` - The value of the variable.
+    /// * `fallback_value` - Alternative value of the variable.
+    ///
+    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
     pub fn new(
         name: impl Into<String>,
         um_type: impl Into<String>,
@@ -33,6 +50,7 @@ impl VariableIrLine {
         }
     }
 
+    /// Constructs SQL query which prepares the IR for receiving of [`VariableIrLine`] data.
     pub fn table_setup() -> String {
         r#"CREATE TABLE IF NOT EXISTS "variables" (
 					"name"	TEXT NOT NULL,

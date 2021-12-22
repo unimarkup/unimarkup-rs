@@ -2,21 +2,45 @@ use crate::middleend::IrError;
 use crate::um_error::UmError;
 use rusqlite::{Error, Row, ToSql, Transaction};
 
+/// Used to get the table name of the given data (IR Line)
 pub trait IrTableName {
+    /// Returns the table name associated with the given structure
+    /// i.e. "content" for [`ContentIrLine`]
+    ///
+    /// [`ContentIrLIne`]: (crate::ir::ContentIrLine)
     fn table_name() -> String;
 }
 
+/// Used to write the given structure into IR
 pub trait WriteToIr {
+    /// Writes the structure into IR.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`UmError`] if writing to IR fails.
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError>;
 }
 
+/// Used to retrieve a structure (IrLine) from IR.
 pub trait RetrieveFromIr {
+    /// Gets the primary key (pk) values of the implementing structure,
+    /// together with the parameters for the SQL query to fetch the
+    /// identified structure.
     fn get_pk_values(&self) -> (String, Vec<&dyn ToSql>);
+
+    /// Fetches and generates `Self` (i.e. IR Line) from IR.
     fn from_ir(row: &Row) -> Result<Self, Error>
     where
         Self: Sized + WriteToIr;
 }
 
+/// Writes IR Lines into IR.
+///
+/// # Arguments
+/// * `ir_lines` - IR Lines to write into the IR
+/// * `ir_transaction` - the [`Transaction`] used to communicate with IR
+///
+/// [`Transaction`]: https://docs.rs/rusqlite/latest/rusqlite/struct.Transaction.html
 pub fn write_ir_lines(
     ir_lines: &[impl WriteToIr],
     ir_transaction: &Transaction,
@@ -30,6 +54,13 @@ pub fn write_ir_lines(
     Ok(())
 }
 
+/// Checks if an entry already exists in IR
+///
+/// # Arguments
+/// * `ir_line` - the IR Line for which is checked
+/// * `ir_transaction` - the rusqlite [`Transaction`] used to communicate with IR
+///
+/// [`Transaction`]: https://docs.rs/rusqlite/latest/rusqlite/struct.Transaction.html
 pub fn entry_already_exists<T: IrTableName + RetrieveFromIr>(
     ir_line: &T,
     ir_transaction: &Transaction,
@@ -57,6 +88,19 @@ fn get_nr_values(params: &[&dyn ToSql]) -> String {
     s
 }
 
+/// Inserts the give IR Line into the IR database.
+///
+/// # Arguments
+/// * `ir_transaction` - rusqlite [`Transaction`] used to communicate with IR
+/// * `sql_table` - table in IR in which to write to
+/// * `params` - parameters for the SQL query
+/// * `column` - column associated with the value(s) which will be inserted.
+///
+/// # Errors
+///
+/// Returns an [`UmError`] if insertion into IR fails.
+///
+/// [`Transaction`]: https://docs.rs/rusqlite/latest/rusqlite/struct.Transaction.html
 pub fn insert_ir_line_execute(
     ir_transaction: &Transaction,
     sql_table: &str,
@@ -84,6 +128,21 @@ pub fn insert_ir_line_execute(
     Ok(())
 }
 
+/// Updates the value in IR, i.e. when overriding some definition
+///
+/// # Arguments
+/// * `ir_transaction` - rusqlite [`Transaction`] used to communicate with IR
+/// * `sql_table` - table in IR in which to write to
+/// * `sql_set` - columns and values for the SQL SET command
+/// * `sql_condition` - condition which identifies the row which will be updated
+/// * `params` - parameters for the SQL query
+/// * `column` - column associated with the value(s) which will be inserted.
+///
+/// # Errors
+///
+/// Returns an [`UmError`] if updating values in IR fails.
+///
+/// [`Transaction`]: https://docs.rs/rusqlite/latest/rusqlite/struct.Transaction.html
 pub fn update_ir_line_execute(
     ir_transaction: &Transaction,
     sql_table: &str,
@@ -112,6 +171,17 @@ pub fn update_ir_line_execute(
     Ok(())
 }
 
+/// Returns a single IR Line from IR database.
+///
+/// # Arguments
+/// * `ir_transaction` - rusqlite [`Transaction`] used to communicate with IR
+/// * `pk_condition_params` - SQL params which identifies the IR Line (Row in IR) we want to fetch
+///
+/// # Errors
+///
+/// Returns an [`UmError`] if communication with IR fails.
+///
+/// [`Transaction`]: https://docs.rs/rusqlite/latest/rusqlite/struct.Transaction.html
 pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName + WriteToIr>(
     ir_transaction: &Transaction,
     pk_condition_params: (String, Vec<&dyn ToSql>),

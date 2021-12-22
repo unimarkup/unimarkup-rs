@@ -7,14 +7,40 @@ use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 use rusqlite::{Connection, Statement, ToSql};
 use std::convert::TryInto;
 
+/// IR compatible representation of [`UnimarkupBlock`]
+///
+/// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
 #[derive(Debug, PartialEq)]
 pub struct ContentIrLine {
+    /// Unique identifier of the given [`UnimarkupBlock`]. Is also used
+    /// in rendering, e.g., as html id attribute.
+    ///
+    /// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
     pub id: String,
+    /// Line number in input unimarkup file where this [`UnimarkupBlock`] is found.
+    ///
+    /// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
     pub line_nr: usize,
+    /// String representation of [`UnimarkupType`]. May include suffix such as `"start"` for
+    /// [`UnimarkupBlock`] which spans multiple [`ContentIrLine`]s.
+    ///
+    /// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
+    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
     pub um_type: String,
+    /// Content of the [`UnimarkupBlock`]. Content may be only partial in case where
+    /// the given [`UnimarkupBlock`] spans multiple [`ContentIrLine`]s.
+    ///
+    /// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
     pub text: String,
+    /// Alternative content of the [`UnimarkupBlock`].
+    ///
+    /// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
     pub fallback_text: String,
+    /// Attributes of the [`UnimarkupBlock`], e.g., color, explicit id etc.
+    ///
+    /// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
     pub attributes: String,
+    /// Alternative attributes.
     pub fallback_attributes: String,
 }
 
@@ -39,6 +65,18 @@ impl IrTableName for ContentIrLine {
 }
 
 impl ContentIrLine {
+    /// Constructs a new [`ContentIrLine`].
+    ///
+    /// # Arguments
+    /// * `id` - The unique identifier
+    /// * `line_nr` - Line number in unimarkup file this instance corresponds to
+    /// * `um_type` - String representation of [`UnimarkupType`] (possibly with suffix)
+    /// * `text` - Content of the [`ContentIrLine`]
+    /// * `fallback_text` - Alternative content
+    /// * `attributes` - Attributes of the [`ContentIrLine`]
+    /// * `fallback_attributes` - Alternative attributes
+    ///
+    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
     pub fn new(
         id: impl Into<String>,
         line_nr: usize,
@@ -59,6 +97,7 @@ impl ContentIrLine {
         }
     }
 
+    /// Constructs SQL query which prepares the IR for receiving of [`ContentIrLine`] data.
     pub fn table_setup() -> String {
         r#"CREATE TABLE IF NOT EXISTS "content" (
 					"id"	TEXT NOT NULL,
@@ -139,6 +178,12 @@ impl RetrieveFromIr for ContentIrLine {
     }
 }
 
+/// Prepares SQL Statement for retrieving [`ContentIrLine`]s ordered by line number
+/// in ascending order
+///
+/// # Errors
+///
+/// Will return Err if sql cannot be converted to a C-compatible string or if the underlying SQLite call fails.
 pub fn prepare_content_rows(ir_connection: &Connection, order: bool) -> Result<Statement, Error> {
     let sql_order = if order { "ORDER BY line_nr ASC" } else { "" };
     let sql = format!(
@@ -149,7 +194,7 @@ pub fn prepare_content_rows(ir_connection: &Connection, order: bool) -> Result<S
     ir_connection.prepare(&sql)
 }
 
-/// Loads the [`ContentIrLine`]s from IR and gives them contained in a vector
+/// Loads the [`ContentIrLine`]s from IR and returns them contained in a vector
 ///
 /// # Arguments
 /// * `connection` - [`rusqlite::Connection`] for interacting with IR
@@ -177,6 +222,12 @@ pub fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLin
     Ok(lines)
 }
 
+/// Used to get [`ContentIrLine`]s representation of a [`UnimarkupBlock`]
+///
+/// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
 pub trait AsIrLines {
+    /// Constructs [`ContentIrLine`]s representation of [`UnimarkupBlock`]
+    ///
+    /// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
     fn as_ir_lines(&self) -> Vec<ContentIrLine>;
 }

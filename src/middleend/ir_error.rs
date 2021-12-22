@@ -1,13 +1,29 @@
 use std::fmt;
 
+/// [`IrError`] is one of the possible Error variants of [`UmError`].
+///
+/// It's returned in case where some operations fails in [`middleend`] module
+/// of the [`unimarkup-rs`], e.g. when communication with IR fails.
+///
+/// [`UmError`]: crate::um_error::UmError
+/// [`middleend`]: crate::middleend
 #[derive(Debug)]
 pub struct IrError {
+    /// The name of target table at the point when error occured.
     pub tablename: String,
+    /// The name of target column in table at the point when error occured.
     pub column: String,
+    /// Custom message to provide more information about the error.
     pub message: String,
 }
 
 impl IrError {
+    /// Constructs a new IrError
+    ///
+    /// # Arguments
+    /// * `tablename` - Name of the target table in IR
+    /// * `column` - Name of the target column in table in IR
+    /// * `message` - Custom error message
     pub fn new(
         tablename: impl Into<String>,
         column: impl Into<String>,

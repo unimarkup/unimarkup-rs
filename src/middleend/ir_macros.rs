@@ -5,12 +5,20 @@ use log::info;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
+/// IR compatible representation of a unimarkup Macro.
 #[derive(Debug, PartialEq, Default)]
 pub struct MacroIrLine {
+    /// Name of the macro, identifier.
     pub name: String,
+    /// Parameters of the macro.
     pub parameters: String,
+    /// The return type of the macro, [`UnimarkupType`] as [`String`].
+    ///
+    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
     pub um_type: String,
+    /// Macro definition.
     pub body: String,
+    /// Alternative macro definition.
     pub fallback_body: String,
 }
 
@@ -21,6 +29,16 @@ impl IrTableName for MacroIrLine {
 }
 
 impl MacroIrLine {
+    /// Constructs a new MacroIrLine
+    ///
+    /// # Arguments
+    /// * `name` - Name of the macro, identifier.
+    /// * `parameters` - Parameters of the macro.
+    /// * `um_type` - The return type of the macro, [`UnimarkupType`] as [`String`].
+    /// * `body` - Macro definition.
+    /// * `fallback_body` - Alternative macro definition.
+    ///
+    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
     pub fn new(
         name: impl Into<String>,
         parameters: impl Into<String>,
@@ -37,6 +55,7 @@ impl MacroIrLine {
         }
     }
 
+    /// Constructs SQL query which prepares the IR for receiving of [`MacroIrLine`] data.
     pub fn table_setup() -> String {
         r#"CREATE TABLE IF NOT EXISTS "macros" (
             "name"	TEXT NOT NULL,

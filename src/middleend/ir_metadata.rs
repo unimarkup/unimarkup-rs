@@ -7,13 +7,21 @@ use log::warn;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
+/// IR Representation of unimarkup Metadata
 #[derive(Debug, PartialEq, Default)]
 pub struct MetadataIrLine {
+    /// Generated hash code of input unimarkup document. Primarily used
+    /// for detecting changes in unimarkup document.
     pub filehash: Vec<u8>,
+    /// Name of the input unimarkup document.
     pub filename: String,
+    /// Path to the input unimarkup document.
     pub path: String,
+    /// Preamble section of the unimarkup document.
     pub preamble: String,
+    /// Alternative preamble
     pub fallback_preamble: String,
+    /// Whether the given file is the entry point of unimarkup document.
     pub root: bool,
 }
 
@@ -24,6 +32,15 @@ impl IrTableName for MetadataIrLine {
 }
 
 impl MetadataIrLine {
+    /// Constructs a new MetadataIrLine
+    ///
+    /// # Arguments
+    /// * `filehash` - Generated hash code of input unimarkup document.
+    /// * `filename` - Name of the input unimarkup document.
+    /// * `path` - Path to the input unimarkup document.
+    /// * `preamble` - Preamble section of the unimarkup document.
+    /// * `fallback_preamble` - Alternative preamble
+    /// * `root` - Whether the given file is the entry point of unimarkup document.
     pub fn new(
         filehash: Vec<u8>,
         filename: impl Into<String>,
@@ -42,6 +59,7 @@ impl MetadataIrLine {
         }
     }
 
+    /// Constructs SQL query which prepares the IR for receiving of [`MetadataIrLine`] data.
     pub fn table_setup() -> String {
         r#"CREATE TABLE IF NOT EXISTS "metadata" (
 					"filehash"	BLOB NOT NULL,
