@@ -4,10 +4,7 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::{fs, path::Path};
 
-use crate::{
-    um_elements::heading_block::HeadingBlock, um_elements::paragraph_block::ParagraphBlock,
-    um_error::UmError,
-};
+use crate::{um_elements::HeadingBlock, um_elements::ParagraphBlock, um_error::UmError};
 
 use super::UnimarkupBlocks;
 

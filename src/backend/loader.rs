@@ -5,9 +5,7 @@ use rusqlite::Connection;
 use crate::{
     backend::{BackendError, Render},
     middleend::{self, ContentIrLine},
-    um_elements::{
-        heading_block::HeadingBlock, paragraph_block::ParagraphBlock, types, types::UnimarkupType,
-    },
+    um_elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock},
     um_error::UmError,
 };
 
