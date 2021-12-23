@@ -1,4 +1,4 @@
-//! Types and elements available in a Unimarkup document.
+//! Available elements for a Unimarkup document.
 
 mod heading_block;
 mod paragraph_block;
