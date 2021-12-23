@@ -1,4 +1,4 @@
-//! [`parser`](crate::frontend::parser) is the module which implements the parsing of the unimarkup syntax
+//! [`parser`](crate::frontend::parser) is the module which implements parsing of the Unimarkup syntax
 
 use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
@@ -8,13 +8,13 @@ use crate::{um_elements::HeadingBlock, um_elements::ParagraphBlock, um_error::Um
 
 use super::UnimarkupBlocks;
 
-/// Used to parse one specific block from unimarkup syntax
+/// Used to parse one specific Unimarkup block
 pub trait UmParse {
-    /// Parses the [`UnimarkupBlocks`] from given data returned from the pest parser.
+    /// Parses [`UnimarkupBlocks`] from given data returned from the pest parser.
     ///
     /// # Errors
     ///
-    /// This function will return an error if given Pairs of Rules contain non-valid unimarkup syntax.
+    /// This function will return an error if given Pairs of Rules contain non-valid Unimarkup syntax.
     fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, UmError>
     where
         Self: Sized;
@@ -26,28 +26,14 @@ mod parser_derivation {
 
     use super::*;
 
-    /// UnimarkupParser which can parse unimarkup file into either atomic or enclosed blocks.
-    ///
-    /// - Atomic block is every block which is constructed of one or more lines of text which
-    /// aren't separated by a blank line. Note that this means that enclosed block can also
-    /// be parsed as atomic, if it doesn't contain any blank lines.
-    ///
-    /// - Enclosed blocks are blocks which are enclosed in some kind of delimiters.
-    ///
-    /// i.e.:
-    /// ```unimarkup
-    /// ~~~
-    ///
-    /// this would be a verbatim block
-    ///
-    /// ~~~
-    /// ```
+    /// UnimarkupParser which can parse a Unimarkup file into either atomic or enclosed blocks.
     ///
     /// # Rule enum
-    /// The pest crate provides a proc-macro which generates an implementation for the Parser
+    /// 
+    /// The pest crate provides a proc-macro, that generates an implementation for the Parser
     /// and creates an enum Rule. Both the parser and the enum are generated according to
-    /// the provided pest grammar. The Rule enum is made of variants which correspond the
-    /// the individual rules in pest grammar.
+    /// the provided pest grammar. The Rule enum is made of variants which correspond to
+    /// the individual rules in the pest grammar.
     #[derive(Parser)]
     #[allow(missing_docs)]
     #[grammar = "grammar/unimarkup.pest"]
@@ -56,13 +42,13 @@ mod parser_derivation {
 
 pub use parser_derivation::*;
 
-/// Parses the given unimarkup file.
+/// Parses the given Unimarkup file.
 ///
-/// Returns Result with either [`UnimarkupBlocks`] or [`UmError`].
+/// Returns [`UnimarkupBlocks`] on success.
 ///
 /// # Errors
 ///
-/// This function will return an [`UmError`] if unimarkup file contains invalid unimarkup syntax.
+/// This function will return an [`UmError`], if the given Unimarkup file contains invalid Unimarkup syntax.
 pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
     let source = fs::read_to_string(um_file).map_err(|err| UmError::General {
         msg: String::from("Could not read file."),

@@ -10,15 +10,15 @@ type CursorPos = (usize, usize);
 /// [`UmError`]: crate::um_error::UmError
 #[derive(Debug)]
 pub struct SyntaxError {
-    /// Start position in unimarkup document of span where [`SyntaxError`] occured.
+    /// Start position in the Unimarkup document, where [`SyntaxError`] occured.
     pub start_pos: CursorPos,
-    /// Position in unimarkup document where [`SyntaxError`] occured.
+    /// Position in the Unimarkup document, where [`SyntaxError`] occured.
     pub current_pos: CursorPos,
-    /// Start line in unimarkup document of span where [`SyntaxError`] occured.
+    /// Start line in the Unimarkup document, where [`SyntaxError`] occured.
     pub start_line: String,
-    /// The line in unimarkup document where [`SyntaxError`] occured.
+    /// The line in the Unimarkup document, where [`SyntaxError`] occured.
     pub current_line: String,
-    /// Custom message to provide details to the user.
+    /// Custom message to provide additional information about the error.
     pub message: String,
 }
 
@@ -47,10 +47,10 @@ impl SyntaxError {
     ///
     /// # Arguments
     ///
-    /// * `content` - Lines of &str from unimarkup document
-    /// * `start_pos` - Start position in unimarkup document of span where [`SyntaxError`] occured.
-    /// * `current_pos` -  Position in unimarkup document where [`SyntaxError`] occured.
-    /// * `message` - Custom message to provide details to the user.
+    /// * `content` - Lines of &str from the Unimarkup document
+    /// * `start_pos` - Start position in the Unimarkup document, where [`SyntaxError`] occured
+    /// * `current_pos` - Position in the Unimarkup document, where [`SyntaxError`] occured
+    /// * `message` - Custom message to provide additional information about the error
     pub fn new(
         content: &[&str],
         start_pos: &CursorPos,
