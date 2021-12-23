@@ -5,32 +5,30 @@ use crate::backend::BackendError;
 use crate::frontend::SyntaxError;
 use crate::middleend::IrError;
 
-/// Unimarkup error which wraps [`SyntaxError`], [`IrError`], [`BackendError`] and
-/// any other type which implements the [`Error`] trait.
+/// Unimarkup error that wraps [`SyntaxError`], [`IrError`], [`BackendError`] and
+/// any other type, that implements the [`Error`] trait.
 ///
 /// [`SyntaxError`]: crate::frontend::SyntaxError
 /// [`IrError`]: crate::middleend::IrError
 /// [`BackendError`]: crate::backend::BackendError
 pub enum UmError {
-    /// Represents a syntax error in input unimarkup document.
+    /// Represents a syntax error in the input Unimarkup document.
     Syntax(SyntaxError),
 
-    /// Represents an error in communication with the IR.
+    /// Represents an error when communicating with the IR.
     Ir(IrError),
 
-    /// Represents an error occured in backend when, for example,
-    /// (re)constructing [`UnimarkupBlocks`] from IR.
-    ///
-    /// [`UnimarkupBlocks`]: crate::frontend::UnimarkupBlocks
+    /// Represents an error in the backend.
     Backend(BackendError),
 
-    /// Wrapper for any other type implementing the [`Error`] trait, for
-    /// cases where neither of the previous three variants apply.
+    /// Wrapper for any other type that implements the [`std::error::Error`] trait.
+    /// 
+    /// Should only be used in cases, where none of the specific errors apply.
     General {
-        /// Custom error message for better explanation
+        /// Custom error message
         msg: String,
 
-        /// The actual error which occured.
+        /// The actual error that occured.
         error: Box<dyn Error>,
     },
 }
