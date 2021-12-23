@@ -2,8 +2,8 @@ use core::fmt;
 
 /// [`BackendError`] is one of the possible Error variants of [`UmError`].
 ///
-/// It's returned in case where some operations fails in [`backend`] module
-/// of the [`unimarkup-rs`], i.e. when (re)constructing UnimarkupBlock from IR,
+/// It's returned, when some operation fails in the [`backend`] module
+/// of [`unimarkup-rs`], i.e. when (re)constructing a UnimarkupBlock from IR,
 /// or trying to render one of the provided output formats.
 ///
 /// [`UmError`]: crate::um_error::UmError

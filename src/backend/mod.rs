@@ -1,7 +1,6 @@
-//! Backend functionality of [`unimarkup-rs`](crate) compiler.
+//! Backend functionality of [`unimarkup-rs`](crate).
 //!
-//! Tasked with (re)construction of [`UnimarkupBlocks`] from IR and, rendering the wanted output
-//! formats and writing them to file.
+//! Like (re)construction of [`UnimarkupBlocks`] from IR and writing them to files for the given output formats.
 //!
 //! [`UnimarkupBlocks`]: crate::frontend::UnimarkupBlocks
 
@@ -20,16 +19,19 @@ pub use backend_error::BackendError;
 pub use loader::ParseFromIr;
 pub use renderer::*;
 
-type RenderBlock = Box<dyn Render>;
+/// Abstract type for elements that implement the [`Render`] trait
+pub type RenderBlock = Box<dyn Render>;
 
-/// This is the entry function for the [`backend`](crate::backend) module. It fetches the
-/// UnimarkupBlocks from IR, renders them and writes the resulting output
-/// to the wanted output format (if any).
+/// This is the entry function for the [`backend`](crate::backend) module. It fetches
+/// [`UnimarkupBlocks`] from IR, renders them to the wanted output format and writes the resulting output.
 ///
 /// This function will return an [`UmError`] if
+/// 
 /// - connection to the IR fails
-/// - reconstructing of UnimarkupBlocks fails, or
-/// - error occuers when writing to the output file
+/// - reconstructing of [`UnimarkupBlocks`] fails
+/// - error occurs when writing to the output file
+/// 
+/// [`UnimarkupBlocks`]: crate::frontend::UnimarkupBlocks
 pub fn run(connection: &mut Connection, config: &Config) -> Result<(), UmError> {
     let blocks: Vec<RenderBlock> = loader::get_blocks_from_ir(connection)?;
 
