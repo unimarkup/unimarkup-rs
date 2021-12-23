@@ -1,9 +1,4 @@
-//! Structs and functions for parsing and generating compiler configuration.
-//!
-//! All user interaction with [`unimarkup-rs`] at the end boils down to
-//! creating a [`Config`] struct containing all relevant information for
-//! [`unimarkup-rs`] to successfully compile the unimarkup document as desired
-//! by the user.
+//! Structs and functions for parsing and generating the Unimarkup configuration.
 
 use std::path::PathBuf;
 
@@ -14,13 +9,7 @@ use crate::um_elements::types::UnimarkupType;
 
 const UNIMARKUP_NAME: &str = "Unimarkup";
 
-/// Config contains the configuration given to the compiler either per
-/// command-line arguments or using the preamble block in the unimarkup file itself.
-///
-/// **Note:** Configuration flags provided as CLI arguments override the preamble configuration.
-/// The rationale behind this decision is that, CLI arguments are probably temporary change in
-/// configuration by the user, and should override the preamble configuration. Simply omitting the
-/// option in CLI will fall-back to the one defined in the preamble.
+/// Config contains the possible options for the Unimarkup configuration.
 #[derive(Debug, PartialEq, Clone, Parser)]
 #[clap(name = UNIMARKUP_NAME, version = crate_version!())]
 pub struct Config {
@@ -217,42 +206,38 @@ pub struct Config {
     pub html_embed_svg: bool,
 }
 
-/// Possible output formats of compiled unimarkup file
-/// as it's variants
+/// Possible output formats for a Unimarkup file
 #[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
 pub enum OutputFormat {
-    /// Standard PDF output format
+    /// PDF output format
     #[strum(ascii_case_insensitive)]
     Pdf,
-    /// standard HTML output format which can be either:
-    /// - standalone with whole document ready to use as is
-    /// - embedded which contains only the body part, or can be integrated
-    /// into a template
+    /// HTML output format
     #[strum(ascii_case_insensitive)]
     Html,
     #[strum(ascii_case_insensitive, serialize = "reveal-js")]
     #[clap(alias = "revealjs")]
-    /// [revealJs] the HTML Presentation Framework, convenient for creating
-    /// presentations in unimarkup
+    /// [revealJs] output format.
+    /// 
+    /// A presentation framework using HTML and Javascript
     ///
     /// [revealJs]: https://revealjs.com/
     RevealJs,
     #[strum(ascii_case_insensitive)]
-    /// Intermediate Representation of the unimarkup document. This is convenient when, i.e.,
-    /// one wants to provide translations for the unimarkup document
+    /// Intermediate representation of the Unimarkup document.
     Intermediate,
 }
 
-/// Possible modes for rendering math in HTML
+/// Possible modes for rendering math formulas in HTML
 #[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
 pub enum HtmlMathmode {
     /// Render math as SVG
     #[strum(ascii_case_insensitive)]
     Svg,
-    /// Embed math as HTML elements
+    /// Embed MathJax
     #[strum(ascii_case_insensitive)]
     Embed,
-    /// Embed math from CDN (Content Delivery Network)
+    /// Use CDN (Content Delivery Network) for MathJax (requires online connection to view math formulas in the output HTML)
     #[strum(ascii_case_insensitive)]
     Cdn,
 }

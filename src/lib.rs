@@ -1,5 +1,5 @@
 #![warn(missing_docs)]
-//! unimarkup-rs crate is the official compiler implementation of the [unimarkup](https://github.com/Unimarkup/Specification/) compiler.
+//! The unimarkup-rs crate is the official implementation of the [Unimarkup specification](https://github.com/Unimarkup/Specification/).
 
 pub mod backend;
 pub mod config;
