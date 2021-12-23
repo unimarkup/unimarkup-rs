@@ -6,11 +6,11 @@ use crate::{
 };
 use rusqlite::Connection;
 
-/// Creates the [`rusqlite::Connection`] in memory.
+/// Creates the [`rusqlite::Connection`] to a in-memory SQLite database.
 ///
 /// # Errors
 ///
-/// Returns a [`UmError::Ir`] if connection could not be created.
+/// Returns a [`UmError::Ir`], if the connection could not be created.
 pub fn setup_ir_connection() -> Result<Connection, UmError> {
     Connection::open_in_memory().map_err(|err| {
         IrError::new(
@@ -22,11 +22,11 @@ pub fn setup_ir_connection() -> Result<Connection, UmError> {
     })
 }
 
-/// Prepares all the necessary tables in IR for receiving data.
+/// Prepares all necessary tables for the IR form.
 ///
 /// # Errors
 ///
-/// Returns a [`UmError::Ir`] if execution of SQL statements fails.
+/// Returns a [`UmError::Ir`], if execution of a SQL statement fails.
 pub fn setup_ir(ir_connection: &Connection) -> Result<(), UmError> {
     let sql = format!(
         "{}{}{}{}{}",

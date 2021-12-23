@@ -10,15 +10,15 @@ use rusqlite::Transaction;
 /// IR compatible representation of various Unimarkup Elements such as Blocks, Variables, Macros etc.
 #[derive(Debug)]
 pub struct IrBlock {
-    /// IR compatible representation of UnimarkupBlock (i.e. HeadingBlock)
+    /// IR compatible representation of a UnimarkupBlock (i.e. HeadingBlock)
     content_lines: Vec<ContentIrLine>,
-    /// IR compatible representation of Unimarkup Variable
+    /// IR compatible representation of a Unimarkup variable
     variable_lines: Vec<VariableIrLine>,
-    /// IR compatible representation of Unimarkup Macro definition
+    /// IR compatible representation of a Unimarkup macro definition
     macro_lines: Vec<MacroIrLine>,
-    /// IR compatible representation of various metadata (i.e. about input file)
+    /// IR compatible representation of various metadata (i.e. name of the input file)
     metadata_lines: Vec<MetadataIrLine>,
-    /// IR compatible representation of Unimarkup Resource Elements (i.e. image reference)
+    /// IR compatible representation of Unimarkup resource elements (i.e. image references)
     resource_lines: Vec<ResourceIrLine>,
 }
 
@@ -26,8 +26,6 @@ impl IrBlock {
     /// Constructs an empty IR Block
     pub fn new() -> Self {
         IrBlock {
-            // Vec::new() does not allocate on heap.
-            // First allocation occurs when first element is pushed into the Vec
             content_lines: Vec::new(),
             variable_lines: Vec::new(),
             macro_lines: Vec::new(),

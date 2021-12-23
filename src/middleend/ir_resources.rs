@@ -4,10 +4,10 @@ use log::debug;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
-/// IR compatible representation of unimarkup Resource elements.
+/// Structure for the resource table representation of the IR
 #[derive(Debug, PartialEq, Default)]
 pub struct ResourceIrLine {
-    /// File name of the given resource, i.e. name of image file.
+    /// Filename of the given resource, i.e. name of a image file.
     pub filename: String,
     /// Path to the given resource.
     pub path: String,
@@ -23,8 +23,9 @@ impl ResourceIrLine {
     /// Constructs a new [`ResourceIrLine`].
     ///
     /// # Arguments
-    /// * `filename` - File name of the given resource, i.e. name of image file.
-    /// * `path` - Path to the given resource.
+    /// 
+    /// * `filename` - Filename of the given resource, i.e. name of a image file
+    /// * `path` - Path to the given resource
     pub fn new(filename: impl Into<String>, path: impl Into<String>) -> Self {
         ResourceIrLine {
             filename: filename.into(),
@@ -32,7 +33,7 @@ impl ResourceIrLine {
         }
     }
 
-    /// Constructs SQL query which prepares the IR for receiving of [`ResourceIrLine`] data.
+    /// Prepares a SQL query to setup the resource table of the IR form.
     pub fn table_setup() -> String {
         r#"CREATE TABLE IF NOT EXISTS "resources" (
 					"filename"	TEXT NOT NULL,
