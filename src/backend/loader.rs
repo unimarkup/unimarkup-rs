@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 use std::{collections::VecDeque, str::FromStr};
 
 use rusqlite::Connection;
@@ -6,34 +5,33 @@ use rusqlite::Connection;
 use crate::{
     backend::{BackendError, Render},
     middleend::{self, ContentIrLine},
-    um_elements::{
-        heading_block::HeadingBlock, paragraph_block::ParagraphBlock, types, types::UnimarkupType,
-    },
+    um_elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock},
     um_error::UmError,
 };
 
 use super::RenderBlock;
 
-/// Trait which should be implemented by any [`UnimarkupType`] which can be stored in IR
+/// Trait that must be implemented for a [`UnimarkupType`] to be stored in IR
 pub trait ParseFromIr {
     /// Parses a Unimarkup Block Element from Intermediate Representation (SQL Database)
     ///
     /// # Arguments
+    ///
     /// * `content_lines` - reference to a slice containing all [`ContentIrLine`] lines
     /// * `line_index` - index of the [`ContentIrLine`] which is currently read
     ///
-    /// As part of the return value is `usize`, which represents
-    /// the index of the next Content Line which should be read.
+    /// Returns the Unimarkup block element on success.
     fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, UmError>
     where
         Self: Sized;
 }
 
-/// Parses the `[ContentIrLine]s`, creates Unimarkup Block Elements and gives them back.
-/// The actual blocks are stored in `Vec` as trait objects of trait [`Render`] since different types
-/// are needed.
+/// Parses `[ContentIrLine]s` and returns all Unimarkup Block Elements that where stored in the IR.
+/// The actual blocks are stored in `Vec` as trait objects of trait [`Render`] since different [`UnimarkupType`]s
+/// are stored in the IR.
 ///
 /// # Arguments
+///
 /// * `connection` - [`rusqlite::Connection`] used for interaction with IR
 pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock>, UmError> {
     let mut blocks: Vec<Box<dyn Render>> = vec![];
@@ -63,12 +61,12 @@ pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock
     Ok(blocks)
 }
 
-/// # Parses the [UnimarkupType] from String
-/// Takes ownership of type as string, since the content ir line will be consumed in order
-/// to return corresponding [UnimarkupType]
+/// Returns the corresponding [`UnimarkupType`] from a given String
 ///
-/// ## Accepted formats
-/// This function accepts all formats produced by the unimarkup parser:
+/// # Accepted formats
+///
+/// This function accepts all formats produced by the Unimarkup parser:
+///
 /// - `"paragraph"`
 /// - `"paragraph-start"`
 /// - `"heading-level-1"`

@@ -14,11 +14,20 @@ use crate::{
 use pest::iterators::Pairs;
 use pest::Span;
 
+/// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default)]
 pub struct ParagraphBlock {
+    /// Unique identifier for a paragraph.
     pub id: String,
+
+    /// The content of the paragraph.
     pub content: String,
+
+    /// Attributes of the paragraph.
     pub attributes: String,
+
+    /// Line number, where the paragraph occurs in
+    /// the Unimarkup document.
     pub line_nr: usize,
 }
 

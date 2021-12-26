@@ -7,14 +7,26 @@ use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 use rusqlite::{Connection, Statement, ToSql};
 use std::convert::TryInto;
 
+/// Structure for the content table representation of the IR
 #[derive(Debug, PartialEq)]
 pub struct ContentIrLine {
+    /// ID of the content
     pub id: String,
+    /// Line number of the input Unimarkup file, where the start of this content is found.
     pub line_nr: usize,
+    /// String representation of the [`UnimarkupType`] for this content.
+    ///
+    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
     pub um_type: String,
+    /// Raw inline Unimarkup content for the [`UnimarkupType`].
+    ///
+    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
     pub text: String,
+    /// Alternative content that is used, if `text` is empty.
     pub fallback_text: String,
+    /// Attributes for this content in JSON format.
     pub attributes: String,
+    /// Alternative attributes that are used, if `attributes` is empty.
     pub fallback_attributes: String,
 }
 
@@ -39,6 +51,19 @@ impl IrTableName for ContentIrLine {
 }
 
 impl ContentIrLine {
+    /// Constructs a new [`ContentIrLine`].
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of a content
+    /// * `line_nr` - Line number in the Unimarkup file, where this content is found
+    /// * `um_type` - String representation of the [`UnimarkupType`]
+    /// * `text` - Content of the [`ContentIrLine`]
+    /// * `fallback_text` - Alternative content
+    /// * `attributes` - Attributes of the [`ContentIrLine`]
+    /// * `fallback_attributes` - Alternative attributes
+    ///
+    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
     pub fn new(
         id: impl Into<String>,
         line_nr: usize,
@@ -59,6 +84,7 @@ impl ContentIrLine {
         }
     }
 
+    /// Prepares a SQL query to setup the content table of the IR form.
     pub fn table_setup() -> String {
         r#"CREATE TABLE IF NOT EXISTS "content" (
 					"id"	TEXT NOT NULL,
@@ -139,6 +165,12 @@ impl RetrieveFromIr for ContentIrLine {
     }
 }
 
+/// Prepares a SQL Statement to get [`ContentIrLine`]s ordered by line number
+/// in ascending order
+///
+/// # Errors
+///
+/// Will return Err, if the SQL query cannot be converted to a C-compatible string, or if the underlying SQLite call fails.
 pub fn prepare_content_rows(ir_connection: &Connection, order: bool) -> Result<Statement, Error> {
     let sql_order = if order { "ORDER BY line_nr ASC" } else { "" };
     let sql = format!(
@@ -149,10 +181,11 @@ pub fn prepare_content_rows(ir_connection: &Connection, order: bool) -> Result<S
     ir_connection.prepare(&sql)
 }
 
-/// Loads the [`ContentIrLine`]s from IR and gives them contained in a vector
+/// Loads [`ContentIrLine`]s from the content table and returns them as a vector
 ///
 /// # Arguments
-/// * `connection` - [`rusqlite::Connection`] for interacting with IR
+///
+/// * `connection` - [`rusqlite::Connection`] to interact with the IR
 pub fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLine>, UmError> {
     let convert_err = |err| -> UmError {
         IrError::new(
@@ -177,6 +210,12 @@ pub fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLin
     Ok(lines)
 }
 
+/// Trait to represent a [`UnimarkupBlock`] as [`ContentIrLine`]s.
+///
+/// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
 pub trait AsIrLines {
+    /// Represents a [`UnimarkupBlock`] as [`ContentIrLine`]s.
+    ///
+    /// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
     fn as_ir_lines(&self) -> Vec<ContentIrLine>;
 }

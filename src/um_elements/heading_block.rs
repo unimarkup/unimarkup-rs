@@ -11,21 +11,35 @@ use crate::middleend::{AsIrLines, ContentIrLine};
 use crate::um_elements::types::{self, UnimarkupType};
 use crate::um_error::UmError;
 
+/// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
 #[strum(serialize_all = "kebab-case")]
 pub enum HeadingLevel {
+    /// Heading level 1, corresponds to `# ` in Unimarkup.
     #[strum(serialize = "level-1")]
     Level1 = 1, // start counting from 0
+
+    /// Heading level 2, corresponds to `## ` in Unimarkup.
     #[strum(serialize = "level-2")]
     Level2,
+
+    /// Heading level 3, corresponds to `### ` in Unimarkup.
     #[strum(serialize = "level-3")]
     Level3,
+
+    /// Heading level 4, corresponds to `#### ` in Unimarkup.
     #[strum(serialize = "level-4")]
     Level4,
+
+    /// Heading level 5, corresponds to `##### ` in Unimarkup.
     #[strum(serialize = "level-5")]
     Level5,
+
+    /// Heading level 6, corresponds to `###### ` in Unimarkup.
     #[strum(serialize = "level-6")]
     Level6,
+
+    /// Invalid level to denote an invalid heading syntax
     Invalid,
 }
 
@@ -77,16 +91,28 @@ impl From<usize> for HeadingLevel {
     }
 }
 
+/// Structure of a Unimarkup heading element.
 #[derive(Debug, Default)]
 pub struct HeadingBlock {
+    /// Unique identifier for a heading.
     pub id: String,
+
+    /// Heading level.
     pub level: HeadingLevel,
+
+    /// The content of the heading line.
     pub content: String,
+
+    /// Attributes of the heading.
     pub attributes: String,
+
+    /// Line number, where the heading occurs in
+    /// the Unimarkup document.
     pub line_nr: usize,
 }
 
 impl HeadingBlock {
+    /// Parses a single instance of a heading element.
     fn parse_single(pair: &Pair<Rule>) -> Self {
         let mut heading_data = pair.clone().into_inner();
 
