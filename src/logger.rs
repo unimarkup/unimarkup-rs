@@ -25,9 +25,15 @@ impl IntoColor for log::Level {
 /// Initializes [`env_logger`](env_logger) used for logging functionality of
 /// [`unimarkup-rs`]
 pub fn init_logger() {
+    let max_level = if cfg!(debug_assertions) {
+        LevelFilter::Trace
+    } else {
+        LevelFilter::Info
+    };
+
     env_logger::builder()
         .format_level(true)
-        .filter_level(LevelFilter::Info)
+        .filter_level(max_level)
         .parse_default_env()
         .format_timestamp(None)
         .format_target(false)
