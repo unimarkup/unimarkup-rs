@@ -218,7 +218,7 @@ pub enum OutputFormat {
     #[strum(ascii_case_insensitive, serialize = "reveal-js")]
     #[clap(alias = "revealjs")]
     /// [revealJs] output format.
-    /// 
+    ///
     /// A presentation framework using HTML and Javascript
     ///
     /// [revealJs]: https://revealjs.com/

@@ -29,7 +29,7 @@ mod parser_derivation {
     /// UnimarkupParser which can parse a Unimarkup file into either atomic or enclosed blocks.
     ///
     /// # Rule enum
-    /// 
+    ///
     /// The pest crate provides a proc-macro, that generates an implementation for the Parser
     /// and creates an enum Rule. Both the parser and the enum are generated according to
     /// the provided pest grammar. The Rule enum is made of variants which correspond to

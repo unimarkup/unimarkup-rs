@@ -26,11 +26,11 @@ pub type RenderBlock = Box<dyn Render>;
 /// [`UnimarkupBlocks`] from IR, renders them to the wanted output format and writes the resulting output.
 ///
 /// This function will return an [`UmError`] if
-/// 
+///
 /// - connection to the IR fails
 /// - reconstructing of [`UnimarkupBlocks`] fails
 /// - error occurs when writing to the output file
-/// 
+///
 /// [`UnimarkupBlocks`]: crate::frontend::UnimarkupBlocks
 pub fn run(connection: &mut Connection, config: &Config) -> Result<(), UmError> {
     let blocks: Vec<RenderBlock> = loader::get_blocks_from_ir(connection)?;

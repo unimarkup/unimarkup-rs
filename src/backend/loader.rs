@@ -16,10 +16,10 @@ pub trait ParseFromIr {
     /// Parses a Unimarkup Block Element from Intermediate Representation (SQL Database)
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `content_lines` - reference to a slice containing all [`ContentIrLine`] lines
     /// * `line_index` - index of the [`ContentIrLine`] which is currently read
-    /// 
+    ///
     /// Returns the Unimarkup block element on success.
     fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, UmError>
     where
@@ -31,7 +31,7 @@ pub trait ParseFromIr {
 /// are stored in the IR.
 ///
 /// # Arguments
-/// 
+///
 /// * `connection` - [`rusqlite::Connection`] used for interaction with IR
 pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock>, UmError> {
     let mut blocks: Vec<Box<dyn Render>> = vec![];
@@ -64,9 +64,9 @@ pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock
 /// Returns the corresponding [`UnimarkupType`] from a given String
 ///
 /// # Accepted formats
-/// 
+///
 /// This function accepts all formats produced by the Unimarkup parser:
-/// 
+///
 /// - `"paragraph"`
 /// - `"paragraph-start"`
 /// - `"heading-level-1"`

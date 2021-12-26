@@ -15,9 +15,9 @@ pub trait Render {
 /// and returns the resulting HTML as [`String`].
 ///
 /// # Arguments
-/// 
+///
 /// - `blocks` - array of type [`RenderBlock`]
-/// 
+///
 /// Returns [`UmError`], if any of the given blocks returns an [`UmError`]
 /// when rendering itself.
 pub fn render_html(blocks: &[RenderBlock]) -> Result<String, UmError> {

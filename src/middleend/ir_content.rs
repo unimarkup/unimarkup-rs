@@ -15,11 +15,11 @@ pub struct ContentIrLine {
     /// Line number of the input Unimarkup file, where the start of this content is found.
     pub line_nr: usize,
     /// String representation of the [`UnimarkupType`] for this content.
-    /// 
+    ///
     /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
     pub um_type: String,
     /// Raw inline Unimarkup content for the [`UnimarkupType`].
-    /// 
+    ///
     /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
     pub text: String,
     /// Alternative content that is used, if `text` is empty.
@@ -54,7 +54,7 @@ impl ContentIrLine {
     /// Constructs a new [`ContentIrLine`].
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `id` - The ID of a content
     /// * `line_nr` - Line number in the Unimarkup file, where this content is found
     /// * `um_type` - String representation of the [`UnimarkupType`]
@@ -184,7 +184,7 @@ pub fn prepare_content_rows(ir_connection: &Connection, order: bool) -> Result<S
 /// Loads [`ContentIrLine`]s from the content table and returns them as a vector
 ///
 /// # Arguments
-/// 
+///
 /// * `connection` - [`rusqlite::Connection`] to interact with the IR
 pub fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLine>, UmError> {
     let convert_err = |err| -> UmError {

@@ -32,7 +32,7 @@ impl MacroIrLine {
     /// Constructs a new MacroIrLine
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `name` - Name of the macro
     /// * `parameters` - Parameters of the macro
     /// * `um_type` - The return type of the macro ([`UnimarkupType`] as [`String`])

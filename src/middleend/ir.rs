@@ -35,18 +35,18 @@ pub trait RetrieveFromIr {
 }
 
 /// Writes IR lines into IR.
-/// 
+///
 /// **Note:** The transaction must be commited manually, before the SQL database is updated.
 ///
 /// # Arguments
-/// 
+///
 /// * `ir_lines` - IR lines to write into the IR
 /// * `ir_transaction` - the [`Transaction`] used to communicate with IR
-/// 
+///
 /// # Errors
 ///
 /// Returns an [`UmError`] if writing an IR line to IR fails.
-/// 
+///
 /// [`Transaction`]: https://docs.rs/rusqlite/latest/rusqlite/struct.Transaction.html
 pub fn write_ir_lines(
     ir_lines: &[impl WriteToIr],
@@ -62,11 +62,11 @@ pub fn write_ir_lines(
 }
 
 /// Checks if an entry already exists in IR
-/// 
+///
 /// **Note:** The transaction must be commited manually, before the SQL database is updated.
 ///
 /// # Arguments
-/// 
+///
 /// * `ir_line` - the IR line that is checked
 /// * `ir_transaction` - the rusqlite [`Transaction`] used to communicate with IR
 ///
@@ -99,11 +99,11 @@ fn get_nr_values(params: &[&dyn ToSql]) -> String {
 }
 
 /// Inserts the given IR line into the IR database.
-/// 
+///
 /// **Note:** The transaction must be commited manually, before the SQL database is updated.
 ///
 /// # Arguments
-/// 
+///
 /// * `ir_transaction` - rusqlite [`Transaction`] used to communicate with IR
 /// * `sql_table` - the table in IR to write to
 /// * `params` - parameters for the SQL query, that will be inserted
@@ -142,11 +142,11 @@ pub fn insert_ir_line_execute(
 }
 
 /// Updates the value in IR, i.e. when overriding some definition
-/// 
+///
 /// **Note:** The transaction must be commited manually, before the SQL database is updated.
 ///
 /// # Arguments
-/// 
+///
 /// * `ir_transaction` - rusqlite [`Transaction`] used to communicate with IR
 /// * `sql_table` - table in IR to write to
 /// * `sql_set` - columns and values for the `SQL SET` command
@@ -188,11 +188,11 @@ pub fn update_ir_line_execute(
 }
 
 /// Returns a single IR line from IR database.
-/// 
+///
 /// **Note:** The transaction must be commited manually, before the SQL database is updated.
 ///
 /// # Arguments
-/// 
+///
 /// * `ir_transaction` - rusqlite [`Transaction`] used to communicate with IR
 /// * `pk_condition_params` - SQL params to identify the IR line (Row in IR) to fetch
 ///

@@ -23,7 +23,7 @@ impl ResourceIrLine {
     /// Constructs a new [`ResourceIrLine`].
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `filename` - Filename of the given resource, i.e. name of a image file
     /// * `path` - Path to the given resource
     pub fn new(filename: impl Into<String>, path: impl Into<String>) -> Self {

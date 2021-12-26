@@ -22,7 +22,7 @@ pub enum UmError {
     Backend(BackendError),
 
     /// Wrapper for any other type that implements the [`std::error::Error`] trait.
-    /// 
+    ///
     /// Should only be used in cases, where none of the specific errors apply.
     General {
         /// Custom error message

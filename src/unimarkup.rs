@@ -9,7 +9,7 @@ use crate::um_error::UmError;
 /// Compiles a Unimarkup document.
 ///
 /// # Arguments
-/// 
+///
 /// * `config` - Unimarkup configuration constructed from command-line arguments passed to unimarkup-rs.
 ///
 /// # Errors

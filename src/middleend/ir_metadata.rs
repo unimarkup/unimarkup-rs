@@ -34,7 +34,7 @@ impl MetadataIrLine {
     /// Constructs a new MetadataIrLine
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `filehash` - Generated hash code of a Unimarkup file
     /// * `filename` - Filename of a Unimarkup file
     /// * `path` - Path to a Unimarkup file

@@ -21,7 +21,7 @@ impl IrError {
     /// Constructs a new IrError
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `tablename` - Name of the target table
     /// * `column` - Name of the target column in the table
     /// * `message` - Custom error message
