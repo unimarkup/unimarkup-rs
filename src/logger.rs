@@ -27,11 +27,10 @@ impl IntoColor for log::Level {
 pub fn init_logger() {
     env_logger::builder()
         .format_level(true)
-        .filter_level(LevelFilter::Debug)
+        .filter_level(LevelFilter::Info)
+        .parse_default_env()
         .format_timestamp(None)
         .format_target(false)
-        .format_module_path(false)
-        .format_suffix("")
         .format(|buf, record| {
             let mut style = buf.style();
             style.set_color(record.level().into_color()).set_bold(true);
