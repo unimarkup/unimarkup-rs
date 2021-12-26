@@ -1,5 +1,39 @@
 # Changelog
 
+### [0.2.1](https://www.github.com/Unimarkup/unimarkup-rs/compare/v0.2.0...v0.2.1) (2021-12-26)
+
+
+### Bug Fixes
+
+* fix logger when using installed unimarkup-rs ([cea675d](https://www.github.com/Unimarkup/unimarkup-rs/commit/cea675d3dd5506e38ad1d06bc33bbdcefec92b7e))
+* fix simple_logger causing panic when using installed version of unimarkup-rs ([efdd2dd](https://www.github.com/Unimarkup/unimarkup-rs/commit/efdd2dd437383f42bcc4c829bfddcadab9098f00))
+* use env_logger instead of simple_logger ([fa67333](https://www.github.com/Unimarkup/unimarkup-rs/commit/fa67333c84be78c7b664daf6c1afee4ced5c404f))
+
+
+### Documentation
+
+* add documentation to the crate ([57326b8](https://www.github.com/Unimarkup/unimarkup-rs/commit/57326b86bea617dc0f8f2c1e7f775d5437c816cb))
+* add overall documentation for backend module ([b7e642e](https://www.github.com/Unimarkup/unimarkup-rs/commit/b7e642e7958972b473e15b72636b3a326ae7d426))
+* **backend:** document backend module ([ed88b6a](https://www.github.com/Unimarkup/unimarkup-rs/commit/ed88b6adbcc90f031bdafbc9e4d11bc62f2b1333))
+* **backend:** update wording ([2108800](https://www.github.com/Unimarkup/unimarkup-rs/commit/21088009eed28446492314956bc21ed834046604))
+* document config module ([b120b8a](https://www.github.com/Unimarkup/unimarkup-rs/commit/b120b8ad791f22d28f79c4e270d622e1b7c74ec4))
+* document the (current) unimarkup elements ([10dd452](https://www.github.com/Unimarkup/unimarkup-rs/commit/10dd4521f96f38f538a6775f3c8707622a3e0c56))
+* document the `BackendError` ([f6d949b](https://www.github.com/Unimarkup/unimarkup-rs/commit/f6d949bdcf68bd75fa972bbc1b8529228ea15260))
+* document the `config` module ([9d3e4b2](https://www.github.com/Unimarkup/unimarkup-rs/commit/9d3e4b244dfd130d9de07fe31392ec00845b6681))
+* document the `frontend` module ([eb1ed07](https://www.github.com/Unimarkup/unimarkup-rs/commit/eb1ed0752bb5c097d22a4bb0cdc74dd0dbd86144))
+* document the renderer module ([4cba48f](https://www.github.com/Unimarkup/unimarkup-rs/commit/4cba48f195ced053843e7ff69bd146a9bdef18e5))
+* document the UmError ([defb7d6](https://www.github.com/Unimarkup/unimarkup-rs/commit/defb7d64b7c0311e1ea63b42197820d7afd7887d))
+* document the unimarkup-rs compiler ([2126fb7](https://www.github.com/Unimarkup/unimarkup-rs/commit/2126fb70575d72e3936c42eaadc4e8f5fb328cfd))
+* enforce documenting code ([1cfdba7](https://www.github.com/Unimarkup/unimarkup-rs/commit/1cfdba7e856fc779457ba27404afa38f9084b576))
+* **fronted:** document the frontend module ([4f82e96](https://www.github.com/Unimarkup/unimarkup-rs/commit/4f82e96a32375e59d17c17c1dbc0d0c2f3e83ab1))
+* **frontend:** update wording ([f88cac8](https://www.github.com/Unimarkup/unimarkup-rs/commit/f88cac88a3bf1dcb04be6a97815ae94783f90ca4))
+* **middleend:** document the middleend module ([9330451](https://www.github.com/Unimarkup/unimarkup-rs/commit/9330451b7d8c620edc902350d76829f5b6eaeea0))
+* **middleend:** update wording ([162881c](https://www.github.com/Unimarkup/unimarkup-rs/commit/162881c173bf2f8ffcedcb23668a271a9953a2ff))
+* **um_elements:** update wording ([9030ad8](https://www.github.com/Unimarkup/unimarkup-rs/commit/9030ad8d0b9b77c711b4e721e9a631b8bcf5661b))
+* **um_error:** update wording ([10e6068](https://www.github.com/Unimarkup/unimarkup-rs/commit/10e60686ef2fd578b455aed713c9d4398e00e753))
+* update the README.md ([700a48f](https://www.github.com/Unimarkup/unimarkup-rs/commit/700a48f1d01c6baedcc4e7476f757624861a6d1f))
+* updated wording in general files ([eb79e4f](https://www.github.com/Unimarkup/unimarkup-rs/commit/eb79e4f4f171d30048c8f0ccf60ebda7b244756b))
+
 ## [0.2.0](https://www.github.com/Unimarkup/unimarkup-rs/compare/v0.1.0...v0.2.0) (2021-12-17)
 
 
