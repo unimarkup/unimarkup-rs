@@ -5,7 +5,7 @@ use pest::Span;
 use strum_macros::*;
 
 use crate::backend::{BackendError, ParseFromIr, Render};
-use crate::frontend::parser::{Rule, UmParse};
+use crate::frontend::parser::{self, Rule, UmParse};
 use crate::frontend::UnimarkupBlocks;
 use crate::middleend::{AsIrLines, ContentIrLine};
 use crate::um_elements::types::{self, UnimarkupType};
@@ -126,21 +126,7 @@ impl HeadingBlock {
         let level = heading_start.as_str().trim().into();
         let (line_nr, _) = heading_start.as_span().start_pos().line_col();
 
-        let mut content_lowercase = heading_content.as_str().trim().to_lowercase();
-        content_lowercase.retain(|c| c.is_alphanumeric() | c.is_whitespace());
-        let content_split = content_lowercase.split_whitespace();
-
-        let id: String = {
-            let mut id = String::new();
-            for word in content_split.into_iter() {
-                id.push_str(word);
-                id.push(types::DELIMITER);
-            }
-
-            id.strip_suffix(types::DELIMITER)
-                .expect("We added the suffix")
-                .to_string()
-        };
+        let id = parser::generate_id(heading_content.as_str());
 
         HeadingBlock {
             id,
