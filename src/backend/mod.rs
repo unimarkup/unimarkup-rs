@@ -8,10 +8,12 @@ use rusqlite::Connection;
 mod backend_error;
 mod loader;
 mod renderer;
+pub(crate) mod inline_formatting;
 
 pub use backend_error::BackendError;
 pub use loader::ParseFromIr;
 pub use renderer::*;
+pub use inline_formatting::InlineFormat;
 
 type RenderBlock = Box<dyn Render>;
 

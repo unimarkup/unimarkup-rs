@@ -42,11 +42,12 @@ heading = { heading_start ~ heading_content }
 headings = { heading+ }
 
 // ****** PARAGRAPH ******
-paragraph = { ( inline_block | ANY )+ }
+paragraph = { ANY+ }
 
 // ****** INLINE FORMATTING ******
-inline_formatting = { bold | italic | subscript | superscript | verbatim }
-inline_block = { PUSH(inline_formatting) ~ inline_body ~ POP}
+inline_format = { (inline_block | ANY)+ }
+formatting_type = { bold | italic | subscript | superscript | verbatim }
+inline_block = { PUSH(formatting_type) ~ inline_body ~ POP}
 inline_body = { (!(PEEK) ~ (inline_block | ANY))+ }
 
 // ****** INLINE FORMATTING STYLES ******

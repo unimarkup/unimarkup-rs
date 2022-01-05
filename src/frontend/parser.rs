@@ -4,7 +4,7 @@ use std::{fs, path::Path};
 
 use crate::{
     um_elements::heading_block::HeadingBlock, um_elements::paragraph_block::ParagraphBlock,
-    um_error::UmError,
+    um_error::UmError, backend::InlineFormat, backend::inline_formatting::create_format_types
 };
 
 use super::UnimarkupBlocks;
@@ -53,4 +53,26 @@ fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
     }
 
     Ok(vec![])
+}
+
+pub fn parse_inline(source: &str)  -> Result<(), UmError> {
+    let mut rule_pairs =
+        UnimarkupParser::parse(Rule::inline_format, source).map_err(|err| UmError::General {
+            msg: String::from("Could not parse string!"),
+            error: Box::new(err),
+        })?;
+    
+    if let Some(inline) = rule_pairs.next() {
+        for rule in inline.into_inner() {
+            if rule.as_rule() == Rule::inline_block {
+                //println!("{}", rule.as_str());
+                create_format_types(rule);
+    
+            }
+        }
+    }
+    
+
+
+    Ok(())
 }

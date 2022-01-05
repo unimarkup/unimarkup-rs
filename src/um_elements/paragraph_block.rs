@@ -3,7 +3,7 @@ use std::{collections::VecDeque, fmt::Debug};
 use crate::{
     backend::{BackendError, ParseFromIr, Render},
     frontend::{
-        parser::{Rule, UmParse},
+        parser::{Rule, UmParse, self},
         UnimarkupBlocks,
     },
     middleend::{AsIrLines, ContentIrLine},
@@ -94,6 +94,9 @@ impl ParseFromIr for ParagraphBlock {
 
 impl Render for ParagraphBlock {
     fn render_html(&self) -> Result<String, UmError> {
+        
+        parser::parse_inline(&self.content);
+        
         let mut html = String::default();
 
         html.push_str("<p");
