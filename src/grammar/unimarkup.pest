@@ -45,14 +45,22 @@ headings = { heading+ }
 paragraph = { ANY+ }
 
 // ****** INLINE FORMATTING ******
-inline_format = { (inline_block | ANY)+ }
-formatting_type = { bold | italic | subscript | superscript | verbatim }
-inline_block = { PUSH(formatting_type) ~ inline_body ~ POP}
-inline_body = { (!(PEEK) ~ (inline_block | ANY))+ }
+text = { (!(inline_delim) ~ ANY)+ }
+inline_format = { (inline_block | text)+ }
+inline_block = _{ bold | italic | subscript | superscript | verbatim }
+//inline_block = { PUSH(formatting_type) ~ inline_body ~ POP}
+inline_body = _{ (!(PEEK) ~ (inline_block | text))+ }
 
 // ****** INLINE FORMATTING STYLES ******
-bold = { "**" }
-italic = { "*" }
-subscript = { "_" }
-superscript = { "^" }
-verbatim = { "`" }
+bold_delim = _{ "**" }
+italic_delim = _{ "*" }
+subscript_delim = _{ "_" }
+superscript_delim = _{ "^" }
+verbatim_delim = _{ "`" }
+inline_delim = { bold_delim | italic_delim | subscript_delim | superscript_delim | verbatim_delim }
+
+bold = { PUSH(bold_delim) ~ inline_body ~ POP }
+italic = { PUSH(italic_delim) ~ inline_body ~ POP }
+subscript = { PUSH(subscript_delim) ~ inline_body ~ POP }
+superscript = { PUSH(superscript_delim) ~ inline_body ~ POP }
+verbatim = { PUSH(verbatim_delim) ~ inline_body ~ POP }

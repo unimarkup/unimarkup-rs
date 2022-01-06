@@ -4,7 +4,7 @@ use std::{fs, path::Path};
 
 use crate::{
     um_elements::heading_block::HeadingBlock, um_elements::paragraph_block::ParagraphBlock,
-    um_error::UmError, backend::InlineFormat, backend::inline_formatting::create_format_types
+    um_error::UmError, backend::inline_formatting::create_format_types
 };
 
 use super::UnimarkupBlocks;
@@ -62,13 +62,12 @@ pub fn parse_inline(source: &str)  -> Result<(), UmError> {
             error: Box::new(err),
         })?;
     
+    println!("{}", rule_pairs);
+
     if let Some(inline) = rule_pairs.next() {
         for rule in inline.into_inner() {
-            if rule.as_rule() == Rule::inline_block {
-                //println!("{}", rule.as_str());
-                create_format_types(rule);
-    
-            }
+            println!("{:#?}", rule);
+            create_format_types(rule);
         }
     }
     
