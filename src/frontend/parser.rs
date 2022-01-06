@@ -79,7 +79,11 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
 
                     blocks.append(&mut enclosed_blocks);
                 }
-                _ => unreachable!("Unimarkup consists only of atomic and enclosed blocks."),
+                Rule::blank_line => continue,
+                _ => unreachable!(
+                    "Unimarkup consists only of blank lines, atomic and enclosed blocks, but reached block: {:#?}",
+                    pair
+                ),
             }
         }
     }
