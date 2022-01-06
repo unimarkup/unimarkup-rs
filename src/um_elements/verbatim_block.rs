@@ -1,8 +1,9 @@
 use std::collections::VecDeque;
 
 use pest::iterators::Pairs;
+use serde::{Deserialize, Serialize};
 
-use crate::backend::{BackendError, ParseFromIr};
+use crate::backend::{BackendError, ParseFromIr, Render};
 use crate::frontend::parser::{Rule, UmParse};
 use crate::frontend::UnimarkupBlocks;
 use crate::middleend::{AsIrLines, ContentIrLine};
@@ -58,9 +59,7 @@ impl UmParse for VerbatimBlock {
             }
         }
 
-        log::debug!("Parsed verbatim block: \n{:#?}", block);
-
-        Ok(vec![])
+        Ok(vec![Box::new(block)])
     }
 }
 
@@ -122,5 +121,34 @@ impl ParseFromIr for VerbatimBlock {
             )
             .into())
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+struct VerbatimAttributes {
+    language: Option<String>,
+}
+
+impl Render for VerbatimBlock {
+    fn render_html(&self) -> Result<String, UmError> {
+        let mut res = String::with_capacity(self.content.capacity());
+
+        let attributes =
+            serde_json::from_str::<VerbatimAttributes>(&self.attributes).unwrap_or_default();
+
+        res.push_str("<pre><code");
+        res.push_str(" 'id=");
+        res.push_str(&self.id);
+
+        if let Some(language) = attributes.language {
+            res.push_str(" class='language-");
+            res.push_str(&language.trim().to_lowercase());
+        }
+
+        res.push_str("'>");
+        res.push_str(&self.content);
+        res.push_str("</code></pre>");
+
+        Ok(res)
     }
 }
