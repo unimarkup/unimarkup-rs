@@ -88,7 +88,16 @@ fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
 
 /// Generates a valid Unimarkup element id from non-empty string.
 ///
+/// Unimarkup identifier has same restrictions as HTML id attribute:
+///
+/// 1. contains at least one character
+/// 2. does not contain ASCII whitespace
+///
+/// The generated id preserves the case of the input string. Returns `None` if
+/// input is an empty string.
+///
 /// # Arguments:
+///
 /// * `input` - non-empty input string. **Note:** input string which
 /// consists only of whitespace is considered empty.
 ///
@@ -100,27 +109,10 @@ fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
 /// let input = "This is some input string";
 /// assert_eq!(generate_id(input), "This-is-some-input-string");
 /// ```
-///
-/// ## Empty (or whitespace-only) inputs cause panic
-/// ```rust,should_panic
-/// use unimarkup_rs::frontend::parser::generate_id;
-///
-/// // This panics
-/// let id = generate_id(" ");
-/// ```
-///
-/// # Panics
-///
-/// Panics if input is either empty or contains only whitespace.
-pub fn generate_id(input: &str) -> String {
-    // Unimarkup identifier has same restrictions as HTML id attribute:
-    // 1. contains at least one character
-    // 2. does not contain ASCII whitespace
-
-    assert!(
-        !input.trim().is_empty(),
-        "Input string is either empty or consists only of whitespace(s)!"
-    );
+pub fn generate_id(input: &str) -> Option<String> {
+    if input.trim().is_empty() {
+        return None;
+    }
 
     let result = {
         let mut id = String::new();
@@ -136,7 +128,7 @@ pub fn generate_id(input: &str) -> String {
         id
     };
 
-    result
+    Some(result)
 }
 
 #[cfg(test)]
@@ -146,7 +138,8 @@ mod id_generator {
         let input = "This is some input";
         let expect = "This-is-some-input";
 
-        assert_eq!(super::generate_id(input), expect);
+        assert!(super::generate_id(input).is_some());
+        assert_eq!(super::generate_id(input).unwrap(), expect);
     }
 
     #[test]
@@ -154,7 +147,8 @@ mod id_generator {
         let input = "Th15 15 1npu7 with num6ers1";
         let expect = "Th15-15-1npu7-with-num6ers1";
 
-        assert_eq!(super::generate_id(input), expect);
+        assert!(super::generate_id(input).is_some());
+        assert_eq!(super::generate_id(input).unwrap(), expect);
     }
 
     #[test]
@@ -162,17 +156,17 @@ mod id_generator {
         let input = "7h1$\t~1d~\t \"c0n741n$\" 'many' $ym6o1$ ~!@#$%%^&^&*()_+}{[]";
         let expect = "7h1$-~1d~-\"c0n741n$\"-'many'-$ym6o1$-~!@#$%%^&^&*()_+}{[]";
 
-        assert_eq!(super::generate_id(input), expect);
+        assert!(super::generate_id(input).is_some());
+        assert_eq!(super::generate_id(input).unwrap(), expect);
     }
 
     #[test]
-    #[should_panic]
     fn empty_input() {
         let input = "";
 
         let id = super::generate_id(input);
 
-        assert!(!id.is_empty());
+        assert!(id.is_none());
     }
 
     #[test]
@@ -182,6 +176,6 @@ mod id_generator {
 
         let id = super::generate_id(input);
 
-        assert!(!id.is_empty());
+        assert!(id.is_none());
     }
 }

@@ -44,7 +44,8 @@ impl UmParse for ParagraphBlock {
             "paragraph{delim}{}",
             line_nr.to_string(),
             delim = types::DELIMITER
-        ));
+        ))
+        .unwrap();
 
         let paragraph_block = ParagraphBlock {
             id,

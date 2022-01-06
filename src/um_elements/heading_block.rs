@@ -116,7 +116,6 @@ impl HeadingBlock {
     fn parse_single(pair: &Pair<Rule>) -> Self {
         let mut heading_data = pair.clone().into_inner();
 
-        // heading_start
         let heading_start = heading_data.next().expect("heading rule has heading_start");
 
         let heading_content = heading_data
@@ -126,7 +125,8 @@ impl HeadingBlock {
         let level = heading_start.as_str().trim().into();
         let (line_nr, _) = heading_start.as_span().start_pos().line_col();
 
-        let id = parser::generate_id(heading_content.as_str());
+        // unwrap() is ok becuase heading grammar guarantees that heading has non-empty content
+        let id = parser::generate_id(heading_content.as_str()).unwrap();
 
         HeadingBlock {
             id,
