@@ -4,7 +4,11 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::{fs, path::Path};
 
-use crate::{um_elements::HeadingBlock, um_elements::ParagraphBlock, um_error::UmError};
+use crate::{
+    um_elements::HeadingBlock,
+    um_elements::{ParagraphBlock, VerbatimBlock},
+    um_error::UmError,
+};
 
 use super::UnimarkupBlocks;
 
@@ -65,9 +69,17 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
 
     if let Some(unimarkup) = rule_pairs.next() {
         for pair in unimarkup.into_inner() {
-            if pair.as_rule() == Rule::atomic_block {
-                let mut atomic_blocks = parse_atomic_block(pair)?;
-                blocks.append(&mut atomic_blocks);
+            match pair.as_rule() {
+                Rule::atomic_block => {
+                    let mut atomic_blocks = parse_atomic_block(pair)?;
+                    blocks.append(&mut atomic_blocks);
+                }
+                Rule::enclosed_block => {
+                    let mut enclosed_blocks = parse_enclosed_block(pair)?;
+
+                    blocks.append(&mut enclosed_blocks);
+                }
+                _ => unreachable!("Unimarkup consists only of atomic and enclosed blocks."),
             }
         }
     }
@@ -79,6 +91,17 @@ fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::headings, input.as_str()) {
         return HeadingBlock::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
+        return ParagraphBlock::parse(pairs, input.as_span());
+    }
+
+    Ok(vec![])
+}
+
+fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
+    if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::verbatim, input.as_str()) {
+        return VerbatimBlock::parse(pairs, input.as_span());
+    } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
+        // fallback to paragraph for now
         return ParagraphBlock::parse(pairs, input.as_span());
     }
 
