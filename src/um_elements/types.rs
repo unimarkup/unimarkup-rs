@@ -11,7 +11,7 @@ use crate::{
     middleend::AsIrLines,
 };
 
-use super::{heading_block::HeadingBlock, paragraph_block::ParagraphBlock};
+use super::{HeadingBlock, ParagraphBlock, VerbatimBlock};
 
 /// Delimiter used in string representation of [`UnimarkupType`].
 pub const DELIMITER: char = '-';
@@ -273,6 +273,7 @@ macro_rules! impl_from {
 
 impl_from!(Heading from HeadingBlock);
 impl_from!(Paragraph from ParagraphBlock);
+impl_from!(VerbatimBlock from VerbatimBlock);
 
 #[test]
 fn check_if_converted() {
