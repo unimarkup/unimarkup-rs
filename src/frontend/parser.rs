@@ -107,7 +107,7 @@ fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
 /// use unimarkup_rs::frontend::parser::generate_id;
 ///
 /// let input = "This is some input string";
-/// assert_eq!(generate_id(input), "This-is-some-input-string");
+/// assert_eq!(generate_id(input).unwrap(), "This-is-some-input-string");
 /// ```
 pub fn generate_id(input: &str) -> Option<String> {
     if input.trim().is_empty() {
@@ -170,7 +170,6 @@ mod id_generator {
     }
 
     #[test]
-    #[should_panic]
     fn whitespace_only() {
         let input = " ";
 
