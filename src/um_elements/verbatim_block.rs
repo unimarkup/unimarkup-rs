@@ -1,5 +1,8 @@
+use std::collections::VecDeque;
+
 use pest::iterators::Pairs;
 
+use crate::backend::{BackendError, ParseFromIr};
 use crate::frontend::parser::{Rule, UmParse};
 use crate::frontend::UnimarkupBlocks;
 use crate::middleend::{AsIrLines, ContentIrLine};
@@ -35,7 +38,7 @@ impl UmParse for VerbatimBlock {
         let (line_nr, _column_nr) = span.start_pos().line_col();
 
         let mut block = VerbatimBlock {
-            id: String::new(),
+            id: format!("verbatim-{}", line_nr),
             content: String::new(),
             attributes: String::new(),
             line_nr,
@@ -74,5 +77,50 @@ impl AsIrLines for VerbatimBlock {
         );
 
         vec![line]
+    }
+}
+
+impl ParseFromIr for VerbatimBlock {
+    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, UmError>
+    where
+        Self: Sized,
+    {
+        if let Some(ir_line) = content_lines.pop_front() {
+            let expected_type = UnimarkupType::VerbatimBlock.to_string();
+
+            if ir_line.um_type != expected_type {
+                return Err(BackendError::new(format!(
+                    "Expected verbatim type to parse, instead got: '{}'",
+                    ir_line.um_type
+                ))
+                .into());
+            }
+
+            let content = if !ir_line.text.is_empty() {
+                ir_line.text
+            } else {
+                ir_line.fallback_text
+            };
+
+            let attributes = if !ir_line.attributes.is_empty() {
+                ir_line.attributes
+            } else {
+                ir_line.fallback_attributes
+            };
+
+            let block = VerbatimBlock {
+                id: ir_line.id,
+                content,
+                attributes,
+                line_nr: ir_line.line_nr,
+            };
+
+            Ok(block)
+        } else {
+            Err(BackendError::new(
+                "Could not construct ParagraphBlock. \nReason: No content ir line available.",
+            )
+            .into())
+        }
     }
 }
