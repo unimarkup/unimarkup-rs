@@ -45,5 +45,6 @@ headings = { heading+ }
 paragraph = { ANY+ }
 
 // ****** VERBATIM ******
-verbatim_lang = { ( !PEEK ~ ANY )+ ~ um_newline }
-verbatim = { PUSH(verbatim_delimiter) ~ verbatim_lang? ~ ( !PEEK ~ ANY)+ ~ POP }
+verbatim_lang    = { ( !( PEEK | um_newline ) ~ ANY )+ ~ um_newline }
+verbatim_content = { ( !PEEK ~ ANY)+ }
+verbatim         = { PUSH(verbatim_delimiter) ~ verbatim_lang? ~ verbatim_content ~ POP }
