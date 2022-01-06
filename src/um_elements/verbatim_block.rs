@@ -137,11 +137,11 @@ impl Render for VerbatimBlock {
             serde_json::from_str::<VerbatimAttributes>(&self.attributes).unwrap_or_default();
 
         res.push_str("<pre><code");
-        res.push_str(" 'id=");
+        res.push_str(" id='");
         res.push_str(&self.id);
 
         if let Some(language) = attributes.language {
-            res.push_str(" class='language-");
+            res.push_str("' class='language-");
             res.push_str(&language.trim().to_lowercase());
         }
 
@@ -183,7 +183,7 @@ mod tests {
             };
 
             let expected_html = format!(
-                "<pre><code id='{}' class='{}'>{}</code></pre>",
+                "<pre><code id='{}' class='language-{}'>{}</code></pre>",
                 id, lang, content
             );
 
