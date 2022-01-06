@@ -43,3 +43,7 @@ headings = { heading+ }
 
 // ****** PARAGRAPH ******
 paragraph = { ANY+ }
+
+// ****** VERBATIM ******
+verbatim_lang = { ( !PEEK ~ ANY )+ ~ um_newline }
+verbatim = { PUSH(verbatim_delimiter) ~ verbatim_lang? ~ ( !PEEK ~ ANY)+ ~ POP }
