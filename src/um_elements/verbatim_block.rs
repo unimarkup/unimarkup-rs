@@ -152,3 +152,50 @@ impl Render for VerbatimBlock {
         Ok(res)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::backend::Render;
+    use crate::frontend::parser::UmParse;
+    use crate::middleend::AsIrLines;
+    use crate::um_elements::VerbatimBlock;
+    use crate::um_error::UmError;
+    mod render {
+        use super::*;
+
+        #[test]
+        fn render_verbatim_block() -> Result<(), UmError> {
+            let id = String::from("verbatim-id");
+            let content = String::from(
+                "This is content of the verbatim block.
+                 It also contains a newline",
+            );
+
+            let lang = "rust";
+
+            let attributes = format!("{{ \"language\": \"{}\" }}", lang);
+
+            let block = VerbatimBlock {
+                id: id.clone(),
+                content: content.clone(),
+                attributes,
+                line_nr: 0,
+            };
+
+            let expected_html = format!(
+                "<pre><code id='{}' class='{}'>{}</code></pre>",
+                id, lang, content
+            );
+
+            assert_eq!(expected_html, block.render_html()?);
+
+            Ok(())
+        }
+    }
+
+    mod parse_from_ir {}
+
+    mod as_ir_lines {}
+
+    mod um_parse {}
+}
