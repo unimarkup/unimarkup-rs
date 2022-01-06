@@ -5,7 +5,7 @@ use rusqlite::Connection;
 use crate::{
     backend::{BackendError, Render},
     middleend::{self, ContentIrLine},
-    um_elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock},
+    um_elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock, VerbatimBlock},
     um_error::UmError,
 };
 
@@ -47,6 +47,9 @@ pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock
             UnimarkupType::Heading => Box::new(HeadingBlock::parse_from_ir(&mut content_lines)?),
             UnimarkupType::Paragraph => {
                 Box::new(ParagraphBlock::parse_from_ir(&mut content_lines)?)
+            }
+            UnimarkupType::VerbatimBlock => {
+                Box::new(VerbatimBlock::parse_from_ir(&mut content_lines)?)
             }
             _ => {
                 let _ = content_lines.pop_front();
