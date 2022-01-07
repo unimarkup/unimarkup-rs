@@ -339,16 +339,33 @@ mod tests {
                                 println!(\"Hello World!\");
                             }\n~~~";
 
-            let expected_id = "verbatim-1";
-            let expected_line_nr = 1;
-            let expected_type = UnimarkupType::VerbatimBlock.to_string();
-
             let expected_text = r#"fn main() {
                                 println!("Hello World!");
                             }"#;
 
-            let expected_attributes = "{ \"language\": \"rust\" }";
+            let expected_line = ContentIrLine::new(
+                "verbatim-1",
+                1,
+                UnimarkupType::VerbatimBlock.to_string(),
+                expected_text,
+                "",
+                "{ \"language\": \"rust\" }",
+                "",
+            );
 
+            try_parse(input, expected_line)
+        }
+
+        #[test]
+        #[should_panic]
+        fn parse_bad() {
+            let input = "~~~
+                            some content ~~~";
+
+            let _ = try_parse(input, ContentIrLine::default()).unwrap();
+        }
+
+        fn try_parse(input: &str, expected_line: ContentIrLine) -> Result<(), UmError> {
             let mut unimarkup = UnimarkupParser::parse(Rule::unimarkup, input).unwrap();
 
             assert_eq!(unimarkup.clone().count(), 1);
@@ -380,13 +397,7 @@ mod tests {
 
             let line = ir_lines.get(0).unwrap();
 
-            assert_eq!(line.id, expected_id);
-            assert_eq!(line.line_nr, expected_line_nr);
-            assert_eq!(line.um_type, expected_type);
-            assert_eq!(line.text, expected_text);
-            assert!(line.fallback_text.is_empty());
-            assert_eq!(line.attributes, expected_attributes);
-            assert!(line.fallback_attributes.is_empty());
+            assert_eq!(line, &expected_line);
 
             Ok(())
         }
