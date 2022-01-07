@@ -56,7 +56,7 @@ impl UmError {
         let error = Box::new(error);
 
         UmError::General {
-            msg: String::from("Could not parse unimarkup file"),
+            msg: String::from("Could not parse Unimarkup file"),
             error,
         }
     }
