@@ -55,7 +55,26 @@ impl UmParse for VerbatimBlock {
                 Rule::verbatim_content => {
                     block.content = String::from(rule.as_str().trim());
                 }
-                _ => continue,
+                Rule::verbatim_delimiter => continue,
+                other => {
+                    use pest::error;
+
+                    let err_variant = error::ErrorVariant::ParsingError {
+                        positives: vec![
+                            Rule::verbatim_lang,
+                            Rule::verbatim_content,
+                            Rule::verbatim_delimiter,
+                        ],
+                        negatives: vec![other],
+                    };
+
+                    let pest_err = error::Error::new_from_span(err_variant, rule.as_span());
+
+                    return Err(UmError::General {
+                        msg: String::from("Could not parse verbatim block."),
+                        error: Box::new(pest_err),
+                    });
+                }
             }
         }
 
@@ -117,7 +136,7 @@ impl ParseFromIr for VerbatimBlock {
             Ok(block)
         } else {
             Err(BackendError::new(
-                "Could not construct ParagraphBlock. \nReason: No content ir line available.",
+                "Could not construct VerbatimBlock. \nReason: No content ir line available.",
             )
             .into())
         }
@@ -230,7 +249,7 @@ mod tests {
             let test_id = String::from("test-id");
             let content = String::from(
                 "This is an example verbatim
-            which spans multiple lines",
+                which spans multiple lines",
             );
 
             let mut lines: VecDeque<_> = vec![ContentIrLine {
