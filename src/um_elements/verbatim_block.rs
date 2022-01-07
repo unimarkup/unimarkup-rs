@@ -55,7 +55,7 @@ impl UmParse for VerbatimBlock {
                 Rule::verbatim_content => {
                     block.content = String::from(rule.as_str().trim());
                 }
-                Rule::verbatim_delimiter => continue,
+                Rule::verbatim_delimiter | Rule::verbatim_end => continue,
                 other => {
                     use pest::error;
 
