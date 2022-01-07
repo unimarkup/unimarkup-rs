@@ -5,8 +5,7 @@ use pest_derive::Parser;
 use std::{fs, path::Path};
 
 use crate::{
-    um_elements::HeadingBlock,
-    um_elements::{ParagraphBlock, VerbatimBlock},
+    um_elements::{HeadingBlock, ParagraphBlock, VerbatimBlock},
     um_error::UmError,
 };
 

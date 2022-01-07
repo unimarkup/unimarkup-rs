@@ -43,7 +43,6 @@ pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock
 
         let block: Box<dyn Render> = match um_type {
             // UnimarkupType::List => todo!(),
-            // UnimarkupType::Verbatim => todo!(),
             UnimarkupType::Heading => Box::new(HeadingBlock::parse_from_ir(&mut content_lines)?),
             UnimarkupType::Paragraph => {
                 Box::new(ParagraphBlock::parse_from_ir(&mut content_lines)?)
