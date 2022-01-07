@@ -105,7 +105,13 @@ fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::verbatim, input.as_str()) {
         return VerbatimBlock::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
-        // fallback to paragraph for now
+        // TODO: Add implementation for the rest of enclosed blocks, return error if none of them match
+        //
+        // warn and fallback to paragraph for now
+
+        log::warn!("Unsupported unimarkup block: \n{}", input.as_str());
+        log::warn!("Will be parsed as a unimarkup paragraph block.");
+
         return ParagraphBlock::parse(pairs, input.as_span());
     }
 
