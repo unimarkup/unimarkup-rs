@@ -42,20 +42,23 @@ impl UmError {
     ///
     /// * `msg` - Custom error message
     /// * `span` - Span in input Unimarkup document where this specific error occured
-    pub fn custom_pest_error(msg: String, span: pest::Span) -> UmError {
+    pub fn custom_pest_error(msg: impl Into<String>, span: pest::Span) -> UmError {
         use crate::frontend::parser;
         use pest::error;
 
         let error = error::Error::new_from_span(
             error::ErrorVariant::<parser::Rule>::CustomError {
-                message: String::from("Invalid id provided"),
+                message: msg.into(),
             },
             span,
         );
 
         let error = Box::new(error);
 
-        UmError::General { msg, error }
+        UmError::General {
+            msg: String::from("Could not parse unimarkup file"),
+            error,
+        }
     }
 }
 
