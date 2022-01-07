@@ -126,7 +126,9 @@ impl HeadingBlock {
         let (line_nr, _) = heading_start.as_span().start_pos().line_col();
 
         // unwrap() is ok becuase heading grammar guarantees that heading has non-empty content
-        let id = parser::generate_id(heading_content.as_str()).unwrap();
+        let id = parser::generate_id(heading_content.as_str())
+            .unwrap()
+            .to_lowercase();
 
         HeadingBlock {
             id,
