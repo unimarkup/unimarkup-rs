@@ -9,9 +9,10 @@ use crate::{
     backend::{ParseFromIr, Render},
     frontend::parser::UmParse,
     middleend::AsIrLines,
+    um_elements,
 };
 
-use super::{heading_block::HeadingBlock, paragraph_block::ParagraphBlock};
+use super::{HeadingBlock, ParagraphBlock};
 
 /// Delimiter used in string representation of [`UnimarkupType`].
 pub const DELIMITER: char = '-';
@@ -273,6 +274,7 @@ macro_rules! impl_from {
 
 impl_from!(Heading from HeadingBlock);
 impl_from!(Paragraph from ParagraphBlock);
+impl_from!(VerbatimBlock from um_elements::VerbatimBlock);
 
 #[test]
 fn check_if_converted() {

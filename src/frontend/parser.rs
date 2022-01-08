@@ -4,8 +4,8 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::{fs, path::Path};
 
-use crate::um_elements::types;
-use crate::{um_elements::HeadingBlock, um_elements::ParagraphBlock, um_error::UmError};
+use crate::um_elements::{types, HeadingBlock, ParagraphBlock, VerbatimBlock};
+use crate::um_error::UmError;
 
 use super::UnimarkupBlocks;
 
@@ -66,9 +66,21 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
 
     if let Some(unimarkup) = rule_pairs.next() {
         for pair in unimarkup.into_inner() {
-            if pair.as_rule() == Rule::atomic_block {
-                let mut atomic_blocks = parse_atomic_block(pair)?;
-                blocks.append(&mut atomic_blocks);
+            match pair.as_rule() {
+                Rule::atomic_block => {
+                    let mut atomic_blocks = parse_atomic_block(pair)?;
+                    blocks.append(&mut atomic_blocks);
+                }
+                Rule::enclosed_block => {
+                    let mut enclosed_blocks = parse_enclosed_block(pair)?;
+
+                    blocks.append(&mut enclosed_blocks);
+                }
+                Rule::blank_line | Rule::EOI => continue,
+                _ => unreachable!(
+                    "Unimarkup consists only of blank lines and atomic and enclosed blocks, but reached block: {:#?}",
+                    pair
+                ),
             }
         }
     }
@@ -80,6 +92,23 @@ fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::headings, input.as_str()) {
         return HeadingBlock::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
+        return ParagraphBlock::parse(pairs, input.as_span());
+    }
+
+    Ok(vec![])
+}
+
+fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
+    if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::verbatim, input.as_str()) {
+        return VerbatimBlock::parse(pairs, input.as_span());
+    } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
+        // TODO: Add implementation for the rest of enclosed blocks, return error if none of them match
+        //
+        // warn and fallback to paragraph for now
+
+        log::warn!("Unsupported unimarkup block: \n{}", input.as_str());
+        log::warn!("Will be parsed as a unimarkup paragraph block.");
+
         return ParagraphBlock::parse(pairs, input.as_span());
     }
 
