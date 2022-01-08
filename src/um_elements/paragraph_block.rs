@@ -3,7 +3,7 @@ use std::{collections::VecDeque, fmt::Debug};
 use crate::{
     backend::{BackendError, ParseFromIr, Render},
     frontend::{
-        parser::{Rule, UmParse},
+        parser::{self, Rule, UmParse},
         UnimarkupBlocks,
     },
     middleend::{AsIrLines, ContentIrLine},
@@ -40,10 +40,12 @@ impl UmParse for ParagraphBlock {
 
         let (line_nr, _column_nr) = span.start_pos().line_col();
 
-        let mut id: String = "".to_string();
-        id.push_str("paragraph");
-        id.push(types::DELIMITER);
-        id.push_str(&line_nr.to_string());
+        let id = parser::generate_id(&format!(
+            "paragraph{delim}{}",
+            line_nr.to_string(),
+            delim = types::DELIMITER
+        ))
+        .unwrap();
 
         let paragraph_block = ParagraphBlock {
             id,

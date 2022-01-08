@@ -33,6 +33,35 @@ pub enum UmError {
     },
 }
 
+impl UmError {
+    /// Creates a custom [`pest::error::Error`] wrapped into [`UmError::General`] variant.
+    ///
+    /// Useful when pest would not generate an error, but pest-style error output is needed.
+    ///
+    /// # Arguments
+    ///
+    /// * `msg` - Custom error message
+    /// * `span` - Span in input Unimarkup document where this specific error occured
+    pub fn custom_pest_error(msg: impl Into<String>, span: pest::Span) -> UmError {
+        use crate::frontend::parser;
+        use pest::error;
+
+        let error = error::Error::new_from_span(
+            error::ErrorVariant::<parser::Rule>::CustomError {
+                message: msg.into(),
+            },
+            span,
+        );
+
+        let error = Box::new(error);
+
+        UmError::General {
+            msg: String::from("Could not parse Unimarkup file"),
+            error,
+        }
+    }
+}
+
 impl From<SyntaxError> for UmError {
     fn from(syntax_error: SyntaxError) -> Self {
         Self::Syntax(syntax_error)
@@ -57,7 +86,7 @@ impl fmt::Display for UmError {
             UmError::Syntax(err) => err.fmt(f),
             UmError::Ir(err) => err.fmt(f),
             UmError::Backend(err) => err.fmt(f),
-            UmError::General { msg, error } => f.write_fmt(format_args!("{}: {}", msg, error)),
+            UmError::General { msg, error } => f.write_fmt(format_args!("{}:\n {}", msg, error)),
         }
     }
 }
