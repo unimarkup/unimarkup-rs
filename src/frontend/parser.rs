@@ -80,7 +80,7 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
                 }
                 Rule::blank_line | Rule::EOI => continue,
                 _ => unreachable!(
-                    "Unimarkup consists only of blank lines, atomic and enclosed blocks, but reached block: {:#?}",
+                    "Unimarkup consists only of blank lines and atomic and enclosed blocks, but reached block: {:#?}",
                     pair
                 ),
             }
