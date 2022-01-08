@@ -2,7 +2,24 @@ use std::fmt;
 
 use unicode_segmentation::UnicodeSegmentation;
 
-type CursorPos = (usize, usize);
+/// Representation of the cursor position in the input Unimarkup file.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct CursorPos {
+    line: usize,
+    column: usize,
+}
+
+impl CursorPos {
+    /// Creates a new [`CursorPos`].
+    ///
+    /// # Arguments
+    ///
+    /// * `line` - the line in the input Unimarkup document
+    /// * `column` - the column on the given line in the input Unimarkup document
+    pub fn new(line: usize, column: usize) -> Self {
+        CursorPos { line, column }
+    }
+}
 
 /// SyntaxError is the [`UmError::Syntax`] variant of [`UmError`].
 ///
@@ -28,13 +45,13 @@ impl SyntaxError {
         start_pos: &CursorPos,
         current_pos: &CursorPos,
     ) -> (String, String) {
-        let start_line = if let Some(line) = content.get(start_pos.0) {
+        let start_line = if let Some(line) = content.get(start_pos.line) {
             line
         } else {
             "Invalid line access!"
         };
 
-        let current_line = if let Some(line) = content.get(current_pos.0) {
+        let current_line = if let Some(line) = content.get(current_pos.line) {
             line
         } else {
             "Invalid line access!"
@@ -71,7 +88,10 @@ impl SyntaxError {
 
 impl fmt::Display for SyntaxError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let (start_line_number, start_symbol) = self.start_pos;
+        let CursorPos {
+            line: start_line_number,
+            column: start_symbol,
+        } = self.start_pos;
 
         let prefix = "Syntax Error: ";
 
@@ -102,7 +122,10 @@ impl fmt::Display for SyntaxError {
 
         f.write_fmt(format_args!("{}^", " ".repeat(skip_length)))?;
 
-        let (curr_line_number, curr_symbol) = self.current_pos;
+        let CursorPos {
+            line: curr_line_number,
+            column: curr_symbol,
+        } = self.current_pos;
 
         f.write_fmt(format_args!("\nError occured at: \n\n"))?;
 
