@@ -48,7 +48,6 @@ paragraph = { ANY+ }
 text = { (!(inline_delim) ~ ANY)+ }
 inline_format = { (inline_block | text)+ }
 inline_block = _{ bold | italic | subscript | superscript | verbatim }
-//inline_block = { PUSH(formatting_type) ~ inline_body ~ POP}
 inline_body = _{ (!(PEEK) ~ (inline_block | text))+ }
 
 // ****** INLINE FORMATTING STYLES ******

@@ -1,10 +1,10 @@
 use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
-use std::{fs, path::Path};
+use std::{fs, path::Path, collections::VecDeque};
 
 use crate::{
     um_elements::heading_block::HeadingBlock, um_elements::paragraph_block::ParagraphBlock,
-    um_error::UmError, backend::inline_formatting::create_format_types
+    um_error::UmError, backend::inline_formatting::{create_format_types, FormatTypes}
 };
 
 use super::UnimarkupBlocks;
@@ -55,23 +55,22 @@ fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
     Ok(vec![])
 }
 
-pub fn parse_inline(source: &str)  -> Result<(), UmError> {
+pub fn parse_inline(source: &str)  -> Result<VecDeque<FormatTypes>, UmError> {
     let mut rule_pairs =
         UnimarkupParser::parse(Rule::inline_format, source).map_err(|err| UmError::General {
             msg: String::from("Could not parse string!"),
             error: Box::new(err),
         })?;
     
-    println!("{}", rule_pairs);
+    let mut inline_format = VecDeque::<FormatTypes>::new();
 
     if let Some(inline) = rule_pairs.next() {
+        
         for rule in inline.into_inner() {
-            println!("{:#?}", rule);
-            create_format_types(rule);
+            inline_format.append(&mut create_format_types(rule));
         }
     }
-    
 
+    Ok(inline_format)
 
-    Ok(())
 }

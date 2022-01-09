@@ -1,4 +1,3 @@
-use core::fmt;
 use std::{collections::VecDeque, fmt::Debug};
 
 use pest::iterators::Pair;
@@ -7,6 +6,8 @@ use crate::{
     frontend::{
         parser::{Rule},
     }};
+
+use super::Render;
 #[derive(Debug)]
 pub struct Plain {
     pub content: String
@@ -41,18 +42,12 @@ pub enum FormatTypes {
     Italic(Italic),
     Subscript(Subscript),
     Superscript(Superscript),
-    //Verbatim(Verbatim),
+    Verbatim(Verbatim),
     Plain(Plain),
-    //TODO: Implement Raw
-    //Raw(Raw)
 }
 
-pub fn create_format_types(pair: Pair<Rule>) {
-    
-    
-    let content = get_nested_inline(pair);
-    println!("{:#?}", content);
-    
+pub fn create_format_types(pair: Pair<Rule>) -> VecDeque<FormatTypes> {
+    get_nested_inline(pair)
 }
 
 fn get_nested_inline(pair: Pair<Rule>) -> VecDeque<FormatTypes> {
@@ -61,8 +56,8 @@ fn get_nested_inline(pair: Pair<Rule>) -> VecDeque<FormatTypes> {
     match pair.as_rule() {
         
         Rule::text => {
-            let plain = FormatTypes::Plain(Plain { content: pair.as_str().to_string(),});
-            content.push_back(plain);
+            let plain = Plain { content: pair.as_str().to_string(),};
+            content.push_back(FormatTypes::Plain(plain));
         },
         Rule::italic => {
             let inner = pair.into_inner();
@@ -104,35 +99,103 @@ fn get_nested_inline(pair: Pair<Rule>) -> VecDeque<FormatTypes> {
             let bold = Bold{content: vector};
             content.push_back(FormatTypes::Bold(bold));
         },
-        // TODO: No nested blocks in verbatim
-        // Rule::verbatim => {
-        //     let inner = pair.into_inner();
-        //     let mut vector = VecDeque::new();
-
-        //     for pair in inner {
-        //         vector.append(&mut get_nested_inline(pair));
-        //     }
-        //     let verbatim = Verbatim{content: vector};
-        //     content.push_back(FormatTypes::Verbatim(verbatim));
-        // },
+        Rule::verbatim => {
+            let verbatim = Verbatim{content: pair.into_inner().as_str().to_string(),};
+            content.push_back(FormatTypes::Verbatim(verbatim));
+        },
         _ => unreachable!("No other inline types allowed.")
     }
     
     content
-} 
+}
 
+//TODO: Handle Expect!
 
-impl fmt::Display for FormatTypes {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FormatTypes::Plain(content) => content.fmt(f),
-            FormatTypes::Bold(_) => todo!(),
-            FormatTypes::Italic(_) => todo!(),
-            FormatTypes::Subscript(_) => todo!(),
-            FormatTypes::Superscript(_) => todo!(),
-            //FormatTypes::Verbatim(_) => todo!(),
-            //FormatTypes::Raw(_) => todo!(),
-
+impl Render for Bold {
+    fn render_html(&self) -> Result<String, crate::um_error::UmError> {
+        
+        let mut html = String::default();
+        html.push_str("<b>");
+        for element in &self.content {
+            html.push_str(&element.render_html().expect("msg"));
         }
+        html.push_str("</b>");
+        Ok(html)
+    }
+}
+
+impl Render for Italic {
+    fn render_html(&self) -> Result<String, crate::um_error::UmError> {
+        
+        let mut html = String::default();
+        html.push_str("<i>");
+        for element in &self.content {
+            html.push_str(&element.render_html().expect("msg"));
+        }
+        html.push_str("</i>");
+        Ok(html)
+    }
+}
+impl Render for Subscript {
+    fn render_html(&self) -> Result<String, crate::um_error::UmError> {
+        
+        let mut html = String::default();
+        html.push_str("<sub>");
+        for element in &self.content {
+            html.push_str(&element.render_html().expect("msg"));
+        }
+        html.push_str("</sub>");
+        Ok(html)
+    }
+}
+impl Render for Superscript {
+    fn render_html(&self) -> Result<String, crate::um_error::UmError> {
+        
+        let mut html = String::default();
+        html.push_str("<sup>");
+        for element in &self.content {
+            html.push_str(&element.render_html().expect("msg"));
+        }
+        html.push_str("</sup>");
+        Ok(html)
+    }
+}
+impl Render for Verbatim {
+    fn render_html(&self) -> Result<String, crate::um_error::UmError> {
+        
+        let mut html = String::default();
+        html.push_str("<pre>");
+        html.push_str(&self.content);
+        html.push_str("</pre>");
+        Ok(html)
+    }
+}
+impl Render for Plain {
+    fn render_html(&self) -> Result<String, crate::um_error::UmError> {
+        
+        let mut html = String::default();
+        html.push_str(&self.content);
+        Ok(html)
+    }
+}
+impl Render for FormatTypes {
+    fn render_html(&self) -> Result<String, crate::um_error::UmError> {
+        match self {
+            FormatTypes::Bold(content) => content.render_html(),
+            FormatTypes::Italic(content) => content.render_html(),
+            FormatTypes::Subscript(content) => content.render_html(),
+            FormatTypes::Superscript(content) => content.render_html(),
+            FormatTypes::Verbatim(content) => content.render_html(),
+            FormatTypes::Plain(content) => content.render_html(),
+        }
+    }
+}
+
+//TODO: Handle Expect!
+
+pub fn render_inline_umblocks(html: &mut String, inline_format:VecDeque<FormatTypes>) {
+
+    for element in inline_format {
+        html.push_str(&element.render_html().expect("msg"));
     }
 }

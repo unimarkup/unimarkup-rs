@@ -4,8 +4,9 @@ use pest::iterators::{Pair, Pairs};
 use pest::Span;
 use strum_macros::*;
 
+use crate::backend::inline_formatting::render_inline_umblocks;
 use crate::backend::{BackendError, ParseFromIr, Render};
-use crate::frontend::parser::{Rule, UmParse};
+use crate::frontend::parser::{Rule, UmParse, self};
 use crate::frontend::UnimarkupBlocks;
 use crate::middleend::{AsIrLines, ContentIrLine};
 use crate::um_elements::types::{self, UnimarkupType};
@@ -249,7 +250,10 @@ impl Render for HeadingBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        html.push_str(&self.content);
+        //TODO: Handle Expect!
+        let inline = parser::parse_inline(&self.content).expect("msg");
+        render_inline_umblocks(&mut html, inline);
+        
         html.push_str("</h");
         html.push_str(&tag_level);
         html.push('>');
@@ -291,6 +295,33 @@ mod heading_tests {
             let html = heading.render_html()?;
 
             let expected = format!("<h{} id='{}'>This is a heading</h{}>", level, id, level);
+            assert_eq!(html, expected);
+        }
+
+        Ok(())
+    }
+
+    //TODO: _html im Funktionsnamen?!
+    #[test]
+    fn render_heading_with_inline() -> Result<(), UmError> {
+        let lowest_level = HeadingLevel::Level1 as usize;
+        let highest_level = HeadingLevel::Level6 as usize;
+
+        for level in lowest_level..=highest_level {
+            let heading_content = String::from("`This` *is _a_* **heading**");
+            let id = format!("heading-id-{}", level);
+
+            let heading = HeadingBlock {
+                id: String::from(&id),
+                level: HeadingLevel::from(level),
+                content: heading_content,
+                attributes: String::default(),
+                line_nr: level as usize,
+            };
+
+            let html = heading.render_html()?;
+
+            let expected = format!("<h{} id='{}'><pre>This</pre> <i>is <sub>a</sub></i> <b>heading</b></h{}>", level, id, level);
             assert_eq!(html, expected);
         }
 

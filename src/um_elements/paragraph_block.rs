@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, fmt::Debug};
 
 use crate::{
-    backend::{BackendError, ParseFromIr, Render},
+    backend::{BackendError, ParseFromIr, Render, inline_formatting::render_inline_umblocks},
     frontend::{
         parser::{Rule, UmParse, self},
         UnimarkupBlocks,
@@ -95,7 +95,6 @@ impl ParseFromIr for ParagraphBlock {
 impl Render for ParagraphBlock {
     fn render_html(&self) -> Result<String, UmError> {
         
-        parser::parse_inline(&self.content);
         
         let mut html = String::default();
 
@@ -104,7 +103,10 @@ impl Render for ParagraphBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        html.push_str(&self.content);
+        //TODO: Handle Expect!
+        let inline = parser::parse_inline(&self.content).expect("msg");
+        render_inline_umblocks(&mut html, inline);
+
         html.push_str("</p>");
 
         Ok(html)
@@ -180,6 +182,25 @@ mod paragraph_tests {
         assert_eq!(paragraph.line_nr, 0);
         assert_eq!(paragraph.content, content);
         assert_eq!(paragraph.attributes, String::from("{}"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn render_paragraph_with_inline_html() -> Result<(), UmError> {
+        let id = String::from("paragraph-id");
+        let content = String::from("This is `the` *content* **of _the_ heading**");
+
+        let block = ParagraphBlock {
+            id: id.clone(),
+            content,
+            attributes: "{}".into(),
+            line_nr: 0,
+        };
+
+        let expected_html = format!("<p id='{}'>This is <pre>the</pre> <i>content</i> <b>of <sub>the</sub> heading</b></p>", id);
+
+        assert_eq!(expected_html, block.render_html()?);
 
         Ok(())
     }
