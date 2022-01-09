@@ -103,8 +103,7 @@ impl Render for ParagraphBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        //TODO: Handle Expect!
-        let inline = parser::parse_inline(&self.content).expect("msg");
+        let inline = parser::parse_inline(&self.content).expect("Inline formatting or plain text expected.");
         render_inline_umblocks(&mut html, inline);
 
         html.push_str("</p>");

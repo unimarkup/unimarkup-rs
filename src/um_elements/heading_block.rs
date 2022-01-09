@@ -250,8 +250,7 @@ impl Render for HeadingBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        //TODO: Handle Expect!
-        let inline = parser::parse_inline(&self.content).expect("msg");
+        let inline = parser::parse_inline(&self.content).expect("Inline formatting or plain text expected");
         render_inline_umblocks(&mut html, inline);
         
         html.push_str("</h");
@@ -276,7 +275,7 @@ mod heading_tests {
     use super::HeadingBlock;
 
     #[test]
-    fn render_heading() -> Result<(), UmError> {
+    fn render_heading_html() -> Result<(), UmError> {
         let lowest_level = HeadingLevel::Level1 as usize;
         let highest_level = HeadingLevel::Level6 as usize;
 
@@ -301,9 +300,8 @@ mod heading_tests {
         Ok(())
     }
 
-    //TODO: _html im Funktionsnamen?!
     #[test]
-    fn render_heading_with_inline() -> Result<(), UmError> {
+    fn render_heading_with_inline_html() -> Result<(), UmError> {
         let lowest_level = HeadingLevel::Level1 as usize;
         let highest_level = HeadingLevel::Level6 as usize;
 

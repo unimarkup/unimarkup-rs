@@ -109,15 +109,13 @@ fn get_nested_inline(pair: Pair<Rule>) -> VecDeque<FormatTypes> {
     content
 }
 
-//TODO: Handle Expect!
-
 impl Render for Bold {
     fn render_html(&self) -> Result<String, crate::um_error::UmError> {
         
         let mut html = String::default();
         html.push_str("<b>");
         for element in &self.content {
-            html.push_str(&element.render_html().expect("msg"));
+            html.push_str(&element.render_html().expect("At least one or more formatting types expected"));
         }
         html.push_str("</b>");
         Ok(html)
@@ -130,7 +128,7 @@ impl Render for Italic {
         let mut html = String::default();
         html.push_str("<i>");
         for element in &self.content {
-            html.push_str(&element.render_html().expect("msg"));
+            html.push_str(&element.render_html().expect("At least one or more formatting types expected"));
         }
         html.push_str("</i>");
         Ok(html)
@@ -142,7 +140,7 @@ impl Render for Subscript {
         let mut html = String::default();
         html.push_str("<sub>");
         for element in &self.content {
-            html.push_str(&element.render_html().expect("msg"));
+            html.push_str(&element.render_html().expect("At least one or more formatting types expected"));
         }
         html.push_str("</sub>");
         Ok(html)
@@ -154,7 +152,7 @@ impl Render for Superscript {
         let mut html = String::default();
         html.push_str("<sup>");
         for element in &self.content {
-            html.push_str(&element.render_html().expect("msg"));
+            html.push_str(&element.render_html().expect("At least one or more formatting types expected"));
         }
         html.push_str("</sup>");
         Ok(html)
@@ -191,11 +189,9 @@ impl Render for FormatTypes {
     }
 }
 
-//TODO: Handle Expect!
-
 pub fn render_inline_umblocks(html: &mut String, inline_format:VecDeque<FormatTypes>) {
 
     for element in inline_format {
-        html.push_str(&element.render_html().expect("msg"));
+        html.push_str(&element.render_html().expect("Rendered format types expected"));
     }
 }
