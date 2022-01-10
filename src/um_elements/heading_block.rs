@@ -4,29 +4,42 @@ use pest::iterators::{Pair, Pairs};
 use pest::Span;
 use strum_macros::*;
 
-use crate::backend::inline_formatting::render_inline_umblocks;
-use crate::backend::{BackendError, ParseFromIr, Render};
-use crate::frontend::parser::{Rule, UmParse, self};
+use crate::backend::{self, BackendError, ParseFromIr, Render};
+use crate::frontend::parser::{self, Rule, UmParse};
 use crate::frontend::UnimarkupBlocks;
 use crate::middleend::{AsIrLines, ContentIrLine};
 use crate::um_elements::types::{self, UnimarkupType};
 use crate::um_error::UmError;
 
+/// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
 #[strum(serialize_all = "kebab-case")]
 pub enum HeadingLevel {
+    /// Heading level 1, corresponds to `# ` in Unimarkup.
     #[strum(serialize = "level-1")]
     Level1 = 1, // start counting from 0
+
+    /// Heading level 2, corresponds to `## ` in Unimarkup.
     #[strum(serialize = "level-2")]
     Level2,
+
+    /// Heading level 3, corresponds to `### ` in Unimarkup.
     #[strum(serialize = "level-3")]
     Level3,
+
+    /// Heading level 4, corresponds to `#### ` in Unimarkup.
     #[strum(serialize = "level-4")]
     Level4,
+
+    /// Heading level 5, corresponds to `##### ` in Unimarkup.
     #[strum(serialize = "level-5")]
     Level5,
+
+    /// Heading level 6, corresponds to `###### ` in Unimarkup.
     #[strum(serialize = "level-6")]
     Level6,
+
+    /// Invalid level to denote an invalid heading syntax
     Invalid,
 }
 
@@ -78,20 +91,31 @@ impl From<usize> for HeadingLevel {
     }
 }
 
+/// Structure of a Unimarkup heading element.
 #[derive(Debug, Default)]
 pub struct HeadingBlock {
+    /// Unique identifier for a heading.
     pub id: String,
+
+    /// Heading level.
     pub level: HeadingLevel,
+
+    /// The content of the heading line.
     pub content: String,
+
+    /// Attributes of the heading.
     pub attributes: String,
+
+    /// Line number, where the heading occurs in
+    /// the Unimarkup document.
     pub line_nr: usize,
 }
 
 impl HeadingBlock {
+    /// Parses a single instance of a heading element.
     fn parse_single(pair: &Pair<Rule>) -> Self {
         let mut heading_data = pair.clone().into_inner();
 
-        // heading_start
         let heading_start = heading_data.next().expect("heading rule has heading_start");
 
         let heading_content = heading_data
@@ -101,21 +125,10 @@ impl HeadingBlock {
         let level = heading_start.as_str().trim().into();
         let (line_nr, _) = heading_start.as_span().start_pos().line_col();
 
-        let mut content_lowercase = heading_content.as_str().trim().to_lowercase();
-        content_lowercase.retain(|c| c.is_alphanumeric() | c.is_whitespace());
-        let content_split = content_lowercase.split_whitespace();
-
-        let id: String = {
-            let mut id = String::new();
-            for word in content_split.into_iter() {
-                id.push_str(word);
-                id.push(types::DELIMITER);
-            }
-
-            id.strip_suffix(types::DELIMITER)
-                .expect("We added the suffix")
-                .to_string()
-        };
+        // unwrap() is ok becuase heading grammar guarantees that heading has non-empty content
+        let id = parser::generate_id(heading_content.as_str())
+            .unwrap()
+            .to_lowercase();
 
         HeadingBlock {
             id,
@@ -250,9 +263,10 @@ impl Render for HeadingBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        let inline = parser::parse_inline(&self.content).expect("Inline formatting or plain text expected");
-        render_inline_umblocks(&mut html, inline);
-        
+        let inline =
+            backend::parse_inline(&self.content).expect("Inline formatting or plain text expected");
+        html.push_str(&inline.render_html()?);
+
         html.push_str("</h");
         html.push_str(&tag_level);
         html.push('>');
@@ -319,7 +333,10 @@ mod heading_tests {
 
             let html = heading.render_html()?;
 
-            let expected = format!("<h{} id='{}'><pre>This</pre> <i>is <sub>a</sub></i> <b>heading</b></h{}>", level, id, level);
+            let expected = format!(
+                "<h{} id='{}'><pre>This</pre> <i>is <sub>a</sub></i> <b>heading</b></h{}>",
+                level, id, level
+            );
             assert_eq!(html, expected);
         }
 

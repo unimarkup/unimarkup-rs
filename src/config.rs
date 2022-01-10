@@ -1,3 +1,5 @@
+//! Structs and functions for parsing and generating the Unimarkup configuration.
+
 use std::path::PathBuf;
 
 use clap::{crate_version, ArgEnum, Parser};
@@ -7,6 +9,7 @@ use crate::um_elements::types::UnimarkupType;
 
 const UNIMARKUP_NAME: &str = "Unimarkup";
 
+/// Config contains the possible options for the Unimarkup configuration.
 #[derive(Debug, PartialEq, Clone, Parser)]
 #[clap(name = UNIMARKUP_NAME, version = crate_version!())]
 pub struct Config {
@@ -203,25 +206,38 @@ pub struct Config {
     pub html_embed_svg: bool,
 }
 
+/// Possible output formats for a Unimarkup file
 #[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
 pub enum OutputFormat {
+    /// PDF output format
     #[strum(ascii_case_insensitive)]
     Pdf,
+    /// HTML output format
     #[strum(ascii_case_insensitive)]
     Html,
     #[strum(ascii_case_insensitive, serialize = "reveal-js")]
     #[clap(alias = "revealjs")]
+    /// [revealJs] output format.
+    ///
+    /// A presentation framework using HTML and Javascript
+    ///
+    /// [revealJs]: https://revealjs.com/
     RevealJs,
     #[strum(ascii_case_insensitive)]
+    /// Intermediate representation of the Unimarkup document.
     Intermediate,
 }
 
+/// Possible modes for rendering math formulas in HTML
 #[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
 pub enum HtmlMathmode {
+    /// Render math as SVG
     #[strum(ascii_case_insensitive)]
     Svg,
+    /// Embed MathJax
     #[strum(ascii_case_insensitive)]
     Embed,
+    /// Use CDN (Content Delivery Network) for MathJax (requires online connection to view math formulas in the output HTML)
     #[strum(ascii_case_insensitive)]
     Cdn,
 }

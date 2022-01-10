@@ -4,9 +4,12 @@ use log::debug;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
+/// Structure for the resource table representation of the IR
 #[derive(Debug, PartialEq, Default)]
 pub struct ResourceIrLine {
+    /// Filename of the given resource, i.e. name of a image file.
     pub filename: String,
+    /// Path to the given resource.
     pub path: String,
 }
 
@@ -17,6 +20,12 @@ impl IrTableName for ResourceIrLine {
 }
 
 impl ResourceIrLine {
+    /// Constructs a new [`ResourceIrLine`].
+    ///
+    /// # Arguments
+    ///
+    /// * `filename` - Filename of the given resource, i.e. name of a image file
+    /// * `path` - Path to the given resource
     pub fn new(filename: impl Into<String>, path: impl Into<String>) -> Self {
         ResourceIrLine {
             filename: filename.into(),
@@ -24,6 +33,7 @@ impl ResourceIrLine {
         }
     }
 
+    /// Prepares a SQL query to setup the resource table of the IR form.
     pub fn table_setup() -> String {
         r#"CREATE TABLE IF NOT EXISTS "resources" (
 					"filename"	TEXT NOT NULL,

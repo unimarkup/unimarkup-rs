@@ -1,9 +1,9 @@
 use std::{collections::VecDeque, fmt::Debug};
 
 use crate::{
-    backend::{BackendError, ParseFromIr, Render, inline_formatting::render_inline_umblocks},
+    backend::{self, BackendError, ParseFromIr, Render},
     frontend::{
-        parser::{Rule, UmParse, self},
+        parser::{self, Rule, UmParse},
         UnimarkupBlocks,
     },
     middleend::{AsIrLines, ContentIrLine},
@@ -14,11 +14,20 @@ use crate::{
 use pest::iterators::Pairs;
 use pest::Span;
 
+/// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default)]
 pub struct ParagraphBlock {
+    /// Unique identifier for a paragraph.
     pub id: String,
+
+    /// The content of the paragraph.
     pub content: String,
+
+    /// Attributes of the paragraph.
     pub attributes: String,
+
+    /// Line number, where the paragraph occurs in
+    /// the Unimarkup document.
     pub line_nr: usize,
 }
 
@@ -31,10 +40,12 @@ impl UmParse for ParagraphBlock {
 
         let (line_nr, _column_nr) = span.start_pos().line_col();
 
-        let mut id: String = "".to_string();
-        id.push_str("paragraph");
-        id.push(types::DELIMITER);
-        id.push_str(&line_nr.to_string());
+        let id = parser::generate_id(&format!(
+            "paragraph{delim}{}",
+            line_nr.to_string(),
+            delim = types::DELIMITER
+        ))
+        .unwrap();
 
         let paragraph_block = ParagraphBlock {
             id,
@@ -94,8 +105,6 @@ impl ParseFromIr for ParagraphBlock {
 
 impl Render for ParagraphBlock {
     fn render_html(&self) -> Result<String, UmError> {
-        
-        
         let mut html = String::default();
 
         html.push_str("<p");
@@ -103,8 +112,9 @@ impl Render for ParagraphBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        let inline = parser::parse_inline(&self.content).expect("Inline formatting or plain text expected.");
-        render_inline_umblocks(&mut html, inline);
+        let inline = backend::parse_inline(&self.content)
+            .expect("Inline formatting or plain text expected.");
+        html.push_str(&inline.render_html()?);
 
         html.push_str("</p>");
 
@@ -144,7 +154,7 @@ mod paragraph_tests {
     #[test]
     fn render_paragraph_html() -> Result<(), UmError> {
         let id = String::from("paragraph-id");
-        let content = String::from("This is the content of the heading");
+        let content = String::from("This is the content of the paragraph");
 
         let block = ParagraphBlock {
             id: id.clone(),
@@ -188,7 +198,7 @@ mod paragraph_tests {
     #[test]
     fn render_paragraph_with_inline_html() -> Result<(), UmError> {
         let id = String::from("paragraph-id");
-        let content = String::from("This is `the` *content* **of _the_ heading**");
+        let content = String::from("This is `the` *content* **of _the_ paragraph**");
 
         let block = ParagraphBlock {
             id: id.clone(),
@@ -197,7 +207,10 @@ mod paragraph_tests {
             line_nr: 0,
         };
 
-        let expected_html = format!("<p id='{}'>This is <pre>the</pre> <i>content</i> <b>of <sub>the</sub> heading</b></p>", id);
+        let expected_html = format!(
+            "<p id='{}'>This is <pre>the</pre> <i>content</i> <b>of <sub>the</sub> paragraph</b></p>",
+            id
+        );
 
         assert_eq!(expected_html, block.render_html()?);
 
