@@ -45,7 +45,9 @@ headings = { heading+ }
 paragraph = { ANY+ }
 
 // ****** INLINE FORMATTING ******
-plain = { (!(inline_delim) ~ ANY)+ }
+escaped = { "\\" }
+escaped_delim = @{ escaped ~ (italic_delim | subscript_delim | superscript_delim | verbatim_delim)}
+plain = @{ ((escaped_delim) | (!(inline_delim) ~ ANY))+ }
 inline_format = { (inline_block | plain)+ }
 inline_block = _{ bold_inline | italic_inline | subscript_inline | superscript_inline | verbatim_inline }
 inline_body = _{ (!(PEEK) ~ (inline_block | plain))+ }

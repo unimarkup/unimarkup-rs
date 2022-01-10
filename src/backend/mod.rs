@@ -12,11 +12,12 @@ use log::info;
 use rusqlite::Connection;
 
 mod backend_error;
+mod inline_formatting;
 mod loader;
 mod renderer;
-pub(crate) mod inline_formatting;
 
 pub use backend_error::BackendError;
+pub use inline_formatting::*;
 pub use loader::ParseFromIr;
 pub use renderer::*;
 

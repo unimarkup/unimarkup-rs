@@ -19,4 +19,5 @@ mod um_elements {
 
 mod backend {
     mod backend_run;
+    mod inline_tests;
 }
