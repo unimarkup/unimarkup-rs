@@ -64,8 +64,6 @@ pub fn parse_inline(source: &str) -> Result<VecDeque<FormatTypes>, UmError> {
 
     let mut inline_format = VecDeque::<FormatTypes>::new();
 
-    println!("{:#?}", rule_pairs);
-
     if let Some(inline) = rule_pairs.next() {
         inline_format.append(&mut pair_into_format_types(inline));
     }
@@ -199,7 +197,6 @@ impl Render for Verbatim {
 
 impl Render for Plain {
     fn render_html(&self) -> Result<String, UmError> {
-        println!("{}", self.content);
         Ok(self.content.clone())
     }
 }
