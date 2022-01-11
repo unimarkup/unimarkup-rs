@@ -3,7 +3,7 @@ use unimarkup_rs::{
     backend::{self, BackendError, Render},
     config::Config,
     middleend::{self, AsIrLines, ContentIrLine},
-    um_elements::heading_block::{HeadingBlock, HeadingLevel},
+    um_elements::{HeadingBlock, HeadingLevel},
     um_error::UmError,
 };
 

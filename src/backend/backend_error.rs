@@ -1,11 +1,20 @@
 use core::fmt;
 
+/// [`BackendError`] is one of the possible Error variants of [`UmError`].
+///
+/// It's returned, when some operation fails in the [`backend`] module
+/// of [`unimarkup-rs`], i.e. when (re)constructing a UnimarkupBlock from IR,
+/// or trying to render one of the provided output formats.
+///
+/// [`UmError`]: crate::um_error::UmError
+/// [`backend`]: crate::backend
 #[derive(Debug)]
 pub struct BackendError {
     message: String,
 }
 
 impl BackendError {
+    /// Creates a new instance of [`BackendError`] with the given message
     pub fn new(msg: impl Into<String>) -> Self {
         BackendError {
             message: msg.into(),

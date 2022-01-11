@@ -1,5 +1,74 @@
 # Changelog
 
+## [0.2.0](https://www.github.com/Unimarkup/unimarkup-rs/compare/v0.1.0...v0.2.0) (2021-12-17)
+
+
+### Features
+
+* add cli -> config conversion ([020b472](https://www.github.com/Unimarkup/unimarkup-rs/commit/020b4723d3986c03a2738f0208cea59df90e1067))
+* add cli draft ([590fa6f](https://www.github.com/Unimarkup/unimarkup-rs/commit/590fa6fa778527cfcfe0cfcfaef243dcfbc0220b))
+* add macro From<UM_BLOCK> for UnimarkupType ([af9200a](https://www.github.com/Unimarkup/unimarkup-rs/commit/af9200a3826b8b0aa1eb6657a26dc2df9af2d907))
+* **backend:** impl parse from IR for Heading ([f7415d4](https://www.github.com/Unimarkup/unimarkup-rs/commit/f7415d401ebaa1238169ecb5a9577336681c4b78))
+* **backend:** implement Render for HeadingBlock ([2a7e20e](https://www.github.com/Unimarkup/unimarkup-rs/commit/2a7e20ee01bb84329cb738abe1b7f6ecb97b6e0f))
+* **backend:** implement um_type parser in loader ([989ac3d](https://www.github.com/Unimarkup/unimarkup-rs/commit/989ac3d3c1ecae480b51181a49c9500996171729))
+* **backend:** implement write html to file ([939efa3](https://www.github.com/Unimarkup/unimarkup-rs/commit/939efa3db1e10db0a8c0ad89920030af3e427df8))
+* **backend:** include backend module in lib.rs ([0a7cbe5](https://www.github.com/Unimarkup/unimarkup-rs/commit/0a7cbe50ada22fd006a86b3cd412f59fefb12191))
+* **backend:** introduce loader - parser from IR ([ee82615](https://www.github.com/Unimarkup/unimarkup-rs/commit/ee8261534fd138a0e81f86ea7fb89832d0bf1df2))
+* **backend:** introduce renderer ([8e578db](https://www.github.com/Unimarkup/unimarkup-rs/commit/8e578dbd7580b77c76b17fe3f150540775f262bc))
+* **backend:** load, parse & render ParagraphBlocks ([4078463](https://www.github.com/Unimarkup/unimarkup-rs/commit/40784633f4153dad60f7539aa5d40344d5c1c7e9))
+* **backend:** prepare parsing of UMBlocks from IR ([2bbf54d](https://www.github.com/Unimarkup/unimarkup-rs/commit/2bbf54d2bc5a0909b60a2dfe0c113e2b5e81ddac))
+* extend UmError with general error variant ([4292c78](https://www.github.com/Unimarkup/unimarkup-rs/commit/4292c78b74467b63488cf35c4abbcf5c2d76d864))
+* **frontend:** introduce headings grammar ([73f3978](https://www.github.com/Unimarkup/unimarkup-rs/commit/73f397874d4c7cfa542e3c69499f88c222927176))
+* **frontent:** introduce paragraph grammar ([036e5cc](https://www.github.com/Unimarkup/unimarkup-rs/commit/036e5cc1d117f71e9ab927360b8c58faf6d32e1b))
+* implement ParseFromIr for ParagraphBlock ([995e1c6](https://www.github.com/Unimarkup/unimarkup-rs/commit/995e1c6b095a149ae2f305344e53506a723db0de))
+* implement parsing of paragraphs ([97b50c1](https://www.github.com/Unimarkup/unimarkup-rs/commit/97b50c1c88fd2eaa99967c0e85cd669138f956db))
+* implement pipeline for heading blocks ([661ac31](https://www.github.com/Unimarkup/unimarkup-rs/commit/661ac31bc5a3fcd86784757deb19b8b97444bd40))
+* implement write_to_ir in parser_pest ([5ffaac2](https://www.github.com/Unimarkup/unimarkup-rs/commit/5ffaac27d41f3e487159f0f3a6dc8851c185ea92))
+* introduce backend error variant of UmError ([71f2f98](https://www.github.com/Unimarkup/unimarkup-rs/commit/71f2f9899399d7b39de0ac59401b8ddc4dedbad1))
+* introduce backend module ([568a42c](https://www.github.com/Unimarkup/unimarkup-rs/commit/568a42cd1c15bee88c61dfc8a399c26c535ffead))
+* make UnimarkupType variants comparable ([1586f18](https://www.github.com/Unimarkup/unimarkup-rs/commit/1586f185f9caf18b82d79c18b10a455a6659ce09))
+
+
+### Bug Fixes
+
+* adapt cli and add matching config struct ([48ca9c8](https://www.github.com/Unimarkup/unimarkup-rs/commit/48ca9c87c023e0968b26c9412ecfd4fef56372db))
+* add clean, rebuild and dot-unimarkup args ([7dd26e0](https://www.github.com/Unimarkup/unimarkup-rs/commit/7dd26e07e0be0a8760c1a5292b721c6afc86f4e9))
+* add features not enabled by default in clap ([c2a3111](https://www.github.com/Unimarkup/unimarkup-rs/commit/c2a3111d5d580b0f98b1efdd588eed04865fe751))
+* add html-standalone flag ([b85a859](https://www.github.com/Unimarkup/unimarkup-rs/commit/b85a859dbdd5b240cfd09f5eed12635895e7b31c))
+* add ParseFromIr trait bound to UnimarkupBlock ([799519c](https://www.github.com/Unimarkup/unimarkup-rs/commit/799519c068307dff66ec565a6d0c69f02c63d015))
+* add template for unimarkup.rs ([c61b097](https://www.github.com/Unimarkup/unimarkup-rs/commit/c61b097aa036f668f28e495ea90f71d3fe14e191))
+* **backend:** handle fallback fields for heading ([3e3b388](https://www.github.com/Unimarkup/unimarkup-rs/commit/3e3b388560f3f6ac46d9220e50b15a464de5aecc))
+* change UmParse to only parse() ([75695b0](https://www.github.com/Unimarkup/unimarkup-rs/commit/75695b03b32ea215b6ab9290d78e31568ad2fa3f))
+* check text line per line to avoid different behavior on different OS ([baf67f5](https://www.github.com/Unimarkup/unimarkup-rs/commit/baf67f54e9374d83da2aeb4e71648076097ab5d6))
+* distribute all options to general and outputs ([1068440](https://www.github.com/Unimarkup/unimarkup-rs/commit/1068440a368c6faf0316688467693f14daaf3b51))
+* move to clap_derive ([8781d77](https://www.github.com/Unimarkup/unimarkup-rs/commit/8781d77276b04379432f929294ab924e405ec4a1))
+* move to option<> for optional config fields ([67d3c49](https://www.github.com/Unimarkup/unimarkup-rs/commit/67d3c49d2bfee580a1bf00be34d5f74a047f6cba))
+* parse multiple blank lines correctly ([2e5588c](https://www.github.com/Unimarkup/unimarkup-rs/commit/2e5588c8b85792ee8668a17f2d0f9cc4d1c67a8f))
+* prepare compile method ([3f45a47](https://www.github.com/Unimarkup/unimarkup-rs/commit/3f45a47e35f4c7781c220ad81afdc5454a7a3608))
+* remove multiple config output options ([aac6726](https://www.github.com/Unimarkup/unimarkup-rs/commit/aac6726994778ecb2cb7fc73f13919afb616cf00))
+* remove Option for flag arguments ([7d98fb6](https://www.github.com/Unimarkup/unimarkup-rs/commit/7d98fb61645199cefc825605a36ce7b283f55468))
+* return error when paragraph type not valid ([4018ef5](https://www.github.com/Unimarkup/unimarkup-rs/commit/4018ef527b348906a01e6224d3f05d84d5eb6038))
+* set config as mutable for frontend ([b4f16b4](https://www.github.com/Unimarkup/unimarkup-rs/commit/b4f16b4c4570d23d250322a0c615dcb19ef257dd))
+* set macro/var definition in UmBlockElements ([1588b4d](https://www.github.com/Unimarkup/unimarkup-rs/commit/1588b4d29ec98dd08142147b072a6e3af290a694))
+* set output_formats as optional arguments ([0abb076](https://www.github.com/Unimarkup/unimarkup-rs/commit/0abb076d30d812f2dfd80210d07a3abb423df686))
+* specify macro/variable definition as options ([d2ff4b4](https://www.github.com/Unimarkup/unimarkup-rs/commit/d2ff4b445ff2e48136fc926d5577cc1128269083))
+* type of ContentIrLine in AsIrLines fixed ([e72ed38](https://www.github.com/Unimarkup/unimarkup-rs/commit/e72ed38c3ad7c06cce7b6db632650a606c91b18f))
+
+
+### Testing
+
+* add cli test cases for all config fields ([7d98fb6](https://www.github.com/Unimarkup/unimarkup-rs/commit/7d98fb61645199cefc825605a36ce7b283f55468))
+* add frontend parsing tests for heading and paragraph ([557cee1](https://www.github.com/Unimarkup/unimarkup-rs/commit/557cee15cb2bf0735526e48330d48ec9e668a30e))
+* add nested multiline heading test ([011923a](https://www.github.com/Unimarkup/unimarkup-rs/commit/011923a5806336044d6f17e62a480816420a545f))
+* add test for line number headings ([2e5588c](https://www.github.com/Unimarkup/unimarkup-rs/commit/2e5588c8b85792ee8668a17f2d0f9cc4d1c67a8f))
+* add test um files for parser testing ([99a5a29](https://www.github.com/Unimarkup/unimarkup-rs/commit/99a5a293a562a7af24f7854428fdbbef928b89cd))
+* **backend:** add basic test for backend::run() ([8654ab7](https://www.github.com/Unimarkup/unimarkup-rs/commit/8654ab735aa2837998252b9dbbfb2c6bb0fdaebc))
+* **backend:** add unit test for Heading rendering ([85c6cc5](https://www.github.com/Unimarkup/unimarkup-rs/commit/85c6cc5be584db89585b132e1b68ec44f761737d))
+* **backend:** add unit test for Paragraph ([fc74d54](https://www.github.com/Unimarkup/unimarkup-rs/commit/fc74d5406b03a0f6df87d51911ba49cc827d5e44))
+* **backend:** check if html file is created ([82bd344](https://www.github.com/Unimarkup/unimarkup-rs/commit/82bd34401e5be2eb80432e3cd18c02846f551d95))
+* **backend:** replace hard-coded values with variables ([da1881e](https://www.github.com/Unimarkup/unimarkup-rs/commit/da1881ea8c560983398a9a0fcd078607b390b486))
+* **backend:** test render_html of ParagraphBlock ([5b1154d](https://www.github.com/Unimarkup/unimarkup-rs/commit/5b1154db76184ba618d227c4fde975225d8f4b7d))
+
 ## 0.1.0 (2021-11-18)
 
 

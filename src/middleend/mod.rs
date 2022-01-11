@@ -1,3 +1,9 @@
+//! Structs, traits and helper functions for IR interaction between [`frontend`] and
+//! [`backend`].
+//!
+//! [`backend`]: crate::backend
+//! [`frontend`]: crate::frontend
+
 mod ir;
 mod ir_block;
 mod ir_content;
