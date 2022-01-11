@@ -10,32 +10,32 @@ use unimarkup_rs::{
 #[test]
 fn umblock_tests() -> Result<(), UmError> {
     //heading1.um
-    let mut um_blocks =
+    let mut unimarkup =
         parser::parse_unimarkup(Path::new("tests/test_files/frontend/heading1.um"))?;
-    loop_through_ir_lines(&um_blocks, heading1_expected_result());
+    loop_through_ir_lines(&unimarkup.blocks, heading1_expected_result());
 
     //heading_line_number.um
-    um_blocks = parser::parse_unimarkup(Path::new(
+    unimarkup = parser::parse_unimarkup(Path::new(
         "tests/test_files/frontend/heading_line_number.um",
     ))?;
-    loop_through_ir_lines(&um_blocks, heading_line_number_expected_result());
+    loop_through_ir_lines(&unimarkup.blocks, heading_line_number_expected_result());
 
     //multiline_headings.um
-    um_blocks =
+    unimarkup =
         parser::parse_unimarkup(Path::new("tests/test_files/frontend/multiline_headings.um"))?;
-    loop_through_ir_lines(&um_blocks, multiline_headings_expected_result());
+    loop_through_ir_lines(&unimarkup.blocks, multiline_headings_expected_result());
 
     //paragraph1.um
-    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph1.um"))?;
-    loop_through_ir_lines(&um_blocks, paragraph1_expected_result());
+    unimarkup = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph1.um"))?;
+    loop_through_ir_lines(&unimarkup.blocks, paragraph1_expected_result());
 
     //paragraph2.um
-    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph2.um"))?;
-    loop_through_ir_lines(&um_blocks, paragraph2_expected_result());
+    unimarkup = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph2.um"))?;
+    loop_through_ir_lines(&unimarkup.blocks, paragraph2_expected_result());
 
     //paragraph3.um
-    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph3.um"))?;
-    loop_through_ir_lines(&um_blocks, paragraph3_expected_result());
+    unimarkup = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph3.um"))?;
+    loop_through_ir_lines(&unimarkup.blocks, paragraph3_expected_result());
 
     Ok(())
 }

@@ -4,10 +4,9 @@ use crate::{
     backend::{self, BackendError, ParseFromIr, Render},
     frontend::{
         parser::{self, Rule, UmParse},
-        UnimarkupBlocks,
     },
     middleend::{AsIrLines, ContentIrLine},
-    um_elements::types::{self, UnimarkupType},
+    um_elements::types::{self, UnimarkupType, UnimarkupBlocks},
     um_error::UmError,
 };
 

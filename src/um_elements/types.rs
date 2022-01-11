@@ -8,7 +8,7 @@ use strum_macros::EnumString;
 use crate::{
     backend::{ParseFromIr, Render},
     frontend::parser::UmParse,
-    middleend::AsIrLines,
+    middleend::{AsIrLines, MacroIrLine, VariableIrLine, MetadataIrLine, ResourceIrLine},
     um_elements,
 };
 
@@ -21,6 +21,29 @@ pub const DELIMITER: char = '-';
 pub trait UnimarkupBlock: Render + AsIrLines + UmParse + ParseFromIr + fmt::Debug {}
 
 impl<T> UnimarkupBlock for T where T: Render + AsIrLines + UmParse + ParseFromIr + fmt::Debug {}
+
+/// Type alias for a vector of elements that implement the [`UnimarkupBlock`] trait.
+pub type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;
+
+/// Struct representing one Unimarkup file
+#[derive(Default)]
+pub struct UnimarkupFile {
+    /// Field containing all Unimarkup blocks for this Unimarkup file
+    pub blocks: UnimarkupBlocks,
+    
+    /// Field containing all macros defined in this Unimarkup file
+    pub macros: Vec<MacroIrLine>,
+    
+    /// Field containing all variables defined in this Unimarkup file
+    pub variables: Vec<VariableIrLine>,
+
+    /// Field containing metadata for this Unimarkup file
+    pub metadata: Vec<MetadataIrLine>,
+
+    /// Field containing all external resources used in this Unimarkup file
+    pub resources: Vec<ResourceIrLine>,
+}
+
 
 /// Type variants available in a Unimarkup document for Unimarkup content elements.
 ///
