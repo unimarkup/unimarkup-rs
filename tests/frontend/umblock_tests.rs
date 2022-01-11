@@ -1,6 +1,6 @@
 use unimarkup_rs::{middleend::ContentIrLine, um_elements::types::UnimarkupBlock};
 
-/// TODO: Documentation
+/// [`loop_through_ir_lines`] is a public function to loop through the generated ir_lines and assert them with the expected output
 pub fn loop_through_ir_lines(
     um_blocks: &[Box<dyn UnimarkupBlock>],
     mut blocks_vector: Vec<ContentIrLine>,
