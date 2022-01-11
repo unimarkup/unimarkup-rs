@@ -32,16 +32,18 @@ pub enum MetadataKind {
 
 impl WriteToIr for Metadata {
     fn write_to_ir(&self, ir_transaction: &rusqlite::Transaction) -> Result<(), UmError> {
+        let filepath = self.file.to_string_lossy().into_owned();
+        let err_msg = format!("Given file `{}` is not a valid metadata file!", &filepath);
+
         let ir_metadata = MetadataIrLine {
             filehash: get_filehash(&self.file)?,
             filename: self
                 .file
                 .file_name()
-                .expect("Filename must be valid")
-                .to_str()
-                .unwrap()
-                .to_string(),
-            path: self.file.as_os_str().to_str().unwrap().to_string(),
+                .expect(&err_msg)
+                .to_string_lossy()
+                .into_owned(),
+            path: self.file.to_string_lossy().into_owned(),
             preamble: self.preamble.clone(),
             fallback_preamble: String::new(),
             root: true,
