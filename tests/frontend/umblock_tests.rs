@@ -1,56 +1,7 @@
-use std::path::Path;
+use unimarkup_rs::{middleend::ContentIrLine, um_elements::types::UnimarkupBlock};
 
-use unimarkup_rs::{
-    frontend::parser::{self},
-    middleend::ContentIrLine,
-    um_elements::types::UnimarkupBlock,
-    um_error::UmError,
-};
-
-use super::{
-    heading_tests::{
-        heading1_expected_result, heading_line_number_expected_result,
-        multiline_headings_expected_result,
-    },
-    paragraph_tests::{
-        paragraph1_expected_result, paragraph2_expected_result, paragraph3_expected_result,
-    },
-};
-
-#[test]
-fn umblock_tests() -> Result<(), UmError> {
-    //heading1.um
-    let mut um_blocks =
-        parser::parse_unimarkup(Path::new("tests/test_files/frontend/heading1.um"))?;
-    loop_through_ir_lines(&um_blocks, heading1_expected_result());
-
-    //heading_line_number.um
-    um_blocks = parser::parse_unimarkup(Path::new(
-        "tests/test_files/frontend/heading_line_number.um",
-    ))?;
-    loop_through_ir_lines(&um_blocks, heading_line_number_expected_result());
-
-    //multiline_headings.um
-    um_blocks =
-        parser::parse_unimarkup(Path::new("tests/test_files/frontend/multiline_headings.um"))?;
-    loop_through_ir_lines(&um_blocks, multiline_headings_expected_result());
-
-    //paragraph1.um
-    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph1.um"))?;
-    loop_through_ir_lines(&um_blocks, paragraph1_expected_result());
-
-    //paragraph2.um
-    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph2.um"))?;
-    loop_through_ir_lines(&um_blocks, paragraph2_expected_result());
-
-    //paragraph3.um
-    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph3.um"))?;
-    loop_through_ir_lines(&um_blocks, paragraph3_expected_result());
-
-    Ok(())
-}
-
-fn loop_through_ir_lines(
+/// TODO: Documentation
+pub fn loop_through_ir_lines(
     um_blocks: &[Box<dyn UnimarkupBlock>],
     mut blocks_vector: Vec<ContentIrLine>,
 ) {

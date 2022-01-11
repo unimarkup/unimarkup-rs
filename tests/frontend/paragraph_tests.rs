@@ -1,4 +1,27 @@
-use unimarkup_rs::{middleend::ContentIrLine, um_elements::types};
+use std::path::Path;
+
+pub use super::umblock_tests::*;
+use unimarkup_rs::{
+    frontend::parser, middleend::ContentIrLine, um_elements::types, um_error::UmError,
+};
+
+#[test]
+fn paragraph_tests() -> Result<(), UmError> {
+    //paragraph1.um
+    let mut um_blocks =
+        parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph1.um"))?;
+    loop_through_ir_lines(&um_blocks, paragraph1_expected_result());
+
+    //paragraph2.um
+    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph2.um"))?;
+    loop_through_ir_lines(&um_blocks, paragraph2_expected_result());
+
+    //paragraph3.um
+    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph3.um"))?;
+    loop_through_ir_lines(&um_blocks, paragraph3_expected_result());
+
+    Ok(())
+}
 
 pub fn paragraph1_expected_result() -> Vec<ContentIrLine> {
     let mut blocks_vector: Vec<ContentIrLine> = Vec::new();
