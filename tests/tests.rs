@@ -1,8 +1,8 @@
 mod frontend {
     mod frontend_run;
-    mod umblock_tests;
     mod heading_tests;
     mod paragraph_tests;
+    mod umblock_tests;
 }
 
 mod middleend {
