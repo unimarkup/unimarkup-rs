@@ -8,11 +8,11 @@ use strum_macros::EnumString;
 use crate::{
     backend::{ParseFromIr, Render},
     frontend::parser::UmParse,
-    middleend::{AsIrLines, MacroIrLine, VariableIrLine, MetadataIrLine, ResourceIrLine},
+    middleend::{AsIrLines, MacroIrLine, VariableIrLine, ResourceIrLine},
     um_elements,
 };
 
-use super::{HeadingBlock, ParagraphBlock};
+use super::{HeadingBlock, ParagraphBlock, Metadata};
 
 /// Delimiter used in string representation of [`UnimarkupType`].
 pub const DELIMITER: char = '-';
@@ -38,7 +38,7 @@ pub struct UnimarkupFile {
     pub variables: Vec<VariableIrLine>,
 
     /// Field containing metadata for this Unimarkup file
-    pub metadata: Vec<MetadataIrLine>,
+    pub metadata: Vec<Metadata>,
 
     /// Field containing all external resources used in this Unimarkup file
     pub resources: Vec<ResourceIrLine>,

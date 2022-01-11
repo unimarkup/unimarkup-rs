@@ -36,6 +36,10 @@ pub fn run(connection: &mut Connection, config: &mut Config) -> Result<(), UmErr
             }
         }
 
+        for metadata in unimarkup.metadata {
+            metadata.write_to_ir(&transaction)?;
+        }
+
         let _ = transaction.commit();
     }
 

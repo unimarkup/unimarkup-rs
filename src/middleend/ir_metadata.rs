@@ -80,14 +80,7 @@ impl WriteToIr for MetadataIrLine {
         let column_pk = format!(
             "filename: {} with hash: {}",
             self.filename,
-            String::from_utf8(self.filehash.to_vec()).map_err(|err| IrError::new(
-                "-".to_string(),
-                "-".to_string(),
-                format!(
-                    "Could not convert filehash into its utf8 representation. Reason: {:?}",
-                    err
-                )
-            ))?
+            hex::encode_upper(&self.filehash),
         );
         let new_values = params![
             self.filehash.to_vec(),
