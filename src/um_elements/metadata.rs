@@ -30,25 +30,38 @@ pub enum MetadataKind {
     Insert,
 }
 
-impl WriteToIr for Metadata {
-    fn write_to_ir(&self, ir_transaction: &rusqlite::Transaction) -> Result<(), UmError> {
-        let filepath = self.file.to_string_lossy().into_owned();
-        let err_msg = format!("Given file `{}` is not a valid metadata file!", &filepath);
+impl From<&Metadata> for MetadataIrLine {
+    fn from(metadata: &Metadata) -> Self {
+        let filepath = metadata.file.to_string_lossy().into_owned();
+        let err_filehash_calc = format!("Could not calculate hash for file `{}`!", &filepath);
+        let err_filename_conversion =
+            format!("Given file `{}` is not a valid metadata file!", &filepath);
 
-        let ir_metadata = MetadataIrLine {
-            filehash: get_filehash(&self.file)?,
-            filename: self
+        MetadataIrLine {
+            filehash: get_filehash(&metadata.file).expect(&err_filehash_calc),
+            filename: metadata
                 .file
                 .file_name()
-                .expect(&err_msg)
+                .expect(&err_filename_conversion)
                 .to_string_lossy()
                 .into_owned(),
-            path: self.file.to_string_lossy().into_owned(),
-            preamble: self.preamble.clone(),
+            path: metadata.file.to_string_lossy().into_owned(),
+            preamble: metadata.preamble.clone(),
             fallback_preamble: String::new(),
             root: true,
-        };
+        }
+    }
+}
 
+impl From<Metadata> for MetadataIrLine {
+    fn from(metadata: Metadata) -> Self {
+        MetadataIrLine::from(&metadata)
+    }
+}
+
+impl WriteToIr for Metadata {
+    fn write_to_ir(&self, ir_transaction: &rusqlite::Transaction) -> Result<(), UmError> {
+        let ir_metadata: MetadataIrLine = self.into();
         ir_metadata.write_to_ir(ir_transaction)
     }
 }
