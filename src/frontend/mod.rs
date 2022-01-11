@@ -8,9 +8,7 @@ mod syntax_error;
 use rusqlite::Connection;
 pub use syntax_error::SyntaxError;
 
-use crate::{
-    config::Config, middleend::WriteToIr, um_error::UmError,
-};
+use crate::{config::Config, middleend::WriteToIr, um_error::UmError};
 
 pub mod parser;
 

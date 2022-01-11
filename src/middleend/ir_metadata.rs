@@ -1,7 +1,4 @@
-use crate::middleend::{
-    ir::{self, IrTableName, RetrieveFromIr, WriteToIr},
-    IrError,
-};
+use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
 use crate::um_error::UmError;
 use log::warn;
 use rusqlite::ToSql;

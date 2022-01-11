@@ -2,11 +2,9 @@ use std::{collections::VecDeque, fmt::Debug};
 
 use crate::{
     backend::{self, BackendError, ParseFromIr, Render},
-    frontend::{
-        parser::{self, Rule, UmParse},
-    },
+    frontend::parser::{self, Rule, UmParse},
     middleend::{AsIrLines, ContentIrLine},
-    um_elements::types::{self, UnimarkupType, UnimarkupBlocks},
+    um_elements::types::{self, UnimarkupBlocks, UnimarkupType},
     um_error::UmError,
 };
 

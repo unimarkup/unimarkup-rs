@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::backend::{BackendError, ParseFromIr, Render};
 use crate::frontend::parser::{Rule, UmParse};
 use crate::middleend::{AsIrLines, ContentIrLine};
-use crate::um_elements::types::{UnimarkupType, UnimarkupBlocks};
+use crate::um_elements::types::{UnimarkupBlocks, UnimarkupType};
 use crate::um_error::UmError;
 
 /// Structure of a Unimarkup verbatim block element.

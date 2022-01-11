@@ -4,7 +4,11 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::{fs, path::Path};
 
-use crate::um_elements::{types,types::{UnimarkupBlocks, UnimarkupFile}, HeadingBlock, ParagraphBlock, VerbatimBlock, Metadata, MetadataKind};
+use crate::um_elements::{
+    types,
+    types::{UnimarkupBlocks, UnimarkupFile},
+    HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
+};
 use crate::um_error::UmError;
 
 /// Used to parse one specific Unimarkup block
@@ -83,7 +87,7 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupFile, UmError> {
         }
     }
 
-    let metadata = Metadata{
+    let metadata = Metadata {
         file: um_file.into(),
         preamble: String::new(),
         kind: MetadataKind::Root,

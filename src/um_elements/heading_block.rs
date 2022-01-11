@@ -7,7 +7,7 @@ use strum_macros::*;
 use crate::backend::{self, BackendError, ParseFromIr, Render};
 use crate::frontend::parser::{self, Rule, UmParse};
 use crate::middleend::{AsIrLines, ContentIrLine};
-use crate::um_elements::types::{self, UnimarkupType, UnimarkupBlocks};
+use crate::um_elements::types::{self, UnimarkupBlocks, UnimarkupType};
 use crate::um_error::UmError;
 
 /// Enum of possible heading levels for unimarkup headings
@@ -161,7 +161,6 @@ impl UmParse for HeadingBlock {
             heading.line_nr += line_nr - 1;
             headings.push(Box::new(heading));
         }
-
 
         Ok(headings)
     }
