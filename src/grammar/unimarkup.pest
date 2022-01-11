@@ -44,6 +44,28 @@ headings = { heading+ }
 // ****** PARAGRAPH ******
 paragraph = { ANY+ }
 
+// ****** INLINE FORMATTING ******
+escaped = { "\\" }
+escaped_delim = @{ escaped ~ (italic_delim | subscript_delim | superscript_delim | verbatim_delim)}
+plain = @{ ((escaped_delim) | (!(inline_delim) ~ ANY))+ }
+inline_format = { (inline_block | plain)+ }
+inline_block = _{ bold_inline | italic_inline | subscript_inline | superscript_inline | verbatim_inline }
+inline_body = _{ (!(PEEK) ~ (inline_block | plain))+ }
+
+// ****** INLINE FORMATTING STYLES ******
+bold_delim = _{ "**" }
+italic_delim = _{ "*" }
+subscript_delim = _{ "_" }
+superscript_delim = _{ "^" }
+verbatim_delim = _{ "`" }
+inline_delim = { bold_delim | italic_delim | subscript_delim | superscript_delim | verbatim_delim }
+
+bold_inline = { PUSH(bold_delim) ~ inline_body ~ POP }
+italic_inline = { PUSH(italic_delim) ~ inline_body ~ POP }
+subscript_inline = { PUSH(subscript_delim) ~ inline_body ~ POP }
+superscript_inline = { PUSH(superscript_delim) ~ inline_body ~ POP }
+verbatim_inline = { PUSH(verbatim_delim) ~ inline_body ~ POP }
+
 // ****** VERBATIM ******
 verbatim_lang    = { ( !( PEEK | ( um_nbsp* ~ um_newline ) ) ~ ANY )+ }
 verbatim_content = { ( !verbatim_end ~ ANY)+ }
