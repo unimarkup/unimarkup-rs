@@ -91,7 +91,7 @@ impl From<usize> for HeadingLevel {
 }
 
 /// Structure of a Unimarkup heading element.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct HeadingBlock {
     /// Unique identifier for a heading.
     pub id: String,
@@ -166,7 +166,7 @@ impl UmParse for HeadingBlock {
     }
 }
 
-impl AsIrLines for HeadingBlock {
+impl AsIrLines<ContentIrLine> for HeadingBlock {
     fn as_ir_lines(&self) -> Vec<ContentIrLine> {
         let level = self.level.to_string();
 

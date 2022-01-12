@@ -21,6 +21,12 @@ pub trait WriteToIr {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError>;
 }
 
+/// Trait to represent a Unimarkup struct as a type that is writable to IR.
+pub trait AsIrLines<T> where T: WriteToIr {
+    /// Returns a Unimarkup struct as a type that is writable to IR.
+    fn as_ir_lines(&self) -> Vec<T>;
+}
+
 /// Used to retrieve a IR line structure from IR.
 pub trait RetrieveFromIr {
     /// Gets the primary key (pk) values of the IR line structure,

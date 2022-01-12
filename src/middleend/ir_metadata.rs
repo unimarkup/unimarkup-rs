@@ -5,7 +5,7 @@ use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
 /// Structure for the metadata table representation of the IR
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct MetadataIrLine {
     /// Generated hash code of a Unimarkup file.
     pub filehash: Vec<u8>,
