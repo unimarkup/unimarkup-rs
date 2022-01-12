@@ -66,8 +66,8 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupFile, UmError> {
 
     let mut unimarkup = UnimarkupFile::default();
 
-    if let Some(um_content) = rule_pairs.next() {
-        for pair in um_content.into_inner() {
+    if let Some(um_tokens) = rule_pairs.next() {
+        for pair in um_tokens.into_inner() {
             match pair.as_rule() {
                 Rule::atomic_block => {
                     let mut atomic_blocks = parse_atomic_block(pair)?;
