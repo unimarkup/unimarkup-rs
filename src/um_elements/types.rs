@@ -8,7 +8,7 @@ use strum_macros::EnumString;
 use crate::{
     backend::{ParseFromIr, Render},
     frontend::parser::UmParse,
-    middleend::{AsIrLines, MacroIrLine, ResourceIrLine, VariableIrLine, ContentIrLine},
+    middleend::{AsIrLines, ContentIrLine, MacroIrLine, ResourceIrLine, VariableIrLine},
     um_elements,
 };
 
@@ -18,9 +18,15 @@ use super::{HeadingBlock, Metadata, ParagraphBlock};
 pub const DELIMITER: char = '-';
 
 /// Used as a combined trait bound for all Unimarkup Elements.
-pub trait UnimarkupBlock: Render + AsIrLines<ContentIrLine> + UmParse + ParseFromIr + fmt::Debug {}
+pub trait UnimarkupBlock:
+    Render + AsIrLines<ContentIrLine> + UmParse + ParseFromIr + fmt::Debug
+{
+}
 
-impl<T> UnimarkupBlock for T where T: Render + AsIrLines<ContentIrLine> + Clone + UmParse + ParseFromIr + fmt::Debug {}
+impl<T> UnimarkupBlock for T where
+    T: Render + AsIrLines<ContentIrLine> + Clone + UmParse + ParseFromIr + fmt::Debug
+{
+}
 
 /// Type alias for a vector of elements that implement the [`UnimarkupBlock`] trait.
 pub type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;

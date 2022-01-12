@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use sha3::{Digest, Sha3_256};
 
-use crate::middleend::{MetadataIrLine, WriteToIr, AsIrLines};
+use crate::middleend::{AsIrLines, MetadataIrLine, WriteToIr};
 use crate::um_error::UmError;
 
 /// Represents a Unimarkup metadata

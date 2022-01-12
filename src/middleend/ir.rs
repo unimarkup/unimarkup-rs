@@ -22,7 +22,10 @@ pub trait WriteToIr {
 }
 
 /// Trait to represent a Unimarkup struct as a type that is writable to IR.
-pub trait AsIrLines<T> where T: WriteToIr {
+pub trait AsIrLines<T>
+where
+    T: WriteToIr,
+{
     /// Returns a Unimarkup struct as a type that is writable to IR.
     fn as_ir_lines(&self) -> Vec<T>;
 }
