@@ -5,13 +5,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::backend::{BackendError, ParseFromIr, Render};
 use crate::frontend::parser::{Rule, UmParse};
-use crate::frontend::UnimarkupBlocks;
 use crate::middleend::{AsIrLines, ContentIrLine};
-use crate::um_elements::types::UnimarkupType;
+use crate::um_elements::types::{UnimarkupBlocks, UnimarkupType};
 use crate::um_error::UmError;
 
 /// Structure of a Unimarkup verbatim block element.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VerbatimBlock {
     /// Unique identifier for a verbatim block.
     pub id: String,
@@ -82,7 +81,7 @@ impl UmParse for VerbatimBlock {
     }
 }
 
-impl AsIrLines for VerbatimBlock {
+impl AsIrLines<ContentIrLine> for VerbatimBlock {
     fn as_ir_lines(&self) -> Vec<ContentIrLine> {
         let line = ContentIrLine::new(
             &self.id,

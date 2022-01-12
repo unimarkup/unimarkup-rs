@@ -9,19 +9,47 @@ use strum_macros::EnumString;
 use crate::{
     backend::{ParseFromIr, Render},
     frontend::parser::UmParse,
-    middleend::AsIrLines,
+    middleend::{AsIrLines, ContentIrLine, MacroIrLine, ResourceIrLine, VariableIrLine},
     um_elements,
 };
 
-use super::{HeadingBlock, ParagraphBlock};
+use super::{HeadingBlock, Metadata, ParagraphBlock};
 
 /// Delimiter used in string representation of [`UnimarkupType`].
 pub const DELIMITER: char = '-';
 
 /// Used as a combined trait bound for all Unimarkup Elements.
-pub trait UnimarkupBlock: Render + AsIrLines + UmParse + ParseFromIr + fmt::Debug {}
+pub trait UnimarkupBlock:
+    Render + AsIrLines<ContentIrLine> + UmParse + ParseFromIr + fmt::Debug
+{
+}
 
-impl<T> UnimarkupBlock for T where T: Render + AsIrLines + UmParse + ParseFromIr + fmt::Debug {}
+impl<T> UnimarkupBlock for T where
+    T: Render + AsIrLines<ContentIrLine> + Clone + UmParse + ParseFromIr + fmt::Debug
+{
+}
+
+/// Type alias for a vector of elements that implement the [`UnimarkupBlock`] trait.
+pub type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;
+
+/// Struct representing one Unimarkup file
+#[derive(Default, Debug)]
+pub struct UnimarkupFile {
+    /// Field containing all Unimarkup blocks for this Unimarkup file
+    pub blocks: UnimarkupBlocks,
+
+    /// Field containing all macros defined in this Unimarkup file
+    pub macros: Vec<MacroIrLine>,
+
+    /// Field containing all variables defined in this Unimarkup file
+    pub variables: Vec<VariableIrLine>,
+
+    /// Field containing metadata for this Unimarkup file
+    pub metadata: Vec<Metadata>,
+
+    /// Field containing all external resources used in this Unimarkup file
+    pub resources: Vec<ResourceIrLine>,
+}
 
 /// Type variants available in a Unimarkup document for Unimarkup content elements.
 ///

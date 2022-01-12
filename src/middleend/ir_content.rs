@@ -8,7 +8,7 @@ use rusqlite::{Connection, Statement, ToSql};
 use std::convert::TryInto;
 
 /// Structure for the content table representation of the IR
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ContentIrLine {
     /// ID of the content
     pub id: String,
@@ -208,14 +208,4 @@ pub fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLin
     }
 
     Ok(lines)
-}
-
-/// Trait to represent a [`UnimarkupBlock`] as [`ContentIrLine`]s.
-///
-/// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
-pub trait AsIrLines {
-    /// Represents a [`UnimarkupBlock`] as [`ContentIrLine`]s.
-    ///
-    /// [`UnimarkupBlock`]: crate::um_elements::types::UnimarkupBlock
-    fn as_ir_lines(&self) -> Vec<ContentIrLine>;
 }

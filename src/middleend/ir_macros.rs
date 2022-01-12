@@ -6,7 +6,7 @@ use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
 /// Structure for the macro table representation of the IR
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct MacroIrLine {
     /// Name of the macro.
     pub name: String,

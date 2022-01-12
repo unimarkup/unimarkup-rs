@@ -1,14 +1,11 @@
-use crate::middleend::{
-    ir::{self, IrTableName, RetrieveFromIr, WriteToIr},
-    IrError,
-};
+use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
 use crate::um_error::UmError;
 use log::warn;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
 /// Structure for the metadata table representation of the IR
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct MetadataIrLine {
     /// Generated hash code of a Unimarkup file.
     pub filehash: Vec<u8>,
@@ -80,14 +77,7 @@ impl WriteToIr for MetadataIrLine {
         let column_pk = format!(
             "filename: {} with hash: {}",
             self.filename,
-            String::from_utf8(self.filehash.to_vec()).map_err(|err| IrError::new(
-                "-".to_string(),
-                "-".to_string(),
-                format!(
-                    "Could not convert filehash into its utf8 representation. Reason: {:?}",
-                    err
-                )
-            ))?
+            hex::encode_upper(&self.filehash),
         );
         let new_values = params![
             self.filehash.to_vec(),
