@@ -2,12 +2,9 @@ use std::{collections::VecDeque, fmt::Debug};
 
 use crate::{
     backend::{self, BackendError, ParseFromIr, Render},
-    frontend::{
-        parser::{self, Rule, UmParse},
-        UnimarkupBlocks,
-    },
+    frontend::parser::{self, Rule, UmParse},
     middleend::{AsIrLines, ContentIrLine},
-    um_elements::types::{self, UnimarkupType},
+    um_elements::types::{self, UnimarkupBlocks, UnimarkupType},
     um_error::UmError,
 };
 
@@ -15,7 +12,7 @@ use pest::iterators::Pairs;
 use pest::Span;
 
 /// Structure of a Unimarkup paragraph element.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ParagraphBlock {
     /// Unique identifier for a paragraph.
     pub id: String,
@@ -122,7 +119,7 @@ impl Render for ParagraphBlock {
     }
 }
 
-impl AsIrLines for ParagraphBlock {
+impl AsIrLines<ContentIrLine> for ParagraphBlock {
     fn as_ir_lines(&self) -> Vec<ContentIrLine> {
         let line = ContentIrLine::new(
             &self.id,
