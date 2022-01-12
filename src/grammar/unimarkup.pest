@@ -71,3 +71,8 @@ verbatim_lang    = { ( !( PEEK | ( um_nbsp* ~ um_newline ) ) ~ ANY )+ }
 verbatim_content = { ( !verbatim_end ~ ANY)+ }
 verbatim_end     = @{ um_newline ~ PEEK }
 verbatim         = { PUSH(verbatim_delimiter) ~ verbatim_lang? ~ ( um_nbsp* ~ um_newline ) ~ verbatim_content ~ verbatim_end }
+
+// ****** ATTRIBUTES ******
+// Note: Actual parsing is done in code using serde_json
+attr_body = { ( ( !( "{" | "}" ) ~ ( ANY ) ) | attributes )+ }
+attributes = @{ "{" ~ attr_body ~ "}" }
