@@ -2,12 +2,13 @@
 
 use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
-use std::{fs, path::Path};
+use std::fs;
 
+use crate::config::Config;
 use crate::um_elements::{types, HeadingBlock, ParagraphBlock, VerbatimBlock};
 use crate::um_error::UmError;
 
-use super::UnimarkupBlocks;
+use super::{preamble, UnimarkupBlocks};
 
 /// Used to parse one specific Unimarkup block
 pub trait UmParse {
@@ -50,7 +51,9 @@ pub use parser_derivation::*;
 /// # Errors
 ///
 /// This function will return an [`UmError`], if the given Unimarkup file contains invalid Unimarkup syntax.
-pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
+pub fn parse_unimarkup(config: &mut Config) -> Result<UnimarkupBlocks, UmError> {
+    let um_file = &config.um_file;
+
     let source = fs::read_to_string(um_file).map_err(|err| UmError::General {
         msg: String::from("Could not read file."),
         error: Box::new(err),
@@ -67,6 +70,10 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
     if let Some(unimarkup) = rule_pairs.next() {
         for pair in unimarkup.into_inner() {
             match pair.as_rule() {
+                Rule::preamble => {
+                    preamble::parse_preamble(pair, config)?;
+                    
+                }
                 Rule::atomic_block => {
                     let mut atomic_blocks = parse_atomic_block(pair)?;
                     blocks.append(&mut atomic_blocks);

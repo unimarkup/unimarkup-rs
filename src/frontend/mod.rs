@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub mod parser;
+pub mod preamble;
 
 /// Type alias for a vector of elements that implement the [`UnimarkupBlock`] trait.
 pub type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;
@@ -27,7 +28,7 @@ pub type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;
 ///
 /// [`frontend`]: crate::frontend
 pub fn run(connection: &mut Connection, config: &mut Config) -> Result<(), UmError> {
-    let blocks = parser::parse_unimarkup(&config.um_file)?;
+    let blocks = parser::parse_unimarkup(config)?;
 
     let transaction = connection.transaction();
 
