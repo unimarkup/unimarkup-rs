@@ -4,22 +4,13 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::fs;
 
-<<<<<<< HEAD
-use crate::config::Config;
-use crate::um_elements::{types, HeadingBlock, ParagraphBlock, VerbatimBlock};
-use crate::um_error::UmError;
-
-use super::{preamble, UnimarkupBlocks};
-
-=======
-use crate::um_elements::{
+use crate::{um_elements::{
     types,
     types::{UnimarkupBlocks, UnimarkupFile},
     HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
-};
+}, config::Config};
 use crate::um_error::UmError;
 
->>>>>>> main
 /// Used to parse one specific Unimarkup block
 pub trait UmParse {
     /// Parses [`UnimarkupBlocks`] from given data returned from the pest parser.
@@ -54,6 +45,8 @@ mod parser_derivation {
 
 pub use parser_derivation::*;
 
+use super::preamble;
+
 /// Parses the given Unimarkup file.
 ///
 /// Returns [`UnimarkupBlocks`] on success.
@@ -61,14 +54,10 @@ pub use parser_derivation::*;
 /// # Errors
 ///
 /// This function will return an [`UmError`], if the given Unimarkup file contains invalid Unimarkup syntax.
-<<<<<<< HEAD
-pub fn parse_unimarkup(config: &mut Config) -> Result<UnimarkupBlocks, UmError> {
-    let um_file = &config.um_file;
+pub fn parse_unimarkup(config: &mut Config) -> Result<UnimarkupFile, UmError> {
+    let um_file = config.um_file.clone();
 
-=======
-pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupFile, UmError> {
->>>>>>> main
-    let source = fs::read_to_string(um_file).map_err(|err| UmError::General {
+    let source = fs::read_to_string(&config.um_file).map_err(|err| UmError::General {
         msg: String::from("Could not read file."),
         error: Box::new(err),
     })?;
@@ -107,7 +96,7 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupFile, UmError> {
     }
 
     let metadata = Metadata {
-        file: um_file.into(),
+        file: um_file,
         preamble: String::new(),
         kind: MetadataKind::Root,
         namespace: ".".to_string(),

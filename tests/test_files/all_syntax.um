@@ -1,6 +1,6 @@
 ;;;
 {
-	OUTPUT-FILE": "output.html",
+	"OUTPUT-FILE": "output.html",
 	"citation-style": "yes",
 	"output-formats": ["Html"],
 	"html_embed_svg": true

@@ -23,11 +23,7 @@ pub mod preamble;
 ///
 /// [`frontend`]: crate::frontend
 pub fn run(connection: &mut Connection, config: &mut Config) -> Result<(), UmError> {
-<<<<<<< HEAD
-    let blocks = parser::parse_unimarkup(config)?;
-=======
-    let unimarkup = parser::parse_unimarkup(&config.um_file)?;
->>>>>>> main
+    let unimarkup = parser::parse_unimarkup(config)?;
 
     let transaction = connection.transaction();
 
