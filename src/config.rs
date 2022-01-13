@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use clap::{crate_version, ArgEnum, Parser};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
 use crate::um_elements::types::UnimarkupType;
@@ -258,7 +258,9 @@ pub struct Config {
 }
 
 /// Possible output formats for a Unimarkup file
-#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize)]
+#[derive(
+    Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+)]
 pub enum OutputFormat {
     /// PDF output format
     #[strum(ascii_case_insensitive)]
@@ -280,7 +282,9 @@ pub enum OutputFormat {
 }
 
 /// Possible modes for rendering math formulas in HTML
-#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize)]
+#[derive(
+    Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+)]
 pub enum HtmlMathmode {
     /// Render math as SVG
     #[strum(ascii_case_insensitive)]

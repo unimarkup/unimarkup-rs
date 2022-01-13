@@ -4,12 +4,15 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::fs;
 
-use crate::{um_elements::{
-    types,
-    types::{UnimarkupBlocks, UnimarkupFile},
-    HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
-}, config::Config};
 use crate::um_error::UmError;
+use crate::{
+    config::Config,
+    um_elements::{
+        types,
+        types::{UnimarkupBlocks, UnimarkupFile},
+        HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
+    },
+};
 
 /// Used to parse one specific Unimarkup block
 pub trait UmParse {
@@ -75,7 +78,6 @@ pub fn parse_unimarkup(config: &mut Config) -> Result<UnimarkupFile, UmError> {
             match pair.as_rule() {
                 Rule::preamble => {
                     preamble::parse_preamble(pair, config)?;
-                    
                 }
                 Rule::atomic_block => {
                     let mut atomic_blocks = parse_atomic_block(pair)?;
