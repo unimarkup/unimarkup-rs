@@ -1,6 +1,9 @@
-use crate::middleend::IrError;
+use crate::um_elements::types::UnimarkupBlocks;
 use crate::um_error::UmError;
+use crate::{middleend::IrError, um_elements::types::UnimarkupBlock};
 use rusqlite::{Error, Row, ToSql, Transaction};
+
+use super::ContentIrLine;
 
 /// Used to get the table name of the given IR line structure
 pub trait IrTableName {
@@ -28,6 +31,19 @@ where
 {
     /// Returns a Unimarkup struct as a type that is writable to IR.
     fn as_ir_lines(&self) -> Vec<T>;
+}
+
+impl<T> WriteToIr for Vec<T>
+where
+    T: WriteToIr,
+{
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
+        for element in self {
+            element.write_to_ir(ir_transaction)?;
+        }
+
+        Ok(())
+    }
 }
 
 /// Used to retrieve a IR line structure from IR.

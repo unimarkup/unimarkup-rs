@@ -1,5 +1,5 @@
 use super::ir::{IrTableName, RetrieveFromIr};
-use super::IrError;
+use super::{AsIrLines, IrError};
 use crate::middleend::ir::{self, WriteToIr};
 use crate::um_error::UmError;
 use log::warn;
@@ -162,6 +162,19 @@ impl RetrieveFromIr for ContentIrLine {
                 row.get::<usize, String>(6)?,
             ))
         }
+    }
+}
+
+impl<T> WriteToIr for T
+where
+    T: AsIrLines<ContentIrLine>,
+{
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
+        for line in self.as_ir_lines() {
+            line.write_to_ir(ir_transaction)?;
+        }
+
+        Ok(())
     }
 }
 
