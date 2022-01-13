@@ -6,18 +6,25 @@ use unimarkup_rs::{
 };
 
 #[test]
-fn paragraph_tests() -> Result<(), UmError> {
+fn valid_paragraph_with_heading() -> Result<(), UmError> {
     //paragraph1.um
-    let mut um_blocks =
-        parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph1.um"))?;
+    let um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph1.um"))?;
     loop_through_ir_lines(&um_blocks, paragraph1_expected_result());
 
+    Ok(())
+}
+#[test]
+fn valid_paragraph_with_multi_line_heading() -> Result<(), UmError> {
     //paragraph2.um
-    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph2.um"))?;
+    let um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph2.um"))?;
     loop_through_ir_lines(&um_blocks, paragraph2_expected_result());
 
+    Ok(())
+}
+#[test]
+fn valid_paragraphs_with_sub_heading() -> Result<(), UmError> {
     //paragraph3.um
-    um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph3.um"))?;
+    let um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph3.um"))?;
     loop_through_ir_lines(&um_blocks, paragraph3_expected_result());
 
     Ok(())

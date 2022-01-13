@@ -6,20 +6,29 @@ use unimarkup_rs::{
 };
 
 #[test]
-fn heading_tests() -> Result<(), UmError> {
+fn valid_heading() -> Result<(), UmError> {
     //heading1.um
-    let mut um_blocks =
-        parser::parse_unimarkup(Path::new("tests/test_files/frontend/heading1.um"))?;
+    let um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/heading1.um"))?;
     loop_through_ir_lines(&um_blocks, heading1_expected_result());
 
+    Ok(())
+}
+
+#[test]
+fn valid_line_number_heading() -> Result<(), UmError> {
     //heading_line_number.um
-    um_blocks = parser::parse_unimarkup(Path::new(
+    let um_blocks = parser::parse_unimarkup(Path::new(
         "tests/test_files/frontend/heading_line_number.um",
     ))?;
     loop_through_ir_lines(&um_blocks, heading_line_number_expected_result());
 
+    Ok(())
+}
+
+#[test]
+fn valid_multi_line_heading() -> Result<(), UmError> {
     //multiline_headings.um
-    um_blocks =
+    let um_blocks =
         parser::parse_unimarkup(Path::new("tests/test_files/frontend/multiline_headings.um"))?;
     loop_through_ir_lines(&um_blocks, multiline_headings_expected_result());
 
