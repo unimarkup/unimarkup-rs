@@ -5,7 +5,7 @@ use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
 /// Structure for the variable table representation of the IR
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct VariableIrLine {
     /// Name of the variable.
     pub name: String,

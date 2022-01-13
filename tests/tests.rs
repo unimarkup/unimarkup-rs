@@ -17,6 +17,7 @@ mod middleend {
 
 mod um_elements {
     mod heading_block;
+    mod metadata;
 }
 
 mod backend {

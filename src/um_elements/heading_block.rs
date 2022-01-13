@@ -6,9 +6,8 @@ use strum_macros::*;
 
 use crate::backend::{self, BackendError, ParseFromIr, Render};
 use crate::frontend::parser::{self, Rule, UmParse};
-use crate::frontend::UnimarkupBlocks;
 use crate::middleend::{AsIrLines, ContentIrLine};
-use crate::um_elements::types::{self, UnimarkupType};
+use crate::um_elements::types::{self, UnimarkupBlocks, UnimarkupType};
 use crate::um_error::UmError;
 
 /// Enum of possible heading levels for unimarkup headings
@@ -92,7 +91,7 @@ impl From<usize> for HeadingLevel {
 }
 
 /// Structure of a Unimarkup heading element.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct HeadingBlock {
     /// Unique identifier for a heading.
     pub id: String,
@@ -167,7 +166,7 @@ impl UmParse for HeadingBlock {
     }
 }
 
-impl AsIrLines for HeadingBlock {
+impl AsIrLines<ContentIrLine> for HeadingBlock {
     fn as_ir_lines(&self) -> Vec<ContentIrLine> {
         let level = self.level.to_string();
 

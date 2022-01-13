@@ -4,10 +4,12 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::{fs, path::Path};
 
-use crate::um_elements::{types, HeadingBlock, ParagraphBlock, VerbatimBlock};
+use crate::um_elements::{
+    types,
+    types::{UnimarkupBlocks, UnimarkupFile},
+    HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
+};
 use crate::um_error::UmError;
-
-use super::UnimarkupBlocks;
 
 /// Used to parse one specific Unimarkup block
 pub trait UmParse {
@@ -50,7 +52,7 @@ pub use parser_derivation::*;
 /// # Errors
 ///
 /// This function will return an [`UmError`], if the given Unimarkup file contains invalid Unimarkup syntax.
-pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
+pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupFile, UmError> {
     let source = fs::read_to_string(um_file).map_err(|err| UmError::General {
         msg: String::from("Could not read file."),
         error: Box::new(err),
@@ -62,19 +64,19 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
             error: Box::new(err),
         })?;
 
-    let mut blocks: UnimarkupBlocks = Vec::new();
+    let mut unimarkup = UnimarkupFile::default();
 
-    if let Some(unimarkup) = rule_pairs.next() {
-        for pair in unimarkup.into_inner() {
+    if let Some(um_tokens) = rule_pairs.next() {
+        for pair in um_tokens.into_inner() {
             match pair.as_rule() {
                 Rule::atomic_block => {
                     let mut atomic_blocks = parse_atomic_block(pair)?;
-                    blocks.append(&mut atomic_blocks);
+                    unimarkup.blocks.append(&mut atomic_blocks);
                 }
                 Rule::enclosed_block => {
                     let mut enclosed_blocks = parse_enclosed_block(pair)?;
 
-                    blocks.append(&mut enclosed_blocks);
+                    unimarkup.blocks.append(&mut enclosed_blocks);
                 }
                 Rule::blank_line | Rule::EOI => continue,
                 _ => unreachable!(
@@ -85,7 +87,15 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupBlocks, UmError> {
         }
     }
 
-    Ok(blocks)
+    let metadata = Metadata {
+        file: um_file.into(),
+        preamble: String::new(),
+        kind: MetadataKind::Root,
+        namespace: ".".to_string(),
+    };
+    unimarkup.metadata.push(metadata);
+
+    Ok(unimarkup)
 }
 
 fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
