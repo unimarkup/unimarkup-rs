@@ -64,7 +64,7 @@ impl UmParse for ParagraphBlock {
         };
 
         let id = match attributes {
-            Some(attrs) if attrs.get("id").is_some() => attrs.get("id").unwrap().to_string(),
+            Some(ref attrs) if attrs.get("id").is_some() => attrs.get("id").unwrap().to_string(),
             _ => parser::generate_id(&format!(
                 "paragraph{delim}{}",
                 line_nr.to_string(),
@@ -76,7 +76,7 @@ impl UmParse for ParagraphBlock {
         let paragraph_block = ParagraphBlock {
             id,
             content,
-            attributes: "{}".into(),
+            attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
             line_nr,
         };
 
