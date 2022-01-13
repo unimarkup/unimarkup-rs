@@ -1,9 +1,6 @@
-use crate::um_elements::types::UnimarkupBlocks;
+use crate::middleend::IrError;
 use crate::um_error::UmError;
-use crate::{middleend::IrError, um_elements::types::UnimarkupBlock};
 use rusqlite::{Error, Row, ToSql, Transaction};
-
-use super::ContentIrLine;
 
 /// Used to get the table name of the given IR line structure
 pub trait IrTableName {

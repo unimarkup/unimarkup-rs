@@ -1,7 +1,6 @@
 use std::{
     collections::{HashMap, VecDeque},
     fmt::Debug,
-    os::unix::prelude::OpenOptionsExt,
 };
 
 use crate::{
