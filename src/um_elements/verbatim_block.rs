@@ -35,8 +35,6 @@ impl UmParse for VerbatimBlock {
             .next()
             .expect("Tried to parse invalid verbatim block.");
 
-        println!("{:#?}", verbatim);
-
         let (line_nr, _column_nr) = span.start_pos().line_col();
 
         let mut block = VerbatimBlock {
@@ -474,7 +472,7 @@ mod tests {
         }
 
         fn check_lines(first: &mut ContentIrLine, second: &mut ContentIrLine) {
-            if first.attributes.len() > 0 {
+            if !first.attributes.is_empty() {
                 let is_attrs: HashMap<&str, &str> =
                     serde_json::from_str(&first.attributes).unwrap();
                 let expect_attrs: HashMap<&str, &str> =
