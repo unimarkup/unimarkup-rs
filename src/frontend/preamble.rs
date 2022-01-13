@@ -1,6 +1,7 @@
 //! [`preamble`](crate::frontend::preamble) is the module which implements
 
 use crate::{config::Config, frontend::parser::Rule, um_error::UmError};
+
 use pest::iterators::Pair;
 
 /// [`parse_preamble`] parses the preamble and serializes depending if JSON or YAML.#
@@ -87,6 +88,3 @@ fn compare_configs(preamble: Config, cli: &mut Config) {
         cli.html_embed_svg = preamble.html_embed_svg;
     }
 }
-
-#[test]
-fn syntax_error_json() {}
