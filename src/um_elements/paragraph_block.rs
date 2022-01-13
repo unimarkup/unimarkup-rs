@@ -1,4 +1,8 @@
-use std::{collections::VecDeque, fmt::Debug};
+use std::{
+    collections::{HashMap, VecDeque},
+    fmt::Debug,
+    os::unix::prelude::OpenOptionsExt,
+};
 
 use crate::{
     backend::{self, BackendError, ParseFromIr, Render},
@@ -33,20 +37,46 @@ impl UmParse for ParagraphBlock {
     where
         Self: Sized,
     {
-        let paragraph = pairs.next().expect("paragraph must be there at this point");
-
         let (line_nr, _column_nr) = span.start_pos().line_col();
 
-        let id = parser::generate_id(&format!(
-            "paragraph{delim}{}",
-            line_nr.to_string(),
-            delim = types::DELIMITER
-        ))
-        .unwrap();
+        let mut paragraph_rules = pairs
+            .next()
+            .expect("paragraph must be there at this point")
+            .into_inner();
+
+        let content = paragraph_rules
+            .next()
+            .expect("Invalid paragraph: content expected")
+            .as_str()
+            .to_string();
+
+        let attributes = if let Some(attributes) = paragraph_rules.next() {
+            let attr: HashMap<&str, &str> =
+                serde_json::from_str(attributes.as_str()).map_err(|_| {
+                    UmError::custom_pest_error(
+                        "Attributes are not valid JSON",
+                        attributes.as_span(),
+                    )
+                })?;
+
+            Some(attr)
+        } else {
+            None
+        };
+
+        let id = match attributes {
+            Some(attrs) if attrs.get("id").is_some() => attrs.get("id").unwrap().to_string(),
+            _ => parser::generate_id(&format!(
+                "paragraph{delim}{}",
+                line_nr.to_string(),
+                delim = types::DELIMITER
+            ))
+            .unwrap(),
+        };
 
         let paragraph_block = ParagraphBlock {
             id,
-            content: paragraph.as_str().into(),
+            content,
             attributes: "{}".into(),
             line_nr,
         };
