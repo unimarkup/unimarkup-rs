@@ -37,8 +37,8 @@ atomic_block = { (!blank_line ~ ANY)+ }
 
 // ****** HEADINGS ******
 heading_start = @{ um_newline? ~ "#"{1,6} ~ um_nbsp }
-heading_content = { ( !( um_newline ~ heading_start ) ~ ANY )+ ~ um_newline? }
-heading = { heading_start ~ heading_content }
+heading_content = { ( !( um_newline ~ ( heading_start | attributes ) ) ~ ANY )+ }
+heading = { heading_start ~ heading_content ~ um_nbsp* ~ ( um_newline ~ attributes )? }
 headings = { heading+ }
 
 // ****** PARAGRAPH ******
