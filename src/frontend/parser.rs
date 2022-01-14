@@ -76,6 +76,7 @@ pub fn parse_unimarkup(config: &mut Config) -> Result<UnimarkupFile, UmError> {
             match pair.as_rule() {
                 Rule::preamble => {
                     preamble::parse_preamble(pair, config)?;
+                    config.validate_config()?;
                 }
                 Rule::atomic_block => {
                     let mut atomic_blocks = parse_atomic_block(pair)?;

@@ -1,4 +1,5 @@
 mod frontend {
+    mod config_tests;
     mod frontend_run;
     mod heading_tests;
     mod paragraph_tests;
