@@ -4,7 +4,6 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::fs;
 
-use crate::config;
 use crate::um_error::UmError;
 use crate::{
     config::Config,

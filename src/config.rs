@@ -296,11 +296,11 @@ pub enum HtmlMathmode {
 impl Config {
     /// [`validate_config`] validates if file and paths exist and if config does not contradict itself
     pub fn validate_config(&mut self) -> Result<(), UmError> {
-        if self.out_file.is_some() {
-            if !self.out_file.as_ref().unwrap().exists() {
+        if let Some(ref file) = self.out_file {
+            if !file.exists() {
                 let msg = format!(
                     "output_file: {} is not a valid file",
-                    self.out_file.as_ref().unwrap().to_str().unwrap()
+                    file.to_string_lossy()
                 );
                 return Err(UmError::Backend(BackendError::new(msg)));
             } else if !self.overwrite_out_files {
