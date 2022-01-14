@@ -1,6 +1,8 @@
-use std::path::Path;
+use std::path::PathBuf;
 
+use clap::StructOpt;
 use unimarkup_rs::{
+    config::Config,
     frontend::parser::{self},
     middleend::ContentIrLine,
     um_elements::types::{self, UnimarkupBlock},
@@ -9,32 +11,39 @@ use unimarkup_rs::{
 
 #[test]
 fn umblock_tests() -> Result<(), UmError> {
+    let mut cfg: Config = Config::parse_from(vec![
+        "unimarkup",
+        "--output-formats=html",
+        "tests/test_files/frontend/heading1.um",
+    ]);
+
     //heading1.um
-    let mut unimarkup =
-        parser::parse_unimarkup(Path::new("tests/test_files/frontend/heading1.um"))?;
+    let mut unimarkup = parser::parse_unimarkup(&mut cfg)?;
     loop_through_ir_lines(&unimarkup.blocks, heading1_expected_result());
 
     //heading_line_number.um
-    unimarkup = parser::parse_unimarkup(Path::new(
-        "tests/test_files/frontend/heading_line_number.um",
-    ))?;
+    cfg.um_file = PathBuf::from("tests/test_files/frontend/heading_line_number.um");
+    unimarkup = parser::parse_unimarkup(&mut cfg)?;
     loop_through_ir_lines(&unimarkup.blocks, heading_line_number_expected_result());
 
     //multiline_headings.um
-    unimarkup =
-        parser::parse_unimarkup(Path::new("tests/test_files/frontend/multiline_headings.um"))?;
+    cfg.um_file = PathBuf::from("tests/test_files/frontend/multiline_headings.um");
+    unimarkup = parser::parse_unimarkup(&mut cfg)?;
     loop_through_ir_lines(&unimarkup.blocks, multiline_headings_expected_result());
 
     //paragraph1.um
-    unimarkup = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph1.um"))?;
+    cfg.um_file = PathBuf::from("tests/test_files/frontend/paragraph1.um");
+    unimarkup = parser::parse_unimarkup(&mut cfg)?;
     loop_through_ir_lines(&unimarkup.blocks, paragraph1_expected_result());
 
     //paragraph2.um
-    unimarkup = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph2.um"))?;
+    cfg.um_file = PathBuf::from("tests/test_files/frontend/paragraph2.um");
+    unimarkup = parser::parse_unimarkup(&mut cfg)?;
     loop_through_ir_lines(&unimarkup.blocks, paragraph2_expected_result());
 
     //paragraph3.um
-    unimarkup = parser::parse_unimarkup(Path::new("tests/test_files/frontend/paragraph3.um"))?;
+    cfg.um_file = PathBuf::from("tests/test_files/frontend/paragraph3.um");
+    unimarkup = parser::parse_unimarkup(&mut cfg)?;
     loop_through_ir_lines(&unimarkup.blocks, paragraph3_expected_result());
 
     Ok(())

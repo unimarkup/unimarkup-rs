@@ -15,6 +15,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_rusqlite = "0.28.0"
 serde_bytes = "0.11.5"
 serde_json = "1.0"
+serde_yaml = "0.8.23"
 serde_plain = "1.0.0"
 strum = "0.22.0"
 strum_macros = "0.22.0"

@@ -11,6 +11,7 @@ pub use syntax_error::SyntaxError;
 use crate::{config::Config, middleend::WriteToIr, um_error::UmError};
 
 pub mod parser;
+pub mod preamble;
 
 /// `frontend::run` is the entry function of the [`frontend`] module.
 /// It parses a Unimarkup file and sends the data to the IR.
@@ -22,7 +23,7 @@ pub mod parser;
 ///
 /// [`frontend`]: crate::frontend
 pub fn run(connection: &mut Connection, config: &mut Config) -> Result<(), UmError> {
-    let unimarkup = parser::parse_unimarkup(&config.um_file)?;
+    let unimarkup = parser::parse_unimarkup(config)?;
 
     let transaction = connection.transaction();
 
