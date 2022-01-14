@@ -6,7 +6,7 @@ fn test_valid_config() -> Result<(), UmError> {
     let mut cfg: Config = Config::parse_from(vec![
         "unimarkup",
         "--output-formats=html",
-        "--dot-unimarkup=tests/test_files/all_syntax.um",
+        "--dot-unimarkup=tests/test_files/",
         "tests/test_files/frontend/heading1.um",
     ]);
 
