@@ -4,6 +4,7 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
 use std::fs;
 
+use crate::config;
 use crate::um_error::UmError;
 use crate::{
     config::Config,
@@ -76,6 +77,7 @@ pub fn parse_unimarkup(config: &mut Config) -> Result<UnimarkupFile, UmError> {
             match pair.as_rule() {
                 Rule::preamble => {
                     preamble::parse_preamble(pair, config)?;
+                    config.validate_config()?;
                 }
                 Rule::atomic_block => {
                     let mut atomic_blocks = parse_atomic_block(pair)?;
