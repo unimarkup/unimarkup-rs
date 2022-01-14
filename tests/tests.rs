@@ -2,7 +2,7 @@ mod frontend {
     mod frontend_run;
     mod heading_tests;
     mod paragraph_tests;
-    mod umblock_tests;
+    mod preamble_tests;
 }
 
 mod middleend {

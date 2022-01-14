@@ -3,6 +3,7 @@
 use std::fmt;
 
 use clap::ArgEnum;
+use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
 use crate::{
@@ -55,7 +56,9 @@ pub struct UnimarkupFile {
 /// Each variant is briefly explained with short example. For more detailed
 /// explanation of available unimarkup elements consult the
 /// official [frontend reference of unimarkup](https://github.com/Unimarkup/Specification/blob/main/Frontend_Reference.markdown).
-#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
+#[derive(
+    Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+)]
 #[strum(ascii_case_insensitive, serialize_all = "kebab-case")]
 pub enum UnimarkupType {
     /// A block of text surrounded with at least one blank line.

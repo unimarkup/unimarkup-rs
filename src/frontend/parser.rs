@@ -2,14 +2,17 @@
 
 use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use pest_derive::Parser;
-use std::{fs, path::Path};
+use std::fs;
 
-use crate::um_elements::{
-    types,
-    types::{UnimarkupBlocks, UnimarkupFile},
-    HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
-};
 use crate::um_error::UmError;
+use crate::{
+    config::Config,
+    um_elements::{
+        types,
+        types::{UnimarkupBlocks, UnimarkupFile},
+        HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
+    },
+};
 
 /// Used to parse one specific Unimarkup block
 pub trait UmParse {
@@ -45,6 +48,8 @@ mod parser_derivation {
 
 pub use parser_derivation::*;
 
+use super::preamble;
+
 /// Parses the given Unimarkup file.
 ///
 /// Returns [`UnimarkupBlocks`] on success.
@@ -52,8 +57,8 @@ pub use parser_derivation::*;
 /// # Errors
 ///
 /// This function will return an [`UmError`], if the given Unimarkup file contains invalid Unimarkup syntax.
-pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupFile, UmError> {
-    let source = fs::read_to_string(um_file).map_err(|err| UmError::General {
+pub fn parse_unimarkup(config: &mut Config) -> Result<UnimarkupFile, UmError> {
+    let source = fs::read_to_string(&config.um_file).map_err(|err| UmError::General {
         msg: String::from("Could not read file."),
         error: Box::new(err),
     })?;
@@ -69,6 +74,9 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupFile, UmError> {
     if let Some(um_tokens) = rule_pairs.next() {
         for pair in um_tokens.into_inner() {
             match pair.as_rule() {
+                Rule::preamble => {
+                    preamble::parse_preamble(pair, config)?;
+                }
                 Rule::atomic_block => {
                     let mut atomic_blocks = parse_atomic_block(pair)?;
                     unimarkup.blocks.append(&mut atomic_blocks);
@@ -88,7 +96,7 @@ pub fn parse_unimarkup(um_file: &Path) -> Result<UnimarkupFile, UmError> {
     }
 
     let metadata = Metadata {
-        file: um_file.into(),
+        file: config.um_file.clone(),
         preamble: String::new(),
         kind: MetadataKind::Root,
         namespace: ".".to_string(),

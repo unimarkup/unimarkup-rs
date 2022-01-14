@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 
 use clap::{crate_version, ArgEnum, Parser};
+use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
 use crate::um_elements::types::UnimarkupType;
@@ -10,7 +11,7 @@ use crate::um_elements::types::UnimarkupType;
 const UNIMARKUP_NAME: &str = "Unimarkup";
 
 /// Config contains the possible options for the Unimarkup configuration.
-#[derive(Debug, PartialEq, Clone, Parser)]
+#[derive(Debug, PartialEq, Clone, Parser, Default, Serialize, Deserialize)]
 #[clap(name = UNIMARKUP_NAME, version = crate_version!())]
 pub struct Config {
     /// The filename of the Unimarkup file that is used as root for rendering.
@@ -21,6 +22,7 @@ pub struct Config {
         takes_value = true,
         parse(from_os_str)
     )]
+    #[serde(skip)]
     pub um_file: PathBuf,
 
     /// The filename without filetype to be used for output filenames. If a path is part of the filename, output files are saved at the given path.
@@ -30,6 +32,8 @@ pub struct Config {
         takes_value = true,
         parse(from_os_str)
     )]
+    #[serde(alias = "OUTPUT-FILE")]
+    #[serde(default)]
     pub out_file: Option<PathBuf>,
 
     /// Set output formats the Unimarkup document should be rendered to. Set outputs are also treated as flags inside the Unimarkup document.
@@ -42,6 +46,9 @@ pub struct Config {
         use_delimiter = true,
         arg_enum
     )]
+    #[serde(alias = "output-formats")]
+    #[serde(alias = "formats")]
+    #[serde(default)]
     pub out_formats: Option<Vec<OutputFormat>>,
 
     /// Set paths that are searched for relative file and image inserts.
@@ -52,6 +59,8 @@ pub struct Config {
         use_delimiter = true,
         parse(from_os_str)
     )]
+    #[serde(alias = "insert-paths")]
+    #[serde(default)]
     pub insert_paths: Option<Vec<PathBuf>>,
 
     /// Set the path to a directory that is used for default preamble and theme settings.
@@ -64,6 +73,9 @@ pub struct Config {
         env = "UNIMARKUP_CONFIG",
         parse(from_os_str)
     )]
+    #[serde(alias = "dot-unimarkup")]
+    #[serde(alias = "config")]
+    #[serde(default)]
     pub dot_unimarkup: Option<PathBuf>,
 
     /// Set a Unimarkup theme file to be used for rendering.
@@ -74,6 +86,8 @@ pub struct Config {
         takes_value = true,
         parse(from_os_str)
     )]
+    #[serde(alias = "theme")]
+    #[serde(default)]
     pub theme: Option<PathBuf>,
 
     /// Set flags that will be set for rendering.
@@ -84,6 +98,8 @@ pub struct Config {
         takes_value = true,
         use_delimiter = true
     )]
+    #[serde(alias = "flags")]
+    #[serde(default)]
     pub flags: Option<Vec<String>>,
 
     /// Explicitly set Unimarkup block elements that can be used inside the given Unimarkup document.
@@ -95,6 +111,8 @@ pub struct Config {
         use_delimiter = true,
         arg_enum
     )]
+    #[serde(alias = "enable-elements")]
+    #[serde(default)]
     pub enable_elements: Option<Vec<UnimarkupType>>,
 
     /// Explicitly set Unimarkup block elements that can NOT be used inside the given Unimarkup document.
@@ -106,6 +124,8 @@ pub struct Config {
         use_delimiter = true,
         arg_enum
     )]
+    #[serde(alias = "disable-elements")]
+    #[serde(default)]
     pub disable_elements: Option<Vec<UnimarkupType>>,
 
     /// Set citation style sheet that is used to process referenced literature
@@ -117,6 +137,9 @@ pub struct Config {
         requires = "references",
         parse(from_os_str)
     )]
+    #[serde(alias = "citation-style")]
+    #[serde(alias = "csl")]
+    #[serde(default)]
     pub citation_style: Option<PathBuf>,
 
     /// Set one or more reference files in bibtex or JSON format to use them with literature referencing.
@@ -129,6 +152,9 @@ pub struct Config {
         requires = "citation-style",
         parse(from_os_str)
     )]
+    #[serde(alias = "references")]
+    #[serde(alias = "refs")]
+    #[serde(default)]
     pub references: Option<Vec<PathBuf>>,
 
     /// Set ttf or woff fonts to be able to use them for rendering
@@ -141,6 +167,10 @@ pub struct Config {
         use_delimiter = true,
         parse(from_os_str)
     )]
+    #[serde(alias = "fonts")]
+    #[serde(alias = "ttf")]
+    #[serde(alias = "woff")]
+    #[serde(default)]
     pub fonts: Option<Vec<PathBuf>>,
 
     /// Overwrites files set with `out-file` if already existing.
@@ -150,14 +180,21 @@ pub struct Config {
         long = "overwrite-out-files",
         takes_value = false
     )]
+    #[serde(alias = "overwrite-out-files")]
+    #[serde(default)]
     pub overwrite_out_files: bool,
 
     /// Deletes all previously rendered documents stored inside the UNIMARKUP_CONFIG path.
     #[clap(display_order = 2, short = 'c', long = "clean", takes_value = false)]
+    #[serde(alias = "clean")]
+    #[serde(alias = "c")]
+    #[serde(default)]
     pub clean: bool,
 
     /// Ignores all previously rendered documents stored inside the UNIMARKUP_CONFIG path and renders the given Unimarkup file.
     #[clap(display_order = 3, short = 'r', long = "rebuild", takes_value = false)]
+    #[serde(alias = "rebuild")]
+    #[serde(default)]
     pub rebuild: bool,
 
     /// Set if preamble of given Unimarkup file is replaced with the given arguments.
@@ -168,6 +205,7 @@ pub struct Config {
         requires = "output-formats",
         takes_value = false
     )]
+    #[serde(skip)]
     pub replace_preamble: bool,
 
     /// This prefix will be set before inserts in the rendered document to inserts that use relative paths.
@@ -179,6 +217,9 @@ pub struct Config {
         takes_value = true,
         parse(from_os_str)
     )]
+    #[serde(alias = "relative-insert-prefix")]
+    #[serde(alias = "insert-prefix")]
+    #[serde(default)]
     pub relative_insert_prefix: Option<PathBuf>,
 
     /// Set a template html file with `{{ head }}` set inside the `head` element and `{{ body }}` set inside the body element.
@@ -190,6 +231,8 @@ pub struct Config {
         takes_value = true,
         parse(from_os_str)
     )]
+    #[serde(alias = "html-template")]
+    #[serde(default)]
     pub html_template: Option<PathBuf>,
 
     /// Set the mathmode of MathJax to be used for rendered html documents.
@@ -199,15 +242,21 @@ pub struct Config {
         takes_value = true,
         arg_enum
     )]
+    #[serde(alias = "html-mathmode")]
+    #[serde(default)]
     pub html_mathmode: Option<HtmlMathmode>,
 
     /// Set if svgs should be embedded into html instead of inserted as regular images.
     #[clap(display_order = 40, long = "html-embed-svg", takes_value = false)]
+    #[serde(alias = "html-embed-svg")]
+    #[serde(default)]
     pub html_embed_svg: bool,
 }
 
 /// Possible output formats for a Unimarkup file
-#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
+#[derive(
+    Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+)]
 pub enum OutputFormat {
     /// PDF output format
     #[strum(ascii_case_insensitive)]
@@ -229,7 +278,9 @@ pub enum OutputFormat {
 }
 
 /// Possible modes for rendering math formulas in HTML
-#[derive(Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display)]
+#[derive(
+    Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+)]
 pub enum HtmlMathmode {
     /// Render math as SVG
     #[strum(ascii_case_insensitive)]
