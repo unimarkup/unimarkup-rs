@@ -1,14 +1,15 @@
-use std::path::Path;
+use unimarkup_rs::frontend::parser;
+use unimarkup_rs::middleend::ContentIrLine;
+use unimarkup_rs::um_elements::types;
+use unimarkup_rs::um_error::UmError;
 
-pub use super::umblock_tests::*;
-use unimarkup_rs::{
-    frontend::parser, middleend::ContentIrLine, um_elements::types, um_error::UmError,
-};
+use super::umblock_tests::*;
 
 #[test]
 fn valid_heading() -> Result<(), UmError> {
     //heading1.um
-    let um_blocks = parser::parse_unimarkup(Path::new("tests/test_files/frontend/heading1.um"))?;
+    let um_blocks =
+        parser::parse_unimarkup(&mut get_config("tests/test_files/frontend/heading1.um"))?;
     loop_through_ir_lines(&um_blocks, heading1_expected_result());
 
     Ok(())
@@ -17,7 +18,7 @@ fn valid_heading() -> Result<(), UmError> {
 #[test]
 fn valid_line_number_heading() -> Result<(), UmError> {
     //heading_line_number.um
-    let um_blocks = parser::parse_unimarkup(Path::new(
+    let um_blocks = parser::parse_unimarkup(&mut get_config(
         "tests/test_files/frontend/heading_line_number.um",
     ))?;
     loop_through_ir_lines(&um_blocks, heading_line_number_expected_result());
@@ -28,8 +29,9 @@ fn valid_line_number_heading() -> Result<(), UmError> {
 #[test]
 fn valid_multi_line_heading() -> Result<(), UmError> {
     //multiline_headings.um
-    let um_blocks =
-        parser::parse_unimarkup(Path::new("tests/test_files/frontend/multiline_headings.um"))?;
+    let um_blocks = parser::parse_unimarkup(&mut get_config(
+        "tests/test_files/frontend/multiline_headings.um",
+    ))?;
     loop_through_ir_lines(&um_blocks, multiline_headings_expected_result());
 
     Ok(())

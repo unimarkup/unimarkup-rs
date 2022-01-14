@@ -1,4 +1,9 @@
-use unimarkup_rs::{middleend::ContentIrLine, um_elements::types::UnimarkupFile};
+use clap::StructOpt;
+use unimarkup_rs::{config::Config, middleend::ContentIrLine, um_elements::types::UnimarkupFile};
+
+pub fn get_config(path: &str) -> Config {
+    Config::parse_from(vec!["unimarkup", "--output-formats=html", path])
+}
 
 /// [`loop_through_ir_lines`] is a public function to loop through the generated ir_lines and assert them with the expected output
 pub fn loop_through_ir_lines(um_file: &UnimarkupFile, mut blocks_vector: Vec<ContentIrLine>) {
