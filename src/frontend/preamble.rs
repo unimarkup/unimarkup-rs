@@ -21,7 +21,7 @@ pub fn parse_preamble(pairs: Pair<Rule>, config: &mut Config) -> Result<(), UmEr
     }
     if preamble.as_rule() == Rule::yaml_body {
         if let Ok(preamble_config) = serde_yaml::from_str::<Config>(preamble.as_str()) {
-            Config::merge(config, preamble_config);
+            config.merge(preamble_config);
         } else {
             return Err(UmError::custom_pest_error(
                 "Expected YAML",
