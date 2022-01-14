@@ -1,9 +1,282 @@
 ;;;
 {
-  "dot-unimarkup" : "tests/test_files/",
 	"preamble-option" : "yes"
 }
 ;;;
 
 # Header 1 - "Basics"
 ## Subheader containing inline formatting
+
+Some paragraph text with possible inline formatting: *italic*, **bold**, __underlined text__,
+^_overlined text^_, ~~strike through text~~, ^superscripted text^, _subscripted text_, `verbatim text`,
+||highlighted text||, ""quoted text"".
+
+Some special inline formatting: $\frac{1}{n}$, A paragraph with [grouped text]{ "size" : "20pt" }. Also grouping within one w[or]{ "color" : "rgb(255,0,0)" }d is possible.
+`verbatim text`{"highlighter":"markdown"}
+
+## Hyperlinks
+
+Paragraph with several hyperlinks
+[Text represented as hyperlink](/some/url)
+[Explicit hyperlink text for some element](#element-id)
+[Hyperlink with an explicit title](some-url){ "title" : "Explicit hyperlink title" }
+[https://github.com/]()
+[Requirements.md#stick-to-unimarkup]
+
+## Emoji + Arrows
+
+A text with an emoji :D in it! Using ::monocle_face::'s emoji shortcut.
+
+A text --> using an arrow!
+
+# Header 2 - Stepping up
+## Referencing { "id" : "ref-heading" }
+
+Referencing a footnote [^^footnote-id]_ [^^myFootnote]_.
+
+_[^^footnote-id] Here is the content of the footnote
+_[^^myFootnote] A note
+_ may span several
+_ lines, but new lines must be added\
+_ explicitly by a backslash at the end of a line.
+_
+_ A blank footnote line between creates another paragraph.
+
+This text has some literature reference [&&literature-id]_.
+This text has more than one literature reference [&&id-1&&id-2]_.
+
+A paragraph that references [##ref-heading]_.
+
+Some text using an [::abbr]_. 
+
+Text using abbreviations [::xml]_, [::html]_ and [::OPC UA TSN]_.
+
+[::mult]_{ "display" : "replace" }
+
+
+_[::abbr] Abbreviation
+
+_[::mult] Abbreviation
+_ spanning multiple lines\
+_ Backslash at end creates a rendered new line!
+
+_[::xml] Extensible Markup Language
+_[::html] Hypertext Markup Language
+
+Direct Unicode: &U+1F642;
+
+# Header 3 - Blocks
+
+- Main list entry
+  - Two spaces before the list start mark a nested list
+    - Another two mark a nested list of a nested list. And so on.
+  - This is again only the nested list of the main list
+
+  This text is part of the main list entry
+
+This is some independent paragraph.
+
+1. Start of numbered list
+  1. Sub numbered list
+
+1. Second entry in numbered list
+
+  Paragraph for this numbered list
+
+  Other paragraph for this numbered list
+
+  ~~~
+  Verbatim block for this numbered list
+  ~~~
+
+  1. Sub numbered list
+
+    Paragraph for this sub numbered list
+
+rI. Numbered list with capital roman symbols
+  rI. Sub numbered list with capital roman symbols
+
+Ri. Numbered list with lower roman symbols
+  Ri. Sub numbered list with lower roman symbols
+
+a. Numbered list with latin symbols
+  a. Sub numbered list with latin symbols
+
+a. Numbered list with latin symbols
+  a. Sub numbered list with latin symbols {<numbered list entry attributes>}
+
+1. Numbered list with id
+  1. Sub numbered list indented 2 spaces
+{ "id" : "numbered-list-id" }
+
+Paragraph not for a numbered list
+
+1. Numbered list with text
+  that spans multiple lines
+  but new lines are treated as spaces
+
+{@breakLists}
+
+1. Macro above defines this as new numbered list
+
+1. Numbered list
+  1.1. Sub numbered list where the first number is for the parent numbered list
+    1.1.1. Sub-sub numbered list
+    
+      Paragraph for the sub-sub numbered list
+
+
+1) Numbered list with different style
+  1)1) Sub list with parent number
+1) Second element of this list
+1. doesn't create a new list, but treats it as the paragraph of the element above
+
+(a) Numberbered list
+  (a)(a) Sub numbered list with parent number
+
+3. Numbered list starting at specific number
+3. Numbered list element that gets incremented automatically
+
+---
+
+-[/] Failed task
+-[] Nested task with status = fail
+  -[x] Completed task
+  -[x] Another one completed
+  -[/] Failed task
+  -[a] Active task
+  -[ ] Open task
+-[] Nested task with status = hold
+  -[h] Completed task
+  -[a] Active task
+  -[ ] Open task
+
+---
+
+- Definition ...--With a class-- And here is the description
+
+---
+
+> Block quote
+> with new lines
+> *treated* as spaces
+> as with normal paragraphs
+> and other **inline formatting** syntax is also possible 
+>
+> > Nested block quote\
+> > A backslash at the end of a line creates a new line.
+> >
+> >-- Author
+
+---
+
+| Text where *spaces* are preserved as is.
+|    All other **markup** however, is considered as **Unimarkup text**.
+
+| A verbatim block may be used inside a line block
+|
+| ~~~
+| Some verbatim text
+| ~~~
+
+---
+
+: New definition term :
+:-- Classifier for this term
+:
+: Paragraph 1
+:
+: Paragraph 2
+
+---
+
+# Super heavy
+
++--+-+--+
+| Top left column of table | 1/2 length | same length as top left |
++-------+
+
++=+=+
+| Header column 1 | Header column 2 |
++-+-+
+| Normal column 1 | Normal column 2 |
++---+
+
++=+-+
+| Header column | Normal column |
++=+-+
+| Header column | Normal column |
++---+
+
++-+-+
+| Multi row | row 1 |
++ +-+
+| paragraph | row 2 |
++---+
+
++-+-+
+| multi row | also multi row |
+| for column1 | for column2 |
++---+
+
++:-+:-:+-:+
+| left alignment with `+:--+` | center alignment with `+:--:+` | right alignment with `+--:+` | 
++_+_+_+
+| footer1 | footer2 | footer3 |
++---------+
+
+'''mermaid
+graph TB
+    A & B--> C & D
+'''
+
+$$$
+x = \frac{3}{4}
+$$$
+
+!!![some image](<image url>).
++++
+Image caption that shows something.
++++
+
+[[[{ "id" : "main-text-block-content"}
+A nested text block
+]]]
+
+|||
+This content is part of the **first** column.
+
+:::
+
+This content is part of the **second** column
+
+:::
+
+This content is part of the **third** column
+|||
+
+|||2| 
+This content may have any form of unimarkup content. It is automatically split into two columns.
+
+# Header
+
+- Bullet list
+- Inside a column block
+
+# Header2
+
+Some *more* text.
+|||#|
+
+===
+Title for a table
+===
++-+-+
+| table | row |
++-+-+
+
+Page break following
+
+:::
+
+**** and finally a comment
