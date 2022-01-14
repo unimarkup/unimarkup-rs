@@ -11,7 +11,7 @@ pub fn parse_preamble(pairs: Pair<Rule>, config: &mut Config) -> Result<(), UmEr
 
     if preamble.as_rule() == Rule::json_body {
         if let Ok(preamble_config) = serde_json::from_str::<Config>(preamble.as_str()) {
-            Config::merge(config, preamble_config);
+            config.merge(preamble_config);
         } else {
             return Err(UmError::custom_pest_error(
                 "Expected JSON",
