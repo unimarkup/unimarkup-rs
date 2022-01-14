@@ -36,12 +36,14 @@ atomic_block = { (!blank_line ~ ANY)+ }
 
 // ****** HEADINGS ******
 heading_start = @{ um_newline? ~ "#"{1,6} ~ um_nbsp }
-heading_content = { ( !( um_newline ~ heading_start ) ~ ANY )+ ~ um_newline? }
-heading = { heading_start ~ heading_content }
+heading_content = { ( !( um_newline ~ ( heading_start | ( um_nbsp* ~ attributes ) ) ) ~ ANY )+ }
+heading = { heading_start ~ heading_content ~ um_nbsp* ~ um_newline? ~ ( um_nbsp* ~ attributes ~ um_newline* )? }
 headings = { heading+ }
 
 // ****** PARAGRAPH ******
-paragraph = { ANY+ }
+par_attr  = _{ um_newline ~ um_nbsp* ~ attributes }
+par_content = { (!par_attr ~ ANY )+ }
+paragraph = {  par_content  ~ par_attr? }
 
 // ****** INLINE FORMATTING ******
 escaped = { "\\" }
@@ -69,7 +71,13 @@ verbatim_inline = { PUSH(verbatim_delim) ~ inline_body ~ POP }
 verbatim_lang    = { ( !( PEEK | ( um_nbsp* ~ um_newline ) ) ~ ANY )+ }
 verbatim_content = { ( !verbatim_end ~ ANY)+ }
 verbatim_end     = @{ um_newline ~ PEEK }
-verbatim         = { PUSH(verbatim_delimiter) ~ verbatim_lang? ~ ( um_nbsp* ~ um_newline ) ~ verbatim_content ~ verbatim_end }
+verbatim_attrs   = _{ um_nbsp* ~ attributes }
+verbatim         = { PUSH(verbatim_delimiter) ~ ( verbatim_attrs | verbatim_lang )? ~ ( um_nbsp* ~ um_newline ) ~ verbatim_content ~ verbatim_end }
+
+// ****** ATTRIBUTES ******
+// Note: Actual parsing is done in code using serde_json
+attr_body = { ( ( !( "{" | "}" ) ~ ( ANY ) ) | attributes )+ }
+attributes = @{ "{" ~ attr_body ~ "}" }
 
 // ****** PREAMBLE ******
 preamble_delimiter = _{ ";;;" }

@@ -28,12 +28,7 @@ pub fn run(connection: &mut Connection, config: &mut Config) -> Result<(), UmErr
     let transaction = connection.transaction();
 
     if let Ok(transaction) = transaction {
-        for block in unimarkup.blocks {
-            for ir_line in block.as_ir_lines() {
-                //TODO: add filename to id
-                ir_line.write_to_ir(&transaction)?;
-            }
-        }
+        unimarkup.blocks.write_to_ir(&transaction)?;
 
         for metadata in unimarkup.metadata {
             metadata.write_to_ir(&transaction)?;

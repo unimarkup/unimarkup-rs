@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use pest::iterators::Pairs;
 use serde::{Deserialize, Serialize};
@@ -55,6 +55,21 @@ impl UmParse for VerbatimBlock {
                     block.content = String::from(rule.as_str().trim());
                 }
                 Rule::verbatim_delimiter | Rule::verbatim_end => continue,
+                Rule::attributes => {
+                    let attributes: HashMap<&str, &str> = serde_json::from_str(rule.as_str())
+                        .map_err(|_| {
+                            UmError::custom_pest_error(
+                                "Arguments are not valid JSON",
+                                rule.as_span(),
+                            )
+                        })?;
+
+                    if let Some(&id) = attributes.get("id") {
+                        block.id = String::from(id);
+                    }
+
+                    block.attributes = serde_json::to_string(&attributes).unwrap();
+                }
                 other => {
                     use pest::error;
 
@@ -329,10 +344,36 @@ mod tests {
     }
 
     mod um_parse {
+        use std::collections::HashMap;
+
         use super::*;
 
         #[test]
         fn parse() -> Result<(), UmError> {
+            let input = "~~~
+                            fn main() {
+                                println!(\"Hello World!\");
+                            }\n~~~";
+
+            let expected_text = r#"fn main() {
+                                println!("Hello World!");
+                            }"#;
+
+            let expected_line = ContentIrLine::new(
+                "verbatim-1",
+                1,
+                UnimarkupType::VerbatimBlock.to_string(),
+                expected_text,
+                "",
+                "",
+                "",
+            );
+
+            try_parse(input, expected_line)
+        }
+
+        #[test]
+        fn parse_with_lang() -> Result<(), UmError> {
             let input = "~~~rust
                             fn main() {
                                 println!(\"Hello World!\");
@@ -356,6 +397,35 @@ mod tests {
         }
 
         #[test]
+        fn parse_with_attrs() -> Result<(), UmError> {
+            let input = "~~~{ \"language\": \"rust\", \"id\": \"custom-id\" }
+                            fn main() {
+                                println!(\"Hello World!\");
+                            }\n~~~";
+
+            let expected_text = r#"fn main() {
+                                println!("Hello World!");
+                            }"#;
+
+            let mut expected_attrs = HashMap::new();
+
+            expected_attrs.insert("id", "custom-id");
+            expected_attrs.insert("language", "rust");
+
+            let expected_line = ContentIrLine::new(
+                "custom-id",
+                1,
+                UnimarkupType::VerbatimBlock.to_string(),
+                expected_text,
+                "",
+                serde_json::to_string(&expected_attrs).unwrap(),
+                "",
+            );
+
+            try_parse(input, expected_line)
+        }
+
+        #[test]
         #[should_panic]
         fn parse_bad() {
             let input = "~~~
@@ -364,7 +434,7 @@ mod tests {
             let _ = try_parse(input, ContentIrLine::default()).unwrap();
         }
 
-        fn try_parse(input: &str, expected_line: ContentIrLine) -> Result<(), UmError> {
+        fn try_parse(input: &str, mut expected_line: ContentIrLine) -> Result<(), UmError> {
             let mut unimarkup = UnimarkupParser::parse(Rule::unimarkup, input).unwrap();
 
             assert_eq!(unimarkup.clone().count(), 1);
@@ -390,15 +460,33 @@ mod tests {
             let list = block_res.unwrap();
             assert_eq!(list.len(), 1);
 
-            let ir_lines = list.get(0).unwrap().as_ir_lines();
+            let mut ir_lines = list.get(0).unwrap().as_ir_lines();
 
             assert_eq!(ir_lines.len(), 1);
 
-            let line = ir_lines.get(0).unwrap();
+            let mut line = ir_lines.pop().unwrap();
 
-            assert_eq!(line, &expected_line);
+            check_lines(&mut line, &mut expected_line);
 
             Ok(())
+        }
+
+        fn check_lines(first: &mut ContentIrLine, second: &mut ContentIrLine) {
+            if !first.attributes.is_empty() {
+                let is_attrs: HashMap<&str, &str> =
+                    serde_json::from_str(&first.attributes).unwrap();
+                let expect_attrs: HashMap<&str, &str> =
+                    serde_json::from_str(&second.attributes).unwrap();
+                assert_eq!(is_attrs, expect_attrs);
+            }
+
+            // test attributes manually because HashMap is not sorted
+            // that makes the test fail depending on the sorting of attributes
+            // even if they contain the same keys with same values
+            first.attributes = String::default();
+            second.attributes = String::default();
+
+            assert_eq!(first, second);
         }
     }
 }

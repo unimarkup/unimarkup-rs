@@ -3,14 +3,16 @@
 use std::fmt;
 
 use clap::ArgEnum;
+use rusqlite::Transaction;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
 use crate::{
     backend::{ParseFromIr, Render},
     frontend::parser::UmParse,
-    middleend::{AsIrLines, ContentIrLine, MacroIrLine, ResourceIrLine, VariableIrLine},
+    middleend::{AsIrLines, ContentIrLine, MacroIrLine, ResourceIrLine, VariableIrLine, WriteToIr},
     um_elements,
+    um_error::UmError,
 };
 
 use super::{HeadingBlock, Metadata, ParagraphBlock};
@@ -20,17 +22,27 @@ pub const DELIMITER: char = '-';
 
 /// Used as a combined trait bound for all Unimarkup Elements.
 pub trait UnimarkupBlock:
-    Render + AsIrLines<ContentIrLine> + UmParse + ParseFromIr + fmt::Debug
+    Render + AsIrLines<ContentIrLine> + UmParse + ParseFromIr + fmt::Debug + WriteToIr
 {
 }
 
 impl<T> UnimarkupBlock for T where
-    T: Render + AsIrLines<ContentIrLine> + Clone + UmParse + ParseFromIr + fmt::Debug
+    T: Render + AsIrLines<ContentIrLine> + Clone + UmParse + ParseFromIr + fmt::Debug + WriteToIr
 {
 }
 
 /// Type alias for a vector of elements that implement the [`UnimarkupBlock`] trait.
 pub type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;
+
+impl WriteToIr for UnimarkupBlocks {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
+        for element in self {
+            element.write_to_ir(ir_transaction)?;
+        }
+
+        Ok(())
+    }
+}
 
 /// Struct representing one Unimarkup file
 #[derive(Default, Debug)]

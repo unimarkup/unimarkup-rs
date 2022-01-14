@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use pest::iterators::{Pair, Pairs};
 use pest::Span;
@@ -112,7 +112,7 @@ pub struct HeadingBlock {
 
 impl HeadingBlock {
     /// Parses a single instance of a heading element.
-    fn parse_single(pair: &Pair<Rule>) -> Self {
+    fn parse_single(pair: &Pair<Rule>) -> Result<Self, UmError> {
         let mut heading_data = pair.clone().into_inner();
 
         let heading_start = heading_data.next().expect("heading rule has heading_start");
@@ -121,21 +121,39 @@ impl HeadingBlock {
             .next()
             .expect("heading rule has heading_content");
 
+        let attributes = match heading_data.next() {
+            Some(attrs_rule) => {
+                let attributes: HashMap<&str, &str> = serde_json::from_str(attrs_rule.as_str())
+                    .map_err(|_| {
+                        UmError::custom_pest_error(
+                            "Attributes are not valid JSON",
+                            attrs_rule.as_span(),
+                        )
+                    })?;
+
+                Some(attributes)
+            }
+            None => None,
+        };
+
         let level = heading_start.as_str().trim().into();
         let (line_nr, _) = heading_start.as_span().start_pos().line_col();
 
         // unwrap() is ok becuase heading grammar guarantees that heading has non-empty content
-        let id = parser::generate_id(heading_content.as_str())
-            .unwrap()
-            .to_lowercase();
+        let id = match attributes {
+            Some(ref attrs) if attrs.get("id").is_some() => attrs.get("id").unwrap().to_string(),
+            _ => parser::generate_id(heading_content.as_str())
+                .unwrap()
+                .to_lowercase(),
+        };
 
-        HeadingBlock {
+        Ok(HeadingBlock {
             id,
             level,
             content: heading_content.as_str().trim().into(),
-            attributes: "{}".into(),
+            attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
             line_nr,
-        }
+        })
     }
 }
 
@@ -154,7 +172,7 @@ impl UmParse for HeadingBlock {
         let (line_nr, _column_nr) = span.start_pos().line_col();
 
         for pair in heading_pairs {
-            let mut heading = Self::parse_single(&pair);
+            let mut heading = Self::parse_single(&pair)?;
             // child line number starts with 1
             // which leads to off by 1 error
             // hence minus 1

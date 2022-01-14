@@ -30,6 +30,19 @@ where
     fn as_ir_lines(&self) -> Vec<T>;
 }
 
+impl<T> WriteToIr for Vec<T>
+where
+    T: WriteToIr,
+{
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
+        for element in self {
+            element.write_to_ir(ir_transaction)?;
+        }
+
+        Ok(())
+    }
+}
+
 /// Used to retrieve a IR line structure from IR.
 pub trait RetrieveFromIr {
     /// Gets the primary key (pk) values of the IR line structure,
