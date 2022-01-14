@@ -1,8 +1,8 @@
 use unimarkup_rs::{middleend::ContentIrLine, um_elements::types::UnimarkupFile};
 
 /// [`loop_through_ir_lines`] is a public function to loop through the generated ir_lines and assert them with the expected output
-pub fn loop_through_ir_lines(um_blocks: &UnimarkupFile, mut blocks_vector: Vec<ContentIrLine>) {
-    for block in &um_blocks.blocks {
+pub fn loop_through_ir_lines(um_file: &UnimarkupFile, mut blocks_vector: Vec<ContentIrLine>) {
+    for block in &um_file.blocks {
         for ir_line in block.as_ir_lines() {
             ir_lines_assert_eq(
                 ir_line,
