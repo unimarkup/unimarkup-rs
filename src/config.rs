@@ -87,7 +87,6 @@ pub struct Config {
         parse(from_os_str)
     )]
     #[serde(alias = "theme")]
-    #[serde(alias = "t")]
     #[serde(default)]
     pub theme: Option<PathBuf>,
 
@@ -100,7 +99,6 @@ pub struct Config {
         use_delimiter = true
     )]
     #[serde(alias = "flags")]
-    #[serde(alias = "f")]
     #[serde(default)]
     pub flags: Option<Vec<String>>,
 
@@ -183,7 +181,6 @@ pub struct Config {
         takes_value = false
     )]
     #[serde(alias = "overwrite-out-files")]
-    #[serde(alias = "w")]
     #[serde(default)]
     pub overwrite_out_files: bool,
 
@@ -197,7 +194,6 @@ pub struct Config {
     /// Ignores all previously rendered documents stored inside the UNIMARKUP_CONFIG path and renders the given Unimarkup file.
     #[clap(display_order = 3, short = 'r', long = "rebuild", takes_value = false)]
     #[serde(alias = "rebuild")]
-    #[serde(alias = "r")]
     #[serde(default)]
     pub rebuild: bool,
 

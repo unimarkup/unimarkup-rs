@@ -1,17 +1,17 @@
-//! [`preamble`](crate::frontend::preamble) is the module which implements
+//! [`preamble`](crate::frontend::preamble) is the module which implements parsing of the preamble and merge the config of the preamble with the CLI arguments.
 
 use crate::{config::Config, frontend::parser::Rule, um_error::UmError};
 
 use pest::iterators::Pair;
 
-/// [`parse_preamble`] parses the preamble and serializes depending if JSON or YAML.#
-/// Then compares the config of the preamble with the CLI and complement arguments from the preamble to the CLI arguments
+///[parse_preamble] parses the preamble and tries to serialize the content given either as JSON or YAML into the [Config] struct.
+///After serialization, the CLI and preamble config structs are merged with CLI taking precedence.
 pub fn parse_preamble(pairs: Pair<Rule>, config: &mut Config) -> Result<(), UmError> {
     let preamble = pairs.into_inner().next().unwrap();
 
     if preamble.as_rule() == Rule::json_body {
-        if let Ok(serialized) = serde_json::from_str::<Config>(preamble.as_str()) {
-            compare_configs(serialized, config);
+        if let Ok(preamble_config) = serde_json::from_str::<Config>(preamble.as_str()) {
+            Config::merge(config, preamble_config);
         } else {
             return Err(UmError::custom_pest_error(
                 "Expected JSON",
@@ -20,8 +20,8 @@ pub fn parse_preamble(pairs: Pair<Rule>, config: &mut Config) -> Result<(), UmEr
         }
     }
     if preamble.as_rule() == Rule::yaml_body {
-        if let Ok(serialized) = serde_yaml::from_str::<Config>(preamble.as_str()) {
-            compare_configs(serialized, config);
+        if let Ok(preamble_config) = serde_yaml::from_str::<Config>(preamble.as_str()) {
+            Config::merge(config, preamble_config);
         } else {
             return Err(UmError::custom_pest_error(
                 "Expected YAML",
@@ -32,59 +32,66 @@ pub fn parse_preamble(pairs: Pair<Rule>, config: &mut Config) -> Result<(), UmEr
     Ok(())
 }
 
-fn compare_configs(preamble: Config, cli: &mut Config) {
-    if cli.out_file.is_none() && preamble.out_file.is_some() {
-        cli.out_file = preamble.out_file;
-    }
-    if cli.out_formats.is_none() && preamble.out_formats.is_some() {
-        cli.out_formats = preamble.out_formats;
-    }
-    if cli.insert_paths.is_none() && preamble.insert_paths.is_some() {
-        cli.insert_paths = preamble.insert_paths;
-    }
-    if cli.dot_unimarkup.is_none() && preamble.dot_unimarkup.is_some() {
-        cli.dot_unimarkup = preamble.dot_unimarkup;
-    }
-    if cli.theme.is_none() && preamble.theme.is_some() {
-        cli.theme = preamble.theme;
-    }
-    if cli.flags.is_none() && preamble.flags.is_some() {
-        cli.flags = preamble.flags;
-    }
-    if cli.enable_elements.is_none() && preamble.enable_elements.is_some() {
-        cli.enable_elements = preamble.enable_elements;
-    }
-    if cli.disable_elements.is_none() && preamble.disable_elements.is_some() {
-        cli.disable_elements = preamble.disable_elements;
-    }
-    if cli.citation_style.is_none() && preamble.citation_style.is_some() {
-        cli.citation_style = preamble.citation_style;
-    }
-    if cli.references.is_none() && preamble.references.is_some() {
-        cli.references = preamble.references;
-    }
-    if cli.fonts.is_none() && preamble.fonts.is_some() {
-        cli.fonts = preamble.fonts;
-    }
-    if !cli.overwrite_out_files && preamble.overwrite_out_files {
-        cli.overwrite_out_files = preamble.overwrite_out_files;
-    }
-    if !cli.clean && preamble.clean {
-        cli.clean = preamble.clean;
-    }
-    if !cli.rebuild && preamble.rebuild {
-        cli.rebuild = preamble.rebuild;
-    }
-    if cli.relative_insert_prefix.is_none() && preamble.relative_insert_prefix.is_some() {
-        cli.relative_insert_prefix = preamble.relative_insert_prefix;
-    }
-    if cli.html_template.is_none() && preamble.html_template.is_some() {
-        cli.html_template = preamble.html_template;
-    }
-    if cli.html_mathmode.is_none() && preamble.html_mathmode.is_some() {
-        cli.html_mathmode = preamble.html_mathmode;
-    }
-    if !cli.html_embed_svg && preamble.html_embed_svg {
-        cli.html_embed_svg = preamble.html_embed_svg;
+impl Config {
+    /// Merges the fields of two [`Config`]s.
+    /// Any field that is `None` is taken from `other` [`Config`] if available.
+    ///
+    /// In other words, the fields of [`Config`] that this method is called on, take precedence over the
+    /// fields of the `other` [`Config`].
+    pub fn merge(&mut self, other: Config) {
+        if self.out_file.is_none() && other.out_file.is_some() {
+            self.out_file = other.out_file;
+        }
+        if self.out_formats.is_none() && other.out_formats.is_some() {
+            self.out_formats = other.out_formats;
+        }
+        if self.insert_paths.is_none() && other.insert_paths.is_some() {
+            self.insert_paths = other.insert_paths;
+        }
+        if self.dot_unimarkup.is_none() && other.dot_unimarkup.is_some() {
+            self.dot_unimarkup = other.dot_unimarkup;
+        }
+        if self.theme.is_none() && other.theme.is_some() {
+            self.theme = other.theme;
+        }
+        if self.flags.is_none() && other.flags.is_some() {
+            self.flags = other.flags;
+        }
+        if self.enable_elements.is_none() && other.enable_elements.is_some() {
+            self.enable_elements = other.enable_elements;
+        }
+        if self.disable_elements.is_none() && other.disable_elements.is_some() {
+            self.disable_elements = other.disable_elements;
+        }
+        if self.citation_style.is_none() && other.citation_style.is_some() {
+            self.citation_style = other.citation_style;
+        }
+        if self.references.is_none() && other.references.is_some() {
+            self.references = other.references;
+        }
+        if self.fonts.is_none() && other.fonts.is_some() {
+            self.fonts = other.fonts;
+        }
+        if !self.overwrite_out_files && other.overwrite_out_files {
+            self.overwrite_out_files = other.overwrite_out_files;
+        }
+        if !self.clean && other.clean {
+            self.clean = other.clean;
+        }
+        if !self.rebuild && other.rebuild {
+            self.rebuild = other.rebuild;
+        }
+        if self.relative_insert_prefix.is_none() && other.relative_insert_prefix.is_some() {
+            self.relative_insert_prefix = other.relative_insert_prefix;
+        }
+        if self.html_template.is_none() && other.html_template.is_some() {
+            self.html_template = other.html_template;
+        }
+        if self.html_mathmode.is_none() && other.html_mathmode.is_some() {
+            self.html_mathmode = other.html_mathmode;
+        }
+        if !self.html_embed_svg && other.html_embed_svg {
+            self.html_embed_svg = other.html_embed_svg;
+        }
     }
 }

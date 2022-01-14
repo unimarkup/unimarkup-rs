@@ -58,8 +58,6 @@ use super::preamble;
 ///
 /// This function will return an [`UmError`], if the given Unimarkup file contains invalid Unimarkup syntax.
 pub fn parse_unimarkup(config: &mut Config) -> Result<UnimarkupFile, UmError> {
-    let um_file = config.um_file.clone();
-
     let source = fs::read_to_string(&config.um_file).map_err(|err| UmError::General {
         msg: String::from("Could not read file."),
         error: Box::new(err),
@@ -98,7 +96,7 @@ pub fn parse_unimarkup(config: &mut Config) -> Result<UnimarkupFile, UmError> {
     }
 
     let metadata = Metadata {
-        file: um_file,
+        file: config.um_file.clone(),
         preamble: String::new(),
         kind: MetadataKind::Root,
         namespace: ".".to_string(),

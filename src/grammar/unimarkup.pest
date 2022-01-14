@@ -19,7 +19,6 @@ unimarkup = { SOI ~ preamble? ~ (unimarkup_block ~ (blank_line | EOI))+ }
 // ****** ENCLOSED BLOCK DELIMITERS ******
 verbatim_delimiter = @{ !"~~~[" ~ "~"{3,} }
 renderer_delimiter = @{ !"'''[" ~ "'"{3,} }
-preamble_delimiter = _{ ";;;" }
 
 // ****** ENCLOSED BLOCK ******
 delimiter = _{ verbatim_delimiter | renderer_delimiter }
@@ -73,6 +72,7 @@ verbatim_end     = @{ um_newline ~ PEEK }
 verbatim         = { PUSH(verbatim_delimiter) ~ verbatim_lang? ~ ( um_nbsp* ~ um_newline ) ~ verbatim_content ~ verbatim_end }
 
 // ****** PREAMBLE ******
+preamble_delimiter = _{ ";;;" }
 preamble_end = { um_newline ~ PEEK }
 preamble_start = _{ PUSH(preamble_delimiter) ~ ( um_nbsp* ~ um_newline+ )}
 preamble = { preamble_start ~ (json_body | yaml_body) ~ preamble_end ~ blank_line }
