@@ -1,10 +1,9 @@
 //! Entry module for unimarkup-rs.
 
-use crate::backend;
-use crate::config::Config;
-use crate::frontend;
-use crate::middleend;
-use crate::um_error::UmError;
+use std::fs;
+
+use unimarkup_core::config::Config;
+use unimarkup_core::error::UmError;
 
 /// Compiles a Unimarkup document.
 ///
@@ -15,11 +14,18 @@ use crate::um_error::UmError;
 /// # Errors
 ///
 /// Returns an [`UmError`], if error occurs during compilation.
-pub fn compile(mut config: Config) -> Result<(), UmError> {
-    let mut connection = middleend::setup_ir_connection()?;
-    middleend::setup_ir(&connection)?;
+pub fn compile(config: Config) -> Result<(), UmError> {
+    let source = fs::read_to_string(&config.um_file).map_err(|err| UmError::General {
+        msg: String::from("Could not read file."),
+        error: Box::new(err),
+    })?;
 
-    frontend::run(&mut connection, &mut config)?;
-    backend::run(&mut connection, &config)?;
+    let _document = unimarkup_core::unimarkup::compile(&source, config)?;
+
+    // let mut connection = middleend::setup_ir_connection()?;
+    // middleend::setup_ir(&connection)?;
+    //
+    // frontend::run(&mut connection, &mut config)?;
+    // backend::run(&mut connection, &config)?;
     Ok(())
 }
