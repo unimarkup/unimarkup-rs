@@ -1,6 +1,6 @@
 use clap::StructOpt;
 use unimarkup_core::{
-    backend::{self, BackendError, Render},
+    backend::{self, Render},
     config::Config,
     elements::{HeadingBlock, HeadingLevel},
     error::UmError,
@@ -36,28 +36,13 @@ fn run() -> Result<(), UmError> {
     let mut out_path = cfg.um_file.clone();
     out_path.set_extension("html");
 
-    backend::run(&mut connection, &cfg)?;
+    let document = backend::run(&mut connection, cfg)?;
 
-    let output = std::fs::read_to_string(&out_path);
+    let html = document.html();
 
-    match output {
-        Ok(content) => {
-            assert_eq!(block.render_html().expect("Block is checked"), content);
-        }
-        _ => {
-            return Err(BackendError::new(format!(
-                "Could not write file to {}",
-                out_path.to_str().unwrap()
-            ))
-            .into())
-        }
-    }
+    let content = html.body();
 
-    assert!(out_path.exists());
-
-    if out_path.exists() {
-        let _ = std::fs::remove_file(out_path);
-    }
+    assert_eq!(block.render_html().expect("Block is checked"), content);
 
     Ok(())
 }

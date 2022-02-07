@@ -2,7 +2,9 @@
 
 use std::fs;
 
-use unimarkup_core::config::Config;
+use log::info;
+use unimarkup_core::backend::BackendError;
+use unimarkup_core::config::{Config, OutputFormat};
 use unimarkup_core::error::UmError;
 
 /// Compiles a Unimarkup document.
@@ -20,12 +22,38 @@ pub fn compile(config: Config) -> Result<(), UmError> {
         error: Box::new(err),
     })?;
 
-    let _document = unimarkup_core::unimarkup::compile(&source, config)?;
+    let out_path = {
+        if let Some(ref out_file) = config.out_file {
+            out_file.clone()
+        } else {
+            let mut in_file = config.um_file.clone();
+            in_file.set_extension("");
 
-    // let mut connection = middleend::setup_ir_connection()?;
-    // middleend::setup_ir(&connection)?;
-    //
-    // frontend::run(&mut connection, &mut config)?;
-    // backend::run(&mut connection, &config)?;
+            in_file
+        }
+    };
+
+    let document = unimarkup_core::unimarkup::compile(&source, config)?;
+
+    if let Some(output_formats) = document.output_formats() {
+        if output_formats.contains(&OutputFormat::Html) {
+            let html = document.html();
+
+            let mut out_path_html = out_path;
+            out_path_html.set_extension("html");
+
+            let out_path = out_path_html.to_str().expect("Validation done in config");
+
+            info!("Writing to {}", out_path);
+
+            std::fs::write(&out_path_html, &html.body()).map_err(|err| {
+                BackendError::new(format!(
+                    "Could not write to file '{}'.\nReason: {}",
+                    out_path, err
+                ))
+            })?;
+        }
+    }
+
     Ok(())
 }
