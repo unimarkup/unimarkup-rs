@@ -1,0 +1,34 @@
+;;;
+{
+	"preamble-option" : "yes"
+}
+;;;
+
+# Header 1 - "Basics"
+## Subheader containing inline formatting
+
+Some paragraph text with possible inline formatting: *italic*, **bold**, __underlined text__,
+^_overlined text^_, ~~strike through text~~, ^superscripted text^, _subscripted text_, `verbatim text`,
+||highlighted text||, ""quoted text"".
+
+## Hyperlinks
+
+# Header 2 - Stepping up
+## Referencing 
+{ "id" : "ref-heading" }
+
+This is a paragraph that has some attributes. The id of this paragraph should 
+be set to "paragraph-with-attributes". Check it out!
+{"id": "paragraph-with-attributes"}
+
+~~~rust
+fn some_function() {
+  println!("With language simply added");
+}
+~~~
+
+~~~ {"language": "rust", "id": "rust-example"}
+fn some_function() {
+  println!("With language in attributes");
+}
+~~~

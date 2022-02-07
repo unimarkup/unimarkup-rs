@@ -145,7 +145,7 @@ fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
 /// # Examples
 ///
 /// ```rust
-/// use unimarkup_rs::frontend::parser::generate_id;
+/// use unimarkup_core::frontend::parser::generate_id;
 ///
 /// let input = "This is some input string";
 /// assert_eq!(generate_id(input).unwrap(), "This-is-some-input-string");
