@@ -1,5 +1,5 @@
 [package]
-name = "unimarkup-inline"
+name = "unimarkup-cli"
 version = "0.3.0"
 edition = "2021"
 
