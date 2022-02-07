@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use clap::StructOpt;
 use unimarkup_core::{config::Config, elements::types::UnimarkupFile, middleend::ContentIrLine};
@@ -7,7 +7,7 @@ pub fn get_config(path: &str) -> Config {
     Config::parse_from(vec!["unimarkup", "--output-formats=html", path])
 }
 
-pub fn get_file_content(path: &PathBuf) -> String {
+pub fn get_file_content(path: &Path) -> String {
     std::fs::read_to_string(path).unwrap()
 }
 

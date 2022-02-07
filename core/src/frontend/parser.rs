@@ -57,7 +57,7 @@ use super::preamble;
 /// This function will return an [`UmError`], if the given Unimarkup file contains invalid Unimarkup syntax.
 pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<UnimarkupFile, UmError> {
     let mut rule_pairs =
-        UnimarkupParser::parse(Rule::unimarkup, &um_content).map_err(|err| UmError::General {
+        UnimarkupParser::parse(Rule::unimarkup, um_content).map_err(|err| UmError::General {
             msg: String::from("Could not parse file!"),
             error: Box::new(err),
         })?;
