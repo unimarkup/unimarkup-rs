@@ -5,10 +5,10 @@ use std::{
 
 use crate::{
     backend::{self, BackendError, ParseFromIr, Render},
+    elements::types::{self, UnimarkupBlocks, UnimarkupType},
+    error::UmError,
     frontend::parser::{self, Rule, UmParse},
     middleend::{AsIrLines, ContentIrLine},
-    um_elements::types::{self, UnimarkupBlocks, UnimarkupType},
-    um_error::UmError,
 };
 
 use pest::iterators::Pairs;
@@ -170,9 +170,9 @@ mod paragraph_tests {
 
     use crate::{
         backend::{ParseFromIr, Render},
+        elements::types::UnimarkupType,
+        error::UmError,
         middleend::ContentIrLine,
-        um_elements::types::UnimarkupType,
-        um_error::UmError,
     };
 
     use super::ParagraphBlock;

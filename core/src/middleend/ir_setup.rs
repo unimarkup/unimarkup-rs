@@ -1,8 +1,8 @@
 use crate::{
+    error::UmError,
     middleend::{
         ContentIrLine, IrError, MacroIrLine, MetadataIrLine, ResourceIrLine, VariableIrLine,
     },
-    um_error::UmError,
 };
 use rusqlite::Connection;
 

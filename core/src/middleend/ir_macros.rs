@@ -1,6 +1,6 @@
 use super::ir::{IrTableName, RetrieveFromIr};
+use crate::error::UmError;
 use crate::middleend::ir::{self, WriteToIr};
-use crate::um_error::UmError;
 use log::info;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
@@ -14,7 +14,7 @@ pub struct MacroIrLine {
     pub parameters: String,
     /// The return type of the macro ([`UnimarkupType`] as [`String`]).
     ///
-    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
+    /// [`UnimarkupType`]: crate::elements::types::UnimarkupType
     pub um_type: String,
     /// Macro definition.
     pub body: String,
@@ -39,7 +39,7 @@ impl MacroIrLine {
     /// * `body` - Macro definition
     /// * `fallback_body` - Alternative macro definition
     ///
-    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
+    /// [`UnimarkupType`]: crate::elements::types::UnimarkupType
     pub fn new(
         name: impl Into<String>,
         parameters: impl Into<String>,

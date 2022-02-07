@@ -1,13 +1,11 @@
 //! [`parser`](crate::frontend::parser) is the module which implements parsing of the Unimarkup syntax
 
 use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
-use pest_derive::Parser;
-use std::fs;
 
-use crate::um_error::UmError;
+use crate::error::UmError;
 use crate::{
     config::Config,
-    um_elements::{
+    elements::{
         types,
         types::{UnimarkupBlocks, UnimarkupFile},
         HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
@@ -30,7 +28,7 @@ pub trait UmParse {
 mod parser_derivation {
     #![allow(missing_docs)]
 
-    use super::*;
+    use pest_derive::Parser;
 
     /// UnimarkupParser which can parse a Unimarkup file into either atomic or enclosed blocks.
     ///
@@ -40,8 +38,8 @@ mod parser_derivation {
     /// and creates an enum Rule. Both the parser and the enum are generated according to
     /// the provided pest grammar. The Rule enum is made of variants which correspond to
     /// the individual rules in the pest grammar.
-    #[derive(Parser)]
     #[allow(missing_docs)]
+    #[derive(Parser)]
     #[grammar = "grammar/unimarkup.pest"]
     pub struct UnimarkupParser;
 }

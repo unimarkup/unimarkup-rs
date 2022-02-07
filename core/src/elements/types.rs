@@ -9,10 +9,10 @@ use strum_macros::EnumString;
 
 use crate::{
     backend::{ParseFromIr, Render},
+    elements,
+    error::UmError,
     frontend::parser::UmParse,
     middleend::{AsIrLines, ContentIrLine, MacroIrLine, ResourceIrLine, VariableIrLine, WriteToIr},
-    um_elements,
-    um_error::UmError,
 };
 
 use super::{HeadingBlock, Metadata, ParagraphBlock};
@@ -317,7 +317,7 @@ macro_rules! impl_from {
 
 impl_from!(Heading from HeadingBlock);
 impl_from!(Paragraph from ParagraphBlock);
-impl_from!(VerbatimBlock from um_elements::VerbatimBlock);
+impl_from!(VerbatimBlock from elements::VerbatimBlock);
 
 #[test]
 fn check_if_converted() {

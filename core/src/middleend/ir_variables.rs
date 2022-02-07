@@ -1,5 +1,5 @@
+use crate::error::UmError;
 use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
-use crate::um_error::UmError;
 use log::info;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
@@ -11,7 +11,7 @@ pub struct VariableIrLine {
     pub name: String,
     /// [`UnimarkupType`] of the variable.
     ///
-    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
+    /// [`UnimarkupType`]: crate::elements::types::UnimarkupType
     pub um_type: String,
     /// The value of the variable.
     pub value: String,
@@ -35,7 +35,7 @@ impl VariableIrLine {
     /// * `value` - The value of the variable
     /// * `fallback_value` - Alternative value of the variable
     ///
-    /// [`UnimarkupType`]: crate::um_elements::types::UnimarkupType
+    /// [`UnimarkupType`]: crate::elements::types::UnimarkupType
     pub fn new(
         name: impl Into<String>,
         um_type: impl Into<String>,

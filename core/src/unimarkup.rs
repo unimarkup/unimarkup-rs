@@ -2,15 +2,15 @@
 
 use crate::backend;
 use crate::config::Config;
+use crate::elements::types::UnimarkupBlocks;
+use crate::error::UmError;
 use crate::frontend;
 use crate::middleend;
-use crate::um_error::UmError;
 
 /// Struct representing a Unimarkup document that can be rendered to supported output formats.
 pub struct UnimarkupDocument {
-    elements: Vec<UnimarkupBlocks>,
+    pub(crate) elements: Vec<UnimarkupBlocks>,
 }
-
 
 /// Compiles Unimarkup content and returns a [`UnimarkupDocument`] representing the given content.
 ///
@@ -21,11 +21,11 @@ pub struct UnimarkupDocument {
 ///
 /// # Errors
 ///
-/// Returns a [`CoreError`], if error occurs during compilation.
-pub fn compile(um_content: &str, mut config: Config) -> Result<UnimarkupDocument, CoreError> {
+/// Returns a [`UmError`], if error occurs during compilation.
+pub fn compile(um_content: &str, mut config: Config) -> Result<UnimarkupDocument, UmError> {
     let mut connection = middleend::setup_ir_connection()?;
     middleend::setup_ir(&connection)?;
 
     frontend::run(um_content, &mut connection, &mut config)?;
-    Ok(backend::run(&mut connection, &config)?);
+    Ok(backend::run(&mut connection, &config)?)
 }

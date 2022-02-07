@@ -4,10 +4,10 @@ use pest::iterators::Pairs;
 use serde::{Deserialize, Serialize};
 
 use crate::backend::{BackendError, ParseFromIr, Render};
+use crate::elements::types::{UnimarkupBlocks, UnimarkupType};
+use crate::error::UmError;
 use crate::frontend::parser::{Rule, UmParse};
 use crate::middleend::{AsIrLines, ContentIrLine};
-use crate::um_elements::types::{UnimarkupBlocks, UnimarkupType};
-use crate::um_error::UmError;
 
 /// Structure of a Unimarkup verbatim block element.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -193,11 +193,11 @@ mod tests {
     use pest::Parser;
 
     use crate::backend::{ParseFromIr, Render};
+    use crate::elements::types::UnimarkupType;
+    use crate::elements::*;
+    use crate::error::UmError;
     use crate::frontend::parser::{Rule, UmParse, UnimarkupParser};
     use crate::middleend::*;
-    use crate::um_elements::types::UnimarkupType;
-    use crate::um_elements::*;
-    use crate::um_error::UmError;
     mod render {
         use super::*;
 

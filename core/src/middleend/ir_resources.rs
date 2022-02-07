@@ -1,5 +1,5 @@
+use crate::error::UmError;
 use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
-use crate::um_error::UmError;
 use log::debug;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};

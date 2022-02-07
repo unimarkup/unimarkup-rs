@@ -6,7 +6,8 @@
 
 use crate::{
     config::{Config, OutputFormat},
-    um_error::UmError,
+    error::UmError,
+    unimarkup::UnimarkupDocument,
 };
 use log::info;
 use rusqlite::Connection;
@@ -69,5 +70,7 @@ pub fn run(connection: &mut Connection, config: &Config) -> Result<UnimarkupDocu
     }
 
     // TODO: return UnimarkupDocument struct instead of writing to file
-    Ok(())
+    Ok(UnimarkupDocument {
+        elements: Vec::default(),
+    })
 }

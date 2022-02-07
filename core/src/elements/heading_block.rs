@@ -5,10 +5,10 @@ use pest::Span;
 use strum_macros::*;
 
 use crate::backend::{self, BackendError, ParseFromIr, Render};
+use crate::elements::types::{self, UnimarkupBlocks, UnimarkupType};
+use crate::error::UmError;
 use crate::frontend::parser::{self, Rule, UmParse};
 use crate::middleend::{AsIrLines, ContentIrLine};
-use crate::um_elements::types::{self, UnimarkupBlocks, UnimarkupType};
-use crate::um_error::UmError;
 
 /// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
@@ -298,9 +298,9 @@ mod heading_tests {
 
     use crate::{
         backend::{ParseFromIr, Render},
+        elements::{heading_block::HeadingLevel, types},
+        error::UmError,
         middleend::ContentIrLine,
-        um_elements::{heading_block::HeadingLevel, types},
-        um_error::UmError,
     };
 
     use super::HeadingBlock;

@@ -1,7 +1,7 @@
 use super::ir::{IrTableName, RetrieveFromIr};
 use super::{AsIrLines, IrError};
+use crate::error::UmError;
 use crate::middleend::ir::{self, WriteToIr};
-use crate::um_error::UmError;
 use log::warn;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 use rusqlite::{Connection, Statement, ToSql};

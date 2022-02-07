@@ -1,5 +1,5 @@
+use crate::error::UmError;
 use crate::middleend::IrError;
-use crate::um_error::UmError;
 use rusqlite::{Error, Row, ToSql, Transaction};
 
 /// Used to get the table name of the given IR line structure

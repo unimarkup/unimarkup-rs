@@ -6,7 +6,7 @@ use clap::{crate_version, ArgEnum, Parser};
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-use crate::{backend::BackendError, um_elements::types::UnimarkupType, um_error::UmError};
+use crate::{backend::BackendError, elements::types::UnimarkupType, error::UmError};
 
 const UNIMARKUP_NAME: &str = "Unimarkup";
 

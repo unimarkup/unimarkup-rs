@@ -1,6 +1,6 @@
 //! [`preamble`](crate::frontend::preamble) is the module which implements parsing of the preamble and merge the config of the preamble with the CLI arguments.
 
-use crate::{config::Config, frontend::parser::Rule, um_error::UmError};
+use crate::{config::Config, error::UmError, frontend::parser::Rule};
 
 use pest::iterators::Pair;
 

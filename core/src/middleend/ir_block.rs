@@ -1,10 +1,10 @@
+use crate::error::UmError;
 use crate::middleend::ir::{self, WriteToIr};
 use crate::middleend::ContentIrLine;
 use crate::middleend::MacroIrLine;
 use crate::middleend::MetadataIrLine;
 use crate::middleend::ResourceIrLine;
 use crate::middleend::VariableIrLine;
-use crate::um_error::UmError;
 use rusqlite::Transaction;
 
 /// IR compatible representation of various Unimarkup Elements such as Blocks, Variables, Macros etc.

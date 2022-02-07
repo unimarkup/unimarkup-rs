@@ -8,7 +8,7 @@ mod syntax_error;
 use rusqlite::Connection;
 pub use syntax_error::SyntaxError;
 
-use crate::{config::Config, middleend::WriteToIr, um_error::UmError};
+use crate::{config::Config, error::UmError, middleend::WriteToIr};
 
 pub mod parser;
 pub mod preamble;
@@ -22,7 +22,11 @@ pub mod preamble;
 /// or if communication with IR fails.
 ///
 /// [`frontend`]: crate::frontend
-pub fn run(um_content: &str, connection: &mut Connection, config: &mut Config) -> Result<(), UmError> {
+pub fn run(
+    um_content: &str,
+    connection: &mut Connection,
+    config: &mut Config,
+) -> Result<(), UmError> {
     let unimarkup = parser::parse_unimarkup(um_content, config)?;
 
     let transaction = connection.transaction();

@@ -4,9 +4,9 @@ use rusqlite::Connection;
 
 use crate::{
     backend::{BackendError, Render},
+    elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock, VerbatimBlock},
+    error::UmError,
     middleend::{self, ContentIrLine},
-    um_elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock, VerbatimBlock},
-    um_error::UmError,
 };
 
 use super::RenderBlock;
@@ -118,7 +118,7 @@ pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, UmError> {
 #[cfg(test)]
 mod loader_tests {
     use super::*;
-    use crate::um_error::UmError;
+    use crate::error::UmError;
 
     #[test]
     fn parse_type() -> Result<(), UmError> {

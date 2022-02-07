@@ -5,7 +5,7 @@ use std::fmt;
 /// It's returned in case, where some operation fails in the [`middleend`] module
 /// of [`unimarkup-rs`], e.g. when communication with the IR fails.
 ///
-/// [`UmError`]: crate::um_error::UmError
+/// [`UmError`]: crate::error::UmError
 /// [`middleend`]: crate::middleend
 #[derive(Debug)]
 pub struct IrError {
