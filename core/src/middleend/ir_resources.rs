@@ -3,7 +3,7 @@ use log::debug;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
-use super::MiddleendError;
+use super::error::MiddleendError;
 
 /// Structure for the resource table representation of the IR
 #[derive(Debug, PartialEq, Default, Clone)]

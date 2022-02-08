@@ -8,10 +8,10 @@ use crate::{
         types,
         types::{UnimarkupBlocks, UnimarkupFile},
         HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
-    }, log_id::{LogId, SetLog}, frontend::ParserWarnLogId,
+    }, log_id::{LogId, SetLog},
 };
 
-use super::{preamble, error::FrontendError, ParserErrLogId};
+use super::{preamble, log_id::{ParserErrLogId, ParserWarnLogId}, error::FrontendError};
 
 /// Used to parse one specific Unimarkup block
 pub trait UmParse {

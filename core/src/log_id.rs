@@ -2,23 +2,25 @@
 
 pub const CORE_GRP: u8 = 0;
 
+// Note: LogSubGrps become obsolete after [https://github.com/rust-lang/rust/issues/60553]() gets into stable
+
 pub enum LogSubGrp {
   General = 0,
   Frontend = 1,
   Middleend = 2,
   Backend = 3,
-  Elements = 4,
+  Element = 4,
+  Config = 5,
 }
 
 enum SubSubGrp {
   General = 0,
-  Config = 1,
 }
 
 pub enum ConfigErrLogId {
-  InvalidFile = get_log_id(CORE_GRP, LogSubGrp::General as u8, SubSubGrp::Config as u8, LogKind::Error, 0),
-  InvalidPath = get_log_id(CORE_GRP, LogSubGrp::General as u8, SubSubGrp::Config as u8, LogKind::Error, 1),
-  InvalidConfig = get_log_id(CORE_GRP, LogSubGrp::General as u8, SubSubGrp::Config as u8, LogKind::Error, 2),
+  InvalidFile = get_log_id(CORE_GRP, LogSubGrp::Config as u8, SubSubGrp::General as u8, LogKind::Error, 0),
+  InvalidPath = get_log_id(CORE_GRP, LogSubGrp::Config as u8, SubSubGrp::General as u8, LogKind::Error, 1),
+  InvalidConfig = get_log_id(CORE_GRP, LogSubGrp::Config as u8, SubSubGrp::General as u8, LogKind::Error, 2),
 }
 
 
@@ -32,6 +34,7 @@ pub type LogId = isize;
 pub const NO_LOG_ID: LogId = 0;
 pub const LOG_KIND_SHIFT: i32 = 16;
 
+#[derive(Debug)]
 pub enum LogKind {
   Error = 3,
   Warn = 2,

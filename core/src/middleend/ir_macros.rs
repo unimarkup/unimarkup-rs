@@ -1,4 +1,4 @@
-use super::MiddleendError;
+use super::error::MiddleendError;
 use super::ir::{IrTableName, RetrieveFromIr};
 use crate::middleend::ir::{self, WriteToIr};
 use log::info;

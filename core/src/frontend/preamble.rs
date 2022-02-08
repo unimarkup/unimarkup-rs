@@ -4,7 +4,7 @@ use crate::{config::Config, frontend::parser::Rule, log_id::{LogId, SetLog}};
 
 use pest::iterators::Pair;
 
-use super::{error::FrontendError, PreambleErrLogId, custom_pest_error};
+use super::{error::{FrontendError, custom_pest_error}, log_id::PreambleErrLogId};
 
 ///[parse_preamble] parses the preamble and tries to serialize the content given either as JSON or YAML into the [Config] struct.
 ///After serialization, the CLI and preamble config structs are merged with CLI taking precedence.

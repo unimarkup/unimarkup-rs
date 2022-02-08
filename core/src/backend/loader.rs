@@ -5,10 +5,10 @@ use rusqlite::Connection;
 use crate::{
     backend::{BackendError, Render},
     elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock, VerbatimBlock},
-    middleend::{self, ContentIrLine}, log_id::{LogId, SetLog}, error::CoreError,
+    middleend::{self, ContentIrLine}, log_id::{LogId, SetLog},
 };
 
-use super::{RenderBlock, LoaderErrLogId};
+use super::{RenderBlock, log_id::LoaderErrLogId};
 
 /// Trait that must be implemented for a [`UnimarkupType`] to be stored in IR
 pub trait ParseFromIr {
@@ -35,7 +35,7 @@ pub trait ParseFromIr {
 pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock>, BackendError> {
     let mut blocks: Vec<Box<dyn Render>> = vec![];
     let mut content_lines: VecDeque<ContentIrLine> =
-        middleend::get_content_lines(connection).map_err(|err| CoreError::from(err))?.into();
+        middleend::get_content_lines(connection)?.into();
 
     while let Some(line) = content_lines.get(0) {
         let um_type = parse_um_type(&line.um_type)?;

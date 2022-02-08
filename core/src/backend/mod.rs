@@ -10,14 +10,15 @@ use rusqlite::Connection;
 mod inline_formatting;
 mod loader;
 mod renderer;
-mod error;
-mod log_id;
 
 pub use inline_formatting::*;
 pub use loader::ParseFromIr;
 pub use renderer::*;
-pub use error::*;
-pub use log_id::*;
+
+use self::error::BackendError;
+
+pub mod error;
+pub mod log_id;
 
 /// Abstract type for elements that implement the [`Render`] trait
 pub type RenderBlock = Box<dyn Render>;

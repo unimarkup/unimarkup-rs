@@ -4,6 +4,8 @@ use unimarkup_core::config::Config;
 
 mod logger;
 mod unimarkup;
+mod error;
+mod log_id;
 
 fn main() {
     logger::init_logger();
@@ -12,7 +14,7 @@ fn main() {
         Ok(config) => {
             match unimarkup::compile(config) {
                 Ok(_) => info!("Done"),
-                Err(err) => error!("Error: {}", err),
+                Err(err) => error!("Error: {:?}", err),
             };
         }
         Err(error) => {

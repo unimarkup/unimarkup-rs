@@ -7,7 +7,7 @@ use crate::backend::BackendError;
 use crate::frontend::parser::{Rule, UnimarkupParser};
 use crate::log_id::{LogId, SetLog};
 
-use super::{Render, InlineErrLogId};
+use super::{Render, log_id::InlineErrLogId};
 /// [`Plain`] is one of the inline formatting types, which contains the raw text as String.
 #[derive(Debug)]
 pub struct Plain {

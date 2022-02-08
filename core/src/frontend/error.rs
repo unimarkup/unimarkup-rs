@@ -1,4 +1,4 @@
-use crate::{log_id::LogId, error::CoreError};
+use crate::{log_id::LogId, error::{CoreError, ConfigError}, middleend::error::MiddleendError, elements::error::ElementError};
 
 #[derive(Debug)]
 pub enum FrontendError {
@@ -8,6 +8,22 @@ pub enum FrontendError {
     Wrapped(LogId),
 }
 
+impl Into<LogId> for FrontendError {
+  fn into(self) -> LogId {
+    match self {
+      FrontendError::General(log_id) => log_id,
+      FrontendError::Parser(log_id) => log_id,
+      FrontendError::Preamble(log_id) => log_id,
+      FrontendError::Wrapped(log_id) => log_id,
+    }
+  }
+}
+
+impl Into<FrontendError> for LogId {
+  fn into(self) -> FrontendError {
+    FrontendError::Wrapped(self)
+  }
+}
 
 impl From<FrontendError> for CoreError {
     fn from(err: FrontendError) -> Self {
@@ -20,15 +36,24 @@ impl From<FrontendError> for CoreError {
     }
 }
 
-impl From<CoreError> for FrontendError {
-  fn from(err: CoreError) -> Self {
-    match err {
-        CoreError::General(log_id) => Self::Wrapped(log_id),
-        CoreError::Frontend(log_id) => Self::Wrapped(log_id),
-        CoreError::Backend(log_id) => Self::Wrapped(log_id),
-        CoreError::Middleend(log_id) => Self::Wrapped(log_id),
-        CoreError::Elements(log_id) => Self::Wrapped(log_id),
-    }
+impl From<MiddleendError> for FrontendError {
+  fn from(err: MiddleendError) -> Self {
+    let log_id: LogId = err.into();
+    log_id.into()
+  }
+}
+
+impl From<ElementError> for FrontendError {
+  fn from(err: ElementError) -> Self {
+    let log_id: LogId = err.into();
+    log_id.into()
+  }
+}
+
+impl From<ConfigError> for FrontendError {
+  fn from(err: ConfigError) -> Self {
+    let log_id: LogId = err.into();
+    log_id.into()
   }
 }
 

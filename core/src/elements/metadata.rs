@@ -3,8 +3,11 @@ use std::path::{Path, PathBuf};
 
 use sha3::{Digest, Sha3_256};
 
-use crate::error::UmError;
-use crate::middleend::{AsIrLines, MetadataIrLine, WriteToIr};
+use crate::log_id::{SetLog, LogId};
+use crate::middleend::{AsIrLines, MetadataIrLine, WriteToIr, error::MiddleendError};
+
+use super::error::MetaDataError;
+use super::log_id::MetaDataErrLogId;
 
 /// Represents a Unimarkup metadata
 #[derive(Debug, Default, Clone)]
@@ -70,19 +73,20 @@ impl From<Metadata> for MetadataIrLine {
 }
 
 impl WriteToIr for Metadata {
-    fn write_to_ir(&self, ir_transaction: &rusqlite::Transaction) -> Result<(), UmError> {
+    fn write_to_ir(&self, ir_transaction: &rusqlite::Transaction) -> Result<(), MiddleendError> {
         let ir_metadata: MetadataIrLine = self.as_ir_lines().pop().unwrap();
         ir_metadata.write_to_ir(ir_transaction)
     }
 }
 
 /// Calculates the sha3-256 hash of a given file
-fn get_filehash(file: &Path) -> Result<Vec<u8>, UmError> {
+fn get_filehash(file: &Path) -> Result<Vec<u8>, MetaDataError> {
     let mut hasher = Sha3_256::new();
-    let source = fs::read_to_string(file).map_err(|err| UmError::General {
-        msg: String::from("Could not read file."),
-        error: Box::new(err),
-    })?;
+    let source = fs::read_to_string(file).map_err(|err| 
+        MetaDataError::General(
+            (MetaDataErrLogId::FailedReadingFile as LogId).set_log(&format!("Could not read file: '{:?}'", file), 
+            file!(), line!()).add_to_log(&format!("Cause: {}", err))
+        ))?;
 
     hasher.update(source);
 

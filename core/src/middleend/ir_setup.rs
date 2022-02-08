@@ -5,7 +5,7 @@ use crate::{
 };
 use rusqlite::Connection;
 
-use super::{MiddleendError, SetupErrLogId};
+use super::{error::MiddleendError, log_id::SetupErrLogId};
 
 /// Creates the [`rusqlite::Connection`] to a in-memory SQLite database.
 ///

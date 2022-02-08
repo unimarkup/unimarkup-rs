@@ -2,7 +2,7 @@ use rusqlite::{Error, Row, ToSql, Transaction};
 
 use crate::log_id::{LogId, SetLog};
 
-use super::{MiddleendError, GeneralErrLogId};
+use super::{error::MiddleendError, log_id::GeneralErrLogId};
 
 /// Used to get the table name of the given IR line structure
 pub trait IrTableName {

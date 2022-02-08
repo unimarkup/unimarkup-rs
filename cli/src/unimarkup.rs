@@ -3,9 +3,9 @@
 use std::fs;
 
 use log::info;
-use unimarkup_core::backend::BackendError;
-use unimarkup_core::config::{Config, OutputFormat};
-use unimarkup_core::error::UmError;
+use unimarkup_core::{config::{Config, OutputFormat}, log_id::{LogId, SetLog}};
+
+use crate::{error::CliError, log_id::GeneralErrLogId};
 
 /// Compiles a Unimarkup document.
 ///
@@ -15,12 +15,15 @@ use unimarkup_core::error::UmError;
 ///
 /// # Errors
 ///
-/// Returns an [`UmError`], if error occurs during compilation.
-pub fn compile(config: Config) -> Result<(), UmError> {
-    let source = fs::read_to_string(&config.um_file).map_err(|err| UmError::General {
-        msg: String::from("Could not read file."),
-        error: Box::new(err),
-    })?;
+/// Returns an [`CliError`], if error occurs during compilation.
+pub fn compile(config: Config) -> Result<(), CliError> {
+    let source = fs::read_to_string(&config.um_file).map_err(|err| 
+        CliError::General(
+            (GeneralErrLogId::FailedReadingFile as LogId)
+            .set_log(&format!("Could not read file: '{:?}'", &config.um_file), file!(), line!())
+            .add_to_log(&format!("Cause: {}", err))
+        )
+    )?;
 
     let out_path = {
         if let Some(ref out_file) = config.out_file {
@@ -46,12 +49,13 @@ pub fn compile(config: Config) -> Result<(), UmError> {
 
             info!("Writing to {}", out_path);
 
-            std::fs::write(&out_path_html, &html.body()).map_err(|err| {
-                BackendError::new(format!(
-                    "Could not write to file '{}'.\nReason: {}",
-                    out_path, err
-                ))
-            })?;
+            std::fs::write(&out_path_html, &html.body()).map_err(|err| 
+                CliError::General(
+                    (GeneralErrLogId::FailedReadingFile as LogId)
+                    .set_log(&format!("Could not write to file: '{:?}'", out_path), file!(), line!())
+                    .add_to_log(&format!("Cause: {}", err))
+                )
+            )?;
         }
     }
 

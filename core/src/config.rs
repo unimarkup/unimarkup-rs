@@ -8,7 +8,7 @@ use strum_macros::EnumString;
 
 use crate::{
     elements::types::UnimarkupType,
-    error::CoreError,
+    error::ConfigError,
     log_id::{ConfigErrLogId, LogId, SetLog},
 };
 
@@ -299,10 +299,10 @@ pub enum HtmlMathmode {
 
 impl Config {
     /// [`validate_config`] validates if file and paths exist and if config does not contradict itself
-    pub fn validate_config(&mut self) -> Result<(), CoreError> {
+    pub fn validate_config(&mut self) -> Result<(), ConfigError> {
         if let Some(ref file) = self.out_file {
             if !file.exists() {
-                return Err(CoreError::General(
+                return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
                         &format!(
                             "Invalid file given for `output-file`: '{}'",
@@ -313,7 +313,7 @@ impl Config {
                     ),
                 ));
             } else if !self.overwrite_out_files {
-                return Err(CoreError::General(
+                return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidConfig as LogId).set_log(
                         "Option `overwrite-out-files` must be `true` if output file exists.",
                         file!(),
@@ -325,7 +325,7 @@ impl Config {
         if let Some(ref paths) = self.insert_paths {
             for path in paths {
                 if !path.exists() {
-                    return Err(CoreError::General(
+                    return Err(ConfigError::General(
                         (ConfigErrLogId::InvalidPath as LogId).set_log(
                             &format!(
                                 "Invalid path given for `insert-paths`: '{}'",
@@ -340,7 +340,7 @@ impl Config {
         }
         if let Some(ref path) = self.dot_unimarkup {
             if !path.is_dir() {
-                return Err(CoreError::General(
+                return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidPath as LogId).set_log(
                         &format!(
                             "Invalid path given for `dot-unimarkup`: '{}'",
@@ -354,7 +354,7 @@ impl Config {
         }
         if let Some(ref file) = self.theme {
             if !file.exists() {
-                return Err(CoreError::General(
+                return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
                         &format!(
                             "Invalid file given for `theme`: '{}'",
@@ -368,7 +368,7 @@ impl Config {
         }
         if let Some(ref file) = self.citation_style {
             if !file.exists() {
-                return Err(CoreError::General(
+                return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
                         &format!(
                             "Invalid file given for `citation-style`: '{}'",
@@ -383,7 +383,7 @@ impl Config {
         if let Some(ref files) = self.references {
             for file in files {
                 if !file.exists() {
-                    return Err(CoreError::General(
+                    return Err(ConfigError::General(
                         (ConfigErrLogId::InvalidFile as LogId).set_log(
                             &format!(
                                 "Invalid file given for `references`: '{}'",
@@ -399,7 +399,7 @@ impl Config {
         if let Some(ref files) = self.fonts {
             for file in files {
                 if !file.exists() {
-                    return Err(CoreError::General(
+                    return Err(ConfigError::General(
                         (ConfigErrLogId::InvalidFile as LogId).set_log(
                             &format!(
                                 "Invalid file given for `fonts`: '{}'",
@@ -414,7 +414,7 @@ impl Config {
         }
         if let Some(ref file) = self.html_template {
             if !file.exists() {
-                return Err(CoreError::General(
+                return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
                         &format!(
                             "Invalid file given for `html-template`: '{}'",
@@ -427,7 +427,7 @@ impl Config {
             }
         }
         if !self.um_file.exists() {
-            return Err(CoreError::General(
+            return Err(ConfigError::General(
                 (ConfigErrLogId::InvalidFile as LogId).set_log(
                     "Set `um-file` does not exist!",
                     file!(),

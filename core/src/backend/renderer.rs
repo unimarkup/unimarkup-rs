@@ -1,4 +1,4 @@
-use crate::backend::BackendError;
+use crate::backend::error::BackendError;
 
 use super::RenderBlock;
 

@@ -1,5 +1,5 @@
 use super::ir::{IrTableName, RetrieveFromIr};
-use super::{AsIrLines, MiddleendError, GeneralErrLogId};
+use super::{AsIrLines, error::MiddleendError, log_id::GeneralErrLogId};
 use crate::log_id::{LogId, SetLog};
 use crate::middleend::ir::{self, WriteToIr};
 use log::warn;

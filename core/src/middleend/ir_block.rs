@@ -6,7 +6,7 @@ use crate::middleend::ResourceIrLine;
 use crate::middleend::VariableIrLine;
 use rusqlite::Transaction;
 
-use super::MiddleendError;
+use super::error::MiddleendError;
 
 /// IR compatible representation of various Unimarkup Elements such as Blocks, Variables, Macros etc.
 #[derive(Debug)]
