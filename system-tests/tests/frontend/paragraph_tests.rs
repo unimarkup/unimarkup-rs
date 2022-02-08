@@ -1,39 +1,32 @@
 use unimarkup_core::elements::types;
-use unimarkup_core::error::UmError;
 use unimarkup_core::frontend::parser;
 use unimarkup_core::middleend::ContentIrLine;
 
 use super::umblock_tests::*;
 
 #[test]
-fn valid_paragraph_with_heading() -> Result<(), UmError> {
+fn valid_paragraph_with_heading() {
     let mut config = get_config("tests/test_files/frontend/paragraph1.um");
     let input = get_file_content(&config.um_file);
     //paragraph1.um
-    let um_blocks = parser::parse_unimarkup(&input, &mut config)?;
+    let um_blocks = parser::parse_unimarkup(&input, &mut config).unwrap();
     loop_through_ir_lines(&um_blocks, paragraph1_expected_result());
-
-    Ok(())
 }
 #[test]
-fn valid_paragraph_with_multi_line_heading() -> Result<(), UmError> {
+fn valid_paragraph_with_multi_line_heading() {
     let mut config = get_config("tests/test_files/frontend/paragraph2.um");
     let input = get_file_content(&config.um_file);
     //paragraph2.um
-    let um_blocks = parser::parse_unimarkup(&input, &mut config)?;
+    let um_blocks = parser::parse_unimarkup(&input, &mut config).unwrap();
     loop_through_ir_lines(&um_blocks, paragraph2_expected_result());
-
-    Ok(())
 }
 #[test]
-fn valid_paragraphs_with_sub_heading() -> Result<(), UmError> {
+fn valid_paragraphs_with_sub_heading() {
     let mut config = get_config("tests/test_files/frontend/paragraph3.um");
     let input = get_file_content(&config.um_file);
     //paragraph3.um
-    let um_blocks = parser::parse_unimarkup(&input, &mut config)?;
+    let um_blocks = parser::parse_unimarkup(&input, &mut config).unwrap();
     loop_through_ir_lines(&um_blocks, paragraph3_expected_result());
-
-    Ok(())
 }
 
 pub fn paragraph1_expected_result() -> Vec<ContentIrLine> {

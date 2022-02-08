@@ -5,7 +5,6 @@ use shlex::Shlex;
 use unimarkup_core::{
     config::{Config, OutputFormat},
     elements::types::UnimarkupType,
-    error::UmError,
 };
 
 fn get_args(options: &str, um_file: &str) -> Vec<String> {
@@ -26,7 +25,7 @@ fn no_arguments_given() {
 }
 
 #[test]
-fn only_required_arguments_to_struct() -> Result<(), UmError> {
+fn only_required_arguments_to_struct() {
     let um_filename = "file.um";
     let cfg: Config = Config::parse_from(get_args("", um_filename));
 
@@ -35,12 +34,10 @@ fn only_required_arguments_to_struct() -> Result<(), UmError> {
         um_filename,
         "Unimarkup filename not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn out_file_option_set() -> Result<(), UmError> {
+fn out_file_option_set() {
     let um_filename = "file.um";
     let out_file = "out_file";
 
@@ -54,12 +51,10 @@ fn out_file_option_set() -> Result<(), UmError> {
         PathBuf::from(out_file),
         "Output file not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn single_output_format() -> Result<(), UmError> {
+fn single_output_format() {
     let um_filename = "file.um";
     let options = "--output-formats=html";
 
@@ -75,12 +70,10 @@ fn single_output_format() -> Result<(), UmError> {
         um_filename,
         "Unimarkup filename not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn multiple_output_formats() -> Result<(), UmError> {
+fn multiple_output_formats() {
     let um_filename = "file.um";
     let options = "--output-formats=html,pdf";
 
@@ -104,12 +97,10 @@ fn multiple_output_formats() -> Result<(), UmError> {
         um_filename,
         "Unimarkup filename not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn insert_path_option_set() -> Result<(), UmError> {
+fn insert_path_option_set(){
     let um_filename = "file.um";
     let insert_path = "~/images";
 
@@ -123,12 +114,10 @@ fn insert_path_option_set() -> Result<(), UmError> {
         PathBuf::from(insert_path),
         "Insert path not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn dot_unimarkup_option_set() -> Result<(), UmError> {
+fn dot_unimarkup_option_set() {
     let um_filename = "file.um";
     let dot_unimarkup = "~/.Unimarkup";
 
@@ -142,12 +131,10 @@ fn dot_unimarkup_option_set() -> Result<(), UmError> {
         PathBuf::from(dot_unimarkup),
         "Dot-Unimarkup path not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn theme_option_set() -> Result<(), UmError> {
+fn theme_option_set() {
     let um_filename = "file.um";
     let theme = "theme_file.um";
 
@@ -161,12 +148,10 @@ fn theme_option_set() -> Result<(), UmError> {
         PathBuf::from(theme),
         "Theme file not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn bad_theme_path() -> Result<(), UmError> {
+fn bad_theme_path() {
     let um_filename = "file.um";
     let theme = "not_existing_theme.um";
 
@@ -176,12 +161,10 @@ fn bad_theme_path() -> Result<(), UmError> {
     let cfg: Config = Config::parse_from(args);
 
     assert!(!cfg.theme.unwrap().exists(), "Theme file should not exist");
-
-    Ok(())
 }
 
 #[test]
-fn flags_option_set() -> Result<(), UmError> {
+fn flags_option_set() {
     let um_filename = "file.um";
     let flag = "test";
 
@@ -191,12 +174,10 @@ fn flags_option_set() -> Result<(), UmError> {
     let cfg: Config = Config::parse_from(args);
 
     assert_eq!(cfg.flags.unwrap()[0], flag, "Flag not set correctly");
-
-    Ok(())
 }
 
 #[test]
-fn enable_elements_option_set() -> Result<(), UmError> {
+fn enable_elements_option_set() {
     let um_filename = "file.um";
     let elements = vec![UnimarkupType::VerbatimBlock, UnimarkupType::DefinitionList];
 
@@ -218,12 +199,10 @@ fn enable_elements_option_set() -> Result<(), UmError> {
         cfg_elements[1], elements[1],
         "Enabled element 2 not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn disable_elements_option_set() -> Result<(), UmError> {
+fn disable_elements_option_set() {
     let um_filename = "file.um";
     let elements = vec![UnimarkupType::VerbatimBlock, UnimarkupType::DefinitionList];
 
@@ -245,8 +224,6 @@ fn disable_elements_option_set() -> Result<(), UmError> {
         cfg_elements[1], elements[1],
         "Disabled element 2 not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
@@ -282,7 +259,7 @@ fn citation_style_set_without_required_options() {
 }
 
 #[test]
-fn reference_options_set() -> Result<(), UmError> {
+fn reference_options_set() {
     let um_filename = "file.um";
     let csl = "apa.csl";
     let refs = "literature.json";
@@ -302,12 +279,10 @@ fn reference_options_set() -> Result<(), UmError> {
         PathBuf::from(refs),
         "References file not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn fonts_option_set() -> Result<(), UmError> {
+fn fonts_option_set() {
     let um_filename = "file.um";
     let font = "myFont.ttf";
 
@@ -321,12 +296,10 @@ fn fonts_option_set() -> Result<(), UmError> {
         PathBuf::from(font),
         "Font file not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn overwrite_out_files_option_set() -> Result<(), UmError> {
+fn overwrite_out_files_option_set() {
     let um_filename = "file.um";
 
     let args = get_args("--overwrite-out-files", um_filename);
@@ -337,12 +310,10 @@ fn overwrite_out_files_option_set() -> Result<(), UmError> {
         cfg.overwrite_out_files,
         "Overwrite-out-files not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn clean_option_set() -> Result<(), UmError> {
+fn clean_option_set() {
     let um_filename = "file.um";
 
     let args = get_args("--clean", um_filename);
@@ -350,12 +321,10 @@ fn clean_option_set() -> Result<(), UmError> {
     let cfg: Config = Config::parse_from(args);
 
     assert!(cfg.clean, "Clean not set correctly");
-
-    Ok(())
 }
 
 #[test]
-fn rebuild_option_set() -> Result<(), UmError> {
+fn rebuild_option_set() {
     let um_filename = "file.um";
 
     let args = get_args("--rebuild", um_filename);
@@ -363,8 +332,6 @@ fn rebuild_option_set() -> Result<(), UmError> {
     let cfg: Config = Config::parse_from(args);
 
     assert!(cfg.rebuild, "Rebuild not set correctly");
-
-    Ok(())
 }
 
 #[test]
@@ -383,7 +350,7 @@ fn replace_preamble_set_without_required_options() {
 }
 
 #[test]
-fn replace_preamble_option_set() -> Result<(), UmError> {
+fn replace_preamble_option_set() {
     let um_filename = "file.um";
     let out_format = "pdf";
 
@@ -393,12 +360,10 @@ fn replace_preamble_option_set() -> Result<(), UmError> {
     let cfg: Config = Config::parse_from(args);
 
     assert!(cfg.replace_preamble, "Replace preamble not set correctly");
-
-    Ok(())
 }
 
 #[test]
-fn relative_insert_prefix_option_set() -> Result<(), UmError> {
+fn relative_insert_prefix_option_set() {
     let um_filename = "file.um";
     let insert_prefix = "subdomain/";
 
@@ -412,12 +377,10 @@ fn relative_insert_prefix_option_set() -> Result<(), UmError> {
         PathBuf::from(insert_prefix),
         "Relative insert prefix not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn html_template_option_set() -> Result<(), UmError> {
+fn html_template_option_set() {
     let um_filename = "file.um";
     let template = "my_template.html";
 
@@ -431,12 +394,10 @@ fn html_template_option_set() -> Result<(), UmError> {
         PathBuf::from(template),
         "Html template not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn html_mathmode_option_set() -> Result<(), UmError> {
+fn html_mathmode_option_set() {
     let um_filename = "file.um";
     let mathmode = unimarkup_core::config::HtmlMathmode::Embed;
 
@@ -450,12 +411,10 @@ fn html_mathmode_option_set() -> Result<(), UmError> {
         mathmode,
         "Html mathmode not set correctly"
     );
-
-    Ok(())
 }
 
 #[test]
-fn html_embed_svg_option_set() -> Result<(), UmError> {
+fn html_embed_svg_option_set() {
     let um_filename = "file.um";
 
     let args = get_args("--html-embed-svg", um_filename);
@@ -463,6 +422,4 @@ fn html_embed_svg_option_set() -> Result<(), UmError> {
     let cfg: Config = Config::parse_from(args);
 
     assert!(cfg.html_embed_svg, "Html embed svg not set correctly");
-
-    Ok(())
 }

@@ -11,6 +11,7 @@ use unimarkup_core::{
 };
 
 #[test]
+#[should_panic]
 fn syntax_error_json() {
     let test_case = ";;;
 {
@@ -28,11 +29,12 @@ fn syntax_error_json() {
         .expect("test")
         .next()
         .unwrap();
-    let err = parse_preamble(pairs, &mut cfg).unwrap_err();
-    assert!(err.to_string().contains("Expected JSON"));
+    
+    parse_preamble(pairs, &mut cfg).unwrap();
 }
 
 #[test]
+#[should_panic]
 fn syntax_error_yaml() {
     let test_case = ";;;
     OUTPUT-FILE: \"output.html\",
@@ -48,8 +50,8 @@ fn syntax_error_yaml() {
         .expect("test")
         .next()
         .unwrap();
-    let err = parse_preamble(pairs, &mut cfg).unwrap_err();
-    assert!(err.to_string().contains("Expected YAML"));
+    
+    parse_preamble(pairs, &mut cfg).unwrap();
 }
 
 #[test]
