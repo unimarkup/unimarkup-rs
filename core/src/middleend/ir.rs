@@ -1,6 +1,8 @@
-use crate::error::UmError;
-use crate::middleend::IrError;
 use rusqlite::{Error, Row, ToSql, Transaction};
+
+use crate::log_id::{LogId, SetLog};
+
+use super::{MiddleendError, GeneralErrLogId};
 
 /// Used to get the table name of the given IR line structure
 pub trait IrTableName {
@@ -17,8 +19,8 @@ pub trait WriteToIr {
     ///
     /// # Errors
     ///
-    /// Returns an [`UmError`], if writing to IR fails.
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError>;
+    /// Returns an [`MiddleendError`], if writing to IR fails.
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError>;
 }
 
 /// Trait to represent a Unimarkup struct as a type that is writable to IR.
@@ -34,7 +36,7 @@ impl<T> WriteToIr for Vec<T>
 where
     T: WriteToIr,
 {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
         for element in self {
             element.write_to_ir(ir_transaction)?;
         }
@@ -67,13 +69,13 @@ pub trait RetrieveFromIr {
 ///
 /// # Errors
 ///
-/// Returns an [`UmError`] if writing an IR line to IR fails.
+/// Returns an [`MiddleendError`] if writing an IR line to IR fails.
 ///
 /// [`Transaction`]: https://docs.rs/rusqlite/latest/rusqlite/struct.Transaction.html
 pub fn write_ir_lines(
     ir_lines: &[impl WriteToIr],
     ir_transaction: &Transaction,
-) -> Result<(), UmError> {
+) -> Result<(), MiddleendError> {
     for ir_line in ir_lines {
         let res = ir_line.write_to_ir(ir_transaction);
         if res.is_err() {
@@ -133,7 +135,7 @@ fn get_nr_values(params: &[&dyn ToSql]) -> String {
 ///
 /// # Errors
 ///
-/// Returns an [`UmError`], if insertion into IR fails.
+/// Returns an [`MiddleendError`], if insertion into IR fails.
 ///
 /// [`Transaction`]: https://docs.rs/rusqlite/latest/rusqlite/struct.Transaction.html
 pub fn insert_ir_line_execute(
@@ -141,7 +143,7 @@ pub fn insert_ir_line_execute(
     sql_table: &str,
     params: &[&dyn ToSql],
     column: &str,
-) -> Result<(), UmError> {
+) -> Result<(), MiddleendError> {
     let sql = format!(
         "INSERT INTO {} VALUES ({})",
         sql_table,
@@ -150,15 +152,13 @@ pub fn insert_ir_line_execute(
 
     let execute_res = ir_transaction.execute(&sql, params);
     if execute_res.is_err() {
-        return Err(IrError::new(
-            sql_table.to_string(),
-            column.to_string(),
-            format!(
-                "Could not insert values on given database connection. Reason: {:?}",
-                execute_res.err()
-            ),
-        )
-        .into());
+        return Err(MiddleendError::General(
+            (GeneralErrLogId::FailedValueInsert as LogId).set_log(
+                &format!("Could not insert values '{}' into table '{}'.",
+                column, sql_table),
+                file!(),
+                line!()
+            ).add_to_log(&format!("Cause: {:?}", execute_res.err()))))
     }
     Ok(())
 }
@@ -178,7 +178,7 @@ pub fn insert_ir_line_execute(
 ///
 /// # Errors
 ///
-/// Returns an [`UmError`], if updating values in IR fails.
+/// Returns an [`MiddleendError`], if updating values in IR fails.
 ///
 /// [`Transaction`]: https://docs.rs/rusqlite/latest/rusqlite/struct.Transaction.html
 pub fn update_ir_line_execute(
@@ -188,7 +188,7 @@ pub fn update_ir_line_execute(
     sql_condition: &str,
     params: &[&dyn ToSql],
     column: &str,
-) -> Result<(), UmError> {
+) -> Result<(), MiddleendError> {
     let sql = format!(
         "UPDATE {} SET {} WHERE {}",
         sql_table, sql_set, sql_condition
@@ -196,15 +196,14 @@ pub fn update_ir_line_execute(
 
     let execute_res = ir_transaction.execute(&sql, params);
     if execute_res.is_err() {
-        return Err(IrError::new(
-            sql_table.to_string(),
-            column.to_string(),
-            format!(
-                "Could not update values on given database connection. Reason: {:?}",
-                execute_res.err()
-            ),
-        )
-        .into());
+        return Err(
+            MiddleendError::General(
+                (GeneralErrLogId::FailedValueUpdate as LogId).set_log(
+                    &format!("Could not update values '{}' for table '{}'.",
+                    column, sql_table),
+                    file!(),
+                    line!()
+                ).add_to_log(&format!("Cause: {:?}", execute_res.err()))));
     }
     Ok(())
 }
@@ -220,13 +219,13 @@ pub fn update_ir_line_execute(
 ///
 /// # Errors
 ///
-/// Returns an [`UmError`], if communication with IR fails.
+/// Returns an [`MiddleendError`], if communication with IR fails.
 ///
 /// [`Transaction`]: https://docs.rs/rusqlite/latest/rusqlite/struct.Transaction.html
 pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName + WriteToIr>(
     ir_transaction: &Transaction,
     pk_condition_params: (String, Vec<&dyn ToSql>),
-) -> Result<T, UmError> {
+) -> Result<T, MiddleendError> {
     let sql = format!(
         "SELECT * FROM {} WHERE {}",
         T::table_name(),
@@ -236,14 +235,14 @@ pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName + WriteToIr>(
     let res_query = ir_transaction.query_row(&sql, params, |row| T::from_ir(row));
 
     res_query.map_err(|err| {
-        IrError::new(
-            T::table_name(),
-            pk_condition_params.0,
-            format!(
-                "Failed getting single IrLine from given database connection. Reason: {:?}",
-                err
-            ),
-        )
-        .into()
+        MiddleendError::General(
+            (GeneralErrLogId::FailedRowQuery as LogId).set_log(
+                &format!("Failed getting single IrLine from table `{}`.",
+                T::table_name()),
+                file!(),
+                line!()
+            )
+            .add_to_log(&format!("PK condition: {}", pk_condition_params.0))
+            .add_to_log(&format!("Cause: {:?}", err)))
     })
 }

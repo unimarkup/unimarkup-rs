@@ -13,13 +13,16 @@ mod ir_metadata;
 mod ir_resources;
 mod ir_setup;
 mod ir_variables;
+mod error;
+mod log_id;
 
 pub use ir::*;
 pub use ir_block::*;
 pub use ir_content::*;
-pub use ir_error::IrError;
 pub use ir_macros::*;
 pub use ir_metadata::*;
 pub use ir_resources::*;
 pub use ir_setup::*;
 pub use ir_variables::*;
+pub use error::*;
+pub use log_id::*;

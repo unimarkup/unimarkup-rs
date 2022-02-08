@@ -1,5 +1,5 @@
+use super::MiddleendError;
 use super::ir::{IrTableName, RetrieveFromIr};
-use crate::error::UmError;
 use crate::middleend::ir::{self, WriteToIr};
 use log::info;
 use rusqlite::ToSql;
@@ -71,7 +71,7 @@ impl MacroIrLine {
 }
 
 impl WriteToIr for MacroIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
         let sql_table = &MacroIrLine::table_name();
         let column_pk = format!("name: {} with parameters: {}", self.name, self.parameters);
         let new_values = params![

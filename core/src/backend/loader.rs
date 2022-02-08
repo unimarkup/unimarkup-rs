@@ -5,7 +5,7 @@ use rusqlite::Connection;
 use crate::{
     backend::{BackendError, Render},
     elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock, VerbatimBlock},
-    middleend::{self, ContentIrLine}, log_id::{LogId, SetLog},
+    middleend::{self, ContentIrLine}, log_id::{LogId, SetLog}, error::CoreError,
 };
 
 use super::{RenderBlock, LoaderErrLogId};
@@ -35,7 +35,7 @@ pub trait ParseFromIr {
 pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock>, BackendError> {
     let mut blocks: Vec<Box<dyn Render>> = vec![];
     let mut content_lines: VecDeque<ContentIrLine> =
-        middleend::get_content_lines(connection)?.into();
+        middleend::get_content_lines(connection).map_err(|err| CoreError::from(err))?.into();
 
     while let Some(line) = content_lines.get(0) {
         let um_type = parse_um_type(&line.um_type)?;

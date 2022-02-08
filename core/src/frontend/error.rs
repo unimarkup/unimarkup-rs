@@ -1,10 +1,11 @@
-use crate::{log_id::{LogId, NO_LOG_ID}, error::CoreError};
+use crate::{log_id::LogId, error::CoreError};
 
 #[derive(Debug)]
 pub enum FrontendError {
     General(LogId),
     Parser(LogId),
     Preamble(LogId),
+    Wrapped(LogId),
 }
 
 
@@ -14,6 +15,7 @@ impl From<FrontendError> for CoreError {
         FrontendError::General(log_id) => CoreError::Frontend(log_id),
         FrontendError::Parser(log_id) => CoreError::Frontend(log_id),
         FrontendError::Preamble(log_id) => CoreError::Frontend(log_id),
+        FrontendError::Wrapped(log_id) => CoreError::Frontend(log_id),
       }
     }
 }
@@ -21,12 +23,15 @@ impl From<FrontendError> for CoreError {
 impl From<CoreError> for FrontendError {
   fn from(err: CoreError) -> Self {
     match err {
-        CoreError::General(log_id) => Self::General(log_id),
-        CoreError::Frontend(log_id) => Self::General(log_id),
-        _ => Self::General(NO_LOG_ID),
+        CoreError::General(log_id) => Self::Wrapped(log_id),
+        CoreError::Frontend(log_id) => Self::Wrapped(log_id),
+        CoreError::Backend(log_id) => Self::Wrapped(log_id),
+        CoreError::Middleend(log_id) => Self::Wrapped(log_id),
+        CoreError::Elements(log_id) => Self::Wrapped(log_id),
     }
   }
 }
+
 
 /// Uses a custom [`pest::error::Error`] to display parsing errors using Pest's pretty print.
 ///

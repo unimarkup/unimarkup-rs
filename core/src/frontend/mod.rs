@@ -10,7 +10,7 @@ mod log_id;
 use rusqlite::Connection;
 pub use syntax_error::SyntaxError;
 
-use crate::{config::Config, middleend::WriteToIr};
+use crate::{config::Config, middleend::WriteToIr, error::CoreError};
 
 use self::error::FrontendError;
 
@@ -38,10 +38,10 @@ pub fn run(
     let transaction = connection.transaction();
 
     if let Ok(transaction) = transaction {
-        unimarkup.blocks.write_to_ir(&transaction)?;
+        unimarkup.blocks.write_to_ir(&transaction).map_err(|err| CoreError::from(err));
 
         for metadata in unimarkup.metadata {
-            metadata.write_to_ir(&transaction)?;
+            metadata.write_to_ir(&transaction).map_err(|err| CoreError::from(err));
         }
 
         let _ = transaction.commit();
