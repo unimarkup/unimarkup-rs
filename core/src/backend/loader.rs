@@ -120,7 +120,7 @@ pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, BackendError> {
                 ),
                 file!(),
                 line!(),
-            ).add_to_log(&format!(
+            ).add_info(&format!(
                 "Cause: {}", err
             )),
         )

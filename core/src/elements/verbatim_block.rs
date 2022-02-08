@@ -95,7 +95,7 @@ impl UmParse for VerbatimBlock {
                     return Err(ElementError::Enclosed(
                         (EnclosedErrLogId::FailedParsing as LogId).set_log(
                             "Could not parse verbatim block.", file!(), line!())
-                            .add_to_log(&format!("Cause: {}", pest_err))
+                            .add_info(&format!("Cause: {}", pest_err))
                     ).into());
                 }
             }
@@ -163,7 +163,7 @@ impl ParseFromIr for VerbatimBlock {
             Err(ElementError::Enclosed(
                 (GeneralErrLogId::FailedBlockCreation as LogId).set_log(
                         "Could not construct VerbatimBlock.", file!(), line!())
-                        .add_to_log("Cause: No content ir line available.")
+                        .add_info("Cause: No content ir line available.")
             ).into())
         }
     }

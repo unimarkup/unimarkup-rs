@@ -54,7 +54,7 @@ impl Html<'_> {
             // FIX: This must change after we move inline formatting
             match try_render {
                 Ok(html) => output.push_str(&html),
-                Err(err) => { let id: LogId = err.into(); id.add_to_log("Failed rendering HTML due to this error!"); },
+                Err(err) => { let id: LogId = err.into(); id.add_info("Failed rendering HTML due to this error!"); },
             }
         }
 

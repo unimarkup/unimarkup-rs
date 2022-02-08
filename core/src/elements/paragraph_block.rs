@@ -59,7 +59,7 @@ impl UmParse for ParagraphBlock {
                                 "Paragraph attributes are not valid JSON.",
                                 attributes.as_span(),
                             ), file!(), line!())
-                            .add_to_log(&format!("Cause: {}", err))
+                            .add_info(&format!("Cause: {}", err))
                     )
                 })?;
 
@@ -131,7 +131,7 @@ impl ParseFromIr for ParagraphBlock {
             Err(ElementError::Atomic(
                 (GeneralErrLogId::FailedBlockCreation as LogId).set_log(
                         "Could not construct ParagraphBlock.", file!(), line!())
-                        .add_to_log("Cause: No content ir line available.")
+                        .add_info("Cause: No content ir line available.")
             ).into())
         }
     }
@@ -152,7 +152,7 @@ impl Render for ParagraphBlock {
             return Err(ElementError::General(
                 (GeneralErrLogId::FailedInlineParsing as LogId)
                 .set_log(&format!("Failed parsing inline formats for paragraph block with id: '{}'", &self.id), file!(), line!())
-                .add_to_log(&format!("Cause: {:?}", try_inline.err()))).into());
+                .add_info(&format!("Cause: {:?}", try_inline.err()))).into());
         }
 
         html.push_str(&try_inline.unwrap().render_html()?);

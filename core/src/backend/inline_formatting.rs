@@ -60,8 +60,8 @@ pub fn parse_inline(source: &str) -> Result<VecDeque<FormatTypes>, BackendError>
     let mut rule_pairs =
         UnimarkupParser::parse(Rule::inline_format, source).map_err(|err| BackendError::General(
             (InlineErrLogId::NoInlineDetected as LogId).set_log("No inline format detected!", file!(), line!())
-            .add_to_log(&format!("Given: {}", source))
-            .add_to_log(&format!("Cause: {}", err))
+            .add_info(&format!("Given: {}", source))
+            .add_info(&format!("Cause: {}", err))
         ))?;
 
     let mut inline_format = VecDeque::<FormatTypes>::new();

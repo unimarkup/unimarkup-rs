@@ -85,7 +85,7 @@ fn get_filehash(file: &Path) -> Result<Vec<u8>, MetaDataError> {
     let source = fs::read_to_string(file).map_err(|err| 
         MetaDataError::General(
             (MetaDataErrLogId::FailedReadingFile as LogId).set_log(&format!("Could not read file: '{:?}'", file), 
-            file!(), line!()).add_to_log(&format!("Cause: {}", err))
+            file!(), line!()).add_info(&format!("Cause: {}", err))
         ))?;
 
     hasher.update(source);

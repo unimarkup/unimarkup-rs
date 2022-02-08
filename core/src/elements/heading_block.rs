@@ -135,7 +135,7 @@ impl HeadingBlock {
                                     "Heading attributes are not valid JSON",
                                     attrs_rule.as_span(),
                                 ), file!(), line!())
-                                .add_to_log(&format!("Cause: {}", err))
+                                .add_info(&format!("Cause: {}", err))
                         )
                     })?;
 
@@ -300,7 +300,7 @@ impl Render for HeadingBlock {
             return Err(ElementError::General(
                 (GeneralErrLogId::FailedInlineParsing as LogId)
                 .set_log(&format!("Failed parsing inline formats for heading block with id: '{}'", &self.id), file!(), line!())
-                .add_to_log(&format!("Cause: {:?}", try_inline.err()))).into());
+                .add_info(&format!("Cause: {:?}", try_inline.err()))).into());
         }
 
         html.push_str(&try_inline.unwrap().render_html()?);

@@ -58,7 +58,7 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Unimarku
     let mut rule_pairs =
         UnimarkupParser::parse(Rule::unimarkup, um_content).map_err(|err| FrontendError::Parser(
             (ParserErrLogId::NoUnimarkupDetected as LogId).set_log("No Unimarkup elements detected!", file!(), line!())
-            .add_to_log(&format!("Content: '{}'", um_content))
+            .add_info(&format!("Content: '{}'", um_content))
         ))?;
 
     let mut unimarkup = UnimarkupFile::default();
@@ -120,7 +120,7 @@ fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, FrontendEr
         (ParserWarnLogId::UnsupportedBlock as LogId).set_log(
             &format!("Unsupported Unimarkup block:\n{}", input.as_str()),
             file!(), line!())
-            .add_to_log("Block is parsed as a Unimarkup paragraph block.");
+            .add_info("Block is parsed as a Unimarkup paragraph block.");
 
         return ParagraphBlock::parse(pairs, input.as_span());
     }

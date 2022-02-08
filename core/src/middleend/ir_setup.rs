@@ -19,7 +19,7 @@ pub fn setup_ir_connection() -> Result<Connection, MiddleendError> {
                 "Could not create a database connection.",
                 file!(),
                 line!()
-            ).add_to_log(&format!("Cause: {}", err))
+            ).add_info(&format!("Cause: {}", err))
         )
     })
 }
@@ -44,7 +44,7 @@ pub fn setup_ir(ir_connection: &Connection) -> Result<(), MiddleendError> {
                 "Could not setup database tables.",
                 file!(),
                 line!()
-            ).add_to_log(&format!("Cause: {}", err))
+            ).add_info(&format!("Cause: {}", err))
         )
     })
 }

@@ -158,7 +158,7 @@ pub fn insert_ir_line_execute(
                 column, sql_table),
                 file!(),
                 line!()
-            ).add_to_log(&format!("Cause: {:?}", execute_res.err()))))
+            ).add_info(&format!("Cause: {:?}", execute_res.err()))))
     }
     Ok(())
 }
@@ -203,7 +203,7 @@ pub fn update_ir_line_execute(
                     column, sql_table),
                     file!(),
                     line!()
-                ).add_to_log(&format!("Cause: {:?}", execute_res.err()))));
+                ).add_info(&format!("Cause: {:?}", execute_res.err()))));
     }
     Ok(())
 }
@@ -242,7 +242,7 @@ pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName + WriteToIr>(
                 file!(),
                 line!()
             )
-            .add_to_log(&format!("PK condition: {}", pk_condition_params.0))
-            .add_to_log(&format!("Cause: {:?}", err)))
+            .add_info(&format!("PK condition: {}", pk_condition_params.0))
+            .add_info(&format!("Cause: {:?}", err)))
     })
 }

@@ -2,7 +2,7 @@ use super::ir::{IrTableName, RetrieveFromIr};
 use super::{AsIrLines, error::MiddleendError, log_id::GeneralErrLogId};
 use crate::log_id::{LogId, SetLog};
 use crate::middleend::ir::{self, WriteToIr};
-use log::warn;
+use crate::middleend::log_id::GeneralWarnLogId;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 use rusqlite::{Connection, Statement, ToSql};
 use std::convert::TryInto;
@@ -115,10 +115,12 @@ impl WriteToIr for ContentIrLine {
         ];
 
         if ir::entry_already_exists(self, ir_transaction) {
-            warn!(
+            (GeneralWarnLogId::EntryOverwritten as LogId)
+            .set_log(&format!(
                 "Content with id: '{}' at line nr: '{}' is overwritten.",
                 self.id, self.line_nr
-            );
+            ), file!(), line!());            
+            
             let sql_condition = "id = ?1 AND line_nr = ?2";
             let sql_set = "um_type = ?3, text = ?4, fallback_text = ?5, attributes = ?6, fallback_attributes = ?7";
             ir::update_ir_line_execute(
@@ -205,7 +207,7 @@ pub fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLin
             "Failed to query content rows from IR.",
             file!(),
             line!()
-        ).add_to_log(&format!("Cause: {}", err))
+        ).add_info(&format!("Cause: {}", err))
     );
 
     let mut rows_statement = prepare_content_rows(connection, true).map_err(convert_err)?;

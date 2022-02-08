@@ -44,33 +44,58 @@ pub enum LogKind {
 
 pub trait SetLog {
   fn set_log(self, msg: &str, filename: &str, line_nr: u32) -> Self;
-  fn add_to_log(self, msg: &str) -> Self;
+  fn add_info(self, msg: &str) -> Self;
+  fn add_debug(self, msg: &str) -> Self;
+  fn add_trace(self, msg: &str) -> Self;
+  fn get_kind(self) -> LogKind;
 }
 
 impl SetLog for LogId {
   fn set_log(self, msg: &str, filename: &str, line_nr: u32) -> LogId {
-    // get LogKind bits
-    let kind = (self >> LOG_KIND_SHIFT) & 3;
+    let kind = self.get_kind();
 
-    if kind == (LogKind::Error as isize) {
-      log::error!("{}: {}", self, msg)
-    } else if kind == (LogKind::Warn as isize) {
-      log::warn!("{}: {}", self, msg)
-    } else if kind == (LogKind::Info as isize) {
-      log::info!("{}: {}", self, msg)
-    } else if kind == (LogKind::Debug as isize) {
-      log::debug!("{}: {}", self, msg)
-    } else {
-      log::trace!("{}: Invalid kind: '{}'", self, kind)
+    match kind {
+        LogKind::Error => log::error!("{}: {}", self, msg),
+        LogKind::Warn => log::warn!("{}: {}", self, msg),
+        LogKind::Info => log::info!("{}: {}", self, msg),
+        LogKind::Debug => log::debug!("{}: {}", self, msg),
     }
   
     log::trace!("{}: Occured in file `{}` at line = {}", self, filename, line_nr);
     self
   }
   
-  fn add_to_log(self, msg: &str) -> LogId {
-    log::debug!("{} (additional info): {}", self, msg);
+  fn add_info(self, msg: &str) -> LogId {
+    log::info!("{}(additional info): {}", self, msg);
     self
+  }
+
+  fn add_debug(self, msg: &str) -> LogId {
+    log::debug!("{}(additional info): {}", self, msg);
+    self
+  }
+
+  fn add_trace(self, msg: &str) -> LogId {
+    log::trace!("{}(additional info): {}", self, msg);
+    self
+  }
+
+  fn get_kind(self) -> LogKind {
+    // get LogKind bits
+    let kind = (self >> LOG_KIND_SHIFT) & 3;
+
+    if kind == (LogKind::Error as isize) {
+      LogKind::Error
+    } else if kind == (LogKind::Warn as isize) {
+      LogKind::Warn
+    } else if kind == (LogKind::Info as isize) {
+      LogKind::Info
+    } else if kind == (LogKind::Debug as isize) {
+      LogKind::Debug
+    } else {
+      log::trace!("{}: Invalid kind: '{}'", self, kind);
+      LogKind::Error
+    }
   }
 }
 

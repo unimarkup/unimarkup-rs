@@ -18,3 +18,13 @@ pub enum SetupErrLogId {
   FailedDatabaseConnection = get_log_id(CORE_GRP, LogSubGrp::Middleend as u8, LogSubSubGrp::Setup as u8, LogKind::Error, 0),
   FailedTableCreation = get_log_id(CORE_GRP, LogSubGrp::Middleend as u8, LogSubSubGrp::Setup as u8, LogKind::Error, 1),
 }
+
+#[derive(Debug)]
+pub enum GeneralInfLogId {
+  EntryOverwritten = get_log_id(CORE_GRP, LogSubGrp::Middleend as u8, LogSubSubGrp::General as u8, LogKind::Info, 0),
+}
+
+#[derive(Debug)]
+pub enum GeneralWarnLogId {
+  EntryOverwritten = get_log_id(CORE_GRP, LogSubGrp::Middleend as u8, LogSubSubGrp::General as u8, LogKind::Warn, 0),
+}

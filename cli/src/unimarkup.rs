@@ -2,10 +2,9 @@
 
 use std::fs;
 
-use log::info;
 use unimarkup_core::{config::{Config, OutputFormat}, log_id::{LogId, SetLog}};
 
-use crate::{error::CliError, log_id::GeneralErrLogId};
+use crate::{error::CliError, log_id::{GeneralErrLogId, GeneralInfLogId}};
 
 /// Compiles a Unimarkup document.
 ///
@@ -21,7 +20,7 @@ pub fn compile(config: Config) -> Result<(), CliError> {
         CliError::General(
             (GeneralErrLogId::FailedReadingFile as LogId)
             .set_log(&format!("Could not read file: '{:?}'", &config.um_file), file!(), line!())
-            .add_to_log(&format!("Cause: {}", err))
+            .add_info(&format!("Cause: {}", err))
         )
     )?;
 
@@ -47,13 +46,14 @@ pub fn compile(config: Config) -> Result<(), CliError> {
 
             let out_path = out_path_html.to_str().expect("Validation done in config");
 
-            info!("Writing to {}", out_path);
+            (GeneralInfLogId::WritingToFile as LogId)
+            .set_log(&format!("Writing to {}", out_path), file!(), line!());
 
             std::fs::write(&out_path_html, &html.body()).map_err(|err| 
                 CliError::General(
-                    (GeneralErrLogId::FailedReadingFile as LogId)
+                    (GeneralErrLogId::FailedWritingFile as LogId)
                     .set_log(&format!("Could not write to file: '{:?}'", out_path), file!(), line!())
-                    .add_to_log(&format!("Cause: {}", err))
+                    .add_info(&format!("Cause: {}", err))
                 )
             )?;
         }
