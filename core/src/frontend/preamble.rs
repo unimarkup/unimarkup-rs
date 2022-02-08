@@ -1,21 +1,25 @@
 //! [`preamble`](crate::frontend::preamble) is the module which implements parsing of the preamble and merge the config of the preamble with the CLI arguments.
 
-use crate::{config::Config, error::UmError, frontend::parser::Rule};
+use crate::{config::Config, frontend::parser::Rule, log_id::{LogId, SetLog}};
 
 use pest::iterators::Pair;
 
+use super::{error::FrontendError, PreambleErrLogId, custom_pest_error};
+
 ///[parse_preamble] parses the preamble and tries to serialize the content given either as JSON or YAML into the [Config] struct.
 ///After serialization, the CLI and preamble config structs are merged with CLI taking precedence.
-pub fn parse_preamble(pairs: Pair<Rule>, config: &mut Config) -> Result<(), UmError> {
+pub fn parse_preamble(pairs: Pair<Rule>, config: &mut Config) -> Result<(), FrontendError> {
     let preamble = pairs.into_inner().next().unwrap();
 
     if preamble.as_rule() == Rule::json_body {
         if let Ok(preamble_config) = serde_json::from_str::<Config>(preamble.as_str()) {
             config.merge(preamble_config);
         } else {
-            return Err(UmError::custom_pest_error(
-                "Expected JSON",
-                preamble.as_span(),
+            return Err(FrontendError::Preamble(
+                (PreambleErrLogId::InvalidJSON as LogId).set_log(
+                    &custom_pest_error(
+                    "Expected valid JSON",
+                    preamble.as_span()), file!(), line!())
             ));
         }
     }
@@ -23,9 +27,11 @@ pub fn parse_preamble(pairs: Pair<Rule>, config: &mut Config) -> Result<(), UmEr
         if let Ok(preamble_config) = serde_yaml::from_str::<Config>(preamble.as_str()) {
             config.merge(preamble_config);
         } else {
-            return Err(UmError::custom_pest_error(
-                "Expected YAML",
-                preamble.as_span(),
+            return Err(FrontendError::Preamble(
+                (PreambleErrLogId::InvalidYAML as LogId).set_log(
+                    &custom_pest_error(
+                    "Expected valid YAML",
+                    preamble.as_span()), file!(), line!())
             ));
         }
     }

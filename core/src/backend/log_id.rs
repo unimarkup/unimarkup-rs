@@ -1,7 +1,7 @@
 use crate::log_id::{get_log_id, CORE_GRP, LogSubGrp, LogKind};
 
 
-pub enum LogSubSubGrp {
+enum LogSubSubGrp {
   General = 0,
   Loader = 1,
   Renderer = 2,

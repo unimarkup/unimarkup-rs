@@ -4,14 +4,20 @@
 //! ['UnimarkupBlocks'] and sending them to the IR.
 
 mod syntax_error;
+mod error;
+mod log_id;
 
 use rusqlite::Connection;
 pub use syntax_error::SyntaxError;
 
-use crate::{config::Config, error::UmError, middleend::WriteToIr};
+use crate::{config::Config, middleend::WriteToIr};
+
+use self::error::FrontendError;
 
 pub mod parser;
 pub mod preamble;
+pub use error::*;
+pub use log_id::*;
 
 /// `frontend::run` is the entry function of the [`frontend`] module.
 /// It parses a Unimarkup file and sends the data to the IR.
@@ -26,7 +32,7 @@ pub fn run(
     um_content: &str,
     connection: &mut Connection,
     config: &mut Config,
-) -> Result<(), UmError> {
+) -> Result<(), FrontendError> {
     let unimarkup = parser::parse_unimarkup(um_content, config)?;
 
     let transaction = connection.transaction();

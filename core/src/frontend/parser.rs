@@ -2,15 +2,16 @@
 
 use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 
-use crate::error::UmError;
 use crate::{
     config::Config,
     elements::{
         types,
         types::{UnimarkupBlocks, UnimarkupFile},
         HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
-    },
+    }, log_id::{LogId, SetLog}, frontend::ParserWarnLogId,
 };
+
+use super::{preamble, error::FrontendError, ParserErrLogId};
 
 /// Used to parse one specific Unimarkup block
 pub trait UmParse {
@@ -19,7 +20,7 @@ pub trait UmParse {
     /// # Errors
     ///
     /// This function will return an error if given Pairs of Rules contain non-valid Unimarkup syntax.
-    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, UmError>
+    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, FrontendError>
     where
         Self: Sized;
 }
@@ -46,21 +47,19 @@ mod parser_derivation {
 
 pub use parser_derivation::*;
 
-use super::preamble;
-
 /// Parses the given Unimarkup content.
 ///
 /// Returns [`UnimarkupBlocks`] on success.
 ///
 /// # Errors
 ///
-/// This function will return an [`UmError`], if the given Unimarkup file contains invalid Unimarkup syntax.
-pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<UnimarkupFile, UmError> {
+/// This function will return an [`FrontendError`], if the given Unimarkup file contains invalid Unimarkup syntax.
+pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<UnimarkupFile, FrontendError> {
     let mut rule_pairs =
-        UnimarkupParser::parse(Rule::unimarkup, um_content).map_err(|err| UmError::General {
-            msg: String::from("Could not parse file!"),
-            error: Box::new(err),
-        })?;
+        UnimarkupParser::parse(Rule::unimarkup, um_content).map_err(|err| FrontendError::Parser(
+            (ParserErrLogId::NoUnimarkupDetected as LogId).set_log("No Unimarkup elements detected!", file!(), line!())
+            .add_to_log(&format!("Content: '{}'", um_content))
+        ))?;
 
     let mut unimarkup = UnimarkupFile::default();
 
@@ -100,7 +99,7 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Unimarku
     Ok(unimarkup)
 }
 
-fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
+fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, FrontendError> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::headings, input.as_str()) {
         return HeadingBlock::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
@@ -110,7 +109,7 @@ fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
     Ok(vec![])
 }
 
-fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
+fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, FrontendError> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::verbatim, input.as_str()) {
         return VerbatimBlock::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
@@ -118,8 +117,10 @@ fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, UmError> {
         //
         // warn and fallback to paragraph for now
 
-        log::warn!("Unsupported unimarkup block: \n{}", input.as_str());
-        log::warn!("Will be parsed as a unimarkup paragraph block.");
+        (ParserWarnLogId::UnsupportedBlock as LogId).set_log(
+            &format!("Unsupported Unimarkup block:\n{}", input.as_str()),
+            file!(), line!())
+            .add_to_log("Block is parsed as a Unimarkup paragraph block.");
 
         return ParagraphBlock::parse(pairs, input.as_span());
     }
