@@ -13,6 +13,7 @@ pub enum GeneralErrLogId {
   InvalidAttribute = get_log_id(CORE_GRP, LogSubGrp::Element as u8, LogSubSubGrp::General as u8, LogKind::Error, 0),
   InvalidElementType = get_log_id(CORE_GRP, LogSubGrp::Element as u8, LogSubSubGrp::General as u8, LogKind::Error, 1),
   FailedBlockCreation = get_log_id(CORE_GRP, LogSubGrp::Element as u8, LogSubSubGrp::General as u8, LogKind::Error, 2),
+  FailedInlineParsing = get_log_id(CORE_GRP, LogSubGrp::Element as u8, LogSubSubGrp::General as u8, LogKind::Error, 3),
 }
 
 #[derive(Debug)]

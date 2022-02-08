@@ -293,9 +293,17 @@ impl Render for HeadingBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        let inline =
-            backend::parse_inline(&self.content).expect("Inline formatting or plain text expected");
-        html.push_str(&inline.render_html()?);
+        let try_inline =
+            backend::parse_inline(&self.content);
+
+        if try_inline.is_err() {
+            return Err(ElementError::General(
+                (GeneralErrLogId::FailedInlineParsing as LogId)
+                .set_log(&format!("Failed parsing inline formats for heading block with id: '{}'", &self.id), file!(), line!())
+                .add_to_log(&format!("Cause: {:?}", try_inline.err()))).into());
+        }
+
+        html.push_str(&try_inline.unwrap().render_html()?);
 
         html.push_str("</h");
         html.push_str(&tag_level);

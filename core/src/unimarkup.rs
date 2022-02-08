@@ -6,6 +6,8 @@ use crate::config::Config;
 use crate::config::OutputFormat;
 use crate::error::CoreError;
 use crate::frontend;
+use crate::log_id::LogId;
+use crate::log_id::SetLog;
 use crate::middleend;
 
 /// Struct representing a Unimarkup document that can be rendered to supported output formats.
@@ -47,7 +49,13 @@ impl Html<'_> {
         let mut output = String::default();
 
         for block in self.elements {
-            output.push_str(&block.render_html().unwrap());
+            let try_render = block.render_html();
+
+            // FIX: This must change after we move inline formatting
+            match try_render {
+                Ok(html) => output.push_str(&html),
+                Err(err) => { let id: LogId = err.into(); id.add_to_log("Failed rendering HTML due to this error!"); },
+            }
         }
 
         output
