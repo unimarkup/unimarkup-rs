@@ -1,5 +1,5 @@
 [package]
-name = "unimarkup-core"
+name = "unimarkup_core"
 version = "0.3.0"
 edition = "2021"
 

@@ -3,5 +3,5 @@ members = [
     "cli",
     "core",
     "inline",
-    "system-tests"
+    "system_tests"
 ]

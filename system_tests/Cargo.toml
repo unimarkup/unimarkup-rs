@@ -1,5 +1,5 @@
 [package]
-name = "system-tests"
+name = "system_tests"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,7 +10,7 @@ version = "0.26"
 features = ["bundled"]
 
 [dependencies]
-unimarkup-core = { path = "../core/" }
+unimarkup_core = { path = "../core/" }
 unicode-segmentation = "1.8.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_rusqlite = "0.28.0"
