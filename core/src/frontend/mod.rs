@@ -3,11 +3,7 @@
 //! i.e. parsing of unimarkup-rs files, generating corresponding
 //! ['UnimarkupBlocks'] and sending them to the IR.
 
-mod syntax_error;
-
-
 use rusqlite::Connection;
-pub use syntax_error::SyntaxError;
 
 use crate::{config::Config, middleend::WriteToIr};
 

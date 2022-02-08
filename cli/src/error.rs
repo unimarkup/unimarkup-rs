@@ -36,14 +36,3 @@ impl From<CoreError> for CliError {
     }
   }
 }
-
-// impl fmt::Display for UmError {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         match self {
-//             UmError::Syntax(err) => err.fmt(f),
-//             UmError::Ir(err) => err.fmt(f),
-//             UmError::Backend(err) => err.fmt(f),
-//             UmError::General { msg, error } => f.write_fmt(format_args!("{}:\n {}", msg, error)),
-//         }
-//     }
-// }

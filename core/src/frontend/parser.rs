@@ -59,6 +59,7 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Unimarku
         UnimarkupParser::parse(Rule::unimarkup, um_content).map_err(|err| FrontendError::Parser(
             (ParserErrLogId::NoUnimarkupDetected as LogId).set_log("No Unimarkup elements detected!", file!(), line!())
             .add_info(&format!("Content: '{}'", um_content))
+            .add_debug(&format!("Cause: {}", err))
         ))?;
 
     let mut unimarkup = UnimarkupFile::default();
