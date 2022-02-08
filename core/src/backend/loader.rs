@@ -5,11 +5,10 @@ use rusqlite::Connection;
 use crate::{
     backend::{BackendError, Render},
     elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock, VerbatimBlock},
-    error::UmError,
-    middleend::{self, ContentIrLine},
+    middleend::{self, ContentIrLine}, log_id::{LogId, SetLog},
 };
 
-use super::RenderBlock;
+use super::{RenderBlock, LoaderErrLogId};
 
 /// Trait that must be implemented for a [`UnimarkupType`] to be stored in IR
 pub trait ParseFromIr {
@@ -21,7 +20,7 @@ pub trait ParseFromIr {
     /// * `line_index` - index of the [`ContentIrLine`] which is currently read
     ///
     /// Returns the Unimarkup block element on success.
-    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, UmError>
+    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, BackendError>
     where
         Self: Sized;
 }
@@ -33,7 +32,7 @@ pub trait ParseFromIr {
 /// # Arguments
 ///
 /// * `connection` - [`rusqlite::Connection`] used for interaction with IR
-pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock>, UmError> {
+pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock>, BackendError> {
     let mut blocks: Vec<Box<dyn Render>> = vec![];
     let mut content_lines: VecDeque<ContentIrLine> =
         middleend::get_content_lines(connection)?.into();
@@ -73,7 +72,7 @@ pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock
 /// - `"paragraph-start"`
 /// - `"heading-level-1"`
 /// - `"heading-level-1-start"` etc.
-pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, UmError> {
+pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, BackendError> {
     let type_string = type_as_str
         .split(types::DELIMITER)
         .map(|part| if part != "start" { part } else { "" })
@@ -96,42 +95,52 @@ pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, UmError> {
         if let Some(val) = type_string.split(&level_delim).next() {
             val.into()
         } else {
-            return Err(BackendError::new(format!(
-                "Invalid type string provided: {}",
-                type_string
-            ))
-            .into());
+            return Err(
+                BackendError::Loader(
+                    (LoaderErrLogId::InvalidElementType as LogId).set_log(
+                        &format!(
+                            "Invalid type string provided: '{}'",
+                            type_string
+                        ),
+                        file!(),
+                        line!(),
+                    ),
+                ));
         }
     } else {
         type_string
     };
 
     UnimarkupType::from_str(&type_string).map_err(|err| {
-        BackendError::new(format!(
-            "Failed to resolve unimarkup type. \nMore info: {}",
-            err
-        ))
-        .into()
+        BackendError::Loader(
+            (LoaderErrLogId::InvalidElementType as LogId).set_log(
+                &format!(
+                    "Failed to resolve Unimarkup type '{}'.",
+                    &type_string
+                ),
+                file!(),
+                line!(),
+            ).add_to_log(&format!(
+                "Cause: {}", err
+            )),
+        )
     })
 }
 
 #[cfg(test)]
 mod loader_tests {
     use super::*;
-    use crate::error::UmError;
 
     #[test]
-    fn parse_type() -> Result<(), UmError> {
+    fn parse_type(){
         // paragraph test
-        let um_type = super::parse_um_type("paragraph-start")?;
+        let um_type = super::parse_um_type("paragraph-start").unwrap();
 
         assert!(um_type == UnimarkupType::Paragraph);
 
         // heading test
-        let um_type = super::parse_um_type("heading-level-1")?;
+        let um_type = super::parse_um_type("heading-level-1").unwrap();
 
         assert!(um_type == UnimarkupType::Heading);
-
-        Ok(())
     }
 }

@@ -1,4 +1,4 @@
-use crate::error::UmError;
+use crate::backend::BackendError;
 
 use super::RenderBlock;
 
@@ -6,9 +6,9 @@ use super::RenderBlock;
 pub trait Render {
     /// Generates the HTML representation of a type that implements this trait.
     ///
-    /// Returns [`UmError`] if it's not possible to generate valid HTML, i.e. if
+    /// Returns [`BackendError`] if it's not possible to generate valid HTML, i.e. if
     /// provided id contains characters not allowed in HTML id attribute.
-    fn render_html(&self) -> Result<String, UmError>;
+    fn render_html(&self) -> Result<String, BackendError>;
 }
 
 /// Renders all [`RenderBlock`](crate::backend::RenderBlock)s
@@ -18,9 +18,9 @@ pub trait Render {
 ///
 /// - `blocks` - array of type [`RenderBlock`]
 ///
-/// Returns [`UmError`], if any of the given blocks returns an [`UmError`]
+/// Returns [`BackendError`], if any of the given blocks returns an [`BackendError`]
 /// when rendering itself.
-pub fn render_html(blocks: &[RenderBlock]) -> Result<String, UmError> {
+pub fn render_html(blocks: &[RenderBlock]) -> Result<String, BackendError> {
     let mut html = String::default();
 
     for block in blocks {

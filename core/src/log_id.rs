@@ -30,30 +30,38 @@ pub type LogId = isize;
 
 
 pub const NO_LOG_ID: LogId = 0;
-
+pub const LOG_KIND_SHIFT: i32 = 16;
 
 pub enum LogKind {
-  Error = 0,
-  Warn,
-  Info,
-  Debug,
+  Error = 3,
+  Warn = 2,
+  Info = 1,
+  Debug = 0,
 }
 
 pub trait SetLog {
-  fn set_log(self, kind: LogKind, msg: &str, filename: &str, linr_nr: u32) -> Self;
+  fn set_log(self, msg: &str, filename: &str, line_nr: u32) -> Self;
   fn add_to_log(self, msg: &str) -> Self;
 }
 
 impl SetLog for LogId {
-  fn set_log(self, kind: LogKind, msg: &str, filename: &str, linr_nr: u32) -> LogId {
-    match kind {
-      LogKind::Error => log::error!("{}: {}", self, msg),
-      LogKind::Warn => log::warn!("{}: {}", self, msg),
-      LogKind::Info => log::info!("{}: {}", self, msg),
-      LogKind::Debug => log::debug!("{}: {}", self, msg),
+  fn set_log(self, msg: &str, filename: &str, line_nr: u32) -> LogId {
+    // get LogKind bits
+    let kind = (self >> LOG_KIND_SHIFT) & 3;
+
+    if kind == (LogKind::Error as isize) {
+      log::error!("{}: {}", self, msg)
+    } else if kind == (LogKind::Warn as isize) {
+      log::warn!("{}: {}", self, msg)
+    } else if kind == (LogKind::Info as isize) {
+      log::info!("{}: {}", self, msg)
+    } else if kind == (LogKind::Debug as isize) {
+      log::debug!("{}: {}", self, msg)
+    } else {
+      log::trace!("{}: Invalid kind: '{}'", self, kind)
     }
   
-    log::trace!("{}: Occured in file `{}` at line = {}", self, filename, linr_nr);
+    log::trace!("{}: Occured in file `{}` at line = {}", self, filename, line_nr);
     self
   }
   
@@ -73,5 +81,5 @@ pub const fn get_log_id(main_grp: u8, sub_grp: u8, sub_sub_grp: u8, log_kind: Lo
   //assert!((main_grp == 0) && (sub_grp == 0) && (sub_sub_grp == 0) && (log_kind_number == 0) && (local_nr == 0), "Log ID 0 is not allowed!");
   //assert!((main_grp >= 2^3) || (sub_grp >= 2^5) || (sub_sub_grp >= 2^6), "At least one log ID subrange is invalid.");
   
-  (((main_grp as i32) << 29) + ((sub_grp as i32) << 24) + ((sub_sub_grp as i32) << 18) + (log_kind_number << 16) + (local_nr as i32)) as LogId
+  (((main_grp as i32) << 29) + ((sub_grp as i32) << 24) + ((sub_sub_grp as i32) << 18) + (log_kind_number << LOG_KIND_SHIFT) + (local_nr as i32)) as LogId
 }

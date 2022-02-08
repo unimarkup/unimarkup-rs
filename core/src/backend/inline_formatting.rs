@@ -3,10 +3,11 @@ use std::{collections::VecDeque, fmt::Debug};
 use pest::iterators::Pair;
 use pest::Parser;
 
-use crate::backend::UmError;
+use crate::backend::BackendError;
 use crate::frontend::parser::{Rule, UnimarkupParser};
+use crate::log_id::{LogId, SetLog};
 
-use super::Render;
+use super::{Render, InlineErrLogId};
 /// [`Plain`] is one of the inline formatting types, which contains the raw text as String.
 #[derive(Debug)]
 pub struct Plain {
@@ -55,12 +56,13 @@ pub enum FormatTypes {
 }
 
 /// [`parse_inline`] parses through the content of a [`UnimarkupBlock`] and returns a VecDeque of Formattypes
-pub fn parse_inline(source: &str) -> Result<VecDeque<FormatTypes>, UmError> {
+pub fn parse_inline(source: &str) -> Result<VecDeque<FormatTypes>, BackendError> {
     let mut rule_pairs =
-        UnimarkupParser::parse(Rule::inline_format, source).map_err(|err| UmError::General {
-            msg: String::from("Could not parse string!"),
-            error: Box::new(err),
-        })?;
+        UnimarkupParser::parse(Rule::inline_format, source).map_err(|err| BackendError::General(
+            (InlineErrLogId::NoInlineDetected as LogId).set_log("No inline format detected!", file!(), line!())
+            .add_to_log(&format!("Given: {}", source))
+            .add_to_log(&format!("Cause: {}", err))
+        ))?;
 
     let mut inline_format = VecDeque::<FormatTypes>::new();
 
@@ -122,7 +124,7 @@ fn pair_into_format_types(pair: Pair<Rule>) -> VecDeque<FormatTypes> {
 }
 
 impl Render for Bold {
-    fn render_html(&self) -> Result<String, UmError> {
+    fn render_html(&self) -> Result<String, BackendError> {
         let mut html = String::default();
         html.push_str("<b>");
         for element in &self.content {
@@ -138,7 +140,7 @@ impl Render for Bold {
 }
 
 impl Render for Italic {
-    fn render_html(&self) -> Result<String, UmError> {
+    fn render_html(&self) -> Result<String, BackendError> {
         let mut html = String::default();
         html.push_str("<i>");
         for element in &self.content {
@@ -154,7 +156,7 @@ impl Render for Italic {
 }
 
 impl Render for Subscript {
-    fn render_html(&self) -> Result<String, UmError> {
+    fn render_html(&self) -> Result<String, BackendError> {
         let mut html = String::default();
         html.push_str("<sub>");
         for element in &self.content {
@@ -170,7 +172,7 @@ impl Render for Subscript {
 }
 
 impl Render for Superscript {
-    fn render_html(&self) -> Result<String, UmError> {
+    fn render_html(&self) -> Result<String, BackendError> {
         let mut html = String::default();
         html.push_str("<sup>");
         for element in &self.content {
@@ -186,7 +188,7 @@ impl Render for Superscript {
 }
 
 impl Render for Verbatim {
-    fn render_html(&self) -> Result<String, UmError> {
+    fn render_html(&self) -> Result<String, BackendError> {
         let mut html = String::default();
         html.push_str("<pre>");
         html.push_str(&self.content);
@@ -196,13 +198,13 @@ impl Render for Verbatim {
 }
 
 impl Render for Plain {
-    fn render_html(&self) -> Result<String, UmError> {
+    fn render_html(&self) -> Result<String, BackendError> {
         Ok(self.content.clone())
     }
 }
 
 impl Render for FormatTypes {
-    fn render_html(&self) -> Result<String, UmError> {
+    fn render_html(&self) -> Result<String, BackendError> {
         match self {
             FormatTypes::Bold(content) => content.render_html(),
             FormatTypes::Italic(content) => content.render_html(),
@@ -215,7 +217,7 @@ impl Render for FormatTypes {
 }
 
 impl Render for VecDeque<FormatTypes> {
-    fn render_html(&self) -> Result<String, UmError> {
+    fn render_html(&self) -> Result<String, BackendError> {
         let mut html = String::default();
 
         for element in self {

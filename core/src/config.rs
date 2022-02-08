@@ -9,7 +9,7 @@ use strum_macros::EnumString;
 use crate::{
     elements::types::UnimarkupType,
     error::CoreError,
-    log_id::{ConfigErrLogId, LogId, LogKind, SetLog},
+    log_id::{ConfigErrLogId, LogId, SetLog},
 };
 
 const UNIMARKUP_NAME: &str = "Unimarkup";
@@ -304,7 +304,6 @@ impl Config {
             if !file.exists() {
                 return Err(CoreError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        LogKind::Error,
                         &format!(
                             "Invalid file given for `output-file`: '{}'",
                             file.to_string_lossy()
@@ -316,7 +315,6 @@ impl Config {
             } else if !self.overwrite_out_files {
                 return Err(CoreError::General(
                     (ConfigErrLogId::InvalidConfig as LogId).set_log(
-                        LogKind::Error,
                         "Option `overwrite-out-files` must be `true` if output file exists.",
                         file!(),
                         line!(),
@@ -329,7 +327,6 @@ impl Config {
                 if !path.exists() {
                     return Err(CoreError::General(
                         (ConfigErrLogId::InvalidPath as LogId).set_log(
-                            LogKind::Error,
                             &format!(
                                 "Invalid path given for `insert-paths`: '{}'",
                                 path.to_string_lossy()
@@ -345,7 +342,6 @@ impl Config {
             if !path.is_dir() {
                 return Err(CoreError::General(
                     (ConfigErrLogId::InvalidPath as LogId).set_log(
-                        LogKind::Error,
                         &format!(
                             "Invalid path given for `dot-unimarkup`: '{}'",
                             path.to_string_lossy()
@@ -360,7 +356,6 @@ impl Config {
             if !file.exists() {
                 return Err(CoreError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        LogKind::Error,
                         &format!(
                             "Invalid file given for `theme`: '{}'",
                             file.to_string_lossy()
@@ -375,7 +370,6 @@ impl Config {
             if !file.exists() {
                 return Err(CoreError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        LogKind::Error,
                         &format!(
                             "Invalid file given for `citation-style`: '{}'",
                             file.to_string_lossy()
@@ -391,7 +385,6 @@ impl Config {
                 if !file.exists() {
                     return Err(CoreError::General(
                         (ConfigErrLogId::InvalidFile as LogId).set_log(
-                            LogKind::Error,
                             &format!(
                                 "Invalid file given for `references`: '{}'",
                                 file.to_string_lossy()
@@ -408,7 +401,6 @@ impl Config {
                 if !file.exists() {
                     return Err(CoreError::General(
                         (ConfigErrLogId::InvalidFile as LogId).set_log(
-                            LogKind::Error,
                             &format!(
                                 "Invalid file given for `fonts`: '{}'",
                                 file.to_string_lossy()
@@ -424,7 +416,6 @@ impl Config {
             if !file.exists() {
                 return Err(CoreError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        LogKind::Error,
                         &format!(
                             "Invalid file given for `html-template`: '{}'",
                             file.to_string_lossy()
@@ -438,7 +429,6 @@ impl Config {
         if !self.um_file.exists() {
             return Err(CoreError::General(
                 (ConfigErrLogId::InvalidFile as LogId).set_log(
-                    LogKind::Error,
                     "Set `um-file` does not exist!",
                     file!(),
                     line!(),

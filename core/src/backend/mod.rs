@@ -4,17 +4,15 @@
 //!
 //! [`UnimarkupBlocks`]: crate::frontend::UnimarkupBlocks
 
-use crate::{config::Config, error::UmError, unimarkup::UnimarkupDocument};
+use crate::{config::Config, unimarkup::UnimarkupDocument};
 use rusqlite::Connection;
 
-mod backend_error;
 mod inline_formatting;
 mod loader;
 mod renderer;
 mod error;
 mod log_id;
 
-pub use backend_error::BackendError;
 pub use inline_formatting::*;
 pub use loader::ParseFromIr;
 pub use renderer::*;
@@ -34,7 +32,7 @@ pub type RenderBlock = Box<dyn Render>;
 /// - error occurs when writing to the output file
 ///
 /// [`UnimarkupBlocks`]: crate::frontend::UnimarkupBlocks
-pub fn run(connection: &mut Connection, config: Config) -> Result<UnimarkupDocument, UmError> {
+pub fn run(connection: &mut Connection, config: Config) -> Result<UnimarkupDocument, BackendError> {
     let blocks: Vec<RenderBlock> = loader::get_blocks_from_ir(connection)?;
 
     Ok(UnimarkupDocument {

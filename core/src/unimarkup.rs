@@ -4,7 +4,7 @@ use crate::backend;
 use crate::backend::RenderBlock;
 use crate::config::Config;
 use crate::config::OutputFormat;
-use crate::error::UmError;
+use crate::error::CoreError;
 use crate::frontend;
 use crate::middleend;
 
@@ -63,8 +63,8 @@ impl Html<'_> {
 ///
 /// # Errors
 ///
-/// Returns a [`UmError`], if error occurs during compilation.
-pub fn compile(um_content: &str, mut config: Config) -> Result<UnimarkupDocument, UmError> {
+/// Returns a [`CoreError`], if error occurs during compilation.
+pub fn compile(um_content: &str, mut config: Config) -> Result<UnimarkupDocument, CoreError> {
     let mut connection = middleend::setup_ir_connection()?;
     middleend::setup_ir(&connection)?;
 
