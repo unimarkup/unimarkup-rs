@@ -61,7 +61,7 @@ impl SetLog for LogId {
         LogKind::Debug => log::debug!("{}: {}", self, msg),
     }
   
-    log::trace!("{}: Occured in file `{}` at line = {}", self, filename, line_nr);
+    log::trace!("{}: Occured in file \"{}\" at line: {}", self, filename, line_nr);
     self
   }
   

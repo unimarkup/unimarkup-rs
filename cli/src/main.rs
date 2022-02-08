@@ -19,11 +19,11 @@ fn main() {
             match unimarkup::compile(config) {
                 Ok(_) => {
                     (GeneralInfLogId::FinishedCompiling as LogId)
-                    .set_log(&format!("Finished compiling: '{:#?}'", um_file), file!(), line!());
+                    .set_log(&format!("Finished compiling: {:?}", um_file), file!(), line!());
                 },
                 Err(err) => {
                     (GeneralErrLogId::FailedCompiling as LogId)
-                    .set_log(&format!("Failed compiling: '{:#?}'", um_file), file!(), line!())
+                    .set_log(&format!("Failed compiling: {:?}", um_file), file!(), line!())
                     .add_info(&format!("Cause: {:?}", err));
                 },
             };

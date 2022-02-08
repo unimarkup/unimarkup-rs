@@ -44,15 +44,13 @@ pub fn compile(config: Config) -> Result<(), CliError> {
             let mut out_path_html = out_path;
             out_path_html.set_extension("html");
 
-            let out_path = out_path_html.to_str().expect("Validation done in config");
-
             (GeneralInfLogId::WritingToFile as LogId)
-            .set_log(&format!("Writing to {}", out_path), file!(), line!());
+            .set_log(&format!("Writing to file: {:?}", out_path_html), file!(), line!());
 
             std::fs::write(&out_path_html, &html.body()).map_err(|err| 
                 CliError::General(
                     (GeneralErrLogId::FailedWritingFile as LogId)
-                    .set_log(&format!("Could not write to file: '{:?}'", out_path), file!(), line!())
+                    .set_log(&format!("Could not write to file: {:?}", out_path_html), file!(), line!())
                     .add_info(&format!("Cause: {}", err))
                 )
             )?;

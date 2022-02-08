@@ -305,8 +305,8 @@ impl Config {
                 return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
                         &format!(
-                            "Invalid file given for `output-file`: '{}'",
-                            file.to_string_lossy()
+                            "Invalid file given for `output-file`: {:?}",
+                            file
                         ),
                         file!(),
                         line!(),
@@ -328,8 +328,8 @@ impl Config {
                     return Err(ConfigError::General(
                         (ConfigErrLogId::InvalidPath as LogId).set_log(
                             &format!(
-                                "Invalid path given for `insert-paths`: '{}'",
-                                path.to_string_lossy()
+                                "Invalid path given for `insert-paths`: {:?}",
+                                path
                             ),
                             file!(),
                             line!(),
@@ -343,8 +343,8 @@ impl Config {
                 return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidPath as LogId).set_log(
                         &format!(
-                            "Invalid path given for `dot-unimarkup`: '{}'",
-                            path.to_string_lossy()
+                            "Invalid path given for `dot-unimarkup`: {:?}",
+                            path
                         ),
                         file!(),
                         line!(),
@@ -357,8 +357,8 @@ impl Config {
                 return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
                         &format!(
-                            "Invalid file given for `theme`: '{}'",
-                            file.to_string_lossy()
+                            "Invalid file given for `theme`: {:?}",
+                            file
                         ),
                         file!(),
                         line!(),
@@ -371,8 +371,8 @@ impl Config {
                 return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
                         &format!(
-                            "Invalid file given for `citation-style`: '{}'",
-                            file.to_string_lossy()
+                            "Invalid file given for `citation-style`: {:?}",
+                            file
                         ),
                         file!(),
                         line!(),
@@ -386,8 +386,8 @@ impl Config {
                     return Err(ConfigError::General(
                         (ConfigErrLogId::InvalidFile as LogId).set_log(
                             &format!(
-                                "Invalid file given for `references`: '{}'",
-                                file.to_string_lossy()
+                                "Invalid file given for `references`: {:?}",
+                                file
                             ),
                             file!(),
                             line!(),
@@ -402,8 +402,8 @@ impl Config {
                     return Err(ConfigError::General(
                         (ConfigErrLogId::InvalidFile as LogId).set_log(
                             &format!(
-                                "Invalid file given for `fonts`: '{}'",
-                                file.to_string_lossy()
+                                "Invalid file given for `fonts`: {:?}",
+                                file
                             ),
                             file!(),
                             line!(),
@@ -417,8 +417,8 @@ impl Config {
                 return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
                         &format!(
-                            "Invalid file given for `html-template`: '{}'",
-                            file.to_string_lossy()
+                            "Invalid file given for `html-template`: {:?}",
+                            file
                         ),
                         file!(),
                         line!(),
