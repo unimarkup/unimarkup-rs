@@ -69,5 +69,5 @@ pub fn compile(um_content: &str, mut config: Config) -> Result<UnimarkupDocument
     middleend::setup_ir(&connection)?;
 
     frontend::run(um_content, &mut connection, &mut config)?;
-    backend::run(&mut connection, config)
+    backend::run(&mut connection, config).map_err(|err| err.into())
 }

@@ -8,15 +8,15 @@ enum LogSubSubGrp {
 }
 
 pub enum ParserErrLogId {
-  NoUnimarkupDetected = get_log_id(CORE_GRP, LogSubGrp::Backend as u8, LogSubSubGrp::Parser as u8, LogKind::Error, 0),
+  NoUnimarkupDetected = get_log_id(CORE_GRP, LogSubGrp::Frontend as u8, LogSubSubGrp::Parser as u8, LogKind::Error, 0),
 }
 
 pub enum ParserWarnLogId {
-  UnsupportedBlock = get_log_id(CORE_GRP, LogSubGrp::Backend as u8, LogSubSubGrp::Parser as u8, LogKind::Warn, 1),
+  UnsupportedBlock = get_log_id(CORE_GRP, LogSubGrp::Frontend as u8, LogSubSubGrp::Parser as u8, LogKind::Warn, 1),
 }
 
 pub enum PreambleErrLogId {
-  InvalidJSON = get_log_id(CORE_GRP, LogSubGrp::Backend as u8, LogSubSubGrp::Preamble as u8, LogKind::Error, 0),
-  InvalidYAML = get_log_id(CORE_GRP, LogSubGrp::Backend as u8, LogSubSubGrp::Preamble as u8, LogKind::Error, 1),
+  InvalidJSON = get_log_id(CORE_GRP, LogSubGrp::Frontend as u8, LogSubSubGrp::Preamble as u8, LogKind::Error, 0),
+  InvalidYAML = get_log_id(CORE_GRP, LogSubGrp::Frontend as u8, LogSubSubGrp::Preamble as u8, LogKind::Error, 1),
 }
 
