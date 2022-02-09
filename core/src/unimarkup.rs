@@ -1,5 +1,7 @@
 //! Entry module for unimarkup-rs.
 
+use log::info;
+
 use crate::backend;
 use crate::backend::RenderBlock;
 use crate::config::Config;
@@ -75,7 +77,7 @@ impl Html<'_> {
 pub fn compile(um_content: &str, mut config: Config) -> Result<UnimarkupDocument, CoreError> {
     let mut connection = middleend::setup_ir_connection()?;
     middleend::setup_ir(&connection)?;
-
+    info!("Test-----");
     frontend::run(um_content, &mut connection, &mut config)?;
     backend::run(&mut connection, config).map_err(|err| err.into())
 }
