@@ -25,3 +25,7 @@ mod elements {
 mod backend {
     mod inline_tests;
 }
+
+mod logging {
+    mod cli_logs;
+}

@@ -28,3 +28,7 @@ shlex = "1.1.0"
 clap = { version = "3.0.0-beta.5", features = ["derive", "cargo", "env"] }
 sha3 = "0.10"
 hex = "0.4"
+
+[[bin]]
+name = "cli"
+path = "../cli/src/main.rs"
