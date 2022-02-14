@@ -5,7 +5,7 @@
 
 use rusqlite::Connection;
 
-use crate::{config::Config, middleend::{WriteToIr, log_id::GeneralInfLogId}, log_id::{SetLog, LogId}};
+use crate::{config::Config, middleend::WriteToIr};
 
 use self::error::FrontendError;
 
@@ -41,6 +41,6 @@ pub fn run(
 
         let _ = transaction.commit();
     }
-    (GeneralInfLogId::EntryOverwritten as LogId).set_log("Test Log---------------------", file!(), line!());
+
     Ok(())
 }

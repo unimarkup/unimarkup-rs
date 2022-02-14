@@ -1,5 +1,3 @@
-use log::{debug, info, warn, error, trace};
-
 
 
 pub const CORE_GRP: u8 = 0;
@@ -57,28 +55,28 @@ impl SetLog for LogId {
     let kind = self.get_kind();
 
     match kind {
-        LogKind::Error => error!("{}: {}", self, msg),
-        LogKind::Warn => warn!("{}: {}", self, msg),
-        LogKind::Info => info!("{}: {}", self, msg),
-        LogKind::Debug => debug!("{}: {}", self, msg),
+        LogKind::Error => log::error!("{}: {}", self, msg),
+        LogKind::Warn => log::warn!("{}: {}", self, msg),
+        LogKind::Info => log::info!("{}: {}", self, msg),
+        LogKind::Debug => log::debug!("{}: {}", self, msg),
     }
   
-    trace!("{}: Occured in file \"{}\" at line: {}", self, filename, line_nr);
+    log::trace!("{}: Occured in file \"{}\" at line: {}", self, filename, line_nr);
     self
   }
   
   fn add_info(self, msg: &str) -> LogId {
-    info!("{}(additional info): {}", self, msg);
+    log::info!("{}(additional info): {}", self, msg);
     self
   }
 
   fn add_debug(self, msg: &str) -> LogId {
-    debug!("{}(additional info): {}", self, msg);
+    log::debug!("{}(additional info): {}", self, msg);
     self
   }
 
   fn add_trace(self, msg: &str) -> LogId {
-    trace!("{}(additional info): {}", self, msg);
+    log::trace!("{}(additional info): {}", self, msg);
     self
   }
 
@@ -95,7 +93,7 @@ impl SetLog for LogId {
     } else if kind == (LogKind::Debug as isize) {
       LogKind::Debug
     } else {
-      trace!("{}: Invalid kind: '{}'", self, kind);
+      log::trace!("{}: Invalid kind: '{}'", self, kind);
       LogKind::Error
     }
   }

@@ -1,6 +1,6 @@
 //! Traits and helper functions for logging functionality.
 
-use env_logger::{fmt::Color, Env};
+use env_logger::fmt::Color;
 use log::LevelFilter;
 use std::io::Write;
 
@@ -31,13 +31,10 @@ pub fn init_logger() {
         LevelFilter::Info
     };
 
-    let env = Env::default()
-        .filter_or("RUST_LOG", "main");
-
     env_logger::builder()
-        .parse_env(env)
         .format_level(true)
         .filter_level(max_level)
+        .parse_default_env()
         .format_timestamp(None)
         .format_target(false)
         .format(|buf, record| {
