@@ -6,7 +6,7 @@ use unimarkup_core::middleend::{
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
-fn test_single_write_retrieve() {
+fn test_ir_single_write_retrieve_metadata() {
     let first_metadata =
         MetadataIrLine::new(b"ccdec233ff78".to_vec(), "test.um", ".", "{}", "", true);
     let mut conn = setup_test_ir();
@@ -16,8 +16,8 @@ fn test_single_write_retrieve() {
     let write_res = first_metadata.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
@@ -28,9 +28,9 @@ fn test_single_write_retrieve() {
     assert!(
         retrieved_metadata_res.is_ok(),
         "Cause: {:?}",
-        retrieved_metadata_res.err()
+        retrieved_metadata_res.unwrap_err()
     );
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- COMPARE ------------------------------------------------------------
     let retrieved_first_metadata = retrieved_metadata_res.unwrap();
@@ -38,7 +38,7 @@ fn test_single_write_retrieve() {
 }
 
 #[test]
-fn test_entry_exists() {
+fn test_ir_entry_exists_metadata() {
     let mut conn = setup_test_ir();
     let first_metadata =
         MetadataIrLine::new(b"ccdec233ff78".to_vec(), "test.um", ".", "{}", "", true);
@@ -52,15 +52,15 @@ fn test_entry_exists() {
     );
 
     let commit_res = transaction.commit();
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- WRITE TO IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
     let write_res = first_metadata.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- ENTRY EXISTS IN IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
@@ -71,11 +71,11 @@ fn test_entry_exists() {
     );
 
     let commit_res = transaction.commit();
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 }
 
 #[test]
-fn test_write_update() {
+fn test_ir_write_update_metadata() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------
@@ -85,8 +85,8 @@ fn test_write_update() {
     let write_res = first_metadata.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- SECOND: WRITE TO IR -------------------------------------------------------
     let updated_metadata = MetadataIrLine::new(
@@ -101,8 +101,8 @@ fn test_write_update() {
     let write_res = updated_metadata.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
@@ -113,9 +113,9 @@ fn test_write_update() {
     assert!(
         retrieved_metadata_res.is_ok(),
         "Cause: {:?}",
-        retrieved_metadata_res.err()
+        retrieved_metadata_res.unwrap_err()
     );
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- COMPARE ------------------------------------------------------------
     let retrieved_updated_metadata = retrieved_metadata_res.unwrap();

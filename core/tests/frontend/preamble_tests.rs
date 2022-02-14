@@ -11,7 +11,8 @@ use unimarkup_core::{
 };
 
 #[test]
-fn syntax_error_json() {
+fn test_parse_invalid_preamble_json() {
+    //Invalid missing quotation mark at OUTPUT-FILE on purpose
     let test_case = ";;;
 {
     OUTPUT-FILE\": \"output.html\",
@@ -28,12 +29,16 @@ fn syntax_error_json() {
         .expect("test")
         .next()
         .unwrap();
-    let err = parse_preamble(pairs, &mut cfg).unwrap_err();
-    assert!(err.to_string().contains("Expected JSON"));
+    let err = parse_preamble(pairs, &mut cfg);
+    assert!(
+        err.is_err(),
+        "Invalid preamble in form of json is detected as valid"
+    );
 }
 
 #[test]
-fn syntax_error_yaml() {
+fn test_parse_invalid_preamble_yaml() {
+    //Invalid extra commas on purpose
     let test_case = ";;;
     OUTPUT-FILE: \"output.html\",
     citation-style: \"yes\",
@@ -48,12 +53,15 @@ fn syntax_error_yaml() {
         .expect("test")
         .next()
         .unwrap();
-    let err = parse_preamble(pairs, &mut cfg).unwrap_err();
-    assert!(err.to_string().contains("Expected YAML"));
+    let err = parse_preamble(pairs, &mut cfg);
+    assert!(
+        err.is_err(),
+        "Invalid preamble in form of yaml is detected as valid"
+    );
 }
 
 #[test]
-fn valid_json() {
+fn test_parse_valid_preamble_json() {
     let test_case = ";;;
 {
     \"OUTPUT-FILE\": \"output.html\",
@@ -70,12 +78,15 @@ fn valid_json() {
         .expect("test")
         .next()
         .unwrap();
-    assert!(parse_preamble(pairs, &mut cfg).is_ok());
+    assert!(
+        parse_preamble(pairs, &mut cfg).is_ok(),
+        "Valid preamble in form of json is not detected as valid"
+    );
     validate_config_content(cfg);
 }
 
 #[test]
-fn valid_yaml() {
+fn test_parse_valid_preamble_yaml() {
     let test_case = ";;;
 OUTPUT-FILE: \"output.html\"
 citation-style: \"yes\"
@@ -90,7 +101,10 @@ html_embed_svg: true
         .expect("test")
         .next()
         .unwrap();
-    assert!(parse_preamble(pairs, &mut cfg).is_ok());
+    assert!(
+        parse_preamble(pairs, &mut cfg).is_ok(),
+        "Valid preamble in form of yaml is not detected as valid"
+    );
     validate_config_content(cfg);
 }
 

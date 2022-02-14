@@ -1,41 +1,37 @@
 use unimarkup_core::elements::types;
-use unimarkup_core::error::UmError;
 use unimarkup_core::frontend::parser;
 use unimarkup_core::middleend::ContentIrLine;
 
 use super::umblock_tests::*;
 
 #[test]
-fn valid_heading() -> Result<(), UmError> {
+fn test_parse_valid_heading_with_subheading() {
     let mut config = get_config("tests/test_files/frontend/heading1.um");
     let input = get_file_content(&config.um_file);
     //heading1.um
-    let um_blocks = parser::parse_unimarkup(&input, &mut config)?;
-    loop_through_ir_lines(&um_blocks, heading1_expected_result());
-
-    Ok(())
+    let um_blocks = parser::parse_unimarkup(&input, &mut config);
+    assert!(um_blocks.is_ok(), "Cause: {:?}", um_blocks.unwrap_err());
+    loop_through_ir_lines(&um_blocks.unwrap(), heading1_expected_result());
 }
 
 #[test]
-fn valid_line_number_heading() -> Result<(), UmError> {
+fn test_parse_valid_nested_headings_with_blank_lines() {
     let mut config = get_config("tests/test_files/frontend/heading_line_number.um");
     let input = get_file_content(&config.um_file);
     //heading_line_number.um
-    let um_blocks = parser::parse_unimarkup(&input, &mut config)?;
-    loop_through_ir_lines(&um_blocks, heading_line_number_expected_result());
-
-    Ok(())
+    let um_blocks = parser::parse_unimarkup(&input, &mut config);
+    assert!(um_blocks.is_ok(), "Cause: {:?}", um_blocks.unwrap_err());
+    loop_through_ir_lines(&um_blocks.unwrap(), heading_line_number_expected_result());
 }
 
 #[test]
-fn valid_multi_line_heading() -> Result<(), UmError> {
+fn test_parse_valid_multi_line_heading() {
     let mut config = get_config("tests/test_files/frontend/multiline_headings.um");
     let input = get_file_content(&config.um_file);
     //multiline_headings.um
-    let um_blocks = parser::parse_unimarkup(&input, &mut config)?;
-    loop_through_ir_lines(&um_blocks, multiline_headings_expected_result());
-
-    Ok(())
+    let um_blocks = parser::parse_unimarkup(&input, &mut config);
+    assert!(um_blocks.is_ok(), "Cause: {:?}", um_blocks.unwrap_err());
+    loop_through_ir_lines(&um_blocks.unwrap(), multiline_headings_expected_result());
 }
 
 pub fn heading1_expected_result() -> Vec<ContentIrLine> {
