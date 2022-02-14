@@ -18,4 +18,4 @@ Cargo.lock
 /.vscode
 
 # ignore generated test HTML files
-/tests/test_files/*.html
+**/tests/**/*.html
