@@ -1,26 +1,23 @@
+//! Defines errors for the cli crate
+
 use unimarkup_core::{log_id::LogId, error::CoreError};
 
-
+/// Error enum for the cli crate
 #[derive(Debug)]
 pub enum CliError {
+  /// General error of the cli crate
   General(LogId),
+  /// Core error of the cli crate
   Core(LogId),
-  Wrapped(LogId),
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<LogId> for CliError {
   fn into(self) -> LogId {
     match self {
       CliError::General(log_id) => log_id,
       CliError::Core(log_id) => log_id,
-      CliError::Wrapped(log_id) => log_id,
     }
-  }
-}
-
-impl Into<CliError> for LogId {
-  fn into(self) -> CliError {
-    CliError::Wrapped(self)
   }
 }
 

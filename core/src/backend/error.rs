@@ -1,14 +1,23 @@
+//! Defines errors for the backend section
+
 use crate::{log_id::LogId, error::CoreError, middleend::error::MiddleendError, elements::error::ElementError};
 
+/// Error enum for the backend section
 #[derive(Debug)]
 pub enum BackendError {
-    General(LogId),
-    Loader(LogId),
-    Renderer(LogId),
-    Inline(LogId),
-    Wrapped(LogId),
+  /// General error of the backend section
+  General(LogId),
+  /// Loader error of the backend section
+  Loader(LogId),
+  /// Renderer error of the backend section
+  Renderer(LogId),
+  /// Inline error of the backend section
+  Inline(LogId),
+  /// Wrapped error of other sections that pass through the backend section
+  Wrapped(LogId),
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<LogId> for BackendError {
   fn into(self) -> LogId {
     match self {
@@ -21,6 +30,7 @@ impl Into<LogId> for BackendError {
   }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<BackendError> for LogId {
   fn into(self) -> BackendError {
     BackendError::Wrapped(self)

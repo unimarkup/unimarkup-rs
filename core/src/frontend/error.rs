@@ -1,13 +1,21 @@
+//! Defines errors for the frontend section
+
 use crate::{log_id::LogId, error::{CoreError, ConfigError}, middleend::error::MiddleendError, elements::error::ElementError};
 
+/// Error enum for the frontend section
 #[derive(Debug)]
 pub enum FrontendError {
-    General(LogId),
-    Parser(LogId),
-    Preamble(LogId),
-    Wrapped(LogId),
+  /// General error of the frontend section
+  General(LogId),
+  /// Parser error of the frontend section
+  Parser(LogId),
+  /// Preamble error of the frontend section
+  Preamble(LogId),
+  /// Wrapped error of other sections that pass through the frontend section
+  Wrapped(LogId),
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<LogId> for FrontendError {
   fn into(self) -> LogId {
     match self {
@@ -19,6 +27,7 @@ impl Into<LogId> for FrontendError {
   }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<FrontendError> for LogId {
   fn into(self) -> FrontendError {
     FrontendError::Wrapped(self)

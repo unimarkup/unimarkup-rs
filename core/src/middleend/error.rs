@@ -1,12 +1,19 @@
+//! Defines errors for the middleend section
+
 use crate::{log_id::LogId, error::CoreError};
 
+/// Error enum for the middleend section
 #[derive(Debug)]
 pub enum MiddleendError {
-    General(LogId),
-    Setup(LogId),
-    Wrapped(LogId),
+  /// General error of the middleend section
+  General(LogId),
+  /// Setup error of the middleend section
+  Setup(LogId),
+  /// Wrapped error of other sections that pass through the middleend section
+  Wrapped(LogId),
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<LogId> for MiddleendError {
   fn into(self) -> LogId {
     match self {
@@ -17,6 +24,7 @@ impl Into<LogId> for MiddleendError {
   }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<MiddleendError> for LogId {
   fn into(self) -> MiddleendError {
     MiddleendError::Wrapped(self)
