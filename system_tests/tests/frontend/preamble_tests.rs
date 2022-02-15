@@ -29,7 +29,7 @@ fn syntax_error_json() {
         .expect("test")
         .next()
         .unwrap();
-    
+
     parse_preamble(pairs, &mut cfg).unwrap();
 }
 
@@ -50,7 +50,7 @@ fn syntax_error_yaml() {
         .expect("test")
         .next()
         .unwrap();
-    
+
     parse_preamble(pairs, &mut cfg).unwrap();
 }
 

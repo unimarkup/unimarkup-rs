@@ -72,11 +72,12 @@ impl WriteToIr for VariableIrLine {
         let new_values = params![self.name, self.um_type, self.value, self.fallback_value,];
 
         if ir::entry_already_exists(self, ir_transaction) {
-            (GeneralInfLogId::EntryOverwritten as LogId)
-            .set_log(&format!(
-                "Variable '{}' is overwritten.", self.name
-            ), file!(), line!());
-            
+            (GeneralInfLogId::EntryOverwritten as LogId).set_log(
+                &format!("Variable '{}' is overwritten.", self.name),
+                file!(),
+                line!(),
+            );
+
             let sql_condition = "name = ?1";
             let sql_set = "um_type = ?2, value = ?3, fallback_value = ?4";
             ir::update_ir_line_execute(

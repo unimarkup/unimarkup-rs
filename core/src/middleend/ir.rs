@@ -153,12 +153,17 @@ pub fn insert_ir_line_execute(
     let execute_res = ir_transaction.execute(&sql, params);
     if execute_res.is_err() {
         return Err(MiddleendError::General(
-            (GeneralErrLogId::FailedValueInsert as LogId).set_log(
-                &format!("Could not insert values '{}' into table '{}'.",
-                column, sql_table),
-                file!(),
-                line!()
-            ).add_info(&format!("Cause: {:?}", execute_res.err()))))
+            (GeneralErrLogId::FailedValueInsert as LogId)
+                .set_log(
+                    &format!(
+                        "Could not insert values '{}' into table '{}'.",
+                        column, sql_table
+                    ),
+                    file!(),
+                    line!(),
+                )
+                .add_info(&format!("Cause: {:?}", execute_res.err())),
+        ));
     }
     Ok(())
 }
@@ -196,14 +201,18 @@ pub fn update_ir_line_execute(
 
     let execute_res = ir_transaction.execute(&sql, params);
     if execute_res.is_err() {
-        return Err(
-            MiddleendError::General(
-                (GeneralErrLogId::FailedValueUpdate as LogId).set_log(
-                    &format!("Could not update values '{}' for table '{}'.",
-                    column, sql_table),
+        return Err(MiddleendError::General(
+            (GeneralErrLogId::FailedValueUpdate as LogId)
+                .set_log(
+                    &format!(
+                        "Could not update values '{}' for table '{}'.",
+                        column, sql_table
+                    ),
                     file!(),
-                    line!()
-                ).add_info(&format!("Cause: {:?}", execute_res.err()))));
+                    line!(),
+                )
+                .add_info(&format!("Cause: {:?}", execute_res.err())),
+        ));
     }
     Ok(())
 }
@@ -236,13 +245,17 @@ pub fn get_single_ir_line<T: RetrieveFromIr + IrTableName + WriteToIr>(
 
     res_query.map_err(|err| {
         MiddleendError::General(
-            (GeneralErrLogId::FailedRowQuery as LogId).set_log(
-                &format!("Failed getting single IrLine from table `{}`.",
-                T::table_name()),
-                file!(),
-                line!()
-            )
-            .add_info(&format!("PK condition: {}", pk_condition_params.0))
-            .add_info(&format!("Cause: {:?}", err)))
+            (GeneralErrLogId::FailedRowQuery as LogId)
+                .set_log(
+                    &format!(
+                        "Failed getting single IrLine from table `{}`.",
+                        T::table_name()
+                    ),
+                    file!(),
+                    line!(),
+                )
+                .add_info(&format!("PK condition: {}", pk_condition_params.0))
+                .add_info(&format!("Cause: {:?}", err)),
+        )
     })
 }

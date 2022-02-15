@@ -11,7 +11,10 @@ use crate::{
     backend::{ParseFromIr, Render},
     elements,
     frontend::parser::UmParse,
-    middleend::{AsIrLines, ContentIrLine, MacroIrLine, ResourceIrLine, VariableIrLine, WriteToIr, error::MiddleendError},
+    middleend::{
+        error::MiddleendError, AsIrLines, ContentIrLine, MacroIrLine, ResourceIrLine,
+        VariableIrLine, WriteToIr,
+    },
 };
 
 use super::{HeadingBlock, Metadata, ParagraphBlock};

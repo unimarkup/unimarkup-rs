@@ -1,5 +1,5 @@
 use clap::StructOpt;
-use unimarkup_core::{config::Config};
+use unimarkup_core::config::Config;
 
 #[test]
 fn test_valid_config() {
@@ -26,7 +26,7 @@ fn test_invalid_config() {
 }
 
 #[test]
-fn test_valid_multi_path_config(){
+fn test_valid_multi_path_config() {
     let mut cfg: Config = Config::parse_from(vec![
         "unimarkup",
         "--output-formats=html",

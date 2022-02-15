@@ -7,12 +7,15 @@ use strum_macros::*;
 use crate::backend::{self, error::BackendError, ParseFromIr, Render};
 use crate::elements::types::{self, UnimarkupBlocks, UnimarkupType};
 use crate::frontend::error::custom_pest_error;
-use crate::frontend::{error::FrontendError, parser::{self, Rule, UmParse}};
+use crate::frontend::{
+    error::FrontendError,
+    parser::{self, Rule, UmParse},
+};
 use crate::log_id::{LogId, SetLog};
 use crate::middleend::{AsIrLines, ContentIrLine};
 
 use super::error::ElementError;
-use super::log_id::{GeneralErrLogId, AtomicErrLogId};
+use super::log_id::{AtomicErrLogId, GeneralErrLogId};
 
 /// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
@@ -130,12 +133,16 @@ impl HeadingBlock {
                 let attributes: HashMap<&str, &str> = serde_json::from_str(attrs_rule.as_str())
                     .map_err(|err| {
                         ElementError::Atomic(
-                            (GeneralErrLogId::InvalidAttribute as LogId).set_log(
-                                &custom_pest_error(
-                                    "Heading attributes are not valid JSON",
-                                    attrs_rule.as_span(),
-                                ), file!(), line!())
-                                .add_info(&format!("Cause: {}", err))
+                            (GeneralErrLogId::InvalidAttribute as LogId)
+                                .set_log(
+                                    &custom_pest_error(
+                                        "Heading attributes are not valid JSON",
+                                        attrs_rule.as_span(),
+                                    ),
+                                    file!(),
+                                    line!(),
+                                )
+                                .add_info(&format!("Cause: {}", err)),
                         )
                     })?;
 
@@ -242,13 +249,13 @@ impl ParseFromIr for HeadingBlock {
             }
 
             if level == HeadingLevel::Invalid {
-                return Err(
-                    BackendError::Loader(
-                        (AtomicErrLogId::InvalidHeadingLvl as LogId)
-                        .set_log(&format!(
-                            "Provided heading level is invalid: {}",
-                            ir_line.um_type), file!(), line!())
-                    ));
+                return Err(BackendError::Loader(
+                    (AtomicErrLogId::InvalidHeadingLvl as LogId).set_log(
+                        &format!("Provided heading level is invalid: {}", ir_line.um_type),
+                        file!(),
+                        line!(),
+                    ),
+                ));
             }
 
             let content = if !ir_line.text.is_empty() {
@@ -275,9 +282,12 @@ impl ParseFromIr for HeadingBlock {
         }
 
         Err(BackendError::Loader(
-                (AtomicErrLogId::InvalidHeadingLvl as LogId)
-                .set_log("ContentIrLines are empty, could not construct HeadingBlock!", file!(), line!())
-            ))
+            (AtomicErrLogId::InvalidHeadingLvl as LogId).set_log(
+                "ContentIrLines are empty, could not construct HeadingBlock!",
+                file!(),
+                line!(),
+            ),
+        ))
     }
 }
 
@@ -293,14 +303,22 @@ impl Render for HeadingBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        let try_inline =
-            backend::parse_inline(&self.content);
+        let try_inline = backend::parse_inline(&self.content);
 
         if try_inline.is_err() {
             return Err(ElementError::General(
                 (GeneralErrLogId::FailedInlineParsing as LogId)
-                .set_log(&format!("Failed parsing inline formats for heading block with id: '{}'", &self.id), file!(), line!())
-                .add_info(&format!("Cause: {:?}", try_inline.err()))).into());
+                    .set_log(
+                        &format!(
+                            "Failed parsing inline formats for heading block with id: '{}'",
+                            &self.id
+                        ),
+                        file!(),
+                        line!(),
+                    )
+                    .add_info(&format!("Cause: {:?}", try_inline.err())),
+            )
+            .into());
         }
 
         html.push_str(&try_inline.unwrap().render_html()?);

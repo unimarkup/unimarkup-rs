@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 
 use sha3::{Digest, Sha3_256};
 
-use crate::log_id::{SetLog, LogId};
-use crate::middleend::{AsIrLines, MetadataIrLine, WriteToIr, error::MiddleendError};
+use crate::log_id::{LogId, SetLog};
+use crate::middleend::{error::MiddleendError, AsIrLines, MetadataIrLine, WriteToIr};
 
 use super::error::MetaDataError;
 use super::log_id::MetaDataErrLogId;
@@ -82,11 +82,17 @@ impl WriteToIr for Metadata {
 /// Calculates the sha3-256 hash of a given file
 fn get_filehash(file: &Path) -> Result<Vec<u8>, MetaDataError> {
     let mut hasher = Sha3_256::new();
-    let source = fs::read_to_string(file).map_err(|err| 
+    let source = fs::read_to_string(file).map_err(|err| {
         MetaDataError::General(
-            (MetaDataErrLogId::FailedReadingFile as LogId).set_log(&format!("Could not read file: '{:?}'", file), 
-            file!(), line!()).add_info(&format!("Cause: {}", err))
-        ))?;
+            (MetaDataErrLogId::FailedReadingFile as LogId)
+                .set_log(
+                    &format!("Could not read file: '{:?}'", file),
+                    file!(),
+                    line!(),
+                )
+                .add_info(&format!("Cause: {}", err)),
+        )
+    })?;
 
     hasher.update(source);
 

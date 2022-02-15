@@ -7,7 +7,7 @@ use crate::backend::BackendError;
 use crate::frontend::parser::{Rule, UnimarkupParser};
 use crate::log_id::{LogId, SetLog};
 
-use super::{Render, log_id::InlineErrLogId};
+use super::{log_id::InlineErrLogId, Render};
 /// [`Plain`] is one of the inline formatting types, which contains the raw text as String.
 #[derive(Debug)]
 pub struct Plain {
@@ -57,12 +57,14 @@ pub enum FormatTypes {
 
 /// [`parse_inline`] parses through the content of a [`UnimarkupBlock`] and returns a VecDeque of Formattypes
 pub fn parse_inline(source: &str) -> Result<VecDeque<FormatTypes>, BackendError> {
-    let mut rule_pairs =
-        UnimarkupParser::parse(Rule::inline_format, source).map_err(|err| BackendError::General(
-            (InlineErrLogId::NoInlineDetected as LogId).set_log("No inline format detected!", file!(), line!())
-            .add_info(&format!("Given: {}", source))
-            .add_info(&format!("Cause: {}", err))
-        ))?;
+    let mut rule_pairs = UnimarkupParser::parse(Rule::inline_format, source).map_err(|err| {
+        BackendError::General(
+            (InlineErrLogId::NoInlineDetected as LogId)
+                .set_log("No inline format detected!", file!(), line!())
+                .add_info(&format!("Given: {}", source))
+                .add_info(&format!("Cause: {}", err)),
+        )
+    })?;
 
     let mut inline_format = VecDeque::<FormatTypes>::new();
 

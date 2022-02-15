@@ -2,9 +2,15 @@
 
 use std::fs;
 
-use unimarkup_core::{config::{Config, OutputFormat}, log_id::{LogId, SetLog}};
+use unimarkup_core::{
+    config::{Config, OutputFormat},
+    log_id::{LogId, SetLog},
+};
 
-use crate::{error::CliError, log_id::{GeneralErrLogId, GeneralInfLogId}};
+use crate::{
+    error::CliError,
+    log_id::{GeneralErrLogId, GeneralInfLogId},
+};
 
 /// Compiles a Unimarkup document.
 ///
@@ -16,13 +22,17 @@ use crate::{error::CliError, log_id::{GeneralErrLogId, GeneralInfLogId}};
 ///
 /// Returns an [`CliError`], if error occurs during compilation.
 pub fn compile(config: Config) -> Result<(), CliError> {
-    let source = fs::read_to_string(&config.um_file).map_err(|err| 
+    let source = fs::read_to_string(&config.um_file).map_err(|err| {
         CliError::General(
             (GeneralErrLogId::FailedReadingFile as LogId)
-            .set_log(&format!("Could not read file: '{:?}'", &config.um_file), file!(), line!())
-            .add_info(&format!("Cause: {}", err))
+                .set_log(
+                    &format!("Could not read file: '{:?}'", &config.um_file),
+                    file!(),
+                    line!(),
+                )
+                .add_info(&format!("Cause: {}", err)),
         )
-    )?;
+    })?;
 
     let out_path = {
         if let Some(ref out_file) = config.out_file {
@@ -44,16 +54,23 @@ pub fn compile(config: Config) -> Result<(), CliError> {
             let mut out_path_html = out_path;
             out_path_html.set_extension("html");
 
-            (GeneralInfLogId::WritingToFile as LogId)
-            .set_log(&format!("Writing to file: {:?}", out_path_html), file!(), line!());
+            (GeneralInfLogId::WritingToFile as LogId).set_log(
+                &format!("Writing to file: {:?}", out_path_html),
+                file!(),
+                line!(),
+            );
 
-            std::fs::write(&out_path_html, &html.body()).map_err(|err| 
+            std::fs::write(&out_path_html, &html.body()).map_err(|err| {
                 CliError::General(
                     (GeneralErrLogId::FailedWritingFile as LogId)
-                    .set_log(&format!("Could not write to file: {:?}", out_path_html), file!(), line!())
-                    .add_info(&format!("Cause: {}", err))
+                        .set_log(
+                            &format!("Could not write to file: {:?}", out_path_html),
+                            file!(),
+                            line!(),
+                        )
+                        .add_info(&format!("Cause: {}", err)),
                 )
-            )?;
+            })?;
         }
     }
 

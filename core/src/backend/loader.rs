@@ -5,10 +5,11 @@ use rusqlite::Connection;
 use crate::{
     backend::{BackendError, Render},
     elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock, VerbatimBlock},
-    middleend::{self, ContentIrLine}, log_id::{LogId, SetLog},
+    log_id::{LogId, SetLog},
+    middleend::{self, ContentIrLine},
 };
 
-use super::{RenderBlock, log_id::LoaderErrLogId};
+use super::{log_id::LoaderErrLogId, RenderBlock};
 
 /// Trait that must be implemented for a [`UnimarkupType`] to be stored in IR
 pub trait ParseFromIr {
@@ -95,17 +96,13 @@ pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, BackendError> {
         if let Some(val) = type_string.split(&level_delim).next() {
             val.into()
         } else {
-            return Err(
-                BackendError::Loader(
-                    (LoaderErrLogId::InvalidElementType as LogId).set_log(
-                        &format!(
-                            "Invalid type string provided: '{}'",
-                            type_string
-                        ),
-                        file!(),
-                        line!(),
-                    ),
-                ));
+            return Err(BackendError::Loader(
+                (LoaderErrLogId::InvalidElementType as LogId).set_log(
+                    &format!("Invalid type string provided: '{}'", type_string),
+                    file!(),
+                    line!(),
+                ),
+            ));
         }
     } else {
         type_string
@@ -113,16 +110,13 @@ pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, BackendError> {
 
     UnimarkupType::from_str(&type_string).map_err(|err| {
         BackendError::Loader(
-            (LoaderErrLogId::InvalidElementType as LogId).set_log(
-                &format!(
-                    "Failed to resolve Unimarkup type '{}'.",
-                    &type_string
-                ),
-                file!(),
-                line!(),
-            ).add_info(&format!(
-                "Cause: {}", err
-            )),
+            (LoaderErrLogId::InvalidElementType as LogId)
+                .set_log(
+                    &format!("Failed to resolve Unimarkup type '{}'.", &type_string),
+                    file!(),
+                    line!(),
+                )
+                .add_info(&format!("Cause: {}", err)),
         )
     })
 }
@@ -132,7 +126,7 @@ mod loader_tests {
     use super::*;
 
     #[test]
-    fn parse_type(){
+    fn parse_type() {
         // paragraph test
         let um_type = super::parse_um_type("paragraph-start").unwrap();
 

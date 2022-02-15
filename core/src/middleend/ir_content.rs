@@ -1,5 +1,5 @@
 use super::ir::{IrTableName, RetrieveFromIr};
-use super::{AsIrLines, error::MiddleendError, log_id::GeneralErrLogId};
+use super::{error::MiddleendError, log_id::GeneralErrLogId, AsIrLines};
 use crate::log_id::{LogId, SetLog};
 use crate::middleend::ir::{self, WriteToIr};
 use crate::middleend::log_id::GeneralWarnLogId;
@@ -115,12 +115,15 @@ impl WriteToIr for ContentIrLine {
         ];
 
         if ir::entry_already_exists(self, ir_transaction) {
-            (GeneralWarnLogId::EntryOverwritten as LogId)
-            .set_log(&format!(
-                "Content with id: '{}' at line nr: '{}' is overwritten.",
-                self.id, self.line_nr
-            ), file!(), line!());            
-            
+            (GeneralWarnLogId::EntryOverwritten as LogId).set_log(
+                &format!(
+                    "Content with id: '{}' at line nr: '{}' is overwritten.",
+                    self.id, self.line_nr
+                ),
+                file!(),
+                line!(),
+            );
+
             let sql_condition = "id = ?1 AND line_nr = ?2";
             let sql_set = "um_type = ?3, text = ?4, fallback_text = ?5, attributes = ?6, fallback_attributes = ?7";
             ir::update_ir_line_execute(
@@ -201,14 +204,16 @@ pub fn prepare_content_rows(ir_connection: &Connection, order: bool) -> Result<S
 /// # Arguments
 ///
 /// * `connection` - [`rusqlite::Connection`] to interact with the IR
-pub fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLine>, MiddleendError> {
-    let convert_err = |err| MiddleendError::General(
-        (GeneralErrLogId::FailedRowQuery as LogId).set_log(
-            "Failed to query content rows from IR.",
-            file!(),
-            line!()
-        ).add_info(&format!("Cause: {}", err))
-    );
+pub fn get_content_lines(
+    connection: &mut Connection,
+) -> Result<Vec<ContentIrLine>, MiddleendError> {
+    let convert_err = |err| {
+        MiddleendError::General(
+            (GeneralErrLogId::FailedRowQuery as LogId)
+                .set_log("Failed to query content rows from IR.", file!(), line!())
+                .add_info(&format!("Cause: {}", err)),
+        )
+    };
 
     let mut rows_statement = prepare_content_rows(connection, true).map_err(convert_err)?;
 

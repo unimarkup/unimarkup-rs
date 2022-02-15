@@ -6,8 +6,12 @@ use std::{
 use crate::{
     backend::{self, error::BackendError, ParseFromIr, Render},
     elements::types::{self, UnimarkupBlocks, UnimarkupType},
-    frontend::{parser::{self, Rule, UmParse}, error::{FrontendError, custom_pest_error}},
-    middleend::{AsIrLines, ContentIrLine}, log_id::{LogId, SetLog},
+    frontend::{
+        error::{custom_pest_error, FrontendError},
+        parser::{self, Rule, UmParse},
+    },
+    log_id::{LogId, SetLog},
+    middleend::{AsIrLines, ContentIrLine},
 };
 
 use pest::iterators::Pairs;
@@ -54,12 +58,16 @@ impl UmParse for ParagraphBlock {
             let attr: HashMap<&str, &str> =
                 serde_json::from_str(attributes.as_str()).map_err(|err| {
                     ElementError::Atomic(
-                        (GeneralErrLogId::InvalidAttribute as LogId).set_log(
-                            &custom_pest_error(
-                                "Paragraph attributes are not valid JSON.",
-                                attributes.as_span(),
-                            ), file!(), line!())
-                            .add_info(&format!("Cause: {}", err))
+                        (GeneralErrLogId::InvalidAttribute as LogId)
+                            .set_log(
+                                &custom_pest_error(
+                                    "Paragraph attributes are not valid JSON.",
+                                    attributes.as_span(),
+                                ),
+                                file!(),
+                                line!(),
+                            )
+                            .add_info(&format!("Cause: {}", err)),
                     )
                 })?;
 
@@ -98,13 +106,17 @@ impl ParseFromIr for ParagraphBlock {
             let expected_type = UnimarkupType::Paragraph.to_string();
 
             if ir_line.um_type != expected_type {
-                return Err(
-                    ElementError::Atomic(
-                        (GeneralErrLogId::InvalidElementType as LogId).set_log(
-                            &format!(
-                                "Expected paragraph type to parse, instead got: '{}'",
-                                ir_line.um_type), file!(), line!())
-                    ).into());
+                return Err(ElementError::Atomic(
+                    (GeneralErrLogId::InvalidElementType as LogId).set_log(
+                        &format!(
+                            "Expected paragraph type to parse, instead got: '{}'",
+                            ir_line.um_type
+                        ),
+                        file!(),
+                        line!(),
+                    ),
+                )
+                .into());
             }
 
             let content = if !ir_line.text.is_empty() {
@@ -129,10 +141,11 @@ impl ParseFromIr for ParagraphBlock {
             Ok(block)
         } else {
             Err(ElementError::Atomic(
-                (GeneralErrLogId::FailedBlockCreation as LogId).set_log(
-                        "Could not construct ParagraphBlock.", file!(), line!())
-                        .add_info("Cause: No content ir line available.")
-            ).into())
+                (GeneralErrLogId::FailedBlockCreation as LogId)
+                    .set_log("Could not construct ParagraphBlock.", file!(), line!())
+                    .add_info("Cause: No content ir line available."),
+            )
+            .into())
         }
     }
 }
@@ -151,8 +164,17 @@ impl Render for ParagraphBlock {
         if try_inline.is_err() {
             return Err(ElementError::General(
                 (GeneralErrLogId::FailedInlineParsing as LogId)
-                .set_log(&format!("Failed parsing inline formats for paragraph block with id: '{}'", &self.id), file!(), line!())
-                .add_info(&format!("Cause: {:?}", try_inline.err()))).into());
+                    .set_log(
+                        &format!(
+                            "Failed parsing inline formats for paragraph block with id: '{}'",
+                            &self.id
+                        ),
+                        file!(),
+                        line!(),
+                    )
+                    .add_info(&format!("Cause: {:?}", try_inline.err())),
+            )
+            .into());
         }
 
         html.push_str(&try_inline.unwrap().render_html()?);

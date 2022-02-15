@@ -1,10 +1,17 @@
 //! [`preamble`](crate::frontend::preamble) is the module which implements parsing of the preamble and merge the config of the preamble with the CLI arguments.
 
-use crate::{config::Config, frontend::parser::Rule, log_id::{LogId, SetLog}};
+use crate::{
+    config::Config,
+    frontend::parser::Rule,
+    log_id::{LogId, SetLog},
+};
 
 use pest::iterators::Pair;
 
-use super::{error::{FrontendError, custom_pest_error}, log_id::PreambleErrLogId};
+use super::{
+    error::{custom_pest_error, FrontendError},
+    log_id::PreambleErrLogId,
+};
 
 ///[parse_preamble] parses the preamble and tries to serialize the content given either as JSON or YAML into the [Config] struct.
 ///After serialization, the CLI and preamble config structs are merged with CLI taking precedence.
@@ -17,9 +24,10 @@ pub fn parse_preamble(pairs: Pair<Rule>, config: &mut Config) -> Result<(), Fron
         } else {
             return Err(FrontendError::Preamble(
                 (PreambleErrLogId::InvalidJSON as LogId).set_log(
-                    &custom_pest_error(
-                    "Expected valid JSON",
-                    preamble.as_span()), file!(), line!())
+                    &custom_pest_error("Expected valid JSON", preamble.as_span()),
+                    file!(),
+                    line!(),
+                ),
             ));
         }
     }
@@ -29,9 +37,10 @@ pub fn parse_preamble(pairs: Pair<Rule>, config: &mut Config) -> Result<(), Fron
         } else {
             return Err(FrontendError::Preamble(
                 (PreambleErrLogId::InvalidYAML as LogId).set_log(
-                    &custom_pest_error(
-                    "Expected valid YAML",
-                    preamble.as_span()), file!(), line!())
+                    &custom_pest_error("Expected valid YAML", preamble.as_span()),
+                    file!(),
+                    line!(),
+                ),
             ));
         }
     }

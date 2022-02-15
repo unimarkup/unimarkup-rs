@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::backend::{error::BackendError, ParseFromIr, Render};
 use crate::elements::log_id::EnclosedErrLogId;
 use crate::elements::types::{UnimarkupBlocks, UnimarkupType};
-use crate::frontend::error::{FrontendError, custom_pest_error};
+use crate::frontend::error::{custom_pest_error, FrontendError};
 use crate::frontend::parser::{Rule, UmParse};
 use crate::log_id::{LogId, SetLog};
 use crate::middleend::{AsIrLines, ContentIrLine};
@@ -68,7 +68,10 @@ impl UmParse for VerbatimBlock {
                                     &custom_pest_error(
                                         "Verbatim block attributes are not valid JSON",
                                         rule.as_span(),
-                                    ), file!(), line!())
+                                    ),
+                                    file!(),
+                                    line!(),
+                                ),
                             )
                         })?;
 
@@ -93,10 +96,11 @@ impl UmParse for VerbatimBlock {
                     let pest_err = error::Error::new_from_span(err_variant, rule.as_span());
 
                     return Err(ElementError::Enclosed(
-                        (EnclosedErrLogId::FailedParsing as LogId).set_log(
-                            "Could not parse verbatim block.", file!(), line!())
-                            .add_info(&format!("Cause: {}", pest_err))
-                    ).into());
+                        (EnclosedErrLogId::FailedParsing as LogId)
+                            .set_log("Could not parse verbatim block.", file!(), line!())
+                            .add_info(&format!("Cause: {}", pest_err)),
+                    )
+                    .into());
                 }
             }
         }
@@ -134,7 +138,11 @@ impl ParseFromIr for VerbatimBlock {
                     (GeneralErrLogId::InvalidElementType as LogId).set_log(
                         &format!(
                             "Expected verbatim type to parse, instead got: '{}'",
-                            ir_line.um_type), file!(), line!())
+                            ir_line.um_type
+                        ),
+                        file!(),
+                        line!(),
+                    ),
                 )
                 .into());
             }
@@ -161,10 +169,11 @@ impl ParseFromIr for VerbatimBlock {
             Ok(block)
         } else {
             Err(ElementError::Enclosed(
-                (GeneralErrLogId::FailedBlockCreation as LogId).set_log(
-                        "Could not construct VerbatimBlock.", file!(), line!())
-                        .add_info("Cause: No content ir line available.")
-            ).into())
+                (GeneralErrLogId::FailedBlockCreation as LogId)
+                    .set_log("Could not construct VerbatimBlock.", file!(), line!())
+                    .add_info("Cause: No content ir line available."),
+            )
+            .into())
         }
     }
 }
@@ -240,7 +249,7 @@ mod tests {
         }
 
         #[test]
-        fn without_lang(){
+        fn without_lang() {
             let id = String::from("verbatim-id");
             let content = String::from(
                 "This is content of the verbatim block.
@@ -354,7 +363,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn parse(){
+        fn parse() {
             let input = "~~~
                             fn main() {
                                 println!(\"Hello World!\");

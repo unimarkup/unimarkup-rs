@@ -304,10 +304,7 @@ impl Config {
             if !file.exists() {
                 return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        &format!(
-                            "Invalid file given for `output-file`: {:?}",
-                            file
-                        ),
+                        &format!("Invalid file given for `output-file`: {:?}", file),
                         file!(),
                         line!(),
                     ),
@@ -327,10 +324,7 @@ impl Config {
                 if !path.exists() {
                     return Err(ConfigError::General(
                         (ConfigErrLogId::InvalidPath as LogId).set_log(
-                            &format!(
-                                "Invalid path given for `insert-paths`: {:?}",
-                                path
-                            ),
+                            &format!("Invalid path given for `insert-paths`: {:?}", path),
                             file!(),
                             line!(),
                         ),
@@ -342,10 +336,7 @@ impl Config {
             if !path.is_dir() {
                 return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidPath as LogId).set_log(
-                        &format!(
-                            "Invalid path given for `dot-unimarkup`: {:?}",
-                            path
-                        ),
+                        &format!("Invalid path given for `dot-unimarkup`: {:?}", path),
                         file!(),
                         line!(),
                     ),
@@ -356,10 +347,7 @@ impl Config {
             if !file.exists() {
                 return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        &format!(
-                            "Invalid file given for `theme`: {:?}",
-                            file
-                        ),
+                        &format!("Invalid file given for `theme`: {:?}", file),
                         file!(),
                         line!(),
                     ),
@@ -370,10 +358,7 @@ impl Config {
             if !file.exists() {
                 return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        &format!(
-                            "Invalid file given for `citation-style`: {:?}",
-                            file
-                        ),
+                        &format!("Invalid file given for `citation-style`: {:?}", file),
                         file!(),
                         line!(),
                     ),
@@ -385,10 +370,7 @@ impl Config {
                 if !file.exists() {
                     return Err(ConfigError::General(
                         (ConfigErrLogId::InvalidFile as LogId).set_log(
-                            &format!(
-                                "Invalid file given for `references`: {:?}",
-                                file
-                            ),
+                            &format!("Invalid file given for `references`: {:?}", file),
                             file!(),
                             line!(),
                         ),
@@ -401,10 +383,7 @@ impl Config {
                 if !file.exists() {
                     return Err(ConfigError::General(
                         (ConfigErrLogId::InvalidFile as LogId).set_log(
-                            &format!(
-                                "Invalid file given for `fonts`: {:?}",
-                                file
-                            ),
+                            &format!("Invalid file given for `fonts`: {:?}", file),
                             file!(),
                             line!(),
                         ),
@@ -416,10 +395,7 @@ impl Config {
             if !file.exists() {
                 return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        &format!(
-                            "Invalid file given for `html-template`: {:?}",
-                            file
-                        ),
+                        &format!("Invalid file given for `html-template`: {:?}", file),
                         file!(),
                         line!(),
                     ),

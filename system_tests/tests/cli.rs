@@ -100,7 +100,7 @@ fn multiple_output_formats() {
 }
 
 #[test]
-fn insert_path_option_set(){
+fn insert_path_option_set() {
     let um_filename = "file.um";
     let insert_path = "~/images";
 

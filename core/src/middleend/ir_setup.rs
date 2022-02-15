@@ -1,7 +1,6 @@
 use crate::{
-    middleend::{
-        ContentIrLine, MacroIrLine, MetadataIrLine, ResourceIrLine, VariableIrLine,
-    }, log_id::{LogId, SetLog},
+    log_id::{LogId, SetLog},
+    middleend::{ContentIrLine, MacroIrLine, MetadataIrLine, ResourceIrLine, VariableIrLine},
 };
 use rusqlite::Connection;
 
@@ -15,11 +14,9 @@ use super::{error::MiddleendError, log_id::SetupErrLogId};
 pub fn setup_ir_connection() -> Result<Connection, MiddleendError> {
     Connection::open_in_memory().map_err(|err| {
         MiddleendError::Setup(
-            (SetupErrLogId::FailedDatabaseConnection as LogId).set_log(
-                "Could not create a database connection.",
-                file!(),
-                line!()
-            ).add_info(&format!("Cause: {}", err))
+            (SetupErrLogId::FailedDatabaseConnection as LogId)
+                .set_log("Could not create a database connection.", file!(), line!())
+                .add_info(&format!("Cause: {}", err)),
         )
     })
 }
@@ -40,11 +37,9 @@ pub fn setup_ir(ir_connection: &Connection) -> Result<(), MiddleendError> {
     );
     ir_connection.execute_batch(&sql).map_err(|err| {
         MiddleendError::Setup(
-            (SetupErrLogId::FailedTableCreation as LogId).set_log(
-                "Could not setup database tables.",
-                file!(),
-                line!()
-            ).add_info(&format!("Cause: {}", err))
+            (SetupErrLogId::FailedTableCreation as LogId)
+                .set_log("Could not setup database tables.", file!(), line!())
+                .add_info(&format!("Cause: {}", err)),
         )
     })
 }

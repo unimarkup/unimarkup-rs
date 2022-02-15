@@ -91,12 +91,15 @@ impl WriteToIr for MetadataIrLine {
         ];
 
         if ir::entry_already_exists(self, ir_transaction) {
-            (GeneralWarnLogId::EntryOverwritten as LogId)
-            .set_log(&format!(
-                "Metadata with filename: '{}' and path: '{}' is overwritten.",
-                self.filename, self.path
-            ), file!(), line!());  
-            
+            (GeneralWarnLogId::EntryOverwritten as LogId).set_log(
+                &format!(
+                    "Metadata with filename: '{}' and path: '{}' is overwritten.",
+                    self.filename, self.path
+                ),
+                file!(),
+                line!(),
+            );
+
             let sql_condition = "filehash = ?1";
             let sql_set =
                 "filename = ?2, path = ?3, preamble = ?4, fallback_preamble = ?5, root = ?6";
