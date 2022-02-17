@@ -20,10 +20,9 @@ pub enum BackendError {
     Wrapped(LogId),
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<LogId> for BackendError {
-    fn into(self) -> LogId {
-        match self {
+impl From<BackendError> for LogId {
+    fn from(err: BackendError) -> Self {
+        match err {
             BackendError::General(log_id) => log_id,
             BackendError::Loader(log_id) => log_id,
             BackendError::Renderer(log_id) => log_id,
@@ -33,10 +32,9 @@ impl Into<LogId> for BackendError {
     }
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<BackendError> for LogId {
-    fn into(self) -> BackendError {
-        BackendError::Wrapped(self)
+impl From<LogId> for BackendError {
+    fn from(log_id: LogId) -> Self {
+        BackendError::Wrapped(log_id)
     }
 }
 

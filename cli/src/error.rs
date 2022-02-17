@@ -11,10 +11,9 @@ pub enum CliError {
     Core(LogId),
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<LogId> for CliError {
-    fn into(self) -> LogId {
-        match self {
+impl From<CliError> for LogId {
+    fn from(err: CliError) -> Self {
+        match err {
             CliError::General(log_id) => log_id,
             CliError::Core(log_id) => log_id,
         }

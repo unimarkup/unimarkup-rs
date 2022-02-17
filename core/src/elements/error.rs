@@ -17,10 +17,9 @@ pub enum ElementError {
     Wrapped(LogId),
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<LogId> for ElementError {
-    fn into(self) -> LogId {
-        match self {
+impl From<ElementError> for LogId {
+    fn from(err: ElementError) -> Self {
+        match err {
             ElementError::General(log_id) => log_id,
             ElementError::Atomic(log_id) => log_id,
             ElementError::Enclosed(log_id) => log_id,
@@ -30,10 +29,9 @@ impl Into<LogId> for ElementError {
     }
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<ElementError> for LogId {
-    fn into(self) -> ElementError {
-        ElementError::Wrapped(self)
+impl From<LogId> for ElementError {
+    fn from(log_id: LogId) -> Self {
+        ElementError::Wrapped(log_id)
     }
 }
 
@@ -58,19 +56,17 @@ pub enum MetaDataError {
     Wrapped(LogId),
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<LogId> for MetaDataError {
-    fn into(self) -> LogId {
-        match self {
+impl From<MetaDataError> for LogId {
+    fn from(err: MetaDataError) -> Self {
+        match err {
             MetaDataError::General(log_id) => log_id,
             MetaDataError::Wrapped(log_id) => log_id,
         }
     }
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<MetaDataError> for LogId {
-    fn into(self) -> MetaDataError {
-        MetaDataError::Wrapped(self)
+impl From<LogId> for MetaDataError {
+    fn from(log_id: LogId) -> Self {
+        MetaDataError::Wrapped(log_id)
     }
 }

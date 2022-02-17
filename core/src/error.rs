@@ -19,10 +19,9 @@ pub enum CoreError {
     Config(LogId),
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<LogId> for CoreError {
-    fn into(self) -> LogId {
-        match self {
+impl From<CoreError> for LogId {
+    fn from(err: CoreError) -> Self {
+        match err {
             CoreError::General(log_id) => log_id,
             CoreError::Frontend(log_id) => log_id,
             CoreError::Middleend(log_id) => log_id,
@@ -33,10 +32,9 @@ impl Into<LogId> for CoreError {
     }
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<CoreError> for LogId {
-    fn into(self) -> CoreError {
-        CoreError::General(self)
+impl From<LogId> for CoreError {
+    fn from(log_id: LogId) -> Self {
+        CoreError::General(log_id)
     }
 }
 
@@ -49,20 +47,18 @@ pub enum ConfigError {
     Wrapped(LogId),
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<LogId> for ConfigError {
-    fn into(self) -> LogId {
-        match self {
+impl From<ConfigError> for LogId {
+    fn from(err: ConfigError) -> Self {
+        match err {
             ConfigError::General(log_id) => log_id,
             ConfigError::Wrapped(log_id) => log_id,
         }
     }
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<ConfigError> for LogId {
-    fn into(self) -> ConfigError {
-        ConfigError::General(self)
+impl From<LogId> for ConfigError {
+    fn from(log_id: LogId) -> Self {
+        ConfigError::General(log_id)
     }
 }
 

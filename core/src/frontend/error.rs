@@ -20,10 +20,9 @@ pub enum FrontendError {
     Wrapped(LogId),
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<LogId> for FrontendError {
-    fn into(self) -> LogId {
-        match self {
+impl From<FrontendError> for LogId {
+    fn from(err: FrontendError) -> Self {
+        match err {
             FrontendError::General(log_id) => log_id,
             FrontendError::Parser(log_id) => log_id,
             FrontendError::Preamble(log_id) => log_id,
@@ -32,10 +31,9 @@ impl Into<LogId> for FrontendError {
     }
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<FrontendError> for LogId {
-    fn into(self) -> FrontendError {
-        FrontendError::Wrapped(self)
+impl From<LogId> for FrontendError {
+    fn from(log_id: LogId) -> Self {
+        FrontendError::Wrapped(log_id)
     }
 }
 
@@ -52,22 +50,19 @@ impl From<FrontendError> for CoreError {
 
 impl From<MiddleendError> for FrontendError {
     fn from(err: MiddleendError) -> Self {
-        let log_id: LogId = err.into();
-        log_id.into()
+        LogId::from(err).into()
     }
 }
 
 impl From<ElementError> for FrontendError {
     fn from(err: ElementError) -> Self {
-        let log_id: LogId = err.into();
-        log_id.into()
+        LogId::from(err).into()
     }
 }
 
 impl From<ConfigError> for FrontendError {
     fn from(err: ConfigError) -> Self {
-        let log_id: LogId = err.into();
-        log_id.into()
+        LogId::from(err).into()
     }
 }
 
