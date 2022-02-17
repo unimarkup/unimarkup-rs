@@ -301,15 +301,7 @@ impl Config {
     /// [`validate_config`] validates if file and paths exist and if config does not contradict itself
     pub fn validate_config(&mut self) -> Result<(), ConfigError> {
         if let Some(ref file) = self.out_file {
-            if !file.exists() {
-                return Err(ConfigError::General(
-                    (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        &format!("Invalid file given for `output-file`: {:?}", file),
-                        file!(),
-                        line!(),
-                    ),
-                ));
-            } else if !self.overwrite_out_files {
+            if file.exists() && !self.overwrite_out_files {
                 return Err(ConfigError::General(
                     (ConfigErrLogId::InvalidConfig as LogId).set_log(
                         "Option `overwrite-out-files` must be `true` if output file exists.",

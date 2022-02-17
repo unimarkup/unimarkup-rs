@@ -50,15 +50,3 @@ fn test_invalid_multi_path_config() {
 
     assert!(cfg.validate_config().is_err());
 }
-
-#[test]
-fn test_invalid_outfile_config() {
-    let mut cfg: Config = Config::parse_from(vec![
-        "unimarkup",
-        "--output-formats=html",
-        "tests/test_files/frontend/heading1.um",
-        "tests/test_files/break_config_validation.html",
-    ]);
-
-    assert!(cfg.validate_config().is_err());
-}
