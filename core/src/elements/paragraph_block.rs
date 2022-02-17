@@ -80,7 +80,7 @@ impl UmParse for ParagraphBlock {
             Some(ref attrs) if attrs.get("id").is_some() => attrs.get("id").unwrap().to_string(),
             _ => parser::generate_id(&format!(
                 "paragraph{delim}{}",
-                line_nr.to_string(),
+                line_nr,
                 delim = types::DELIMITER
             ))
             .unwrap(),
