@@ -7,7 +7,6 @@
 mod ir;
 mod ir_block;
 mod ir_content;
-mod ir_error;
 mod ir_macros;
 mod ir_metadata;
 mod ir_resources;
