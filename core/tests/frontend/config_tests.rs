@@ -1,8 +1,8 @@
 use clap::StructOpt;
-use unimarkup_core::{config::Config, error::UmError};
+use unimarkup_core::config::Config;
 
 #[test]
-fn test_valid_config() -> Result<(), UmError> {
+fn test_valid_config() {
     let mut cfg: Config = Config::parse_from(vec![
         "unimarkup",
         "--output-formats=html",
@@ -10,13 +10,11 @@ fn test_valid_config() -> Result<(), UmError> {
         "tests/test_files/frontend/heading1.um",
     ]);
 
-    cfg.validate_config()?;
-
-    Ok(())
+    cfg.validate_config().unwrap();
 }
 
 #[test]
-fn test_invalid_config() -> Result<(), UmError> {
+fn test_invalid_config() {
     let mut cfg: Config = Config::parse_from(vec![
         "unimarkup",
         "--output-formats=html",
@@ -25,12 +23,10 @@ fn test_invalid_config() -> Result<(), UmError> {
     ]);
 
     assert!(cfg.validate_config().is_err());
-
-    Ok(())
 }
 
 #[test]
-fn test_valid_multi_path_config() -> Result<(), UmError> {
+fn test_valid_multi_path_config() {
     let mut cfg: Config = Config::parse_from(vec![
         "unimarkup",
         "--output-formats=html",
@@ -39,13 +35,11 @@ fn test_valid_multi_path_config() -> Result<(), UmError> {
         "tests/test_files/frontend/heading1.um",
     ]);
 
-    cfg.validate_config()?;
-
-    Ok(())
+    cfg.validate_config().unwrap();
 }
 
 #[test]
-fn test_invalid_multi_path_config() -> Result<(), UmError> {
+fn test_invalid_multi_path_config() {
     let mut cfg: Config = Config::parse_from(vec![
         "unimarkup",
         "--output-formats=html",
@@ -55,20 +49,4 @@ fn test_invalid_multi_path_config() -> Result<(), UmError> {
     ]);
 
     assert!(cfg.validate_config().is_err());
-
-    Ok(())
-}
-
-#[test]
-fn test_invalid_outfile_config() -> Result<(), UmError> {
-    let mut cfg: Config = Config::parse_from(vec![
-        "unimarkup",
-        "--output-formats=html",
-        "tests/test_files/frontend/heading1.um",
-        "tests/test_files/break_config_validation.html",
-    ]);
-
-    assert!(cfg.validate_config().is_err());
-
-    Ok(())
 }

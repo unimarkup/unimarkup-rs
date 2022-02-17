@@ -6,7 +6,11 @@ use clap::{crate_version, ArgEnum, Parser};
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-use crate::{backend::BackendError, elements::types::UnimarkupType, error::UmError};
+use crate::{
+    elements::types::UnimarkupType,
+    error::ConfigError,
+    log_id::{ConfigErrLogId, LogId, SetLog},
+};
 
 const UNIMARKUP_NAME: &str = "Unimarkup";
 
@@ -43,7 +47,7 @@ pub struct Config {
         long = "output-formats",
         alias = "formats",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         arg_enum
     )]
     #[serde(alias = "output-formats")]
@@ -56,7 +60,7 @@ pub struct Config {
         display_order = 2,
         long = "insert-paths",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         parse(from_os_str)
     )]
     #[serde(alias = "insert-paths")]
@@ -96,7 +100,7 @@ pub struct Config {
         short = 'f',
         long = "flags",
         takes_value = true,
-        use_delimiter = true
+        use_value_delimiter = true
     )]
     #[serde(alias = "flags")]
     #[serde(default)]
@@ -108,7 +112,7 @@ pub struct Config {
         display_order = 7,
         long = "enable-elements",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         arg_enum
     )]
     #[serde(alias = "enable-elements")]
@@ -121,7 +125,7 @@ pub struct Config {
         display_order = 8,
         long = "disable-elements",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         arg_enum
     )]
     #[serde(alias = "disable-elements")]
@@ -148,7 +152,7 @@ pub struct Config {
         long = "references",
         alias = "refs",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         requires = "citation-style",
         parse(from_os_str)
     )]
@@ -164,7 +168,7 @@ pub struct Config {
         alias = "ttf",
         alias = "woff",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         parse(from_os_str)
     )]
     #[serde(alias = "fonts")]
@@ -295,93 +299,109 @@ pub enum HtmlMathmode {
 
 impl Config {
     /// [`validate_config`] validates if file and paths exist and if config does not contradict itself
-    pub fn validate_config(&mut self) -> Result<(), UmError> {
+    pub fn validate_config(&mut self) -> Result<(), ConfigError> {
         if let Some(ref file) = self.out_file {
-            if !file.exists() {
-                let msg = format!(
-                    "output_file: {} is not a valid file",
-                    file.to_string_lossy()
-                );
-                return Err(UmError::Backend(BackendError::new(msg)));
-            } else if !self.overwrite_out_files {
-                return Err(UmError::Backend(BackendError::new(
-                    "overwrite-out-files has to be true",
-                )));
+            if file.exists() && !self.overwrite_out_files {
+                return Err(ConfigError::General(
+                    (ConfigErrLogId::InvalidConfig as LogId).set_log(
+                        "Option `overwrite-out-files` must be `true` if output file exists.",
+                        file!(),
+                        line!(),
+                    ),
+                ));
             }
         }
         if let Some(ref paths) = self.insert_paths {
             for path in paths {
                 if !path.exists() {
-                    let msg = format!(
-                        "the path in insert-paths: {} is not a valid path",
-                        path.to_string_lossy()
-                    );
-                    return Err(UmError::Backend(BackendError::new(msg)));
+                    return Err(ConfigError::General(
+                        (ConfigErrLogId::InvalidPath as LogId).set_log(
+                            &format!("Invalid path given for `insert-paths`: {:?}", path),
+                            file!(),
+                            line!(),
+                        ),
+                    ));
                 }
             }
         }
         if let Some(ref path) = self.dot_unimarkup {
             if !path.is_dir() {
-                let msg = format!(
-                    "dot-unimarkup: {} is not a valid path",
-                    path.to_string_lossy()
-                );
-                return Err(UmError::Backend(BackendError::new(msg)));
+                return Err(ConfigError::General(
+                    (ConfigErrLogId::InvalidPath as LogId).set_log(
+                        &format!("Invalid path given for `dot-unimarkup`: {:?}", path),
+                        file!(),
+                        line!(),
+                    ),
+                ));
             }
         }
         if let Some(ref file) = self.theme {
             if !file.exists() {
-                let msg = format!("theme: {} is not a valid file", file.to_string_lossy());
-                return Err(UmError::Backend(BackendError::new(msg)));
+                return Err(ConfigError::General(
+                    (ConfigErrLogId::InvalidFile as LogId).set_log(
+                        &format!("Invalid file given for `theme`: {:?}", file),
+                        file!(),
+                        line!(),
+                    ),
+                ));
             }
         }
         if let Some(ref file) = self.citation_style {
             if !file.exists() {
-                let msg = format!(
-                    "citation-style: {} is not a valid file",
-                    file.to_string_lossy()
-                );
-                return Err(UmError::Backend(BackendError::new(msg)));
+                return Err(ConfigError::General(
+                    (ConfigErrLogId::InvalidFile as LogId).set_log(
+                        &format!("Invalid file given for `citation-style`: {:?}", file),
+                        file!(),
+                        line!(),
+                    ),
+                ));
             }
         }
-        if let Some(ref paths) = self.references {
-            for path in paths {
-                if !path.exists() {
-                    let msg = format!(
-                        "this file in references: {} is not a valid file",
-                        path.to_string_lossy()
-                    );
-                    return Err(UmError::Backend(BackendError::new(msg)));
+        if let Some(ref files) = self.references {
+            for file in files {
+                if !file.exists() {
+                    return Err(ConfigError::General(
+                        (ConfigErrLogId::InvalidFile as LogId).set_log(
+                            &format!("Invalid file given for `references`: {:?}", file),
+                            file!(),
+                            line!(),
+                        ),
+                    ));
                 }
             }
         }
         if let Some(ref files) = self.fonts {
             for file in files {
                 if !file.exists() {
-                    let msg = format!(
-                        "this file in fonts
-                        : {} is not a valid file",
-                        file.to_string_lossy()
-                    );
-                    return Err(UmError::Backend(BackendError::new(msg)));
+                    return Err(ConfigError::General(
+                        (ConfigErrLogId::InvalidFile as LogId).set_log(
+                            &format!("Invalid file given for `fonts`: {:?}", file),
+                            file!(),
+                            line!(),
+                        ),
+                    ));
                 }
             }
         }
         if let Some(ref file) = self.html_template {
             if !file.exists() {
-                let msg = format!(
-                    "html-template: {} is not a valid file",
-                    file.to_string_lossy()
-                );
-                return Err(UmError::Backend(BackendError::new(msg)));
+                return Err(ConfigError::General(
+                    (ConfigErrLogId::InvalidFile as LogId).set_log(
+                        &format!("Invalid file given for `html-template`: {:?}", file),
+                        file!(),
+                        line!(),
+                    ),
+                ));
             }
         }
         if !self.um_file.exists() {
-            let msg = format!(
-                "um-file: {} is not a valid file",
-                self.out_file.as_ref().unwrap().to_str().unwrap()
-            );
-            return Err(UmError::Backend(BackendError::new(msg)));
+            return Err(ConfigError::General(
+                (ConfigErrLogId::InvalidFile as LogId).set_log(
+                    "Set `um-file` does not exist!",
+                    file!(),
+                    line!(),
+                ),
+            ));
         }
 
         Ok(())

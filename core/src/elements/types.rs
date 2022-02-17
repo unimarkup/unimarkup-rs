@@ -10,9 +10,11 @@ use strum_macros::EnumString;
 use crate::{
     backend::{ParseFromIr, Render},
     elements,
-    error::UmError,
     frontend::parser::UmParse,
-    middleend::{AsIrLines, ContentIrLine, MacroIrLine, ResourceIrLine, VariableIrLine, WriteToIr},
+    middleend::{
+        error::MiddleendError, AsIrLines, ContentIrLine, MacroIrLine, ResourceIrLine,
+        VariableIrLine, WriteToIr,
+    },
 };
 
 use super::{HeadingBlock, Metadata, ParagraphBlock};
@@ -35,7 +37,7 @@ impl<T> UnimarkupBlock for T where
 pub type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;
 
 impl WriteToIr for UnimarkupBlocks {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
         for element in self {
             element.write_to_ir(ir_transaction)?;
         }

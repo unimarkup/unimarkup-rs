@@ -1,8 +1,10 @@
-use crate::error::UmError;
+use crate::log_id::{LogId, SetLog};
 use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
-use log::warn;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
+
+use super::error::MiddleendError;
+use super::log_id::GeneralWarnLogId;
 
 /// Structure for the metadata table representation of the IR
 #[derive(Debug, PartialEq, Default, Clone)]
@@ -72,7 +74,7 @@ impl MetadataIrLine {
 }
 
 impl WriteToIr for MetadataIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
         let sql_table = &MetadataIrLine::table_name();
         let column_pk = format!(
             "filename: {} with hash: {}",
@@ -89,10 +91,15 @@ impl WriteToIr for MetadataIrLine {
         ];
 
         if ir::entry_already_exists(self, ir_transaction) {
-            warn!(
-                "Metadata with filename: '{}' and path: '{}' is overwritten.",
-                self.filename, self.path
+            (GeneralWarnLogId::EntryOverwritten as LogId).set_log(
+                &format!(
+                    "Metadata with filename: '{}' and path: '{}' is overwritten.",
+                    self.filename, self.path
+                ),
+                file!(),
+                line!(),
             );
+
             let sql_condition = "filehash = ?1";
             let sql_set =
                 "filename = ?2, path = ?3, preamble = ?4, fallback_preamble = ?5, root = ?6";

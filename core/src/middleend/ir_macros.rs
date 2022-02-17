@@ -1,7 +1,8 @@
+use super::error::MiddleendError;
 use super::ir::{IrTableName, RetrieveFromIr};
-use crate::error::UmError;
+use super::log_id::GeneralInfLogId;
+use crate::log_id::{LogId, SetLog};
 use crate::middleend::ir::{self, WriteToIr};
-use log::info;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
@@ -71,7 +72,7 @@ impl MacroIrLine {
 }
 
 impl WriteToIr for MacroIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
         let sql_table = &MacroIrLine::table_name();
         let column_pk = format!("name: {} with parameters: {}", self.name, self.parameters);
         let new_values = params![
@@ -83,10 +84,15 @@ impl WriteToIr for MacroIrLine {
         ];
 
         if ir::entry_already_exists(self, ir_transaction) {
-            info!(
-                "Macro with name: '{}' and parameters: '{}' is overwritten.",
-                self.name, self.parameters
+            (GeneralInfLogId::EntryOverwritten as LogId).set_log(
+                &format!(
+                    "Macro with name: '{}' and parameters: '{}' is overwritten.",
+                    self.name, self.parameters
+                ),
+                file!(),
+                line!(),
             );
+
             let sql_condition = "name = ?1 AND parameters = ?2";
             let sql_set = "um_type = ?3, body = ?4, fallback_body = ?5";
             ir::update_ir_line_execute(

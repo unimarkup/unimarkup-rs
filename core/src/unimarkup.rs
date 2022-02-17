@@ -4,8 +4,10 @@ use crate::backend;
 use crate::backend::RenderBlock;
 use crate::config::Config;
 use crate::config::OutputFormat;
-use crate::error::UmError;
+use crate::error::CoreError;
 use crate::frontend;
+use crate::log_id::LogId;
+use crate::log_id::SetLog;
 use crate::middleend;
 
 /// Struct representing a Unimarkup document that can be rendered to supported output formats.
@@ -47,7 +49,16 @@ impl Html<'_> {
         let mut output = String::default();
 
         for block in self.elements {
-            output.push_str(&block.render_html().unwrap());
+            let try_render = block.render_html();
+
+            // FIX: This must change after we move inline formatting
+            match try_render {
+                Ok(html) => output.push_str(&html),
+                Err(err) => {
+                    let id: LogId = err.into();
+                    id.add_info("Failed rendering HTML due to this error!");
+                }
+            }
         }
 
         output
@@ -63,11 +74,11 @@ impl Html<'_> {
 ///
 /// # Errors
 ///
-/// Returns a [`UmError`], if error occurs during compilation.
-pub fn compile(um_content: &str, mut config: Config) -> Result<UnimarkupDocument, UmError> {
+/// Returns a [`CoreError`], if error occurs during compilation.
+pub fn compile(um_content: &str, mut config: Config) -> Result<UnimarkupDocument, CoreError> {
     let mut connection = middleend::setup_ir_connection()?;
     middleend::setup_ir(&connection)?;
 
     frontend::run(um_content, &mut connection, &mut config)?;
-    backend::run(&mut connection, config)
+    backend::run(&mut connection, config).map_err(|err| err.into())
 }

@@ -5,13 +5,12 @@ use clap::StructOpt;
 use unimarkup_core::{
     config::Config,
     elements::{Metadata, MetadataKind},
-    error::UmError,
     frontend, middleend,
-    middleend::{IrError, MetadataIrLine},
+    middleend::MetadataIrLine,
 };
 
 #[test]
-fn root_metadata_in_ir() -> Result<(), UmError> {
+fn root_metadata_in_ir() {
     let testfile = "tests/test_files/small_testfile.um";
 
     let mut connection = ir_test_setup::setup_test_ir();
@@ -19,7 +18,7 @@ fn root_metadata_in_ir() -> Result<(), UmError> {
 
     let input = std::fs::read_to_string(&cfg.um_file).unwrap();
 
-    frontend::run(&input, &mut connection, &mut cfg)?;
+    frontend::run(&input, &mut connection, &mut cfg).unwrap();
 
     let expected_metadata = Metadata {
         file: Path::new(testfile).to_path_buf(),
@@ -30,16 +29,12 @@ fn root_metadata_in_ir() -> Result<(), UmError> {
 
     let ir_metadata: MetadataIrLine = expected_metadata.into();
 
-    if let Ok(transaction) = connection.transaction() {
-        let metadata_exists = middleend::entry_already_exists(&ir_metadata, &transaction);
+    match connection.transaction() {
+        Ok(transaction) => {
+            let metadata_exists = middleend::entry_already_exists(&ir_metadata, &transaction);
 
-        assert!(metadata_exists);
-        return Ok(());
-    }
-
-    Err(UmError::Ir(IrError {
-        tablename: "metadata".to_string(),
-        column: "-".to_string(),
-        message: "given metadata not found".to_string(),
-    }))
+            assert!(metadata_exists);
+        }
+        Err(_) => panic!("Failed creating database connection"),
+    };
 }

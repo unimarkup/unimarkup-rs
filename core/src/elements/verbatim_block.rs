@@ -3,11 +3,16 @@ use std::collections::{HashMap, VecDeque};
 use pest::iterators::Pairs;
 use serde::{Deserialize, Serialize};
 
-use crate::backend::{BackendError, ParseFromIr, Render};
+use crate::backend::{error::BackendError, ParseFromIr, Render};
+use crate::elements::log_id::EnclosedErrLogId;
 use crate::elements::types::{UnimarkupBlocks, UnimarkupType};
-use crate::error::UmError;
+use crate::frontend::error::{custom_pest_error, FrontendError};
 use crate::frontend::parser::{Rule, UmParse};
+use crate::log_id::{LogId, SetLog};
 use crate::middleend::{AsIrLines, ContentIrLine};
+
+use super::error::ElementError;
+use super::log_id::GeneralErrLogId;
 
 /// Structure of a Unimarkup verbatim block element.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -27,7 +32,7 @@ pub struct VerbatimBlock {
 }
 
 impl UmParse for VerbatimBlock {
-    fn parse(pairs: &mut Pairs<Rule>, span: pest::Span) -> Result<UnimarkupBlocks, UmError>
+    fn parse(pairs: &mut Pairs<Rule>, span: pest::Span) -> Result<UnimarkupBlocks, FrontendError>
     where
         Self: Sized,
     {
@@ -58,9 +63,15 @@ impl UmParse for VerbatimBlock {
                 Rule::attributes => {
                     let attributes: HashMap<&str, &str> = serde_json::from_str(rule.as_str())
                         .map_err(|_| {
-                            UmError::custom_pest_error(
-                                "Arguments are not valid JSON",
-                                rule.as_span(),
+                            ElementError::Enclosed(
+                                (GeneralErrLogId::InvalidAttribute as LogId).set_log(
+                                    &custom_pest_error(
+                                        "Verbatim block attributes are not valid JSON",
+                                        rule.as_span(),
+                                    ),
+                                    file!(),
+                                    line!(),
+                                ),
                             )
                         })?;
 
@@ -84,10 +95,12 @@ impl UmParse for VerbatimBlock {
 
                     let pest_err = error::Error::new_from_span(err_variant, rule.as_span());
 
-                    return Err(UmError::General {
-                        msg: String::from("Could not parse verbatim block."),
-                        error: Box::new(pest_err),
-                    });
+                    return Err(ElementError::Enclosed(
+                        (EnclosedErrLogId::FailedParsing as LogId)
+                            .set_log("Could not parse verbatim block.", file!(), line!())
+                            .add_info(&format!("Cause: {}", pest_err)),
+                    )
+                    .into());
                 }
             }
         }
@@ -113,7 +126,7 @@ impl AsIrLines<ContentIrLine> for VerbatimBlock {
 }
 
 impl ParseFromIr for VerbatimBlock {
-    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, UmError>
+    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, BackendError>
     where
         Self: Sized,
     {
@@ -121,10 +134,16 @@ impl ParseFromIr for VerbatimBlock {
             let expected_type = UnimarkupType::VerbatimBlock.to_string();
 
             if ir_line.um_type != expected_type {
-                return Err(BackendError::new(format!(
-                    "Expected verbatim type to parse, instead got: '{}'",
-                    ir_line.um_type
-                ))
+                return Err(ElementError::Enclosed(
+                    (GeneralErrLogId::InvalidElementType as LogId).set_log(
+                        &format!(
+                            "Expected verbatim type to parse, instead got: '{}'",
+                            ir_line.um_type
+                        ),
+                        file!(),
+                        line!(),
+                    ),
+                )
                 .into());
             }
 
@@ -149,8 +168,10 @@ impl ParseFromIr for VerbatimBlock {
 
             Ok(block)
         } else {
-            Err(BackendError::new(
-                "Could not construct VerbatimBlock. \nReason: No content ir line available.",
+            Err(ElementError::Enclosed(
+                (GeneralErrLogId::FailedBlockCreation as LogId)
+                    .set_log("Could not construct VerbatimBlock.", file!(), line!())
+                    .add_info("Cause: No content ir line available."),
             )
             .into())
         }
@@ -163,7 +184,7 @@ struct VerbatimAttributes {
 }
 
 impl Render for VerbatimBlock {
-    fn render_html(&self) -> Result<String, UmError> {
+    fn render_html(&self) -> Result<String, BackendError> {
         let mut res = String::with_capacity(self.content.capacity());
 
         let attributes =
@@ -195,14 +216,13 @@ mod tests {
     use crate::backend::{ParseFromIr, Render};
     use crate::elements::types::UnimarkupType;
     use crate::elements::*;
-    use crate::error::UmError;
     use crate::frontend::parser::{Rule, UmParse, UnimarkupParser};
     use crate::middleend::*;
     mod render {
         use super::*;
 
         #[test]
-        fn with_lang() -> Result<(), UmError> {
+        fn with_lang() {
             let id = String::from("verbatim-id");
             let content = String::from(
                 "This is content of the verbatim block.
@@ -225,13 +245,11 @@ mod tests {
                 id, lang, content
             );
 
-            assert_eq!(expected_html, block.render_html()?);
-
-            Ok(())
+            assert_eq!(expected_html, block.render_html().unwrap());
         }
 
         #[test]
-        fn without_lang() -> Result<(), UmError> {
+        fn without_lang() {
             let id = String::from("verbatim-id");
             let content = String::from(
                 "This is content of the verbatim block.
@@ -249,9 +267,7 @@ mod tests {
 
             let expected_html = format!("<pre><code id='{}'>{}</code></pre>", id, content);
 
-            assert_eq!(expected_html, block.render_html()?);
-
-            Ok(())
+            assert_eq!(expected_html, block.render_html().unwrap());
         }
     }
 
@@ -259,7 +275,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn parse() -> Result<(), UmError> {
+        fn parse() {
             let test_id = String::from("test-id");
             let content = String::from(
                 "This is an example verbatim
@@ -276,14 +292,12 @@ mod tests {
             }]
             .into();
 
-            let verbatim = VerbatimBlock::parse_from_ir(&mut lines)?;
+            let verbatim = VerbatimBlock::parse_from_ir(&mut lines).unwrap();
 
             assert_eq!(verbatim.id, test_id);
             assert_eq!(verbatim.line_nr, 0);
             assert_eq!(verbatim.content, content);
             assert_eq!(verbatim.attributes, String::from("{}"));
-
-            Ok(())
         }
 
         #[test]
@@ -349,7 +363,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn parse() -> Result<(), UmError> {
+        fn parse() {
             let input = "~~~
                             fn main() {
                                 println!(\"Hello World!\");
@@ -373,7 +387,7 @@ mod tests {
         }
 
         #[test]
-        fn parse_with_lang() -> Result<(), UmError> {
+        fn parse_with_lang() {
             let input = "~~~rust
                             fn main() {
                                 println!(\"Hello World!\");
@@ -397,7 +411,7 @@ mod tests {
         }
 
         #[test]
-        fn parse_with_attrs() -> Result<(), UmError> {
+        fn parse_with_attrs() {
             let input = "~~~{ \"language\": \"rust\", \"id\": \"custom-id\" }
                             fn main() {
                                 println!(\"Hello World!\");
@@ -431,10 +445,10 @@ mod tests {
             let input = "~~~
                             some content ~~~";
 
-            let _ = try_parse(input, ContentIrLine::default()).unwrap();
+            try_parse(input, ContentIrLine::default());
         }
 
-        fn try_parse(input: &str, mut expected_line: ContentIrLine) -> Result<(), UmError> {
+        fn try_parse(input: &str, mut expected_line: ContentIrLine) {
             let mut unimarkup = UnimarkupParser::parse(Rule::unimarkup, input).unwrap();
 
             assert_eq!(unimarkup.clone().count(), 1);
@@ -467,8 +481,6 @@ mod tests {
             let mut line = ir_lines.pop().unwrap();
 
             check_lines(&mut line, &mut expected_line);
-
-            Ok(())
         }
 
         fn check_lines(first: &mut ContentIrLine, second: &mut ContentIrLine) {
