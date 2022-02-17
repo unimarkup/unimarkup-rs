@@ -28,13 +28,13 @@ fn root_metadata_in_ir() {
     };
 
     let ir_metadata: MetadataIrLine = expected_metadata.into();
-    let try_transaction = connection.transaction();
 
-    if let Ok(transaction) = try_transaction {
-        let metadata_exists = middleend::entry_already_exists(&ir_metadata, &transaction);
+    match connection.transaction() {
+        Ok(transaction) => {
+            let metadata_exists = middleend::entry_already_exists(&ir_metadata, &transaction);
 
-        assert!(metadata_exists);
-    } else {
-        panic!("Failed creating database connection")
-    }
+            assert!(metadata_exists);
+        }
+        Err(_) => panic!("Failed creating database connection"),
+    };
 }
