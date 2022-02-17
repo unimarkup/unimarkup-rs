@@ -47,7 +47,7 @@ pub struct Config {
         long = "output-formats",
         alias = "formats",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         arg_enum
     )]
     #[serde(alias = "output-formats")]
@@ -60,7 +60,7 @@ pub struct Config {
         display_order = 2,
         long = "insert-paths",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         parse(from_os_str)
     )]
     #[serde(alias = "insert-paths")]
@@ -100,7 +100,7 @@ pub struct Config {
         short = 'f',
         long = "flags",
         takes_value = true,
-        use_delimiter = true
+        use_value_delimiter = true
     )]
     #[serde(alias = "flags")]
     #[serde(default)]
@@ -112,7 +112,7 @@ pub struct Config {
         display_order = 7,
         long = "enable-elements",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         arg_enum
     )]
     #[serde(alias = "enable-elements")]
@@ -125,7 +125,7 @@ pub struct Config {
         display_order = 8,
         long = "disable-elements",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         arg_enum
     )]
     #[serde(alias = "disable-elements")]
@@ -152,7 +152,7 @@ pub struct Config {
         long = "references",
         alias = "refs",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         requires = "citation-style",
         parse(from_os_str)
     )]
@@ -168,7 +168,7 @@ pub struct Config {
         alias = "ttf",
         alias = "woff",
         takes_value = true,
-        use_delimiter = true,
+        use_value_delimiter = true,
         parse(from_os_str)
     )]
     #[serde(alias = "fonts")]
