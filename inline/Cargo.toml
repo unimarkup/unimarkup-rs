@@ -1,0 +1,29 @@
+[package]
+name = "unimarkup_inline"
+version = "0.3.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.rusqlite]
+version = "0.26"
+features = ["bundled"]
+
+[dependencies]
+unicode-segmentation = "1.8.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_rusqlite = "0.28.0"
+serde_bytes = "0.11.5"
+serde_json = "1.0"
+serde_yaml = "0.8.23"
+serde_plain = "1.0.0"
+strum = "0.22.0"
+strum_macros = "0.22.0"
+log = "0.4"
+env_logger = "0.9.0"
+pest = "2.1.3"
+pest_derive = "2.0"
+shlex = "1.1.0"
+clap = { version = "^3.1.0", features = ["derive", "cargo", "env"] }
+sha3 = "0.10"
+hex = "0.4"
