@@ -207,6 +207,7 @@ impl Render for VerbatimBlock {
     }
 }
 
+#[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
     use std::collections::VecDeque;
@@ -222,7 +223,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn with_lang() {
+        fn test__render_html__verbatim_with_lang() {
             let id = String::from("verbatim-id");
             let content = String::from(
                 "This is content of the verbatim block.
@@ -249,7 +250,7 @@ mod tests {
         }
 
         #[test]
-        fn without_lang() {
+        fn test__render_html__verbatim_without_lang() {
             let id = String::from("verbatim-id");
             let content = String::from(
                 "This is content of the verbatim block.
@@ -275,7 +276,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn parse() {
+        fn test__parse_from_ir__valid_verbatim() {
             let test_id = String::from("test-id");
             let content = String::from(
                 "This is an example verbatim
@@ -300,8 +301,9 @@ mod tests {
             assert_eq!(verbatim.attributes, String::from("{}"));
         }
 
+        #[should_panic]
         #[test]
-        fn parse_bad() {
+        fn test__parse_from_ir__invalid_verbatim() {
             let mut lines = vec![].into();
 
             let block_res = VerbatimBlock::parse_from_ir(&mut lines);
@@ -318,9 +320,7 @@ mod tests {
 
             lines.push_front(ir_line_bad_type);
 
-            let block_res = VerbatimBlock::parse_from_ir(&mut lines);
-
-            assert!(block_res.is_err());
+            VerbatimBlock::parse_from_ir(&mut lines).unwrap();
         }
     }
 
@@ -328,7 +328,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn lines() {
+        fn test__content_ir_lines__valid_verbatim() {
             let id = String::from("verbatim-id");
             let content = String::from("This is placeholder content");
             let attributes = String::from("{}");
@@ -363,7 +363,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn parse() {
+        fn test__parse__verbatim() {
             let input = "~~~
                             fn main() {
                                 println!(\"Hello World!\");
@@ -387,7 +387,7 @@ mod tests {
         }
 
         #[test]
-        fn parse_with_lang() {
+        fn test__parse__verbatim_with_lang() {
             let input = "~~~rust
                             fn main() {
                                 println!(\"Hello World!\");
@@ -411,7 +411,7 @@ mod tests {
         }
 
         #[test]
-        fn parse_with_attrs() {
+        fn test__parse_verbatim__with_attrs() {
             let input = "~~~{ \"language\": \"rust\", \"id\": \"custom-id\" }
                             fn main() {
                                 println!(\"Hello World!\");
@@ -441,7 +441,7 @@ mod tests {
 
         #[test]
         #[should_panic]
-        fn parse_bad() {
+        fn test__parse__invalid_verbatim() {
             let input = "~~~
                             some content ~~~";
 
@@ -451,32 +451,44 @@ mod tests {
         fn try_parse(input: &str, mut expected_line: ContentIrLine) {
             let mut unimarkup = UnimarkupParser::parse(Rule::unimarkup, input).unwrap();
 
-            assert_eq!(unimarkup.clone().count(), 1);
+            assert_eq!(unimarkup.clone().count(), 1, "Number of pairs not equal 1");
 
             let mut inner_pairs = unimarkup.next().unwrap().into_inner();
 
-            assert_eq!(inner_pairs.clone().count(), 2);
+            assert_eq!(
+                inner_pairs.clone().count(),
+                2,
+                "Number of inner pairs not equal 2"
+            );
 
             let enclosed = inner_pairs.next().unwrap();
 
-            assert_eq!(enclosed.as_rule(), Rule::enclosed_block);
+            assert_eq!(
+                enclosed.as_rule(),
+                Rule::enclosed_block,
+                "Inner pair is not a enclosed_block"
+            );
 
             let verbatim_res = UnimarkupParser::parse(Rule::verbatim, enclosed.as_str());
 
-            assert!(verbatim_res.is_ok());
+            assert!(verbatim_res.is_ok(), "Cause: {}", verbatim_res.unwrap_err());
 
             let mut input_pairs = verbatim_res.unwrap();
 
             let block_res = VerbatimBlock::parse(&mut input_pairs, enclosed.as_span());
 
-            assert!(block_res.is_ok());
+            assert!(block_res.is_ok(), "Cause: {:?}", block_res.unwrap_err());
 
             let list = block_res.unwrap();
-            assert_eq!(list.len(), 1);
+            assert_eq!(
+                list.len(),
+                1,
+                "Number of UnimarkupBlocks in VerbatimBlock not equal 1"
+            );
 
             let mut ir_lines = list.get(0).unwrap().as_ir_lines();
 
-            assert_eq!(ir_lines.len(), 1);
+            assert_eq!(ir_lines.len(), 1, "Number of ir_lines not equal 1");
 
             let mut line = ir_lines.pop().unwrap();
 
@@ -489,7 +501,7 @@ mod tests {
                     serde_json::from_str(&first.attributes).unwrap();
                 let expect_attrs: HashMap<&str, &str> =
                     serde_json::from_str(&second.attributes).unwrap();
-                assert_eq!(is_attrs, expect_attrs);
+                assert_eq!(is_attrs, expect_attrs, "Attributes do not match");
             }
 
             // test attributes manually because HashMap is not sorted
@@ -498,7 +510,7 @@ mod tests {
             first.attributes = String::default();
             second.attributes = String::default();
 
-            assert_eq!(first, second);
+            assert_eq!(first, second, "ContentIrLine does not match");
         }
     }
 }

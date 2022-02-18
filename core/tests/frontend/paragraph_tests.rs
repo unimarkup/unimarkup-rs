@@ -5,7 +5,7 @@ use unimarkup_core::middleend::ContentIrLine;
 use super::umblock_tests::*;
 
 #[test]
-fn test_parse_valid_paragraph_with_heading() {
+fn test__parse__valid_paragraph_with_heading() {
     let mut config = get_config("tests/test_files/frontend/paragraph1.um");
     let input = get_file_content(&config.um_file);
     //paragraph1.um
@@ -14,7 +14,7 @@ fn test_parse_valid_paragraph_with_heading() {
     loop_through_ir_lines(&um_blocks.unwrap(), paragraph1_expected_result());
 }
 #[test]
-fn test_parse_valid_paragraph_with_multi_line_heading() {
+fn test__parse__valid_paragraph_with_multi_line_heading() {
     let mut config = get_config("tests/test_files/frontend/paragraph2.um");
     let input = get_file_content(&config.um_file);
     //paragraph2.um
@@ -23,7 +23,7 @@ fn test_parse_valid_paragraph_with_multi_line_heading() {
     loop_through_ir_lines(&um_blocks.unwrap(), paragraph2_expected_result());
 }
 #[test]
-fn test_parse_valid_paragraphs_with_sub_heading() {
+fn test__parse__valid_paragraphs_with_sub_heading() {
     let mut config = get_config("tests/test_files/frontend/paragraph3.um");
     let input = get_file_content(&config.um_file);
     //paragraph3.um

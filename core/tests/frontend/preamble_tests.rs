@@ -12,7 +12,7 @@ use unimarkup_core::{
 
 #[test]
 #[should_panic]
-fn test_parse_invalid_preamble_json() {
+fn test__parse__invalid_preamble_json() {
     //Invalid missing quotation mark at OUTPUT-FILE on purpose
     let test_case = ";;;
 {
@@ -36,7 +36,7 @@ fn test_parse_invalid_preamble_json() {
 
 #[test]
 #[should_panic]
-fn test_parse_invalid_preamble_yaml() {
+fn test__parse__invalid_preamble_yaml() {
     //Invalid extra commas on purpose
     let test_case = ";;;
     OUTPUT-FILE: \"output.html\",
@@ -57,7 +57,7 @@ fn test_parse_invalid_preamble_yaml() {
 }
 
 #[test]
-fn test_parse_valid_preamble_json() {
+fn test__parse__valid_preamble_json() {
     let test_case = ";;;
 {
     \"OUTPUT-FILE\": \"output.html\",
@@ -82,7 +82,7 @@ fn test_parse_valid_preamble_json() {
 }
 
 #[test]
-fn test_parse_valid_preamble_yaml() {
+fn test__parse__valid_preamble_yaml() {
     let test_case = ";;;
 OUTPUT-FILE: \"output.html\"
 citation-style: \"yes\"

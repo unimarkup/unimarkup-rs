@@ -6,7 +6,7 @@ use unimarkup_core::middleend::{prepare_content_rows, ContentIrLine};
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
-fn test_ir_single_write_retrieve_content() {
+fn test__ir_single_write_retrieve__content() {
     let first_content = ContentIrLine::new("1", 1, "paragraph", "test", "", "{}", "");
     let mut conn = setup_test_ir();
 
@@ -37,7 +37,7 @@ fn test_ir_single_write_retrieve_content() {
 }
 
 #[test]
-fn test_ir_entry_exists_paragraph() {
+fn test__ir_entry_exists__paragraph() {
     let mut conn = setup_test_ir();
     let first_content = ContentIrLine::new("1", 1, "paragraph", "test", "", "{}", "");
 
@@ -73,7 +73,7 @@ fn test_ir_entry_exists_paragraph() {
 }
 
 #[test]
-fn test_ir_write_update_paragraph() {
+fn test__ir_write_update__paragraph() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------
@@ -121,7 +121,7 @@ fn test_ir_write_update_paragraph() {
 }
 
 #[test]
-fn test_ir_rows_query_paragraph() {
+fn test__ir_rows_query__paragraph() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------
@@ -162,7 +162,7 @@ fn test_ir_rows_query_paragraph() {
 }
 
 #[test]
-fn test_ir_rows_query_ordered_paragraph() {
+fn test__ir_rows_query_ordered__paragraph() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------

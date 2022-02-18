@@ -14,7 +14,7 @@ fn get_args(options: &str, um_file: &str) -> Vec<String> {
 
 #[test]
 #[should_panic]
-fn no_arguments_given() {
+fn test_config_parse_no_arguments_given() {
     let cfg = Config::try_parse_from(vec![""]);
 
     assert_eq!(
@@ -25,7 +25,7 @@ fn no_arguments_given() {
 }
 
 #[test]
-fn only_required_arguments_to_struct() {
+fn test_config_parse_only_required_arguments_to_struct() {
     let um_filename = "file.um";
     let cfg: Config = Config::parse_from(get_args("", um_filename));
 
@@ -37,7 +37,7 @@ fn only_required_arguments_to_struct() {
 }
 
 #[test]
-fn out_file_option_set() {
+fn test_config_parse_out_file_option_set() {
     let um_filename = "file.um";
     let out_file = "out_file";
 
@@ -54,7 +54,7 @@ fn out_file_option_set() {
 }
 
 #[test]
-fn single_output_format() {
+fn test_config_parse_single_output_format() {
     let um_filename = "file.um";
     let options = "--output-formats=html";
 
@@ -73,7 +73,7 @@ fn single_output_format() {
 }
 
 #[test]
-fn multiple_output_formats() {
+fn test_config_parse_multiple_output_formats() {
     let um_filename = "file.um";
     let options = "--output-formats=html,pdf";
 
@@ -100,7 +100,7 @@ fn multiple_output_formats() {
 }
 
 #[test]
-fn insert_path_option_set() {
+fn test_config_parse_insert_path_option_set() {
     let um_filename = "file.um";
     let insert_path = "~/images";
 
@@ -117,7 +117,7 @@ fn insert_path_option_set() {
 }
 
 #[test]
-fn dot_unimarkup_option_set() {
+fn test_config_parse_dot_unimarkup_option_set() {
     let um_filename = "file.um";
     let dot_unimarkup = "~/.Unimarkup";
 
@@ -134,7 +134,7 @@ fn dot_unimarkup_option_set() {
 }
 
 #[test]
-fn theme_option_set() {
+fn test_config_parse_theme_option_set() {
     let um_filename = "file.um";
     let theme = "theme_file.um";
 
@@ -151,7 +151,7 @@ fn theme_option_set() {
 }
 
 #[test]
-fn bad_theme_path() {
+fn test_config_parse_bad_theme_path() {
     let um_filename = "file.um";
     let theme = "not_existing_theme.um";
 
@@ -164,7 +164,7 @@ fn bad_theme_path() {
 }
 
 #[test]
-fn flags_option_set() {
+fn test_config_parse_flags_option_set() {
     let um_filename = "file.um";
     let flag = "test";
 
@@ -177,7 +177,7 @@ fn flags_option_set() {
 }
 
 #[test]
-fn enable_elements_option_set() {
+fn test_config_parse_enable_elements_option_set() {
     let um_filename = "file.um";
     let elements = vec![UnimarkupType::VerbatimBlock, UnimarkupType::DefinitionList];
 
@@ -202,7 +202,7 @@ fn enable_elements_option_set() {
 }
 
 #[test]
-fn disable_elements_option_set() {
+fn test_config_parse_disable_elements_option_set() {
     let um_filename = "file.um";
     let elements = vec![UnimarkupType::VerbatimBlock, UnimarkupType::DefinitionList];
 
@@ -228,7 +228,7 @@ fn disable_elements_option_set() {
 
 #[test]
 #[should_panic]
-fn references_set_without_required_options() {
+fn test_config_parse_references_set_without_required_options() {
     let um_filename = "file.um";
 
     let args = get_args("--references=test.json", um_filename);
@@ -244,7 +244,7 @@ fn references_set_without_required_options() {
 
 #[test]
 #[should_panic]
-fn citation_style_set_without_required_options() {
+fn test_config_parse_citation_style_set_without_required_options() {
     let um_filename = "file.um";
 
     let args = get_args("--csl=harvard.csl", um_filename);
@@ -259,7 +259,7 @@ fn citation_style_set_without_required_options() {
 }
 
 #[test]
-fn reference_options_set() {
+fn test_config_parse_reference_options_set() {
     let um_filename = "file.um";
     let csl = "apa.csl";
     let refs = "literature.json";
@@ -282,7 +282,7 @@ fn reference_options_set() {
 }
 
 #[test]
-fn fonts_option_set() {
+fn test_config_parse_fonts_option_set() {
     let um_filename = "file.um";
     let font = "myFont.ttf";
 
@@ -299,7 +299,7 @@ fn fonts_option_set() {
 }
 
 #[test]
-fn overwrite_out_files_option_set() {
+fn test_config_parse_overwrite_out_files_option_set() {
     let um_filename = "file.um";
 
     let args = get_args("--overwrite-out-files", um_filename);
@@ -313,7 +313,7 @@ fn overwrite_out_files_option_set() {
 }
 
 #[test]
-fn clean_option_set() {
+fn test_config_parse_clean_option_set() {
     let um_filename = "file.um";
 
     let args = get_args("--clean", um_filename);
@@ -324,7 +324,7 @@ fn clean_option_set() {
 }
 
 #[test]
-fn rebuild_option_set() {
+fn test_config_parse_rebuild_option_set() {
     let um_filename = "file.um";
 
     let args = get_args("--rebuild", um_filename);
@@ -350,7 +350,7 @@ fn replace_preamble_set_without_required_options() {
 }
 
 #[test]
-fn replace_preamble_option_set() {
+fn test_config_parse_replace_preamble_option_set() {
     let um_filename = "file.um";
     let out_format = "pdf";
 
@@ -363,7 +363,7 @@ fn replace_preamble_option_set() {
 }
 
 #[test]
-fn relative_insert_prefix_option_set() {
+fn test_config_parse_relative_insert_prefix_option_set() {
     let um_filename = "file.um";
     let insert_prefix = "subdomain/";
 
@@ -380,7 +380,7 @@ fn relative_insert_prefix_option_set() {
 }
 
 #[test]
-fn html_template_option_set() {
+fn test_config_parse_html_template_option_set() {
     let um_filename = "file.um";
     let template = "my_template.html";
 
@@ -397,7 +397,7 @@ fn html_template_option_set() {
 }
 
 #[test]
-fn html_mathmode_option_set() {
+fn test_config_parse_html_mathmode_option_set() {
     let um_filename = "file.um";
     let mathmode = unimarkup_core::config::HtmlMathmode::Embed;
 
@@ -414,7 +414,7 @@ fn html_mathmode_option_set() {
 }
 
 #[test]
-fn html_embed_svg_option_set() {
+fn test_config_parse_html_embed_svg_option_set() {
     let um_filename = "file.um";
 
     let args = get_args("--html-embed-svg", um_filename);

@@ -6,7 +6,7 @@ use unimarkup_core::middleend::{
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
-fn test_ir_single_write_retrieve_macro() {
+fn test__ir_single_write_retrieve__macro() {
     let first_macro = MacroIrLine::new(
         "test",
         "{%{ list }val1 %{ paragraph } val2}",
@@ -43,7 +43,7 @@ fn test_ir_single_write_retrieve_macro() {
 }
 
 #[test]
-fn test_ir_entry_exists_macro() {
+fn test__ir_entry_exists__macro() {
     let mut conn = setup_test_ir();
     let first_macro = MacroIrLine::new("test", "", "paragraph", "test", "");
 
@@ -79,7 +79,7 @@ fn test_ir_entry_exists_macro() {
 }
 
 #[test]
-fn test_ir_write_update_macro() {
+fn test__ir_write_update__macro() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------

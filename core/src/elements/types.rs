@@ -321,8 +321,9 @@ impl_from!(Heading from HeadingBlock);
 impl_from!(Paragraph from ParagraphBlock);
 impl_from!(VerbatimBlock from elements::VerbatimBlock);
 
+#[allow(non_snake_case)]
 #[test]
-fn check_if_converted() {
+fn test__convert_types__heading() {
     let heading = HeadingBlock::default();
 
     let um_type = UnimarkupType::from(&heading);

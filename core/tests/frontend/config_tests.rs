@@ -2,7 +2,7 @@ use clap::StructOpt;
 use unimarkup_core::config::Config;
 
 #[test]
-fn test_validate_valid_config() {
+fn test__validate__valid_config() {
     let mut cfg: Config = Config::parse_from(vec![
         "unimarkup",
         "--output-formats=html",
@@ -14,8 +14,9 @@ fn test_validate_valid_config() {
     assert!(result.is_ok(), "Cause: {:?}", result.unwrap_err());
 }
 
+#[should_panic]
 #[test]
-fn test_validate_invalid_config() {
+fn test__validate__invalid_config() {
     let mut cfg: Config = Config::parse_from(vec![
         "unimarkup",
         "--output-formats=html",
@@ -24,14 +25,11 @@ fn test_validate_invalid_config() {
         "tests/test_files/frontend/heading1.um",
     ]);
 
-    assert!(
-        cfg.validate_config().is_err(),
-        "invalid config is detected as valid"
-    );
+    cfg.validate_config().unwrap();
 }
 
 #[test]
-fn test_validate_valid_multi_path_config() {
+fn test__validate__valid_multi_path_config() {
     let mut cfg: Config = Config::parse_from(vec![
         "unimarkup",
         "--output-formats=html",
@@ -44,8 +42,9 @@ fn test_validate_valid_multi_path_config() {
     assert!(result.is_ok(), "Cause: {:?}", result.unwrap_err());
 }
 
+#[should_panic]
 #[test]
-fn test_validate_invalid_multi_path_config() {
+fn test__validate__invalid_multi_path_config() {
     let mut cfg: Config = Config::parse_from(vec![
         "unimarkup",
         "--output-formats=html",
@@ -55,14 +54,12 @@ fn test_validate_invalid_multi_path_config() {
         "tests/test_files/frontend/heading1.um",
     ]);
 
-    assert!(
-        cfg.validate_config().is_err(),
-        "invalid config is detected as valid"
-    );
+    cfg.validate_config().unwrap();
 }
 
+#[should_panic]
 #[test]
-fn test_validate_invalid_outfile_config() {
+fn test__validate__invalid_outfile_config() {
     let mut cfg: Config = Config::parse_from(vec![
         "unimarkup",
         "--output-formats=html",
@@ -71,8 +68,5 @@ fn test_validate_invalid_outfile_config() {
         "tests/test_files/break_config_validation.html",
     ]);
 
-    assert!(
-        cfg.validate_config().is_err(),
-        "invalid config is detected as valid"
-    );
+    cfg.validate_config().unwrap();
 }

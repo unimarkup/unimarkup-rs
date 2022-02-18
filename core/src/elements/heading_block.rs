@@ -331,6 +331,7 @@ impl Render for HeadingBlock {
     }
 }
 
+#[allow(non_snake_case)]
 #[cfg(test)]
 mod heading_tests {
     use std::collections::VecDeque;
@@ -344,7 +345,7 @@ mod heading_tests {
     use super::HeadingBlock;
 
     #[test]
-    fn render_heading_html() {
+    fn test__render_html__heading() {
         let lowest_level = HeadingLevel::Level1 as usize;
         let highest_level = HeadingLevel::Level6 as usize;
 
@@ -368,7 +369,7 @@ mod heading_tests {
     }
 
     #[test]
-    fn render_heading_with_inline_html() {
+    fn test__render_html__heading_with_inline() {
         let lowest_level = HeadingLevel::Level1 as usize;
         let highest_level = HeadingLevel::Level6 as usize;
 
@@ -395,7 +396,7 @@ mod heading_tests {
     }
 
     #[test]
-    fn parse_from_ir_test() {
+    fn test__parse_from_ir__valid_heading() {
         let lowest_level = HeadingLevel::Level1 as usize;
         let highest_level = HeadingLevel::Level6 as usize;
 
@@ -447,7 +448,7 @@ mod heading_tests {
     }
 
     #[test]
-    fn parse_from_ir_bad() {
+    fn test__parse_from_ir__invalid_heading() {
         let mut ir_lines: VecDeque<ContentIrLine> = vec![].into();
 
         let bad_ir_line = ContentIrLine::new(

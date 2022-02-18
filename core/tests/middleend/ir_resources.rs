@@ -6,7 +6,7 @@ use unimarkup_core::middleend::{
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
-fn test_ir_single_write_retrieve_resource() {
+fn test__ir_single_write_retrieve__resource() {
     let first_resources = ResourceIrLine::new("test.png", ".");
     let mut conn = setup_test_ir();
 
@@ -37,7 +37,7 @@ fn test_ir_single_write_retrieve_resource() {
 }
 
 #[test]
-fn test_ir_entry_exists_resource() {
+fn test__ir_entry_exists__resource() {
     let mut conn = setup_test_ir();
     let first_resource = ResourceIrLine::new("test.um", ".");
 
@@ -73,7 +73,7 @@ fn test_ir_entry_exists_resource() {
 }
 
 #[test]
-fn test_ir_write_update_resource() {
+fn test__ir_write_update__resource() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------

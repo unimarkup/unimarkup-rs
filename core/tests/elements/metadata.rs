@@ -10,7 +10,7 @@ use unimarkup_core::{
 };
 
 #[test]
-fn test_ir_root_metadata_in_ir() {
+fn test__ir_root__metadata_in_ir() {
     let testfile = "tests/test_files/small_testfile.um";
 
     let mut connection = ir_test_setup::setup_test_ir();
@@ -31,19 +31,12 @@ fn test_ir_root_metadata_in_ir() {
 
     let ir_metadata: MetadataIrLine = expected_metadata.into();
 
-    let transaction = connection.transaction();
+    match connection.transaction() {
+        Ok(transaction) => {
+            let metadata_exists = middleend::entry_already_exists(&ir_metadata, &transaction);
 
-    assert!(
-        transaction.is_ok(),
-        //TODO: How to throw error?
-        // "Cause: {:?}",
-        // UmError::Ir(IrError {
-        //     tablename: "metadata".to_string(),
-        //     column: "-".to_string(),
-        //     message: "given metadata not found".to_string(),
-        // })
-    );
-
-    let metadata_exists = middleend::entry_already_exists(&ir_metadata, &transaction.unwrap());
-    assert!(metadata_exists, "Metadata does not exist");
+            assert!(metadata_exists);
+        }
+        Err(_) => panic!("Failed creating database connection"),
+    };
 }

@@ -5,7 +5,7 @@ use unimarkup_core::middleend::ContentIrLine;
 use super::umblock_tests::*;
 
 #[test]
-fn test_parse_valid_heading_with_subheading() {
+fn test__parse__valid_heading_with_subheading() {
     let mut config = get_config("tests/test_files/frontend/heading1.um");
     let input = get_file_content(&config.um_file);
     //heading1.um
@@ -15,7 +15,7 @@ fn test_parse_valid_heading_with_subheading() {
 }
 
 #[test]
-fn test_parse_valid_nested_headings_with_blank_lines() {
+fn test__parse__valid_nested_headings_with_blank_lines() {
     let mut config = get_config("tests/test_files/frontend/heading_line_number.um");
     let input = get_file_content(&config.um_file);
     //heading_line_number.um
@@ -25,7 +25,7 @@ fn test_parse_valid_nested_headings_with_blank_lines() {
 }
 
 #[test]
-fn test_parse_valid_multi_line_heading() {
+fn test__parse__valid_multi_line_heading() {
     let mut config = get_config("tests/test_files/frontend/multiline_headings.um");
     let input = get_file_content(&config.um_file);
     //multiline_headings.um

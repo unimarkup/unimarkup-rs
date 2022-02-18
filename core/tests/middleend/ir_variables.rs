@@ -7,7 +7,7 @@ use unimarkup_core::middleend::{
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
-fn test_ir_single_write_retrieve_variable() {
+fn test__ir_single_write_retrieve__variable() {
     let first_variable = VariableIrLine::new("test", "paragraph", "test paragraph", "");
     let mut conn = setup_test_ir();
 
@@ -38,7 +38,7 @@ fn test_ir_single_write_retrieve_variable() {
 }
 
 #[test]
-fn test_ir_entry_exists_variable() {
+fn test__ir_entry_exists__variable() {
     let mut conn = setup_test_ir();
     let first_macro = VariableIrLine::new("test", "paragraph", "test paragraph", "");
 
@@ -74,7 +74,7 @@ fn test_ir_entry_exists_variable() {
 }
 
 #[test]
-fn test_ir_write_update_variable() {
+fn test__ir_write_update__variable() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------

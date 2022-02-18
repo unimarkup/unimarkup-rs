@@ -1,7 +1,7 @@
 use std::process::{Command, Stdio};
 
 #[test]
-fn test_main_log_trace() {
+fn test__main_log_trace__invalid_attributes_file() {
     let cli_proc = Command::new("cargo")
         .stderr(Stdio::piped())
         .args([

@@ -190,47 +190,59 @@ pub fn generate_id(input: &str) -> Option<String> {
 #[cfg(test)]
 mod id_generator {
     #[test]
-    fn valid_id() {
+    fn test_generate_id_valid_id() {
         let input = "This is some input";
         let expect = "This-is-some-input";
 
-        assert!(super::generate_id(input).is_some());
-        assert_eq!(super::generate_id(input).unwrap(), expect);
+        assert!(super::generate_id(input).is_some(), "generate_id is none");
+        assert_eq!(
+            super::generate_id(input).unwrap(),
+            expect,
+            "generate_id does not return expected id"
+        );
     }
 
     #[test]
-    fn valid_id_with_num() {
+    fn test_generate_id_valid_id_with_num() {
         let input = "Th15 15 1npu7 with num6ers1";
         let expect = "Th15-15-1npu7-with-num6ers1";
 
-        assert!(super::generate_id(input).is_some());
-        assert_eq!(super::generate_id(input).unwrap(), expect);
+        assert!(super::generate_id(input).is_some(), "generate_id is none");
+        assert_eq!(
+            super::generate_id(input).unwrap(),
+            expect,
+            "generate_id does not return expected id"
+        );
     }
 
     #[test]
-    fn valid_id_many_symbols() {
+    fn test_generate_id_valid_id_many_symbols() {
         let input = "7h1$\t~1d~\t \"c0n741n$\" 'many' $ym6o1$ ~!@#$%%^&^&*()_+}{[]";
         let expect = "7h1$-~1d~-\"c0n741n$\"-'many'-$ym6o1$-~!@#$%%^&^&*()_+}{[]";
 
-        assert!(super::generate_id(input).is_some());
-        assert_eq!(super::generate_id(input).unwrap(), expect);
+        assert!(super::generate_id(input).is_some(), "generate_id is none");
+        assert_eq!(
+            super::generate_id(input).unwrap(),
+            expect,
+            "generate_id does not return expected id"
+        );
     }
 
     #[test]
-    fn empty_input() {
+    fn test_generate_id_empty_input() {
         let input = "";
 
         let id = super::generate_id(input);
 
-        assert!(id.is_none());
+        assert!(id.is_none(), "generate_id is some");
     }
 
     #[test]
-    fn whitespace_only() {
+    fn test_generate_id_whitespace_only() {
         let input = " ";
 
         let id = super::generate_id(input);
 
-        assert!(id.is_none());
+        assert!(id.is_none(), "generate_id is some");
     }
 }

@@ -9,7 +9,7 @@ use unimarkup_core::{
 use super::super::middleend::ir_test_setup;
 
 #[test]
-fn run() {
+fn test__backend_run__heading_block() {
     let mut connection = ir_test_setup::setup_test_ir();
 
     let block = HeadingBlock {

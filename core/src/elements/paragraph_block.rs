@@ -201,6 +201,7 @@ impl AsIrLines<ContentIrLine> for ParagraphBlock {
     }
 }
 
+#[allow(non_snake_case)]
 #[cfg(test)]
 mod paragraph_tests {
     use std::collections::VecDeque;
@@ -214,7 +215,7 @@ mod paragraph_tests {
     use super::ParagraphBlock;
 
     #[test]
-    fn render_paragraph_html() {
+    fn test__render_html__paragraph() {
         let id = String::from("paragraph-id");
         let content = String::from("This is the content of the paragraph");
 
@@ -231,7 +232,7 @@ mod paragraph_tests {
     }
 
     #[test]
-    fn parse_from_ir() {
+    fn test__parse_from_ir__paragraph() {
         let test_id = String::from("test-par-id");
         let content = String::from("This is an example paragraph\nwhich spans multiple lines");
 
@@ -254,7 +255,7 @@ mod paragraph_tests {
     }
 
     #[test]
-    fn render_paragraph_with_inline_html() {
+    fn test__render_html__paragraph_with_inline() {
         let id = String::from("paragraph-id");
         let content = String::from("This is `the` *content* **of _the_ paragraph**");
 
@@ -274,7 +275,7 @@ mod paragraph_tests {
     }
 
     #[test]
-    fn parse_from_ir_bad() {
+    fn test__parse_from_ir__invalid_paragraph() {
         let mut lines = vec![].into();
 
         let block_res = ParagraphBlock::parse_from_ir(&mut lines);

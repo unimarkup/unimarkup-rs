@@ -20,7 +20,7 @@ fn table_exists(conn: &Connection, table: &str, columns: &str) -> bool {
 }
 
 #[test]
-fn test_ir_valid_setup() {
+fn test__ir__valid_setup() {
     let res_conn = setup_ir_connection();
     assert!(res_conn.is_ok(), "Cause: {:?}", res_conn.unwrap_err());
     let conn = res_conn.unwrap();

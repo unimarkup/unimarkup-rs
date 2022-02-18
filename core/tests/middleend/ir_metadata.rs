@@ -6,7 +6,7 @@ use unimarkup_core::middleend::{
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
-fn test_ir_single_write_retrieve_metadata() {
+fn test__ir_single_write_retrieve__metadata() {
     let first_metadata =
         MetadataIrLine::new(b"ccdec233ff78".to_vec(), "test.um", ".", "{}", "", true);
     let mut conn = setup_test_ir();
@@ -38,7 +38,7 @@ fn test_ir_single_write_retrieve_metadata() {
 }
 
 #[test]
-fn test_ir_entry_exists_metadata() {
+fn test__ir_entry_exists__metadata() {
     let mut conn = setup_test_ir();
     let first_metadata =
         MetadataIrLine::new(b"ccdec233ff78".to_vec(), "test.um", ".", "{}", "", true);
@@ -75,7 +75,7 @@ fn test_ir_entry_exists_metadata() {
 }
 
 #[test]
-fn test_ir_write_update_metadata() {
+fn test__ir_write_update__metadata() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------
