@@ -35,12 +35,13 @@ fn test_ir_root_metadata_in_ir() {
 
     assert!(
         transaction.is_ok(),
-        "Cause: {:?}",
-        UmError::Ir(IrError {
-            tablename: "metadata".to_string(),
-            column: "-".to_string(),
-            message: "given metadata not found".to_string(),
-        })
+        //TODO: How to throw error?
+        // "Cause: {:?}",
+        // UmError::Ir(IrError {
+        //     tablename: "metadata".to_string(),
+        //     column: "-".to_string(),
+        //     message: "given metadata not found".to_string(),
+        // })
     );
 
     let metadata_exists = middleend::entry_already_exists(&ir_metadata, &transaction.unwrap());
