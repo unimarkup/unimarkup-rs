@@ -3,13 +3,14 @@
 //! i.e. parsing of unimarkup-rs files, generating corresponding
 //! ['UnimarkupBlocks'] and sending them to the IR.
 
-mod syntax_error;
-
 use rusqlite::Connection;
-pub use syntax_error::SyntaxError;
 
-use crate::{config::Config, error::UmError, middleend::WriteToIr};
+use crate::{config::Config, middleend::WriteToIr};
 
+use self::error::FrontendError;
+
+pub mod error;
+pub mod log_id;
 pub mod parser;
 pub mod preamble;
 
@@ -26,7 +27,7 @@ pub fn run(
     um_content: &str,
     connection: &mut Connection,
     config: &mut Config,
-) -> Result<(), UmError> {
+) -> Result<(), FrontendError> {
     let unimarkup = parser::parse_unimarkup(um_content, config)?;
 
     let transaction = connection.transaction();

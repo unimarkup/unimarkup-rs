@@ -11,6 +11,7 @@ use unimarkup_core::{
 };
 
 #[test]
+#[should_panic]
 fn test_parse_invalid_preamble_json() {
     //Invalid missing quotation mark at OUTPUT-FILE on purpose
     let test_case = ";;;
@@ -29,14 +30,12 @@ fn test_parse_invalid_preamble_json() {
         .expect("test")
         .next()
         .unwrap();
-    let err = parse_preamble(pairs, &mut cfg);
-    assert!(
-        err.is_err(),
-        "Invalid preamble in form of json is detected as valid"
-    );
+
+    parse_preamble(pairs, &mut cfg).unwrap();
 }
 
 #[test]
+#[should_panic]
 fn test_parse_invalid_preamble_yaml() {
     //Invalid extra commas on purpose
     let test_case = ";;;
@@ -53,11 +52,8 @@ fn test_parse_invalid_preamble_yaml() {
         .expect("test")
         .next()
         .unwrap();
-    let err = parse_preamble(pairs, &mut cfg);
-    assert!(
-        err.is_err(),
-        "Invalid preamble in form of yaml is detected as valid"
-    );
+
+    parse_preamble(pairs, &mut cfg).unwrap();
 }
 
 #[test]

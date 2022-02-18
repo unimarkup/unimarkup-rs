@@ -4,11 +4,18 @@ use pest::iterators::{Pair, Pairs};
 use pest::Span;
 use strum_macros::*;
 
-use crate::backend::{self, BackendError, ParseFromIr, Render};
+use crate::backend::{self, error::BackendError, ParseFromIr, Render};
 use crate::elements::types::{self, UnimarkupBlocks, UnimarkupType};
-use crate::error::UmError;
-use crate::frontend::parser::{self, Rule, UmParse};
+use crate::frontend::error::custom_pest_error;
+use crate::frontend::{
+    error::FrontendError,
+    parser::{self, Rule, UmParse},
+};
+use crate::log_id::{LogId, SetLog};
 use crate::middleend::{AsIrLines, ContentIrLine};
+
+use super::error::ElementError;
+use super::log_id::{AtomicErrLogId, GeneralErrLogId};
 
 /// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
@@ -112,7 +119,7 @@ pub struct HeadingBlock {
 
 impl HeadingBlock {
     /// Parses a single instance of a heading element.
-    fn parse_single(pair: &Pair<Rule>) -> Result<Self, UmError> {
+    fn parse_single(pair: &Pair<Rule>) -> Result<Self, ElementError> {
         let mut heading_data = pair.clone().into_inner();
 
         let heading_start = heading_data.next().expect("heading rule has heading_start");
@@ -124,10 +131,18 @@ impl HeadingBlock {
         let attributes = match heading_data.next() {
             Some(attrs_rule) => {
                 let attributes: HashMap<&str, &str> = serde_json::from_str(attrs_rule.as_str())
-                    .map_err(|_| {
-                        UmError::custom_pest_error(
-                            "Attributes are not valid JSON",
-                            attrs_rule.as_span(),
+                    .map_err(|err| {
+                        ElementError::Atomic(
+                            (GeneralErrLogId::InvalidAttribute as LogId)
+                                .set_log(
+                                    &custom_pest_error(
+                                        "Heading attributes are not valid JSON",
+                                        attrs_rule.as_span(),
+                                    ),
+                                    file!(),
+                                    line!(),
+                                )
+                                .add_info(&format!("Cause: {}", err)),
                         )
                     })?;
 
@@ -158,7 +173,7 @@ impl HeadingBlock {
 }
 
 impl UmParse for HeadingBlock {
-    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, UmError>
+    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, FrontendError>
     where
         Self: Sized,
     {
@@ -214,7 +229,7 @@ impl AsRef<Self> for HeadingBlock {
 }
 
 impl ParseFromIr for HeadingBlock {
-    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, UmError> {
+    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, BackendError> {
         let mut level = HeadingLevel::Invalid;
 
         if let Some(ir_line) = content_lines.pop_front() {
@@ -234,11 +249,13 @@ impl ParseFromIr for HeadingBlock {
             }
 
             if level == HeadingLevel::Invalid {
-                return Err(BackendError::new(format!(
-                    "Provided heading level is invalid: {}",
-                    ir_line.um_type
-                ))
-                .into());
+                return Err(BackendError::Loader(
+                    (AtomicErrLogId::InvalidHeadingLvl as LogId).set_log(
+                        &format!("Provided heading level is invalid: {}", ir_line.um_type),
+                        file!(),
+                        line!(),
+                    ),
+                ));
             }
 
             let content = if !ir_line.text.is_empty() {
@@ -264,12 +281,18 @@ impl ParseFromIr for HeadingBlock {
             return Ok(block);
         }
 
-        Err(BackendError::new("ContentIrLines are empty, could not construct HeadingBlock!").into())
+        Err(BackendError::Loader(
+            (AtomicErrLogId::InvalidHeadingLvl as LogId).set_log(
+                "ContentIrLines are empty, could not construct HeadingBlock!",
+                file!(),
+                line!(),
+            ),
+        ))
     }
 }
 
 impl Render for HeadingBlock {
-    fn render_html(&self) -> Result<String, UmError> {
+    fn render_html(&self) -> Result<String, BackendError> {
         let mut html = String::default();
 
         let tag_level = usize::from(self.level).to_string();
@@ -280,9 +303,25 @@ impl Render for HeadingBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        let inline =
-            backend::parse_inline(&self.content).expect("Inline formatting or plain text expected");
-        html.push_str(&inline.render_html()?);
+        let try_inline = backend::parse_inline(&self.content);
+
+        if try_inline.is_err() {
+            return Err(ElementError::General(
+                (GeneralErrLogId::FailedInlineParsing as LogId)
+                    .set_log(
+                        &format!(
+                            "Failed parsing inline formats for heading block with id: '{}'",
+                            &self.id
+                        ),
+                        file!(),
+                        line!(),
+                    )
+                    .add_info(&format!("Cause: {:?}", try_inline.err())),
+            )
+            .into());
+        }
+
+        html.push_str(&try_inline.unwrap().render_html()?);
 
         html.push_str("</h");
         html.push_str(&tag_level);
@@ -299,14 +338,13 @@ mod heading_tests {
     use crate::{
         backend::{ParseFromIr, Render},
         elements::{heading_block::HeadingLevel, types},
-        error::UmError,
         middleend::ContentIrLine,
     };
 
     use super::HeadingBlock;
 
     #[test]
-    fn render_heading_html() -> Result<(), UmError> {
+    fn render_heading_html() {
         let lowest_level = HeadingLevel::Level1 as usize;
         let highest_level = HeadingLevel::Level6 as usize;
 
@@ -322,17 +360,15 @@ mod heading_tests {
                 line_nr: level as usize,
             };
 
-            let html = heading.render_html()?;
+            let html = heading.render_html().unwrap();
 
             let expected = format!("<h{} id='{}'>This is a heading</h{}>", level, id, level);
             assert_eq!(html, expected);
         }
-
-        Ok(())
     }
 
     #[test]
-    fn render_heading_with_inline_html() -> Result<(), UmError> {
+    fn render_heading_with_inline_html() {
         let lowest_level = HeadingLevel::Level1 as usize;
         let highest_level = HeadingLevel::Level6 as usize;
 
@@ -348,7 +384,7 @@ mod heading_tests {
                 line_nr: level as usize,
             };
 
-            let html = heading.render_html()?;
+            let html = heading.render_html().unwrap();
 
             let expected = format!(
                 "<h{} id='{}'><pre>This</pre> <i>is <sub>a</sub></i> <b>heading</b></h{}>",
@@ -356,12 +392,10 @@ mod heading_tests {
             );
             assert_eq!(html, expected);
         }
-
-        Ok(())
     }
 
     #[test]
-    fn parse_from_ir_test() -> Result<(), UmError> {
+    fn parse_from_ir_test() {
         let lowest_level = HeadingLevel::Level1 as usize;
         let highest_level = HeadingLevel::Level6 as usize;
 
@@ -396,7 +430,7 @@ mod heading_tests {
                 break;
             }
 
-            let block = HeadingBlock::parse_from_ir(&mut ir_lines)?;
+            let block = HeadingBlock::parse_from_ir(&mut ir_lines).unwrap();
 
             let (id, level, content, attr);
 
@@ -410,8 +444,6 @@ mod heading_tests {
             assert_eq!(content, String::from("This is a heading"));
             assert_eq!(attr, String::from("{}"));
         }
-
-        Ok(())
     }
 
     #[test]
@@ -434,7 +466,7 @@ mod heading_tests {
         let result = HeadingBlock::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
-        println!("{}", result.err().unwrap());
+        println!("{:?}", result.err().unwrap());
 
         let bad_ir_line = ContentIrLine::new(
             "some_id",
@@ -452,7 +484,7 @@ mod heading_tests {
         let result = HeadingBlock::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
-        println!("{}", result.err().unwrap());
+        println!("{:?}", result.err().unwrap());
 
         let bad_ir_line = ContentIrLine::new(
             "some_id",
@@ -472,6 +504,6 @@ mod heading_tests {
         let result = HeadingBlock::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
-        println!("{}", result.err().unwrap());
+        println!("{:?}", result.err().unwrap());
     }
 }

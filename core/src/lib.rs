@@ -6,5 +6,6 @@ pub mod config;
 pub mod elements;
 pub mod error;
 pub mod frontend;
+pub mod log_id;
 pub mod middleend;
 pub mod unimarkup;

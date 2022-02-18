@@ -5,6 +5,8 @@ mod metadata;
 mod paragraph_block;
 mod verbatim_block;
 
+pub mod error;
+pub mod log_id;
 pub mod types;
 
 pub use heading_block::*;

@@ -3,14 +3,13 @@ use unimarkup_core::{
     backend::{self, Render},
     config::Config,
     elements::{HeadingBlock, HeadingLevel},
-    error::UmError,
     middleend::{self, AsIrLines, ContentIrLine},
 };
 
 use super::super::middleend::ir_test_setup;
 
 #[test]
-fn run() -> Result<(), UmError> {
+fn run() {
     let mut connection = ir_test_setup::setup_test_ir();
 
     let block = HeadingBlock {
@@ -25,7 +24,7 @@ fn run() -> Result<(), UmError> {
 
     {
         let transaction = ir_test_setup::get_test_transaction(&mut connection);
-        middleend::write_ir_lines(&lines, &transaction)?;
+        middleend::write_ir_lines(&lines, &transaction).unwrap();
 
         transaction.commit().unwrap();
     }
@@ -36,13 +35,11 @@ fn run() -> Result<(), UmError> {
     let mut out_path = cfg.um_file.clone();
     out_path.set_extension("html");
 
-    let document = backend::run(&mut connection, cfg)?;
+    let document = backend::run(&mut connection, cfg).unwrap();
 
     let html = document.html();
 
     let content = html.body();
 
     assert_eq!(block.render_html().expect("Block is checked"), content);
-
-    Ok(())
 }

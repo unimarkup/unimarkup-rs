@@ -1,8 +1,10 @@
-use crate::error::UmError;
+use crate::log_id::{LogId, SetLog};
 use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
-use log::info;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
+
+use super::error::MiddleendError;
+use super::log_id::GeneralInfLogId;
 
 /// Structure for the variable table representation of the IR
 #[derive(Debug, PartialEq, Default, Clone)]
@@ -64,13 +66,18 @@ impl VariableIrLine {
 }
 
 impl WriteToIr for VariableIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), UmError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
         let sql_table = &VariableIrLine::table_name();
         let column_pk = format!("name: {}", self.name);
         let new_values = params![self.name, self.um_type, self.value, self.fallback_value,];
 
         if ir::entry_already_exists(self, ir_transaction) {
-            info!("Variable '{}' is overwritten.", self.name);
+            (GeneralInfLogId::EntryOverwritten as LogId).set_log(
+                &format!("Variable '{}' is overwritten.", self.name),
+                file!(),
+                line!(),
+            );
+
             let sql_condition = "name = ?1";
             let sql_set = "um_type = ?2, value = ?3, fallback_value = ?4";
             ir::update_ir_line_execute(

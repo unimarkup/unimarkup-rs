@@ -16,7 +16,7 @@ fn test_render_html_valid_escaped_inline() {
     let mut expected_html = format!("<p id='{}'>\\*23\\*3</p>", id);
 
     let result = block.render_html();
-    assert!(result.is_ok(), "Cause: {}", result.unwrap_err());
+    assert!(result.is_ok(), "Cause: {:?}", result.unwrap_err());
     assert_eq!(
         expected_html,
         result.unwrap(),
@@ -26,7 +26,7 @@ fn test_render_html_valid_escaped_inline() {
     block.content = "\\ *italic*\\".to_string();
     expected_html = format!("<p id='{}'>\\ <i>italic</i>\\</p>", id);
     let result = block.render_html();
-    assert!(result.is_ok(), "Cause: {}", result.unwrap_err());
+    assert!(result.is_ok(), "Cause: {:?}", result.unwrap_err());
     assert_eq!(
         expected_html,
         result.unwrap(),
@@ -37,7 +37,7 @@ fn test_render_html_valid_escaped_inline() {
     expected_html = format!("<p id='{}'><b>\\*only bold\\*</b></p>", id);
 
     let result = block.render_html();
-    assert!(result.is_ok(), "Cause: {}", result.unwrap_err());
+    assert!(result.is_ok(), "Cause: {:?}", result.unwrap_err());
     assert_eq!(
         expected_html,
         result.unwrap(),
