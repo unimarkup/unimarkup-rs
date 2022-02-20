@@ -1,12 +1,13 @@
+#![allow(non_snake_case)]
 // allows using `__` for better separation in functionnames
+
 #[allow(non_snake_case)]
 mod frontend {
-    mod config_tests;
     mod frontend_run;
     mod heading_tests;
     mod paragraph_tests;
     mod preamble_tests;
-    mod umblock_tests;
+    mod tests_helper;
 }
 
 // allows using `__` for better separation in functionnames
@@ -24,7 +25,6 @@ mod middleend {
 // allows using `__` for better separation in functionnames
 #[allow(non_snake_case)]
 mod elements {
-    mod heading_block;
     mod metadata;
 }
 

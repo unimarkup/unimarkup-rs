@@ -210,307 +210,289 @@ impl Render for VerbatimBlock {
 #[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
-    use std::collections::VecDeque;
+    use std::collections::{HashMap, VecDeque};
 
     use pest::Parser;
 
+    use super::*;
     use crate::backend::{ParseFromIr, Render};
     use crate::elements::types::UnimarkupType;
-    use crate::elements::*;
     use crate::frontend::parser::{Rule, UmParse, UnimarkupParser};
     use crate::middleend::*;
-    mod render {
-        use super::*;
 
-        #[test]
-        fn test__render_html__verbatim_with_lang() {
-            let id = String::from("verbatim-id");
-            let content = String::from(
-                "This is content of the verbatim block.
+    #[test]
+    fn test__render_html__verbatim_with_lang() {
+        let id = String::from("verbatim-id");
+        let content = String::from(
+            "This is content of the verbatim block.
                  It also contains a newline",
-            );
+        );
 
-            let lang = "rust";
+        let lang = "rust";
 
-            let attributes = format!("{{ \"language\": \"{}\" }}", lang);
+        let attributes = format!("{{ \"language\": \"{}\" }}", lang);
 
-            let block = VerbatimBlock {
-                id: id.clone(),
-                content: content.clone(),
-                attributes,
-                line_nr: 0,
-            };
+        let block = VerbatimBlock {
+            id: id.clone(),
+            content: content.clone(),
+            attributes,
+            line_nr: 0,
+        };
 
-            let expected_html = format!(
-                "<pre><code id='{}' class='language-{}'>{}</code></pre>",
-                id, lang, content
-            );
+        let expected_html = format!(
+            "<pre><code id='{}' class='language-{}'>{}</code></pre>",
+            id, lang, content
+        );
 
-            assert_eq!(expected_html, block.render_html().unwrap());
-        }
-
-        #[test]
-        fn test__render_html__verbatim_without_lang() {
-            let id = String::from("verbatim-id");
-            let content = String::from(
-                "This is content of the verbatim block.
-                 It also contains a newline",
-            );
-
-            let attributes = String::from("{}");
-
-            let block = VerbatimBlock {
-                id: id.clone(),
-                content: content.clone(),
-                attributes,
-                line_nr: 0,
-            };
-
-            let expected_html = format!("<pre><code id='{}'>{}</code></pre>", id, content);
-
-            assert_eq!(expected_html, block.render_html().unwrap());
-        }
+        assert_eq!(expected_html, block.render_html().unwrap());
     }
 
-    mod parse_from_ir {
-        use super::*;
+    #[test]
+    fn test__render_html__verbatim_without_lang() {
+        let id = String::from("verbatim-id");
+        let content = String::from(
+            "This is content of the verbatim block.
+                 It also contains a newline",
+        );
 
-        #[test]
-        fn test__parse_from_ir__valid_verbatim() {
-            let test_id = String::from("test-id");
-            let content = String::from(
-                "This is an example verbatim
+        let attributes = String::from("{}");
+
+        let block = VerbatimBlock {
+            id: id.clone(),
+            content: content.clone(),
+            attributes,
+            line_nr: 0,
+        };
+
+        let expected_html = format!("<pre><code id='{}'>{}</code></pre>", id, content);
+
+        assert_eq!(expected_html, block.render_html().unwrap());
+    }
+
+    #[test]
+    fn test__parse_from_ir__valid_verbatim() {
+        let test_id = String::from("test-id");
+        let content = String::from(
+            "This is an example verbatim
                 which spans multiple lines",
-            );
+        );
 
-            let mut lines: VecDeque<_> = vec![ContentIrLine {
-                id: test_id.clone(),
-                line_nr: 0,
-                um_type: UnimarkupType::VerbatimBlock.to_string(),
-                text: content.clone(),
-                attributes: String::from("{}"),
-                ..Default::default()
-            }]
-            .into();
+        let mut lines: VecDeque<_> = vec![ContentIrLine {
+            id: test_id.clone(),
+            line_nr: 0,
+            um_type: UnimarkupType::VerbatimBlock.to_string(),
+            text: content.clone(),
+            attributes: String::from("{}"),
+            ..Default::default()
+        }]
+        .into();
 
-            let verbatim = VerbatimBlock::parse_from_ir(&mut lines).unwrap();
+        let verbatim = VerbatimBlock::parse_from_ir(&mut lines).unwrap();
 
-            assert_eq!(verbatim.id, test_id);
-            assert_eq!(verbatim.line_nr, 0);
-            assert_eq!(verbatim.content, content);
-            assert_eq!(verbatim.attributes, String::from("{}"));
-        }
-
-        #[should_panic]
-        #[test]
-        fn test__parse_from_ir__invalid_verbatim() {
-            let mut lines = vec![].into();
-
-            let block_res = VerbatimBlock::parse_from_ir(&mut lines);
-
-            assert!(block_res.is_err());
-
-            let ir_line_bad_type = ContentIrLine {
-                id: String::from("some-id"),
-                line_nr: 2,
-                um_type: format!("{}-more-info", UnimarkupType::VerbatimBlock.to_string()),
-                text: String::from("This is the text of this verbatim"),
-                ..Default::default()
-            };
-
-            lines.push_front(ir_line_bad_type);
-
-            VerbatimBlock::parse_from_ir(&mut lines).unwrap();
-        }
+        assert_eq!(verbatim.id, test_id);
+        assert_eq!(verbatim.line_nr, 0);
+        assert_eq!(verbatim.content, content);
+        assert_eq!(verbatim.attributes, String::from("{}"));
     }
 
-    mod as_ir_lines {
-        use super::*;
+    #[should_panic]
+    #[test]
+    fn test__parse_from_ir__invalid_verbatim() {
+        let mut lines = vec![].into();
 
-        #[test]
-        fn test__content_ir_lines__valid_verbatim() {
-            let id = String::from("verbatim-id");
-            let content = String::from("This is placeholder content");
-            let attributes = String::from("{}");
-            let line_nr = 0;
+        let block_res = VerbatimBlock::parse_from_ir(&mut lines);
 
-            let block = VerbatimBlock {
-                id,
-                content,
-                attributes,
-                line_nr,
-            };
+        assert!(block_res.is_err());
 
-            let ir_lines = block.as_ir_lines();
+        let ir_line_bad_type = ContentIrLine {
+            id: String::from("some-id"),
+            line_nr: 2,
+            um_type: format!("{}-more-info", UnimarkupType::VerbatimBlock.to_string()),
+            text: String::from("This is the text of this verbatim"),
+            ..Default::default()
+        };
 
-            assert_eq!(ir_lines.len(), 1);
+        lines.push_front(ir_line_bad_type);
 
-            let line = ir_lines.get(0).unwrap();
-
-            assert_eq!(line.id, block.id);
-            assert_eq!(line.line_nr, block.line_nr);
-            assert_eq!(line.um_type, UnimarkupType::VerbatimBlock.to_string());
-            assert_eq!(line.text, block.content);
-            assert!(line.fallback_text.is_empty());
-            assert_eq!(line.attributes, block.attributes);
-            assert!(line.fallback_attributes.is_empty());
-        }
+        VerbatimBlock::parse_from_ir(&mut lines).unwrap();
     }
 
-    mod um_parse {
-        use std::collections::HashMap;
+    #[test]
+    fn test__content_ir_lines__valid_verbatim() {
+        let id = String::from("verbatim-id");
+        let content = String::from("This is placeholder content");
+        let attributes = String::from("{}");
+        let line_nr = 0;
 
-        use super::*;
+        let block = VerbatimBlock {
+            id,
+            content,
+            attributes,
+            line_nr,
+        };
 
-        #[test]
-        fn test__parse__verbatim() {
-            let input = "~~~
+        let ir_lines = block.as_ir_lines();
+
+        assert_eq!(ir_lines.len(), 1);
+
+        let line = ir_lines.get(0).unwrap();
+
+        assert_eq!(line.id, block.id);
+        assert_eq!(line.line_nr, block.line_nr);
+        assert_eq!(line.um_type, UnimarkupType::VerbatimBlock.to_string());
+        assert_eq!(line.text, block.content);
+        assert!(line.fallback_text.is_empty());
+        assert_eq!(line.attributes, block.attributes);
+        assert!(line.fallback_attributes.is_empty());
+    }
+
+    #[test]
+    fn test__parse__verbatim() {
+        let input = "~~~
                             fn main() {
                                 println!(\"Hello World!\");
                             }\n~~~";
 
-            let expected_text = r#"fn main() {
+        let expected_text = r#"fn main() {
                                 println!("Hello World!");
                             }"#;
 
-            let expected_line = ContentIrLine::new(
-                "verbatim-1",
-                1,
-                UnimarkupType::VerbatimBlock.to_string(),
-                expected_text,
-                "",
-                "",
-                "",
-            );
+        let expected_line = ContentIrLine::new(
+            "verbatim-1",
+            1,
+            UnimarkupType::VerbatimBlock.to_string(),
+            expected_text,
+            "",
+            "",
+            "",
+        );
 
-            try_parse(input, expected_line)
-        }
+        try_parse(input, expected_line)
+    }
 
-        #[test]
-        fn test__parse__verbatim_with_lang() {
-            let input = "~~~rust
+    #[test]
+    fn test__parse__verbatim_with_lang() {
+        let input = "~~~rust
                             fn main() {
                                 println!(\"Hello World!\");
                             }\n~~~";
 
-            let expected_text = r#"fn main() {
+        let expected_text = r#"fn main() {
                                 println!("Hello World!");
                             }"#;
 
-            let expected_line = ContentIrLine::new(
-                "verbatim-1",
-                1,
-                UnimarkupType::VerbatimBlock.to_string(),
-                expected_text,
-                "",
-                "{ \"language\": \"rust\" }",
-                "",
-            );
+        let expected_line = ContentIrLine::new(
+            "verbatim-1",
+            1,
+            UnimarkupType::VerbatimBlock.to_string(),
+            expected_text,
+            "",
+            "{ \"language\": \"rust\" }",
+            "",
+        );
 
-            try_parse(input, expected_line)
-        }
+        try_parse(input, expected_line)
+    }
 
-        #[test]
-        fn test__parse_verbatim__with_attrs() {
-            let input = "~~~{ \"language\": \"rust\", \"id\": \"custom-id\" }
+    #[test]
+    fn test__parse_verbatim__with_attrs() {
+        let input = "~~~{ \"language\": \"rust\", \"id\": \"custom-id\" }
                             fn main() {
                                 println!(\"Hello World!\");
                             }\n~~~";
 
-            let expected_text = r#"fn main() {
+        let expected_text = r#"fn main() {
                                 println!("Hello World!");
                             }"#;
 
-            let mut expected_attrs = HashMap::new();
+        let mut expected_attrs = HashMap::new();
 
-            expected_attrs.insert("id", "custom-id");
-            expected_attrs.insert("language", "rust");
+        expected_attrs.insert("id", "custom-id");
+        expected_attrs.insert("language", "rust");
 
-            let expected_line = ContentIrLine::new(
-                "custom-id",
-                1,
-                UnimarkupType::VerbatimBlock.to_string(),
-                expected_text,
-                "",
-                serde_json::to_string(&expected_attrs).unwrap(),
-                "",
-            );
+        let expected_line = ContentIrLine::new(
+            "custom-id",
+            1,
+            UnimarkupType::VerbatimBlock.to_string(),
+            expected_text,
+            "",
+            serde_json::to_string(&expected_attrs).unwrap(),
+            "",
+        );
 
-            try_parse(input, expected_line)
-        }
+        try_parse(input, expected_line)
+    }
 
-        #[test]
-        #[should_panic]
-        fn test__parse__invalid_verbatim() {
-            let input = "~~~
+    #[test]
+    #[should_panic]
+    fn test__parse__invalid_verbatim() {
+        let input = "~~~
                             some content ~~~";
 
-            try_parse(input, ContentIrLine::default());
+        try_parse(input, ContentIrLine::default());
+    }
+
+    fn try_parse(input: &str, mut expected_line: ContentIrLine) {
+        let mut unimarkup = UnimarkupParser::parse(Rule::unimarkup, input).unwrap();
+
+        assert_eq!(unimarkup.clone().count(), 1, "Number of pairs not equal 1");
+
+        let mut inner_pairs = unimarkup.next().unwrap().into_inner();
+
+        assert_eq!(
+            inner_pairs.clone().count(),
+            2,
+            "Number of inner pairs not equal 2"
+        );
+
+        let enclosed = inner_pairs.next().unwrap();
+
+        assert_eq!(
+            enclosed.as_rule(),
+            Rule::enclosed_block,
+            "Inner pair is not a enclosed_block"
+        );
+
+        let verbatim_res = UnimarkupParser::parse(Rule::verbatim, enclosed.as_str());
+
+        assert!(verbatim_res.is_ok(), "Cause: {}", verbatim_res.unwrap_err());
+
+        let mut input_pairs = verbatim_res.unwrap();
+
+        let block_res = VerbatimBlock::parse(&mut input_pairs, enclosed.as_span());
+
+        assert!(block_res.is_ok(), "Cause: {:?}", block_res.unwrap_err());
+
+        let list = block_res.unwrap();
+        assert_eq!(
+            list.len(),
+            1,
+            "Number of UnimarkupBlocks in VerbatimBlock not equal 1"
+        );
+
+        let mut ir_lines = list.get(0).unwrap().as_ir_lines();
+
+        assert_eq!(ir_lines.len(), 1, "Number of ir_lines not equal 1");
+
+        let mut line = ir_lines.pop().unwrap();
+
+        check_lines(&mut line, &mut expected_line);
+    }
+
+    fn check_lines(first: &mut ContentIrLine, second: &mut ContentIrLine) {
+        if !first.attributes.is_empty() {
+            let is_attrs: HashMap<&str, &str> = serde_json::from_str(&first.attributes).unwrap();
+            let expect_attrs: HashMap<&str, &str> =
+                serde_json::from_str(&second.attributes).unwrap();
+            assert_eq!(is_attrs, expect_attrs, "Attributes do not match");
         }
 
-        fn try_parse(input: &str, mut expected_line: ContentIrLine) {
-            let mut unimarkup = UnimarkupParser::parse(Rule::unimarkup, input).unwrap();
+        // test attributes manually because HashMap is not sorted
+        // that makes the test fail depending on the sorting of attributes
+        // even if they contain the same keys with same values
+        first.attributes = String::default();
+        second.attributes = String::default();
 
-            assert_eq!(unimarkup.clone().count(), 1, "Number of pairs not equal 1");
-
-            let mut inner_pairs = unimarkup.next().unwrap().into_inner();
-
-            assert_eq!(
-                inner_pairs.clone().count(),
-                2,
-                "Number of inner pairs not equal 2"
-            );
-
-            let enclosed = inner_pairs.next().unwrap();
-
-            assert_eq!(
-                enclosed.as_rule(),
-                Rule::enclosed_block,
-                "Inner pair is not a enclosed_block"
-            );
-
-            let verbatim_res = UnimarkupParser::parse(Rule::verbatim, enclosed.as_str());
-
-            assert!(verbatim_res.is_ok(), "Cause: {}", verbatim_res.unwrap_err());
-
-            let mut input_pairs = verbatim_res.unwrap();
-
-            let block_res = VerbatimBlock::parse(&mut input_pairs, enclosed.as_span());
-
-            assert!(block_res.is_ok(), "Cause: {:?}", block_res.unwrap_err());
-
-            let list = block_res.unwrap();
-            assert_eq!(
-                list.len(),
-                1,
-                "Number of UnimarkupBlocks in VerbatimBlock not equal 1"
-            );
-
-            let mut ir_lines = list.get(0).unwrap().as_ir_lines();
-
-            assert_eq!(ir_lines.len(), 1, "Number of ir_lines not equal 1");
-
-            let mut line = ir_lines.pop().unwrap();
-
-            check_lines(&mut line, &mut expected_line);
-        }
-
-        fn check_lines(first: &mut ContentIrLine, second: &mut ContentIrLine) {
-            if !first.attributes.is_empty() {
-                let is_attrs: HashMap<&str, &str> =
-                    serde_json::from_str(&first.attributes).unwrap();
-                let expect_attrs: HashMap<&str, &str> =
-                    serde_json::from_str(&second.attributes).unwrap();
-                assert_eq!(is_attrs, expect_attrs, "Attributes do not match");
-            }
-
-            // test attributes manually because HashMap is not sorted
-            // that makes the test fail depending on the sorting of attributes
-            // even if they contain the same keys with same values
-            first.attributes = String::default();
-            second.attributes = String::default();
-
-            assert_eq!(first, second, "ContentIrLine does not match");
-        }
+        assert_eq!(first, second, "ContentIrLine does not match");
     }
 }

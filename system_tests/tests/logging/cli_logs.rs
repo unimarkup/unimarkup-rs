@@ -4,7 +4,7 @@ use std::{
 };
 
 #[test]
-fn test__main_log_trace__invalid_attributes_file() {
+fn test__main_log_trace__attributes_file() {
     let path = PathBuf::from("tests/test_files/attrs.um");
     let path = path.canonicalize().unwrap();
 

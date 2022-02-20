@@ -1,7 +1,6 @@
 use unimarkup_core::{backend::Render, elements::ParagraphBlock};
 
 #[test]
-
 fn test__render_html__valid_escaped_inline() {
     let id = String::from("paragraph-id");
     let content = String::from("\\*23\\*3");

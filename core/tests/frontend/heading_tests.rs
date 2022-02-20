@@ -2,7 +2,7 @@ use unimarkup_core::elements::types;
 use unimarkup_core::frontend::parser;
 use unimarkup_core::middleend::ContentIrLine;
 
-use super::umblock_tests::*;
+use super::tests_helper::*;
 
 #[test]
 fn test__parse__valid_heading_with_subheading() {

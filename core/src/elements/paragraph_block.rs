@@ -203,7 +203,7 @@ impl AsIrLines<ContentIrLine> for ParagraphBlock {
 
 #[allow(non_snake_case)]
 #[cfg(test)]
-mod paragraph_tests {
+mod tests {
     use std::collections::VecDeque;
 
     use crate::{

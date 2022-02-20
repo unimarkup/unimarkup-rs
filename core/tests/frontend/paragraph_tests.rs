@@ -2,7 +2,7 @@ use unimarkup_core::elements::types;
 use unimarkup_core::frontend::parser;
 use unimarkup_core::middleend::ContentIrLine;
 
-use super::umblock_tests::*;
+use super::tests_helper::*;
 
 #[test]
 fn test__parse__valid_paragraph_with_heading() {
@@ -13,6 +13,7 @@ fn test__parse__valid_paragraph_with_heading() {
     assert!(um_blocks.is_ok(), "Cause: {:?}", um_blocks.unwrap_err());
     loop_through_ir_lines(&um_blocks.unwrap(), paragraph1_expected_result());
 }
+
 #[test]
 fn test__parse__valid_paragraph_with_multi_line_heading() {
     let mut config = get_config("tests/test_files/frontend/paragraph2.um");
@@ -22,6 +23,7 @@ fn test__parse__valid_paragraph_with_multi_line_heading() {
     assert!(um_blocks.is_ok(), "Cause: {:?}", um_blocks.unwrap_err());
     loop_through_ir_lines(&um_blocks.unwrap(), paragraph2_expected_result());
 }
+
 #[test]
 fn test__parse__valid_paragraphs_with_sub_heading() {
     let mut config = get_config("tests/test_files/frontend/paragraph3.um");

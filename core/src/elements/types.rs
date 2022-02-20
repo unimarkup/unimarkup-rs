@@ -322,11 +322,16 @@ impl_from!(Paragraph from ParagraphBlock);
 impl_from!(VerbatimBlock from elements::VerbatimBlock);
 
 #[allow(non_snake_case)]
-#[test]
-fn test__convert_types__heading() {
-    let heading = HeadingBlock::default();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let um_type = UnimarkupType::from(&heading);
+    #[test]
+    fn test__convert_types__heading() {
+        let heading = HeadingBlock::default();
 
-    assert_eq!(um_type, UnimarkupType::Heading);
+        let um_type = UnimarkupType::from(&heading);
+
+        assert_eq!(um_type, UnimarkupType::Heading);
+    }
 }

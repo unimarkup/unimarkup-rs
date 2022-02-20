@@ -333,7 +333,7 @@ impl Render for HeadingBlock {
 
 #[allow(non_snake_case)]
 #[cfg(test)]
-mod heading_tests {
+mod tests {
     use std::collections::VecDeque;
 
     use crate::{
