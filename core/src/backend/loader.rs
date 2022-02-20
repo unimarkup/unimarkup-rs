@@ -121,12 +121,13 @@ pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, BackendError> {
     })
 }
 
+#[allow(non_snake_case)]
 #[cfg(test)]
-mod loader_tests {
+mod tests {
     use super::*;
 
     #[test]
-    fn parse_type() {
+    fn test__parse__type_paragraph_header() {
         // paragraph test
         let um_type = super::parse_um_type("paragraph-start").unwrap();
 

@@ -6,7 +6,7 @@ use unimarkup_core::middleend::{
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
-fn test_single_write_retrieve() {
+fn test__ir_single_write_retrieve__resource() {
     let first_resources = ResourceIrLine::new("test.png", ".");
     let mut conn = setup_test_ir();
 
@@ -15,8 +15,8 @@ fn test_single_write_retrieve() {
     let write_res = first_resources.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
@@ -27,9 +27,9 @@ fn test_single_write_retrieve() {
     assert!(
         retrieved_resources_res.is_ok(),
         "Cause: {:?}",
-        retrieved_resources_res.err()
+        retrieved_resources_res.unwrap_err()
     );
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- COMPARE ------------------------------------------------------------
     let retrieved_first_resources = retrieved_resources_res.unwrap();
@@ -37,7 +37,7 @@ fn test_single_write_retrieve() {
 }
 
 #[test]
-fn test_entry_exists() {
+fn test__ir_entry_exists__resource() {
     let mut conn = setup_test_ir();
     let first_resource = ResourceIrLine::new("test.um", ".");
 
@@ -50,15 +50,15 @@ fn test_entry_exists() {
     );
 
     let commit_res = transaction.commit();
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- WRITE TO IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
     let write_res = first_resource.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- ENTRY EXISTS IN IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
@@ -69,11 +69,11 @@ fn test_entry_exists() {
     );
 
     let commit_res = transaction.commit();
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 }
 
 #[test]
-fn test_write_update() {
+fn test__ir_write_update__resource() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------
@@ -82,8 +82,8 @@ fn test_write_update() {
     let write_res = first_resource.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- SECOND: WRITE TO IR -------------------------------------------------------
     let updated_resource = ResourceIrLine::new(&first_resource.filename, &first_resource.path); // resources only has pk columns
@@ -91,8 +91,8 @@ fn test_write_update() {
     let write_res = updated_resource.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
@@ -103,9 +103,9 @@ fn test_write_update() {
     assert!(
         retrieved_resource_res.is_ok(),
         "Cause: {:?}",
-        retrieved_resource_res.err()
+        retrieved_resource_res.unwrap_err()
     );
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- COMPARE ------------------------------------------------------------
     let retrieved_updated_resource = retrieved_resource_res.unwrap();

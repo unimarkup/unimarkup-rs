@@ -6,7 +6,7 @@ use unimarkup_core::middleend::{prepare_content_rows, ContentIrLine};
 use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
-fn test_single_write_retrieve() {
+fn test__ir_single_write_retrieve__content() {
     let first_content = ContentIrLine::new("1", 1, "paragraph", "test", "", "{}", "");
     let mut conn = setup_test_ir();
 
@@ -15,8 +15,8 @@ fn test_single_write_retrieve() {
     let write_res = first_content.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
@@ -27,9 +27,9 @@ fn test_single_write_retrieve() {
     assert!(
         retrieved_content_res.is_ok(),
         "Cause: {:?}",
-        retrieved_content_res.err()
+        retrieved_content_res.unwrap_err()
     );
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- COMPARE ------------------------------------------------------------
     let retrieved_first_content = retrieved_content_res.unwrap();
@@ -37,7 +37,7 @@ fn test_single_write_retrieve() {
 }
 
 #[test]
-fn test_entry_exists() {
+fn test__ir_entry_exists__paragraph() {
     let mut conn = setup_test_ir();
     let first_content = ContentIrLine::new("1", 1, "paragraph", "test", "", "{}", "");
 
@@ -50,15 +50,15 @@ fn test_entry_exists() {
     );
 
     let commit_res = transaction.commit();
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- WRITE TO IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
     let write_res = first_content.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- ENTRY EXISTS IN IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
@@ -69,11 +69,11 @@ fn test_entry_exists() {
     );
 
     let commit_res = transaction.commit();
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 }
 
 #[test]
-fn test_write_update() {
+fn test__ir_write_update__paragraph() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------
@@ -82,8 +82,8 @@ fn test_write_update() {
     let write_res = first_content.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- SECOND: WRITE TO IR -------------------------------------------------------
     let updated_content = ContentIrLine::new(
@@ -99,8 +99,8 @@ fn test_write_update() {
     let write_res = updated_content.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
@@ -111,9 +111,9 @@ fn test_write_update() {
     assert!(
         retrieved_content_res.is_ok(),
         "Cause: {:?}",
-        retrieved_content_res.err()
+        retrieved_content_res.unwrap_err()
     );
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- COMPARE ------------------------------------------------------------
     let retrieved_updated_content = retrieved_content_res.unwrap();
@@ -121,7 +121,7 @@ fn test_write_update() {
 }
 
 #[test]
-fn test_rows_query() {
+fn test__ir_rows_query__paragraph() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------
@@ -130,8 +130,8 @@ fn test_rows_query() {
     let write_res = first_content.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- SECOND: WRITE TO IR -------------------------------------------------------
     let second_content = ContentIrLine::new("2", 2, "paragraph", "other paragraph", "", "{ }", "");
@@ -139,16 +139,16 @@ fn test_rows_query() {
     let write_res = second_content.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- QUERY ROWS ---------------------------------------------------
     let stmt_res = prepare_content_rows(&conn, false);
-    assert!(stmt_res.is_ok(), "Cause: {:?}", stmt_res.err());
+    assert!(stmt_res.is_ok(), "Cause: {:?}", stmt_res.unwrap_err());
 
     let mut stmt = stmt_res.unwrap();
     let rows_res = stmt.query([]);
-    assert!(rows_res.is_ok(), "Cause: {:?}", rows_res.err());
+    assert!(rows_res.is_ok(), "Cause: {:?}", rows_res.err().unwrap());
 
     //--- COMPARE ------------------------------------------------------------
     let mut rows = rows_res.unwrap();
@@ -162,7 +162,7 @@ fn test_rows_query() {
 }
 
 #[test]
-fn test_rows_query_ordered() {
+fn test__ir_rows_query_ordered__paragraph() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------
@@ -172,8 +172,8 @@ fn test_rows_query_ordered() {
     let write_res = first_content.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- SECOND: WRITE TO IR -------------------------------------------------------
     let second_content = ContentIrLine::new("2", 2, "paragraph", "other paragraph", "", "{ }", "");
@@ -181,16 +181,16 @@ fn test_rows_query_ordered() {
     let write_res = second_content.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
-    assert!(write_res.is_ok(), "Cause: {:?}", write_res.err());
-    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.err());
+    assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
+    assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- QUERY ROWS ---------------------------------------------------
     let stmt_res = prepare_content_rows(&conn, true);
-    assert!(stmt_res.is_ok(), "Cause: {:?}", stmt_res.err());
+    assert!(stmt_res.is_ok(), "Cause: {:?}", stmt_res.unwrap_err());
 
     let mut stmt = stmt_res.unwrap();
     let rows_res = stmt.query([]);
-    assert!(rows_res.is_ok(), "Cause: {:?}", rows_res.err());
+    assert!(rows_res.is_ok(), "Cause: {:?}", rows_res.err().unwrap());
 
     //--- COMPARE ------------------------------------------------------------
     let mut rows = rows_res.unwrap();

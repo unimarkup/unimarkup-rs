@@ -26,14 +26,29 @@ pub fn loop_through_ir_lines(um_file: &UnimarkupFile, mut blocks_vector: Vec<Con
 }
 
 fn ir_lines_assert_eq(line: ContentIrLine, heading_ir_line: ContentIrLine) {
-    assert_eq!(line.id, heading_ir_line.id);
-    assert_eq!(line.line_nr, heading_ir_line.line_nr);
-    assert_eq!(line.um_type, heading_ir_line.um_type);
-    assert_eq!(line.fallback_text, heading_ir_line.fallback_text);
-    assert_eq!(line.attributes, heading_ir_line.attributes);
     assert_eq!(
-        line.fallback_attributes,
-        heading_ir_line.fallback_attributes
+        line.id, heading_ir_line.id,
+        "id of heading does not match expected result"
+    );
+    assert_eq!(
+        line.line_nr, heading_ir_line.line_nr,
+        "line_number of heading does not match expected result"
+    );
+    assert_eq!(
+        line.um_type, heading_ir_line.um_type,
+        "um_type of heading does not match expected result",
+    );
+    assert_eq!(
+        line.fallback_text, heading_ir_line.fallback_text,
+        "fallback text of heading does not match expected result"
+    );
+    assert_eq!(
+        line.attributes, heading_ir_line.attributes,
+        "attributes of heading does not match expected result"
+    );
+    assert_eq!(
+        line.fallback_attributes, heading_ir_line.fallback_attributes,
+        "fallback_attributes of heading does not match expected result"
     );
     ir_lines_text_eq(line.text, heading_ir_line.text);
 }
@@ -42,6 +57,10 @@ fn ir_lines_text_eq(line_text: String, heading_ir_line_text: String) {
     let mut ir_lines = heading_ir_line_text.lines();
 
     for line in line_text.lines() {
-        assert_eq!(line, ir_lines.next().expect("predefined text"));
+        assert_eq!(
+            line,
+            ir_lines.next().expect("predefined text"),
+            "Text of heading does not match expected result"
+        );
     }
 }

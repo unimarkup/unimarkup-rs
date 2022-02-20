@@ -10,7 +10,7 @@ use unimarkup_core::{
 };
 
 #[test]
-fn root_metadata_in_ir() {
+fn test__ir_root__metadata_in_ir() {
     let testfile = "tests/test_files/small_testfile.um";
 
     let mut connection = ir_test_setup::setup_test_ir();
@@ -18,7 +18,9 @@ fn root_metadata_in_ir() {
 
     let input = std::fs::read_to_string(&cfg.um_file).unwrap();
 
-    frontend::run(&input, &mut connection, &mut cfg).unwrap();
+    let result = frontend::run(&input, &mut connection, &mut cfg);
+
+    assert!(result.is_ok(), "Cause: {:?}", result.unwrap_err());
 
     let expected_metadata = Metadata {
         file: Path::new(testfile).to_path_buf(),
