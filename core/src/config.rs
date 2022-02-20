@@ -468,18 +468,4 @@ mod tests {
 
         cfg.validate_config().unwrap();
     }
-
-    #[should_panic]
-    #[test]
-    fn test__validate__invalid_outfile_config() {
-        let mut cfg: Config = Config::parse_from(vec![
-            "unimarkup",
-            "--output-formats=html",
-            "tests/test_files/frontend/heading1.um",
-            //invalid file "break_config_validation" on purpose
-            "tests/test_files/break_config_validation.html",
-        ]);
-
-        cfg.validate_config().unwrap();
-    }
 }
