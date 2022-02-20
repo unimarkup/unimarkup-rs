@@ -1,5 +1,32 @@
 # Changelog
 
+### [0.3.1](https://www.github.com/Unimarkup/unimarkup-rs/compare/v0.3.0...v0.3.1) (2022-02-20)
+
+
+### Bug Fixes
+
+* add temporal fix for inline formatting ([13d6549](https://www.github.com/Unimarkup/unimarkup-rs/commit/13d654941b4dcf4ca558534cc6dc43ecb5e231b3))
+* remove out-file path validation ([2be50d3](https://www.github.com/Unimarkup/unimarkup-rs/commit/2be50d3096138ee70927440fa7960e9868508c2b))
+* set correct logId for frontend ([e6d3ad4](https://www.github.com/Unimarkup/unimarkup-rs/commit/e6d3ad4ca4911abe7daf447775fe9afaa3712926))
+* set same fileoutput style for logs ([26bc9f0](https://www.github.com/Unimarkup/unimarkup-rs/commit/26bc9f0613c6fc09d2721a486dba8befa32ed9b6))
+* **test:** remove wrong test case ([7e3dde3](https://www.github.com/Unimarkup/unimarkup-rs/commit/7e3dde356ca6271cc03fb89649c41e63e6d933ae))
+* update clap to v3 ([5ace622](https://www.github.com/Unimarkup/unimarkup-rs/commit/5ace62242400032c1f934e0fd65bb4e5ebfd4522))
+* use correct print ([7d95fc6](https://www.github.com/Unimarkup/unimarkup-rs/commit/7d95fc6db1e7c2e61795b577ed66e020fa41ea1e))
+
+
+### CI
+
+* run workflows on feature branch ([a28adcf](https://www.github.com/Unimarkup/unimarkup-rs/commit/a28adcf48a2e5064d7462acce33fae314c49c2bb))
+
+
+### Testing
+
+* add log test for cli main ([4548e7d](https://www.github.com/Unimarkup/unimarkup-rs/commit/4548e7ddc0e80108b554a080a03b58ea7cb68706))
+* change tests structure ([2dcd72e](https://www.github.com/Unimarkup/unimarkup-rs/commit/2dcd72e0d510c5e043058e84f2f50420dffe71f5))
+* double underscore in test names ([15898a8](https://www.github.com/Unimarkup/unimarkup-rs/commit/15898a824f36d3143673769f2cc12c6d814eb38a))
+* implement changes from testing branch ([956b2be](https://www.github.com/Unimarkup/unimarkup-rs/commit/956b2be5c79e145061b3a705a6570d16748a87b7))
+* simplify some if-else to match statements ([6737869](https://www.github.com/Unimarkup/unimarkup-rs/commit/67378696e229004c775673eb05fa4ffa439158e7))
+
 ## [0.3.0](https://www.github.com/Unimarkup/unimarkup-rs/compare/v0.2.0...v0.3.0) (2022-01-14)
 
 
