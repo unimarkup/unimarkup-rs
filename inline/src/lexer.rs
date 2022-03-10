@@ -1,19 +1,32 @@
 #![allow(dead_code)]
 
-use std::{
-    fmt::Display,
-    ops::{Deref, DerefMut},
-};
+use std::cmp::Ordering;
+use std::ops::{Deref, DerefMut};
 
+mod spacing;
+mod token;
+
+pub use spacing::*;
+pub use token::*;
+
+/// Lexer of the Unimarkup inline format types.
 #[derive(Debug)]
 pub struct Lexer {
+    /// Input as characters
     input: Vec<char>,
+
+    /// Cursor used for indexing into input
     index: usize,
 }
 
 impl Lexer {
     const ESC: char = '\\';
+    const STAR: char = '*';
+    const ULINE: char = '_';
+    const CARET: char = '^';
+    const TILDE: char = '~';
 
+    /// Create a lexer over given input.
     pub fn new(input: &str) -> Self {
         Lexer {
             input: input.chars().collect(),
@@ -21,46 +34,131 @@ impl Lexer {
         }
     }
 
-    fn identify_token(&mut self) -> Token {
-        // consume all chars of token
-        let first_char = self.input.get(self.index).unwrap(); // this one is guaranteed
+    /// Get token length starting from the current cursor position.
+    fn token_len(&self, token_char: &char) -> usize {
         let mut count = 1;
 
-        let space_before = self.index == 0
-            || self
-                .get(self.index - 1)
-                .map(|ch| ch.is_whitespace())
-                .unwrap_or(false);
-
-        self.index += 1;
-
-        while let Some(ch) = self.input.get(self.index) {
-            if *ch == *first_char {
-                self.index += 1;
+        while let Some(ch) = self.input.get(self.index + count) {
+            if *ch == *token_char {
                 count += 1;
             } else {
                 break;
             }
         }
 
-        let space_after = self
-            .get(self.index + 1)
-            .map(|ch| ch.is_whitespace())
-            .unwrap_or(false);
+        count
+    }
 
-        if space_before && space_after {
-            return Token::Plain;
-        }
-
-        if *first_char == '*' && count == 2 {
-            if space_before {
-                Token::BoldBegin
-            } else {
-                Token::BoldEnd
-            }
+    /// Check if character at cursor position with offset is whitespace.
+    fn is_whitespace(&self, offset: isize) -> bool {
+        if offset < 0 && offset.abs() as usize > self.index {
+            false
         } else {
-            Token::Plain
+            let pos = if offset < 0 {
+                self.index - offset.abs() as usize
+            } else {
+                self.index + offset as usize
+            };
+
+            self.get(pos).map_or(false, |ch| ch.is_whitespace())
         }
+    }
+
+    /// Identifies the token under current cursor position.
+    fn identify_token(&mut self) -> Token {
+        let first_char = self
+            .input
+            .get(self.index)
+            .expect("Expected at least one character");
+
+        let start_index = self.index;
+
+        let mut spacing = Spacing::Neither;
+
+        if self.is_whitespace(-1) {
+            spacing += Spacing::Pre;
+        }
+
+        let mut len = self.token_len(first_char);
+
+        // check if ambiguous token
+        match len.cmp(&3) {
+            Ordering::Equal => {
+                if self.is_whitespace(len as isize) {
+                    spacing += Spacing::Post;
+                }
+
+                if let Some(amb_token) = self.identify_ambiguous(first_char, spacing) {
+                    self.index += len;
+                    return amb_token;
+                }
+            }
+            Ordering::Greater => {
+                // 4 or more tokens can be open - close of same token
+                // e.g. **** -> open bold, close bold
+                len = 2;
+                self.index += len;
+            }
+            Ordering::Less => {
+                self.index += len;
+            }
+        }
+
+        if self.is_whitespace(0) {
+            spacing += Spacing::Post;
+        }
+
+        if spacing == Spacing::Both {
+            // is plain text
+            let content = String::from_iter(self.input[start_index..self.index].iter());
+
+            Token::new(TokenKind::Plain(content), Spacing::Both)
+        } else {
+            let kind = match *first_char {
+                Lexer::STAR => match len {
+                    2 => TokenKind::Bold,
+                    _ => TokenKind::Italic,
+                },
+                Lexer::ULINE => match len {
+                    2 => TokenKind::Underline,
+                    _ => TokenKind::Subscript,
+                },
+                Lexer::TILDE => TokenKind::Verbatim,
+                Lexer::CARET => TokenKind::Superscript,
+                _ => self.input[start_index..self.index].into(),
+            };
+
+            Token::new(kind, spacing)
+        }
+    }
+
+    /// Identifies the [`AmbiguousToken`] under the current cursor position.
+    fn identify_ambiguous(&self, token_char: &char, spacing: Spacing) -> Option<Token> {
+        let mut kind: Option<TokenKind> = None;
+
+        match *token_char {
+            Self::STAR => {
+                kind = Some(TokenKind::Ambiguous(AmbiguousToken::new(
+                    TokenKind::Bold,
+                    TokenKind::Italic,
+                )))
+            }
+            Self::ULINE => {
+                kind = Some(TokenKind::Ambiguous(AmbiguousToken::new(
+                    TokenKind::Underline,
+                    TokenKind::Subscript,
+                )))
+            }
+            _ => {}
+        }
+
+        kind.map(|kind| Token::new(kind, spacing))
+    }
+}
+
+impl From<&[char]> for TokenKind {
+    fn from(input: &[char]) -> Self {
+        TokenKind::Plain(String::from_iter(input))
     }
 }
 
@@ -84,26 +182,34 @@ impl Iterator for Lexer {
     fn next(&mut self) -> Option<Self::Item> {
         // two cases:
         // 1. First char is not part of keyword -> it's plain text token
-        // 2. First char is part of a keyword -> is some other token
+        // 2. First char is part of a keyword -> is potentially some other token
 
-        // let begin_index = self.index;
         let first = self.get(self.index)?; // return None if there is no next char
 
         if first.is_keyword() {
             // parse token
-            return Some(self.identify_token());
+            Some(self.identify_token())
         } else {
-            // parse until keyword
+            // parse plain until keyword
+            let mut content = String::new();
+            let mut begin_index = self.index;
+
             while let Some(ch) = self.get(self.index) {
                 match ch {
                     _ if ch.is_keyword() => {
-                        // return characters as plain text
-                        return Some(Token::Plain);
+                        // stop parsing of plain
+                        break;
                     }
                     _ if *ch == Lexer::ESC => {
                         // escape character
-                        // skip escape character, add next character to plain text
-                        // and go to character after it => index + 2
+
+                        content.extend(self.input[begin_index..self.index].iter());
+
+                        // next character which should be added into content is the one after the
+                        // escape character
+                        begin_index = self.index + 1;
+
+                        // continue parsing from character after the escape character
                         self.index += 2;
                     }
                     _ => {
@@ -111,65 +217,27 @@ impl Iterator for Lexer {
                     }
                 }
             }
-        }
 
-        Some(Token::Plain)
+            content.extend(self.input[begin_index..self.index].iter());
+
+            let token = Token::new(TokenKind::Plain(content), Spacing::Neither);
+
+            Some(token)
+        }
     }
 }
 
-impl Display for Lexer {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for ch in &self.input {
-            f.write_fmt(format_args!("{}", ch))?;
-        }
-
-        Ok(())
-    }
-}
-
+/// Extension trait for char
 trait IsKeyword {
+    /// Checks if the given `char` is potentially a keyword.
     fn is_keyword(&self) -> bool;
 }
 
 impl IsKeyword for char {
     fn is_keyword(&self) -> bool {
-        *self == '*'
+        [Lexer::STAR, Lexer::CARET, Lexer::ULINE, Lexer::TILDE].contains(self)
     }
 }
-
-struct Spacing {
-    before: bool,
-    after: bool,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum Token {
-    BoldBegin,
-    BoldEnd,
-    Plain,
-}
-
-// pub enum TokenKind {
-//     BoldBegin,
-//     BoldEnd,
-//     ItalicBegin,
-//     ItalicEnd,
-// }
 
 #[cfg(test)]
-mod tests {
-    use crate::lexer::Lexer;
-
-    #[test]
-    fn lex_bold() {
-        let input = "*\\*This is some** text with some more **text";
-
-        let lexer = Lexer::new(input);
-
-        let tokens: Vec<_> = lexer.collect();
-        println!("\nTokens in '{}':", input);
-        println!("{:#?}", tokens);
-
-        assert_eq!("haha", "haha");
-    }
-}
+mod tests;
