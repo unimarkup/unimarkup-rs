@@ -11,3 +11,4 @@ features = ["bundled"]
 
 [dependencies]
 log = "0.4"
+unicode-segmentation = "1.9.0"

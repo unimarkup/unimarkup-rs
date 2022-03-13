@@ -4,7 +4,7 @@ mod inlines;
 
 //pub use lexer::*;
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Copy)]
 pub struct Position {
   pub line: usize,
   pub column: usize,

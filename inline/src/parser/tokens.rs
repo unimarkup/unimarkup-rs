@@ -1,3 +1,5 @@
+use unicode_segmentation::UnicodeSegmentation;
+
 use crate::Position;
 
 
@@ -8,7 +10,30 @@ pub struct Token {
   pub position: Position,
 }
 
+impl Token {
+  pub fn length(&self) -> usize {
+    self.content.graphemes(true).count()
+  }
+}
+
 #[derive(Debug, Clone, PartialEq)]
+pub enum SingleTokenKind {
+  Plain,
+  LineFeed,
+  CarriageReturn,
+  Tab,
+  Space,
+  Backslash,
+  ExclamationMark,
+  Ampersand,
+  Colon,
+  Caret,
+  Underscore,
+  Asterisk,
+  Plus,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
 pub enum TokenKind {
   BoldOpen,
   BoldClose,
@@ -16,11 +41,13 @@ pub enum TokenKind {
   ItalicClose,
   BoldItalicOpen,
   BoldItalicClose,
+  VerbatimOpen,
+  VerbatimClose,
   Plain,
   EmojiOpen,
   EmojiClose,
-  PossibleDirectEmoji,
-  PossibleDirectArrow,
+  DirectEmoji,
+  DirectArrow,
   EscapedChar,
   NewLine,
   Space,
@@ -36,7 +63,7 @@ impl Default for TokenKind {
 }
 
 impl TokenKind {
-  fn as_str(&self) -> &'static str {
+  pub fn as_str(&self) -> &'static str {
     match *self {
       TokenKind::BoldOpen => "**",
       TokenKind::BoldClose => TokenKind::BoldOpen.as_str(),
@@ -44,6 +71,8 @@ impl TokenKind {
       TokenKind::ItalicClose => TokenKind::ItalicOpen.as_str(),
       TokenKind::BoldItalicOpen => "***",
       TokenKind::BoldItalicClose => TokenKind::BoldItalicOpen.as_str(),
+      TokenKind::VerbatimOpen => "`",
+      TokenKind::VerbatimClose => TokenKind::EmojiOpen.as_str(), 
       TokenKind::EmojiOpen => "::",
       TokenKind::EmojiClose => TokenKind::EmojiOpen.as_str(),  
       TokenKind::CommentOpen => ";;",
@@ -51,85 +80,92 @@ impl TokenKind {
 
       // Note: Below are only placeholder valus
       TokenKind::Plain => "",
-      TokenKind::PossibleDirectEmoji => ":D",
-      TokenKind::PossibleDirectArrow => "-->",
+      TokenKind::DirectEmoji => ":D",
+      TokenKind::DirectArrow => "-->",
       TokenKind::EscapedChar => "\\",
       TokenKind::NewLine => "\n",
       TokenKind::Space => " ",
-      TokenKind::DirectUnicode => "&U+1F816;"
+      TokenKind::DirectUnicode => "&U+1F816;",
     }
   }
 }
 
-pub trait Keyword {
-  fn is_keyword(&self) -> Option<TokenKind>;
-  fn is_newline(&self) -> bool;
+
+pub trait AsSingleTokenKind {
+  fn as_single_token_kind(&self) -> SingleTokenKind;
 }
 
-impl Keyword for char {
-    fn is_keyword(&self) -> Option<TokenKind> {
-      let s = self.to_string();
-      return s.as_str().is_keyword();
-    }
+impl AsSingleTokenKind for char {
+    fn as_single_token_kind(&self) -> SingleTokenKind {
+      match *self {
+        '*' => { SingleTokenKind::Asterisk },
 
-    fn is_newline(&self) -> bool {
-      let s = self.to_string();
-      return s.as_str().is_newline();
+        c => {
+          if c.is_whitespace() {
+            return SingleTokenKind::Space;
+          }
+          SingleTokenKind::Plain
+        }
+      }
     }
 }
 
-impl Keyword for &str {
-    fn is_keyword(&self) -> Option<TokenKind> {
+pub trait AsTokenKind {
+  fn as_token_kind(&self) -> TokenKind;
+}
+
+impl AsTokenKind for &str {
+    fn as_token_kind(&self) -> TokenKind {
       let s = *self;
 
       // Note: Close token is omitted if open and close are equal
       if s == TokenKind::BoldOpen.as_str() {
-        return Some(TokenKind::BoldOpen);
+        return TokenKind::BoldOpen;
       } else if s == TokenKind::ItalicOpen.as_str() {
-        return Some(TokenKind::ItalicOpen);
+        return TokenKind::ItalicOpen;
       } else if s == TokenKind::BoldItalicOpen.as_str() {
-        return Some(TokenKind::BoldItalicOpen);
+        return TokenKind::BoldItalicOpen;
       } else if s == TokenKind::EmojiOpen.as_str() {
-        return Some(TokenKind::EmojiOpen);
-      } else if let Some(arrow) = possible_arrow(s) {
-        return Some(arrow);
-      } else if let Some(emoji) = possible_emoji(s) {
-        return Some(emoji);
-      } else if let Some(direct_unicode) = possible_direct_unicode(s) {
-        return Some(direct_unicode);
+        return TokenKind::EmojiOpen;
       }
     
-      None
-    }
-
-    fn is_newline(&self) -> bool {
-      let s = *self;
-      //Note: Only temporary solution until rust supports is_newline() per default
-      s == "\n" || s == "\r\n" || s == "\r"
+      TokenKind::Plain
     }
 }
 
-pub fn possible_arrow(s: &str) -> Option<TokenKind> {
-  if s.contains(|c| c == '-' || c == '=' || c == '<' || c == '>' || c == '|') {
-    return Some(TokenKind::PossibleDirectArrow);
-  }
-  None
+pub trait Newline {
+  fn is_newline(&self) -> bool;
 }
 
-pub fn possible_emoji(s: &str) -> Option<TokenKind> {
-  if s.contains(|c| c == '-' || c == '=' || c == '<' || c == '>' || c == ')'
-    || c == '(' || c == '^' || c == 'O' || c == 'D' || c == 'Y' || c == 'N' || c == 'P'
-    || c == '3' || c == '/' || c == ':' || c == ';' || c == '_') {
-
-    return Some(TokenKind::PossibleDirectEmoji);
+impl Newline for &str {
+  fn is_newline(&self) -> bool {
+    let s = *self;
+    //Note: Only temporary solution until rust supports is_newline() per default
+    s == "\n" || s == "\r\n" || s == "\r"
   }
-  None
 }
 
-pub fn possible_direct_unicode(s: &str) -> Option<TokenKind> {
-  if s.contains(|c: char| c == '&' || c == 'U' || c == '+' || c.is_digit(16) || c == ';') {
-    return Some(TokenKind::DirectUnicode)
-  }
-  None
-}
+// pub fn possible_arrow(s: &str) -> Option<TokenKind> {
+//   if s.contains(|c| c == '-' || c == '=' || c == '<' || c == '>' || c == '|') {
+//     return Some(TokenKind::PossibleDirectArrow);
+//   }
+//   None
+// }
+
+// pub fn possible_emoji(s: &str) -> Option<TokenKind> {
+//   if s.contains(|c| c == '-' || c == '=' || c == '<' || c == '>' || c == ')'
+//     || c == '(' || c == '^' || c == 'O' || c == 'D' || c == 'Y' || c == 'N' || c == 'P'
+//     || c == '3' || c == '/' || c == ':' || c == ';' || c == '_') {
+
+//     return Some(TokenKind::PossibleDirectEmoji);
+//   }
+//   None
+// }
+
+// pub fn possible_direct_unicode(s: &str) -> Option<TokenKind> {
+//   if s.contains(|c: char| c == '&' || c == 'U' || c == '+' || c.is_digit(16) || c == ';') {
+//     return Some(TokenKind::DirectUnicode)
+//   }
+//   None
+// }
 
