@@ -254,7 +254,10 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
       } else {
         let new_token;
         tokenized.cur_pos.column += last.length();
-        if tokenized.open_tokens.contains_key(&TokenKind::ItalicOpen) {
+        if tokenized.open_tokens.contains_key(&TokenKind::ItalicOpen)
+          || tokenized.open_tokens.contains_key(&TokenKind::BoldOpen)
+          || tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen) {
+
           if last.kind == TokenKind::Space || last.kind == TokenKind::NewLine {
             // Note: closing not allowed after space
             new_token = Token{ kind: TokenKind::ItalicOpen, content: c.to_string(), position: tokenized.cur_pos };
@@ -300,6 +303,24 @@ mod tests {
       Token{ kind: TokenKind::ItalicOpen, content: "*".to_string(), position: Position { line: 0, column: 11 } },
       Token{ kind: TokenKind::Plain, content: "italic".to_string(), position: Position { line: 0, column: 12 } },
       Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 18 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__plain_after_bold() {
+    let input = "**bold** plain text";
+    let expected = [
+      Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 2 } },
+      Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 6 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 8 } },
+      Token{ kind: TokenKind::Plain, content: "plain".to_string(), position: Position { line: 0, column: 9 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 14 } },
+      Token{ kind: TokenKind::Plain, content: "text".to_string(), position: Position { line: 0, column: 15 } },
     ];
 
     let actual = input.tokenize();
