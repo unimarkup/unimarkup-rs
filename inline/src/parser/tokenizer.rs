@@ -1,4 +1,4 @@
-use std::collections::{HashMap, hash_map::Entry::Vacant};
+use std::{collections::{HashMap, hash_map::Entry::Vacant}, cmp::min};
 
 use crate::Position;
 
@@ -74,17 +74,55 @@ fn update_tokens(tokenized: &mut Tokenized, c: char) {
 fn handle_last_closing_token(tokenized: &mut Tokenized) {
   if let Some(last) = tokenized.tokens.last() {
     let open_index;
+    let mut updated_open_tokens = HashMap::new();
     match last.kind {
-        TokenKind::BoldClose => { open_index = tokenized.open_tokens.remove(&TokenKind::BoldOpen).unwrap(); },
-        TokenKind::ItalicClose => { open_index = tokenized.open_tokens.remove(&TokenKind::ItalicOpen).unwrap(); },
-        TokenKind::BoldItalicClose => { open_index = tokenized.open_tokens.remove(&TokenKind::BoldItalicOpen).unwrap(); },
+        TokenKind::BoldClose => { 
+          if let Some(index) = tokenized.open_tokens.remove(&TokenKind::BoldOpen) {
+            open_index = index;
+          } else {
+            open_index = tokenized.open_tokens.remove(&TokenKind::BoldItalicOpen).expect("Closing token requires open token");
+            let open_token = tokenized.tokens.get_mut(open_index).expect("Got token index from hashmap");
+            open_token.kind = TokenKind::ItalicOpen;
+            open_token.content = TokenKind::ItalicOpen.as_str().to_string();
+            updated_open_tokens.insert(open_token.kind, open_index);
+            let new_pos = Position { line: open_token.position.line, column: open_token.position.column + open_token.length() };
+            // Note: +1 because the inner token gets closed first
+            tokenized.tokens.insert(open_index + 1, Token { 
+              kind: TokenKind::BoldOpen, content: TokenKind::BoldOpen.as_str().to_string(), position: new_pos
+            });
+          }
+        },
+        TokenKind::ItalicClose => { 
+          if let Some(index) = tokenized.open_tokens.remove(&TokenKind::ItalicOpen) {
+            open_index = index;
+          } else {
+            open_index = tokenized.open_tokens.remove(&TokenKind::BoldItalicOpen).expect("Closing token requires open token");
+            let open_token = tokenized.tokens.get_mut(open_index).expect("Got token index from hashmap");
+            open_token.kind = TokenKind::BoldOpen;
+            open_token.content = TokenKind::BoldOpen.as_str().to_string();
+            updated_open_tokens.insert(open_token.kind, open_index);
+            let new_pos = Position { line: open_token.position.line, column: open_token.position.column + open_token.length() };
+            // Note: +1 because the inner token gets closed first
+            tokenized.tokens.insert(open_index + 1, Token { 
+              kind: TokenKind::ItalicOpen, content: TokenKind::ItalicOpen.as_str().to_string(), position: new_pos
+            });
+          }
+        },
+        TokenKind::BoldItalicClose => { 
+          if let Some(index) = tokenized.open_tokens.remove(&TokenKind::BoldItalicOpen) {
+            open_index = index;
+          } else {
+            let bold_index = tokenized.open_tokens.remove(&TokenKind::BoldOpen).expect("Bold open must exist for bold-italic closing");
+            let italic_index = tokenized.open_tokens.remove(&TokenKind::ItalicOpen).expect("Italic open must exist for bold-italic closing");
+            open_index = min(bold_index, italic_index);
+          }
+        },
         TokenKind::VerbatimClose => { open_index = tokenized.open_tokens.remove(&TokenKind::VerbatimOpen).unwrap(); },
         TokenKind::EmojiClose => { open_index = tokenized.open_tokens.remove(&TokenKind::EmojiOpen).unwrap(); },
         TokenKind::CommentClose => { open_index = tokenized.open_tokens.remove(&TokenKind::CommentOpen).unwrap(); },
         _ => { return; },
     }
 
-    let mut updated_open_tokens = HashMap::new();
     for (kind, index) in &tokenized.open_tokens {
       if *index < open_index {
         updated_open_tokens.insert(*kind, *index);
@@ -169,12 +207,11 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
       if last.kind == TokenKind::ItalicOpen {
         last.content.push(c);
 
-        if let Some(bold_open) = tokenized.open_tokens.remove(&TokenKind::BoldOpen) {
+        if let Some(bold_open) = tokenized.open_tokens.get(&TokenKind::BoldOpen) {
           let preceding_token = tokenized.tokens.last().expect("Tokens must not be empty, because open token exists");
           if preceding_token.kind == TokenKind::Space || preceding_token.kind == TokenKind::NewLine {
             // Close after space is not allowed
             last.kind = TokenKind::Plain;
-            tokenized.open_tokens.insert(TokenKind::BoldOpen, bold_open);
           } else {
             last.kind = TokenKind::BoldClose;
           }
@@ -321,6 +358,26 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "plain".to_string(), position: Position { line: 0, column: 9 } },
       Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 14 } },
       Token{ kind: TokenKind::Plain, content: "text".to_string(), position: Position { line: 0, column: 15 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__left_side_nested() {
+    let input = "***italic* and bold**";
+    let expected = [
+      Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::ItalicOpen, content: "*".to_string(), position: Position { line: 0, column: 2 } },
+      Token{ kind: TokenKind::Plain, content: "italic".to_string(), position: Position { line: 0, column: 3 } },
+      Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 9 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 10 } },
+      Token{ kind: TokenKind::Plain, content: "and".to_string(), position: Position { line: 0, column: 11 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 14 } },
+      Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 15 } },
+      Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 19 } },
     ];
 
     let actual = input.tokenize();
