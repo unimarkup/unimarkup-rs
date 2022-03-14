@@ -14,6 +14,10 @@ impl Token {
   pub fn length(&self) -> usize {
     self.content.graphemes(true).count()
   }
+
+  pub fn is_space_or_newline(&self) -> bool {
+    self.kind == TokenKind::Space || self.kind == TokenKind::NewLine
+  }
 }
 
 #[derive(Debug, Clone, PartialEq)]
