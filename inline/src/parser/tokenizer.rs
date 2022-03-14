@@ -261,15 +261,37 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
         let new_token = Token{ kind: TokenKind::BoldClose, content: c.to_string(), position: tokenized.cur_pos };
         tokenized.tokens.push(new_token);
       } else if last.kind == TokenKind::ItalicClose {
-        last.content.push(c);
-
-        if tokenized.open_tokens.contains_key(&TokenKind::BoldOpen) || tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen) {
+        if tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen) {
           last.kind = TokenKind::BoldClose;
+          last.content.push(c);
+          tokenized.tokens.push(last);
+        } else if let Some(bold_index) = tokenized.open_tokens.get(&TokenKind::BoldOpen) {
+          match tokenized.open_tokens.get(&TokenKind::ItalicOpen) {
+            Some(italic_index) => {
+              if italic_index < bold_index {
+                last.kind = TokenKind::BoldClose;
+                last.content.push(c);
+                tokenized.tokens.push(last);
+              } else {
+                last.kind = TokenKind::ItalicClose;
+                tokenized.cur_pos.column += last.length();
+                tokenized.tokens.push(last);
+                tokenized.tokens.push(Token { 
+                  kind: TokenKind::ItalicOpen, content: c.to_string(), position: tokenized.cur_pos 
+                })
+              }
+            },
+            None => { 
+              last.kind = TokenKind::BoldClose;
+              last.content.push(c); 
+              tokenized.tokens.push(last);
+            },
+          }
         } else {
           last.kind = TokenKind::BoldOpen;
+          last.content.push(c);
+          tokenized.tokens.push(last);
         }
-
-        tokenized.tokens.push(last);
       } else if last.kind == TokenKind::BoldClose {
         if tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen) {
           last.content.push(c);
@@ -366,6 +388,26 @@ mod tests {
   }
 
   #[test]
+  pub fn test_formatting__right_side_nested() {
+    let input = "**bold and *italic***";
+    let expected = [
+      Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 2 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 6 } },
+      Token{ kind: TokenKind::Plain, content: "and".to_string(), position: Position { line: 0, column: 7 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 10 } },
+      Token{ kind: TokenKind::ItalicOpen, content: "*".to_string(), position: Position { line: 0, column: 11 } },
+      Token{ kind: TokenKind::Plain, content: "italic".to_string(), position: Position { line: 0, column: 12 } },
+      Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 18 } },
+      Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 19 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
   pub fn test_formatting__left_side_nested() {
     let input = "***italic* and bold**";
     let expected = [
@@ -378,6 +420,28 @@ mod tests {
       Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 14 } },
       Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 15 } },
       Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 19 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__left_side_nested_with_plain_ending() {
+    let input = "***italic* and bold** plain";
+    let expected = [
+      Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::ItalicOpen, content: "*".to_string(), position: Position { line: 0, column: 2 } },
+      Token{ kind: TokenKind::Plain, content: "italic".to_string(), position: Position { line: 0, column: 3 } },
+      Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 9 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 10 } },
+      Token{ kind: TokenKind::Plain, content: "and".to_string(), position: Position { line: 0, column: 11 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 14 } },
+      Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 15 } },
+      Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 19 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 21 } },
+      Token{ kind: TokenKind::Plain, content: "plain".to_string(), position: Position { line: 0, column: 22 } },
     ];
 
     let actual = input.tokenize();
