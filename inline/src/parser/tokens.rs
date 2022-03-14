@@ -23,9 +23,7 @@ impl Token {
 #[derive(Debug, Clone, PartialEq)]
 pub enum SingleTokenKind {
   Plain,
-  LineFeed,
-  CarriageReturn,
-  Tab,
+  Newline,
   Space,
   Backslash,
   ExclamationMark,
@@ -99,13 +97,15 @@ pub trait AsSingleTokenKind {
   fn as_single_token_kind(&self) -> SingleTokenKind;
 }
 
-impl AsSingleTokenKind for char {
+impl AsSingleTokenKind for &str {
     fn as_single_token_kind(&self) -> SingleTokenKind {
       match *self {
-        '*' => { SingleTokenKind::Asterisk },
-        '\\' => { SingleTokenKind::Backslash },
-        c => {
-          if c.is_whitespace() {
+        "*" => { SingleTokenKind::Asterisk },
+        "\\" => { SingleTokenKind::Backslash },
+        grapheme => {
+          if grapheme.is_newline() {
+            return SingleTokenKind::Newline;
+          } else if grapheme.trim().is_empty() {
             return SingleTokenKind::Space;
           }
           SingleTokenKind::Plain
@@ -142,9 +142,11 @@ pub trait Newline {
 }
 
 impl Newline for &str {
+  /// Note: Only temporary solution until rust supports is_newline() per default.
+  /// 
+  /// Treats `\n`, `\r\n` and `\r` as one newline.
   fn is_newline(&self) -> bool {
-    let s = *self;
-    //Note: Only temporary solution until rust supports is_newline() per default
+    let s = *self;    
     s == "\n" || s == "\r\n" || s == "\r"
   }
 }

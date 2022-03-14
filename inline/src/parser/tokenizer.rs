@@ -1,16 +1,31 @@
 use std::{collections::{HashMap, hash_map::Entry::Vacant}, cmp::min};
 
+use unicode_segmentation::{UnicodeSegmentation, Graphemes};
+
 use crate::Position;
 
 use super::tokens::{Token, TokenKind, AsSingleTokenKind, SingleTokenKind};
 
 
-#[derive(Debug, Default)]
-struct Tokenized {
+#[derive(Debug)]
+struct Tokenized<'a> {
+  graphemes: Graphemes<'a>,
   tokens: Vec::<Token>,
   open_tokens: HashMap::<TokenKind, usize>,
   cur_pos: Position,
   escape_active: bool,
+}
+
+impl<'a> Tokenized<'a> {
+    fn new(content: &'a str) -> Self {
+      Self {
+        graphemes: content.graphemes(true),
+        tokens: Default::default(),
+        open_tokens: Default::default(),
+        cur_pos: Default::default(),
+        escape_active: Default::default() 
+      }
+    }
 }
 
 pub(crate) trait Tokenizer {
@@ -19,11 +34,11 @@ pub(crate) trait Tokenizer {
 
 impl Tokenizer for &str {
   fn tokenize(self) -> Vec<Token> {
-    let mut tokenized = Tokenized::default();
+    let mut tokenized = Tokenized::new(self);
     let mut last_token_index = 0;
     
-    for c in self.chars() {
-      update_tokens(&mut tokenized, c);
+    while let Some(grapheme) = tokenized.graphemes.next() {
+      update_tokens(&mut tokenized, grapheme);
 
       let updated_last_token_index = if tokenized.tokens.is_empty() { 0 } else { tokenized.tokens.len() - 1 };
       if last_token_index != updated_last_token_index && updated_last_token_index > 0 {
@@ -45,18 +60,17 @@ impl Tokenizer for &str {
   }
 }
 
-fn update_tokens(tokenized: &mut Tokenized, c: char) {
+fn update_tokens(tokenized: &mut Tokenized, grapheme: &str) {
   if tokenized.escape_active {
-    update_escaped(tokenized, c);
+    update_escaped(tokenized, grapheme);
     tokenized.escape_active = false;
   } else {
-    let single_token_kind = c.as_single_token_kind();
-    // only single char tokens need to be handled here, because `c` is only one char
+    let single_token_kind = grapheme.as_single_token_kind();
+    // only single grapheme tokens need to be handled here, because only single grapheme is handled per update
     match single_token_kind {
-      SingleTokenKind::Plain => update_plain(tokenized, c),
-      SingleTokenKind::LineFeed | SingleTokenKind::CarriageReturn => todo!(),
-      SingleTokenKind::Tab => todo!(),
-      SingleTokenKind::Space => update_space(tokenized, c),
+      SingleTokenKind::Plain => update_plain(tokenized, grapheme),
+      SingleTokenKind::Newline => todo!(),
+      SingleTokenKind::Space => update_space(tokenized, grapheme),
       SingleTokenKind::Backslash => { 
         tokenized.escape_active = true;
         tokenized.cur_pos.column += 1;
@@ -66,7 +80,7 @@ fn update_tokens(tokenized: &mut Tokenized, c: char) {
       SingleTokenKind::Colon => todo!(),
       SingleTokenKind::Caret => todo!(),
       SingleTokenKind::Underscore => todo!(),
-      SingleTokenKind::Asterisk => update_asterisk(tokenized, c),
+      SingleTokenKind::Asterisk => update_asterisk(tokenized, grapheme),
       SingleTokenKind::Plus => todo!(),
     }
   }
@@ -173,45 +187,45 @@ fn update_open_map(tokenized: &mut Tokenized, next_token_is_space_or_newline: bo
   }
 }
 
-fn update_plain(tokenized: &mut Tokenized, c: char) {
+fn update_plain(tokenized: &mut Tokenized, grapheme: &str) {
   if let Some(last) = tokenized.tokens.last_mut() {
     if last.kind == TokenKind::Plain {
-      last.content.push(c);
+      last.content.push_str(grapheme);
     } else {
       tokenized.cur_pos.column += last.length();
-      let new_token = Token{ kind: TokenKind::Plain, content: c.to_string(), position: tokenized.cur_pos };
+      let new_token = Token{ kind: TokenKind::Plain, content: grapheme.to_string(), position: tokenized.cur_pos };
       tokenized.tokens.push(new_token);
     }
   } else {
-    let new_token = Token{ kind: TokenKind::Plain, content: c.to_string(), position: tokenized.cur_pos };
+    let new_token = Token{ kind: TokenKind::Plain, content: grapheme.to_string(), position: tokenized.cur_pos };
     tokenized.tokens.push(new_token);
   }
 }
 
-fn update_escaped(tokenized: &mut Tokenized, c: char) {
-  tokenized.tokens.push(Token{ kind: TokenKind::EscapedChar, content: c.to_string(), position: tokenized.cur_pos });
+fn update_escaped(tokenized: &mut Tokenized, grapheme: &str) {
+  tokenized.tokens.push(Token{ kind: TokenKind::EscapedChar, content: grapheme.to_string(), position: tokenized.cur_pos });
 }
 
-fn update_space(tokenized: &mut Tokenized, c: char) {
+fn update_space(tokenized: &mut Tokenized, grapheme: &str) {
   if let Some(last) = tokenized.tokens.last_mut() {
     if last.kind == TokenKind::Space {
-      last.content.push(c);
+      last.content.push_str(grapheme);
     } else {
       tokenized.cur_pos.column += last.length();
-      let new_token = Token{ kind: TokenKind::Space, content: c.to_string(), position: tokenized.cur_pos };
+      let new_token = Token{ kind: TokenKind::Space, content: grapheme.to_string(), position: tokenized.cur_pos };
       tokenized.tokens.push(new_token);
     }
   } else {
-    let new_token = Token{ kind: TokenKind::Space, content: c.to_string(), position: tokenized.cur_pos };
+    let new_token = Token{ kind: TokenKind::Space, content: grapheme.to_string(), position: tokenized.cur_pos };
     tokenized.tokens.push(new_token);
   }
 }
 
-fn update_asterisk(tokenized: &mut Tokenized, c: char) {
+fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
   match tokenized.tokens.pop() {
     Some(mut last) => {
       if last.kind == TokenKind::ItalicOpen {
-        last.content.push(c);
+        last.content.push_str(grapheme);
 
         if tokenized.open_tokens.get(&TokenKind::BoldOpen).is_some() {
           let preceding_token = tokenized.tokens.last().expect("Tokens must not be empty, because open token exists");
@@ -253,7 +267,7 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
           }  
         } else {
           last.kind = TokenKind::BoldItalicOpen;
-          last.content.push(c);
+          last.content.push_str(grapheme);
           tokenized.tokens.push(last);
         }
       } else if last.kind == TokenKind::BoldItalicOpen {
@@ -292,7 +306,7 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
           tokenized.tokens.push(italic_open_token);
         } else {
           last.kind = TokenKind::Plain;
-          last.content.push(c);
+          last.content.push_str(grapheme);
           match tokenized.tokens.last_mut() {
             Some(prev) => {
               if prev.kind == TokenKind::Plain {
@@ -309,52 +323,52 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
       } else if last.kind == TokenKind::ItalicClose {
         if tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen) {
           last.kind = TokenKind::BoldClose;
-          last.content.push(c);
+          last.content.push_str(grapheme);
           tokenized.tokens.push(last);
         } else if let Some(bold_index) = tokenized.open_tokens.get(&TokenKind::BoldOpen) {
           match tokenized.open_tokens.get(&TokenKind::ItalicOpen) {
             Some(italic_index) => {
               if italic_index < bold_index {
                 last.kind = TokenKind::BoldClose;
-                last.content.push(c);
+                last.content.push_str(grapheme);
                 tokenized.tokens.push(last);
               } else {
                 last.kind = TokenKind::ItalicClose;
                 tokenized.cur_pos.column += last.length();
                 tokenized.tokens.push(last);
                 tokenized.tokens.push(Token { 
-                  kind: TokenKind::ItalicOpen, content: c.to_string(), position: tokenized.cur_pos 
+                  kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos 
                 })
               }
             },
             None => { 
               last.kind = TokenKind::BoldClose;
-              last.content.push(c); 
+              last.content.push_str(grapheme); 
               tokenized.tokens.push(last);
             },
           }
         } else {
           last.kind = TokenKind::BoldOpen;
-          last.content.push(c);
+          last.content.push_str(grapheme);
           tokenized.tokens.push(last);
         }
       } else if last.kind == TokenKind::BoldClose {
         if tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen) {
-          last.content.push(c);
+          last.content.push_str(grapheme);
           last.kind = TokenKind::BoldItalicClose;
           tokenized.tokens.push(last);
         } else {
           // Note: handles `**bold***italic*` -> [bo]bold[bc][io]italic[ic]
           tokenized.cur_pos.column += last.length();
           tokenized.tokens.push(last);
-          let new_token = Token{ kind: TokenKind::ItalicOpen, content: c.to_string(), position: tokenized.cur_pos };
+          let new_token = Token{ kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
           tokenized.tokens.push(new_token);
         }
       } else if last.kind == TokenKind::BoldItalicClose {
         // Note: handles `***bold & italic****italic*` -> [bio]bold & italic[bic][io]italic[ic]
         tokenized.cur_pos.column += last.length();
         tokenized.tokens.push(last);
-        let new_token = Token{ kind: TokenKind::ItalicOpen, content: c.to_string(), position: tokenized.cur_pos };
+        let new_token = Token{ kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
         tokenized.tokens.push(new_token);
       } else {
         let new_token;
@@ -365,12 +379,12 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
 
           if last.is_space_or_newline() {
             // Note: closing not allowed after space
-            new_token = Token{ kind: TokenKind::ItalicOpen, content: c.to_string(), position: tokenized.cur_pos };
+            new_token = Token{ kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
           } else {
-            new_token = Token{ kind: TokenKind::ItalicClose, content: c.to_string(), position: tokenized.cur_pos };
+            new_token = Token{ kind: TokenKind::ItalicClose, content: grapheme.to_string(), position: tokenized.cur_pos };
           }
         } else {
-          new_token = Token{ kind: TokenKind::ItalicOpen, content: c.to_string(), position: tokenized.cur_pos };
+          new_token = Token{ kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
         }
 
         tokenized.tokens.push(last);
@@ -378,7 +392,7 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
       }
     },
     None => {
-      let new_token = Token{ kind: TokenKind::ItalicOpen, content: c.to_string(), position: tokenized.cur_pos };
+      let new_token = Token{ kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
       tokenized.tokens.push(new_token);
     },
   }
