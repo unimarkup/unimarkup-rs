@@ -134,6 +134,9 @@ fn handle_last_closing_token(tokenized: &mut Tokenized) {
   }
 }
 
+/// Enteres the last fixed token into the open token hashmap, if it is an open token.
+/// 
+/// Note: Enforces open token contraints, changing a token to plain if a constraint is violated
 fn update_open_map(tokenized: &mut Tokenized, next_token_is_space_or_newline: bool, last_token_index: usize) {
   if let Some(mut prev) = tokenized.tokens.pop() {
     // Note: Makes sure that no two open tokens of the same kind are before one closing one
@@ -643,6 +646,22 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "no".to_string(), position: Position { line: 0, column: 2 } },
       Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 4 } },
       Token{ kind: TokenKind::Plain, content: "italic*".to_string(), position: Position { line: 0, column: 5 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__invalid_bold_open() {
+    let input = "plain** still plain**";
+    let expected = [
+      Token{ kind: TokenKind::Plain, content: "plain**".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 7 } },
+      Token{ kind: TokenKind::Plain, content: "still".to_string(), position: Position { line: 0, column: 8 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 13 } },
+      Token{ kind: TokenKind::Plain, content: "plain**".to_string(), position: Position { line: 0, column: 14 } },
     ];
 
     let actual = input.tokenize();
