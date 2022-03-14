@@ -43,6 +43,7 @@ pub enum SingleTokenKind {
   Underscore,
   Asterisk,
   Plus,
+  Accent,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
@@ -114,6 +115,7 @@ impl AsSingleTokenKind for &str {
       match *self {
         "*" => { SingleTokenKind::Asterisk },
         "\\" => { SingleTokenKind::Backslash },
+        "`" => { SingleTokenKind::Accent },
         grapheme => {
           if grapheme.is_newline() {
             return SingleTokenKind::Newline;

@@ -27,6 +27,7 @@ struct Tokenized<'a> {
   open_tokens: HashMap::<TokenKind, usize>,
   cur_pos: Position,
   escape_active: bool,
+  open_verbatim: bool,
 }
 
 impl<'a> Tokenized<'a> {
@@ -37,6 +38,7 @@ impl<'a> Tokenized<'a> {
       open_tokens: Default::default(),
       cur_pos: Default::default(),
       escape_active: false,
+      open_verbatim: false,
     }
   }
 
@@ -64,6 +66,25 @@ impl<'a> Tokenized<'a> {
     update_open_map(self, true);
     try_closing_last_token(self);
   }
+
+  fn update_accent(&mut self, grapheme: &str) {
+    if let Some(last) = self.tokens.last() {
+      self.cur_pos.column += last.length();
+    }
+
+    match self.open_tokens.contains_key(&TokenKind::VerbatimOpen) {
+      true => {
+        let new_token = Token{ kind: TokenKind::VerbatimClose, content: grapheme.to_string(), position: self.cur_pos };
+        self.tokens.push(new_token);
+        self.open_verbatim = false;
+      },
+      false => {
+        let new_token = Token{ kind: TokenKind::VerbatimOpen, content: grapheme.to_string(), position: self.cur_pos };
+        self.tokens.push(new_token);
+        self.open_verbatim = true;
+      },
+    }
+  }
 }
 
 
@@ -89,6 +110,7 @@ fn update_tokens(tokenized: &mut Tokenized, grapheme: &str) {
       SingleTokenKind::Underscore => todo!(),
       SingleTokenKind::Asterisk => update_asterisk(tokenized, grapheme),
       SingleTokenKind::Plus => todo!(),
+      SingleTokenKind::Accent => tokenized.update_accent(grapheme),
     }
   }
 }
@@ -210,6 +232,9 @@ fn update_plain(tokenized: &mut Tokenized, grapheme: &str) {
 }
 
 fn update_escaped(tokenized: &mut Tokenized, grapheme: &str) {
+  if let Some(last) = tokenized.tokens.last() {
+    tokenized.cur_pos.column += last.length();
+  }
   tokenized.tokens.push(Token{ kind: TokenKind::EscapedChar, content: grapheme.to_string(), position: tokenized.cur_pos });
 }
 
@@ -689,5 +714,38 @@ mod tests {
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
+
+  #[test]
+  pub fn test_formatting__verbatim() {
+    let input = "`verbatim`";
+    let expected = [
+      Token{ kind: TokenKind::VerbatimOpen, content: "`".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::Plain, content: "verbatim".to_string(), position: Position { line: 0, column: 1 } },
+      Token{ kind: TokenKind::VerbatimClose, content: "`".to_string(), position: Position { line: 0, column: 9 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__verbatim_escaped_close() {
+    let input = "`verbatim\\`still verbatim`";
+    let expected = [
+      Token{ kind: TokenKind::VerbatimOpen, content: "`".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::Plain, content: "verbatim".to_string(), position: Position { line: 0, column: 1 } },
+      Token{ kind: TokenKind::EscapedChar, content: "`".to_string(), position: Position { line: 0, column: 10 } },
+      Token{ kind: TokenKind::Plain, content: "still".to_string(), position: Position { line: 0, column: 11 } },     
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 16 } },
+      Token{ kind: TokenKind::Plain, content: "verbatim".to_string(), position: Position { line: 0, column: 17 } },
+      Token{ kind: TokenKind::VerbatimClose, content: "`".to_string(), position: Position { line: 0, column: 25 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
 }
 
