@@ -40,8 +40,10 @@ impl Tokenizer for &str {
       }
     }
 
+    update_open_map(&mut tokenized, last_token_index);
     handle_last_closing_token(&mut tokenized);
     cleanup_loose_open_tokens(&mut tokenized);
+
     tokenized.tokens
   }
 }
@@ -58,7 +60,10 @@ fn update_tokens(tokenized: &mut Tokenized, c: char) {
       SingleTokenKind::LineFeed | SingleTokenKind::CarriageReturn => todo!(),
       SingleTokenKind::Tab => todo!(),
       SingleTokenKind::Space => update_space(tokenized, c),
-      SingleTokenKind::Backslash => { tokenized.escape_active = true; },
+      SingleTokenKind::Backslash => { 
+        tokenized.escape_active = true;
+        tokenized.cur_pos.column += 1;
+      },
       SingleTokenKind::ExclamationMark => todo!(),
       SingleTokenKind::Ampersand => todo!(),
       SingleTokenKind::Colon => todo!(),
@@ -207,7 +212,7 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
       if last.kind == TokenKind::ItalicOpen {
         last.content.push(c);
 
-        if let Some(bold_open) = tokenized.open_tokens.get(&TokenKind::BoldOpen) {
+        if tokenized.open_tokens.get(&TokenKind::BoldOpen).is_some() {
           let preceding_token = tokenized.tokens.last().expect("Tokens must not be empty, because open token exists");
           if preceding_token.kind == TokenKind::Space || preceding_token.kind == TokenKind::NewLine {
             // Close after space is not allowed
@@ -220,7 +225,7 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
         }
         tokenized.tokens.push(last);    
       } else if last.kind == TokenKind::BoldOpen {
-        if let Some(italic_open) = tokenized.open_tokens.get(&TokenKind::ItalicOpen) {
+        if tokenized.open_tokens.get(&TokenKind::ItalicOpen).is_some() {
           // Note: handles cases like `*italic***bold**`
           let preceding_token = tokenized.tokens.last().expect("Tokens must not be empty, because open token exists");
           if preceding_token.kind == TokenKind::Space || preceding_token.kind == TokenKind::NewLine {
@@ -338,9 +343,34 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
   }
 }
 
-
+/// Remaining open tokens that have no matching close token get converted to plain.
+/// Neighboring plain tokens get merged with the open token. 
 fn cleanup_loose_open_tokens(tokenized: &mut Tokenized) {
-  // all remaining hashmap entries get turned into plain tokens
+  let mut open_indizes: Vec<_> = tokenized.open_tokens.values().collect();
+  open_indizes.sort();
+
+  for index in open_indizes {
+    let mut token = tokenized.tokens.remove(*index);
+    token.kind = TokenKind::Plain;
+    if (*index + 1) < tokenized.open_tokens.len() {
+      let next_token = tokenized.tokens.remove(*index + 1);
+      if next_token.kind == TokenKind::Plain {
+        token.content.push_str(&next_token.content);
+      } else {
+        tokenized.tokens.insert(*index + 1, next_token);
+      }
+    }
+
+    if *index > 0 {
+      if let Some(prev_token) = tokenized.tokens.get_mut(*index - 1) {
+        if prev_token.kind == TokenKind::Plain {
+          prev_token.content.push_str(&token.content);
+        }
+      } else {
+        tokenized.tokens.insert(*index, token);
+      }
+    }
+  }
 }
 
 
@@ -442,6 +472,21 @@ mod tests {
       Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 19 } },
       Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 21 } },
       Token{ kind: TokenKind::Plain, content: "plain".to_string(), position: Position { line: 0, column: 22 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__escape_open_italic() {
+    let input = "\\*not italic*";
+    let expected = [
+      Token{ kind: TokenKind::EscapedChar, content: "*".to_string(), position: Position { line: 0, column: 1 } },
+      Token{ kind: TokenKind::Plain, content: "not".to_string(), position: Position { line: 0, column: 2 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 5 } },
+      Token{ kind: TokenKind::Plain, content: "italic*".to_string(), position: Position { line: 0, column: 6 } },
     ];
 
     let actual = input.tokenize();

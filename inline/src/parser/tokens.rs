@@ -99,7 +99,7 @@ impl AsSingleTokenKind for char {
     fn as_single_token_kind(&self) -> SingleTokenKind {
       match *self {
         '*' => { SingleTokenKind::Asterisk },
-
+        '\\' => { SingleTokenKind::Backslash },
         c => {
           if c.is_whitespace() {
             return SingleTokenKind::Space;
