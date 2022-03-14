@@ -4,8 +4,21 @@ use unicode_segmentation::{UnicodeSegmentation, Graphemes};
 
 use crate::Position;
 
-use super::tokens::{Token, TokenKind, AsSingleTokenKind, SingleTokenKind};
+use super::tokens::{Token, TokenKind, AsSingleTokenKind, SingleTokenKind, Tokens};
 
+pub(crate) trait Tokenizer {
+  fn tokenize(self) -> Vec<Token>;
+}
+
+impl Tokenizer for &str {
+  fn tokenize(self) -> Vec<Token> {
+    let mut tokenized = Tokenized::new(self);
+    tokenized.tokenize_until(TokenKind::EOI);
+    cleanup_loose_open_tokens(&mut tokenized);
+
+    tokenized.tokens
+  }
+}
 
 #[derive(Debug)]
 struct Tokenized<'a> {
@@ -17,48 +30,42 @@ struct Tokenized<'a> {
 }
 
 impl<'a> Tokenized<'a> {
-    fn new(content: &'a str) -> Self {
-      Self {
-        graphemes: content.graphemes(true),
-        tokens: Default::default(),
-        open_tokens: Default::default(),
-        cur_pos: Default::default(),
-        escape_active: Default::default() 
-      }
+  fn new(content: &'a str) -> Self {
+    Self {
+      graphemes: content.graphemes(true),
+      tokens: Default::default(),
+      open_tokens: Default::default(),
+      cur_pos: Default::default(),
+      escape_active: false,
     }
-}
+  }
 
-pub(crate) trait Tokenizer {
-  fn tokenize(self) -> Vec<Token>;
-}
+  fn tokenize_until(&mut self, token_kind: TokenKind) {
+    let mut prev_last_token_index = self.tokens.last_token_index();
+    while let Some(grapheme) = self.graphemes.next() {
+      update_tokens(self, grapheme);
 
-impl Tokenizer for &str {
-  fn tokenize(self) -> Vec<Token> {
-    let mut tokenized = Tokenized::new(self);
-    let mut last_token_index = 0;
-    
-    while let Some(grapheme) = tokenized.graphemes.next() {
-      update_tokens(&mut tokenized, grapheme);
-
-      let updated_last_token_index = if tokenized.tokens.is_empty() { 0 } else { tokenized.tokens.len() - 1 };
-      if last_token_index != updated_last_token_index && updated_last_token_index > 0 {
+      if self.tokens.last_token_index() != prev_last_token_index && !self.tokens.is_empty() {
         // Note: last token excluded, since it is not fixated yet
-        let last = tokenized.tokens.pop().unwrap();
-        update_open_map(&mut tokenized, last.is_space_or_newline(), last_token_index);
-        handle_last_closing_token(&mut tokenized);
-        tokenized.tokens.push(last);
+        let last = self.tokens.pop().unwrap();
+        update_open_map(self, last.is_space_or_newline());
+        try_closing_last_token(self);
+        let last_kind = last.kind;
+        self.tokens.push(last);
 
-        last_token_index = updated_last_token_index;
+        if last_kind == token_kind {
+          return;
+        }       
+
+        prev_last_token_index = self.tokens.last_token_index();
       }
     }
     // Note: EOI is treated as newline
-    update_open_map(&mut tokenized, true, last_token_index);
-    handle_last_closing_token(&mut tokenized);
-    cleanup_loose_open_tokens(&mut tokenized);
-
-    tokenized.tokens
+    update_open_map(self, true);
+    try_closing_last_token(self);
   }
 }
+
 
 fn update_tokens(tokenized: &mut Tokenized, grapheme: &str) {
   if tokenized.escape_active {
@@ -87,7 +94,7 @@ fn update_tokens(tokenized: &mut Tokenized, grapheme: &str) {
 }
 
 /// Function removes any dangling open token between open/close tokens of the last fix token, if it is a closing one
-fn handle_last_closing_token(tokenized: &mut Tokenized) {
+fn try_closing_last_token(tokenized: &mut Tokenized) {
   if let Some(last) = tokenized.tokens.last() {
     let open_index;
     let mut updated_open_tokens = HashMap::new();
@@ -151,7 +158,7 @@ fn handle_last_closing_token(tokenized: &mut Tokenized) {
 /// Enteres the last fixed token into the open token hashmap, if it is an open token.
 /// 
 /// Note: Enforces open token contraints, changing a token to plain if a constraint is violated
-fn update_open_map(tokenized: &mut Tokenized, next_token_is_space_or_newline: bool, last_token_index: usize) {
+fn update_open_map(tokenized: &mut Tokenized, next_token_is_space_or_newline: bool) {
   if let Some(mut prev) = tokenized.tokens.pop() {
     // Note: Makes sure that no two open tokens of the same kind are before one closing one
     if let Vacant(e) = tokenized.open_tokens.entry(prev.kind) {
@@ -164,10 +171,10 @@ fn update_open_map(tokenized: &mut Tokenized, next_token_is_space_or_newline: bo
           if next_token_is_space_or_newline {
             prev.kind = TokenKind::Plain;
           } else {
-            e.insert(last_token_index);
+            e.insert(tokenized.tokens.last_token_index());
           }
         },
-        TokenKind::VerbatimOpen => { e.insert(last_token_index); },
+        TokenKind::VerbatimOpen => { e.insert(tokenized.tokens.last_token_index()); },
         _ => {  },
       }
     } else {

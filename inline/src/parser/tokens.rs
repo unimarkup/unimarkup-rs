@@ -20,6 +20,16 @@ impl Token {
   }
 }
 
+pub trait Tokens {
+  fn last_token_index(&self) -> usize;
+}
+
+impl Tokens for Vec<Token> {
+  fn last_token_index(&self) -> usize {
+    if self.is_empty() { 0 } else { self.len() - 1 }
+  }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum SingleTokenKind {
   Plain,
@@ -56,6 +66,7 @@ pub enum TokenKind {
   CommentOpen,
   CommentClose,
   DirectUnicode,
+  EOI,
 }
 
 impl Default for TokenKind {
@@ -88,6 +99,7 @@ impl TokenKind {
       TokenKind::NewLine => "\n",
       TokenKind::Space => " ",
       TokenKind::DirectUnicode => "&U+1F816;",
+      TokenKind::EOI => "",
     }
   }
 }
