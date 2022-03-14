@@ -229,16 +229,15 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
           // Note: handles cases like `*italic***bold**`
           let preceding_token = tokenized.tokens.last().expect("Tokens must not be empty, because open token exists");
           if preceding_token.kind == TokenKind::Space || preceding_token.kind == TokenKind::NewLine {
-            // If Space is before `***`, it is split into [plain|italicClose|italicOpen] -> `*before ***after*` = `[io]before*[ic][io]after[ic]
+            // If Space is before `***`, it is split into [plain|italicClose|italicOpen] -> `*before ***after*` = `[io]before *[ic][io]after[ic]
             last.kind = TokenKind::Plain;
             last.content = TokenKind::ItalicOpen.as_str().to_string();
             tokenized.cur_pos.column += last.length();
             tokenized.tokens.push(last);
+
             let italic_close_token = Token { kind: TokenKind::ItalicClose, content: TokenKind::ItalicClose.as_str().to_string(), position: tokenized.cur_pos };
             tokenized.cur_pos.column += italic_close_token.length();
             tokenized.tokens.push(italic_close_token);
-  
-            handle_last_closing_token(tokenized);
   
             let italic_open_token = Token { kind: TokenKind::ItalicOpen, content: TokenKind::ItalicClose.as_str().to_string(), position: tokenized.cur_pos };
             tokenized.tokens.push(italic_open_token);
@@ -247,8 +246,6 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
             last.content = TokenKind::ItalicClose.as_str().to_string();
             tokenized.cur_pos.column += last.length();
             tokenized.tokens.push(last);
-            
-            handle_last_closing_token(tokenized);
   
             let bold_open_token = Token { kind: TokenKind::BoldOpen, content: TokenKind::BoldOpen.as_str().to_string(), position: tokenized.cur_pos };
             tokenized.tokens.push(bold_open_token);
@@ -261,9 +258,10 @@ fn update_asterisk(tokenized: &mut Tokenized, c: char) {
       } else if last.kind == TokenKind::BoldItalicOpen {
         // Note: handles `****` as empty bold
         last.kind = TokenKind::BoldOpen;
+        last.content = TokenKind::BoldOpen.as_str().to_string();
         tokenized.cur_pos.column += last.length();
         tokenized.tokens.push(last);
-        let new_token = Token{ kind: TokenKind::BoldClose, content: c.to_string(), position: tokenized.cur_pos };
+        let new_token = Token{ kind: TokenKind::BoldClose, content: TokenKind::BoldClose.as_str().to_string(), position: tokenized.cur_pos };
         tokenized.tokens.push(new_token);
       } else if last.kind == TokenKind::ItalicClose {
         if tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen) {
@@ -487,6 +485,74 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "not".to_string(), position: Position { line: 0, column: 2 } },
       Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 5 } },
       Token{ kind: TokenKind::Plain, content: "italic*".to_string(), position: Position { line: 0, column: 6 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__bold_directly_after_italic() {
+    let input = "*italic***bold**";
+    let expected = [
+      Token{ kind: TokenKind::ItalicOpen, content: "*".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::Plain, content: "italic".to_string(), position: Position { line: 0, column: 1 } },
+      Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 7 } },
+      Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 8 } },
+      Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 10 } },
+      Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 14 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+  
+  #[test]
+  pub fn test_formatting__split_bold_italic_combined_close_due_to_space() {
+    let input = "*before ***after*";
+    let expected = [
+      Token{ kind: TokenKind::ItalicOpen, content: "*".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::Plain, content: "before".to_string(), position: Position { line: 0, column: 1 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 7 } },
+      Token{ kind: TokenKind::Plain, content: "*".to_string(), position: Position { line: 0, column: 8 } },
+      Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 9 } },
+      Token{ kind: TokenKind::ItalicOpen, content: "*".to_string(), position: Position { line: 0, column: 10 } },
+      Token{ kind: TokenKind::Plain, content: "after".to_string(), position: Position { line: 0, column: 11 } },
+      Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 16 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__empty_bold() {
+    let input = "before****after";
+    let expected = [
+      Token{ kind: TokenKind::Plain, content: "before".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 6 } },
+      Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 8 } },
+      Token{ kind: TokenKind::Plain, content: "after".to_string(), position: Position { line: 0, column: 10 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__empty_bold_surrounded_by_space() {
+    let input = "before **** after";
+    let expected = [
+      Token{ kind: TokenKind::Plain, content: "before".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 6 } },
+      Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 7 } },
+      Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 9 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 11 } },
+      Token{ kind: TokenKind::Plain, content: "after".to_string(), position: Position { line: 0, column: 12 } },
     ];
 
     let actual = input.tokenize();
