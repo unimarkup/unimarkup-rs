@@ -20,16 +20,6 @@ impl Token {
   }
 }
 
-pub trait Tokens {
-  fn last_token_index(&self) -> usize;
-}
-
-impl Tokens for Vec<Token> {
-  fn last_token_index(&self) -> usize {
-    if self.is_empty() { 0 } else { self.len() - 1 }
-  }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum SingleTokenKind {
   Plain,

@@ -4,7 +4,7 @@ use unicode_segmentation::{UnicodeSegmentation, Graphemes};
 
 use crate::Position;
 
-use super::tokens::{Token, TokenKind, AsSingleTokenKind, SingleTokenKind, Tokens};
+use super::tokens::{Token, TokenKind, AsSingleTokenKind, SingleTokenKind};
 
 pub(crate) trait Tokenizer {
   fn tokenize(self) -> Vec<Token>;
@@ -12,7 +12,7 @@ pub(crate) trait Tokenizer {
 
 impl Tokenizer for &str {
   fn tokenize(self) -> Vec<Token> {
-    let mut tokenized = Tokenized::new(self);
+    let mut tokenized = Tokenized::from(self);
     tokenized.tokenize_until(TokenKind::EOI);
     cleanup_loose_open_tokens(&mut tokenized);
 
@@ -30,9 +30,9 @@ struct Tokenized<'a> {
   open_verbatim: bool,
 }
 
-impl<'a> Tokenized<'a> {
-  fn new(content: &'a str) -> Self {
-    Self {
+impl<'a> From<&'a str> for Tokenized<'a> {
+  fn from(content: &'a str) -> Self {
+    Tokenized {
       graphemes: content.graphemes(true),
       tokens: Default::default(),
       open_tokens: Default::default(),
@@ -41,13 +41,18 @@ impl<'a> Tokenized<'a> {
       open_verbatim: false,
     }
   }
+}
 
+impl<'a> Tokenized<'a> {
+  /// Function creates tokens until `token_kind` is matched, or end of input is reached.
+  /// 
+  /// Note: The token of kind `token_kind` is also included in the resulting tokens vector.
   fn tokenize_until(&mut self, token_kind: TokenKind) {
-    let mut prev_last_token_index = self.tokens.last_token_index();
+    let mut prev_tokens_len = self.tokens.len();
     while let Some(grapheme) = self.graphemes.next() {
       update_tokens(self, grapheme);
-
-      if self.tokens.last_token_index() != prev_last_token_index && !self.tokens.is_empty() {
+      
+      if self.tokens.len() != prev_tokens_len && !self.tokens.is_empty() {
         // Note: last token excluded, since it is not fixated yet
         let last = self.tokens.pop().unwrap();
         update_open_map(self, last.is_space_or_newline());
@@ -59,7 +64,7 @@ impl<'a> Tokenized<'a> {
           return;
         }       
 
-        prev_last_token_index = self.tokens.last_token_index();
+        prev_tokens_len = self.tokens.len();
       }
     }
     // Note: EOI is treated as newline
@@ -193,10 +198,10 @@ fn update_open_map(tokenized: &mut Tokenized, next_token_is_space_or_newline: bo
           if next_token_is_space_or_newline {
             prev.kind = TokenKind::Plain;
           } else {
-            e.insert(tokenized.tokens.last_token_index());
+            e.insert(tokenized.tokens.len());
           }
         },
-        TokenKind::VerbatimOpen => { e.insert(tokenized.tokens.last_token_index()); },
+        TokenKind::VerbatimOpen => { e.insert(tokenized.tokens.len()); },
         _ => {  },
       }
     } else {
@@ -303,31 +308,29 @@ fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
           tokenized.tokens.push(last);
         }
       } else if last.kind == TokenKind::BoldItalicOpen {
-        // Note: handles `****` as plain, if no italic, bold or bolditalic open token is present
+        // Note: Handles `****` by converting the leftmost `*` to plain.
+        // If no italic, bold or bolditalic open token is present before, bolditalicopen is kept as is.
+        // Otherwise, italic, bold or bolditalic closing tokens are taken from the remaining three `*`.
         last.kind = TokenKind::Plain;
+        last.content = TokenKind::ItalicOpen.as_str().to_string();
+        tokenized.cur_pos.column += last.length();
+
         if (tokenized.open_tokens.contains_key(&TokenKind::ItalicOpen) && tokenized.open_tokens.contains_key(&TokenKind::BoldOpen))
           || tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen) {
-          
-          last.content = TokenKind::ItalicOpen.as_str().to_string();
-          tokenized.cur_pos.column += last.length();
+
           tokenized.tokens.push(last);
 
           let combined_close_token = Token { kind: TokenKind::BoldItalicClose, content: TokenKind::BoldItalicClose.as_str().to_string(), position: tokenized.cur_pos };
           tokenized.tokens.push(combined_close_token);
         } else if tokenized.open_tokens.contains_key(&TokenKind::ItalicOpen) {
-          last.content = TokenKind::ItalicOpen.as_str().to_string();
-          tokenized.cur_pos.column += last.length();
           tokenized.tokens.push(last);
 
           let italic_close_token = Token { kind: TokenKind::ItalicClose, content: TokenKind::ItalicClose.as_str().to_string(), position: tokenized.cur_pos };
-          tokenized.cur_pos.column += italic_close_token.length();
           tokenized.tokens.push(italic_close_token);
 
           let bold_open_token = Token { kind: TokenKind::BoldOpen, content: TokenKind::BoldOpen.as_str().to_string(), position: tokenized.cur_pos };
           tokenized.tokens.push(bold_open_token);
         } else if tokenized.open_tokens.contains_key(&TokenKind::BoldOpen) {
-          last.content = TokenKind::ItalicOpen.as_str().to_string();
-          tokenized.cur_pos.column += last.length();
           tokenized.tokens.push(last);
 
           let bold_close_token = Token { kind: TokenKind::BoldClose, content: TokenKind::BoldClose.as_str().to_string(), position: tokenized.cur_pos };
@@ -337,8 +340,6 @@ fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
           let italic_open_token = Token { kind: TokenKind::ItalicOpen, content: TokenKind::ItalicOpen.as_str().to_string(), position: tokenized.cur_pos };
           tokenized.tokens.push(italic_open_token);
         } else {
-          last.kind = TokenKind::Plain;
-          last.content.push_str(grapheme);
           match tokenized.tokens.last_mut() {
             Some(prev) => {
               if prev.kind == TokenKind::Plain {
@@ -351,6 +352,9 @@ fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
               tokenized.tokens.push(last);
             },
           }
+
+          let combined_open_token = Token { kind: TokenKind::BoldItalicOpen, content: TokenKind::BoldItalicOpen.as_str().to_string(), position: tokenized.cur_pos };
+          tokenized.tokens.push(combined_open_token);
         }
       } else if last.kind == TokenKind::ItalicClose {
         if tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen) {
@@ -439,12 +443,12 @@ fn cleanup_loose_open_tokens(tokenized: &mut Tokenized) {
   for index in open_indizes {
     let mut token = tokenized.tokens.remove(*index);
     token.kind = TokenKind::Plain;
-    if (*index + 1) < tokenized.open_tokens.len() {
-      let next_token = tokenized.tokens.remove(*index + 1);
+    if (*index) < tokenized.tokens.len() {
+      let next_token = tokenized.tokens.remove(*index);
       if next_token.kind == TokenKind::Plain {
         token.content.push_str(&next_token.content);
       } else {
-        tokenized.tokens.insert(*index + 1, next_token);
+        tokenized.tokens.insert(*index, next_token);
       }
     }
 
@@ -676,6 +680,63 @@ mod tests {
       Token{ kind: TokenKind::ItalicOpen, content: "*".to_string(), position: Position { line: 0, column: 19 } },
       Token{ kind: TokenKind::Plain, content: "italic".to_string(), position: Position { line: 0, column: 20 } },
       Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 26 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__italic_directly_after_plain_asterisks() {
+    let input = "****italic*";
+    let expected = [
+      Token{ kind: TokenKind::Plain, content: "***".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::ItalicOpen, content: "*".to_string(), position: Position { line: 0, column: 3 } },
+      Token{ kind: TokenKind::Plain, content: "italic".to_string(), position: Position { line: 0, column: 4 } },
+      Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 10 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__bold_directly_after_plain_asterisks() {
+    let input = "*****bold**";
+    let expected = [
+      Token{ kind: TokenKind::Plain, content: "***".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 3 } },
+      Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 5 } },
+      Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 9 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__combined_directly_after_plain_asterisks() {
+    let input = "******bold-italic***";
+    let expected = [
+      Token{ kind: TokenKind::Plain, content: "***".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::BoldItalicOpen, content: "***".to_string(), position: Position { line: 0, column: 3 } },
+      Token{ kind: TokenKind::Plain, content: "bold-italic".to_string(), position: Position { line: 0, column: 6 } },
+      Token{ kind: TokenKind::BoldItalicClose, content: "***".to_string(), position: Position { line: 0, column: 17 } },
+    ];
+
+    let actual = input.tokenize();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_formatting__plain_asterisks() {
+    let input = "*********";
+    let expected = [
+      Token{ kind: TokenKind::Plain, content: "*********".to_string(), position: Position { line: 0, column: 0 } },
     ];
 
     let actual = input.tokenize();
