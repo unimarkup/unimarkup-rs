@@ -2,21 +2,24 @@ use std::{collections::{HashMap, hash_map::Entry::Vacant}, cmp::min};
 
 use unicode_segmentation::{UnicodeSegmentation, Graphemes};
 
-use crate::Position;
+use crate::{Position, error::InlineError};
 
 use super::tokens::{Token, TokenKind, AsSingleTokenKind, SingleTokenKind};
 
 pub(crate) trait Tokenizer {
-  fn tokenize(self) -> Vec<Token>;
+  fn tokenize(self) -> Result<Vec<Token>, InlineError>;
 }
 
 impl Tokenizer for &str {
-  fn tokenize(self) -> Vec<Token> {
+  fn tokenize(self) -> Result<Vec<Token>, InlineError> {
     let mut tokenized = Tokenized::from(self);
-    tokenized.tokenize_until(TokenKind::EOI);
+    tokenize_until(&mut tokenized, TokenKind::Eoi)?;
+    // EOI is treated as newline
+    update_open_map(&mut tokenized, true);
+    try_closing_fixated_token(&mut tokenized);
     cleanup_loose_open_tokens(&mut tokenized);
 
-    tokenized.tokens
+    Ok(tokenized.tokens)
   }
 }
 
@@ -43,63 +46,69 @@ impl<'a> From<&'a str> for Tokenized<'a> {
   }
 }
 
-impl<'a> Tokenized<'a> {
-  /// Function creates tokens until `token_kind` is matched, or end of input is reached.
-  /// 
-  /// Note: The token of kind `token_kind` is also included in the resulting tokens vector.
-  fn tokenize_until(&mut self, token_kind: TokenKind) {
-    let mut prev_tokens_len = self.tokens.len();
-    while let Some(grapheme) = self.graphemes.next() {
-      update_tokens(self, grapheme);
+/// Function creates tokens until `token_kind` is matched, or end of input is reached.
+/// 
+/// Note: The token of kind `token_kind` is also included in the resulting tokens vector.
+fn tokenize_until(tokenized: &mut Tokenized, token_kind: TokenKind) -> Result<(), InlineError> {
+  let mut prev_tokens_len = tokenized.tokens.len();
+  while let Some(grapheme) = tokenized.graphemes.next() {
+    update_tokens(tokenized, grapheme)?;
+
+    if tokenized.tokens.len() != prev_tokens_len && !tokenized.tokens.is_empty() {
+      // Last token excluded, since it is not fixated yet
+      let last = tokenized.tokens.pop().unwrap();
+      if !last.closes_scope() {
+        update_open_map(tokenized, last.is_space_or_newline());
+        try_closing_fixated_token(tokenized);
+      }
       
-      if self.tokens.len() != prev_tokens_len && !self.tokens.is_empty() {
-        // Note: last token excluded, since it is not fixated yet
-        let last = self.tokens.pop().unwrap();
-        update_open_map(self, last.is_space_or_newline());
-        try_closing_last_token(self);
-        let last_kind = last.kind;
-        self.tokens.push(last);
+      let last_kind = last.kind;
+      tokenized.tokens.push(last);
 
-        if last_kind == token_kind {
-          return;
-        }       
-
-        prev_tokens_len = self.tokens.len();
+      if last_kind == token_kind {
+        return Ok(());
       }
     }
-    // Note: EOI is treated as newline
-    update_open_map(self, true);
-    try_closing_last_token(self);
+    prev_tokens_len = tokenized.tokens.len();
   }
 
-  fn update_accent(&mut self, grapheme: &str) {
-    if let Some(last) = self.tokens.last() {
-      self.cur_pos.column += last.length();
+  // Brackets must close
+  if let Some(last) = tokenized.tokens.last() {
+    if token_kind != TokenKind::Eoi && last.kind != token_kind {
+      return Err(InlineError{});
     }
+  }
 
-    match self.open_tokens.contains_key(&TokenKind::VerbatimOpen) {
-      true => {
-        let new_token = Token{ kind: TokenKind::VerbatimClose, content: grapheme.to_string(), position: self.cur_pos };
-        self.tokens.push(new_token);
-        self.open_verbatim = false;
-      },
-      false => {
-        let new_token = Token{ kind: TokenKind::VerbatimOpen, content: grapheme.to_string(), position: self.cur_pos };
-        self.tokens.push(new_token);
-        self.open_verbatim = true;
-      },
-    }
+  Ok(())
+}
+
+fn update_accent(tokenized: &mut Tokenized, grapheme: &str) {
+  if let Some(last) = tokenized.tokens.last() {
+    tokenized.cur_pos.column += last.length();
+  }
+
+  match tokenized.open_tokens.contains_key(&TokenKind::VerbatimOpen) {
+    true => {
+      let new_token = Token{ kind: TokenKind::VerbatimClose, content: grapheme.to_string(), position: tokenized.cur_pos };
+      tokenized.tokens.push(new_token);
+      tokenized.open_verbatim = false;
+    },
+    false => {
+      let new_token = Token{ kind: TokenKind::VerbatimOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
+      tokenized.tokens.push(new_token);
+      tokenized.open_verbatim = true;
+    },
   }
 }
 
 
-fn update_tokens(tokenized: &mut Tokenized, grapheme: &str) {
+fn update_tokens(tokenized: &mut Tokenized, grapheme: &str) -> Result<(), InlineError> {
   if tokenized.escape_active {
     update_escaped(tokenized, grapheme);
     tokenized.escape_active = false;
   } else {
     let single_token_kind = grapheme.as_single_token_kind();
-    // only single grapheme tokens need to be handled here, because only single grapheme is handled per update
+    // Only single grapheme tokens need to be handled here, because only single grapheme is handled per update
     match single_token_kind {
       SingleTokenKind::Plain => update_plain(tokenized, grapheme),
       SingleTokenKind::Newline => todo!(),
@@ -115,13 +124,63 @@ fn update_tokens(tokenized: &mut Tokenized, grapheme: &str) {
       SingleTokenKind::Underscore => todo!(),
       SingleTokenKind::Asterisk => update_asterisk(tokenized, grapheme),
       SingleTokenKind::Plus => todo!(),
-      SingleTokenKind::Accent => tokenized.update_accent(grapheme),
+      SingleTokenKind::Accent => update_accent(tokenized, grapheme),
+      SingleTokenKind::LeftSquareBracket => open_text_group(tokenized, grapheme)?,
+      SingleTokenKind::RightSquareBracket => try_closing_text_group(tokenized, grapheme),
+    }
+  }
+
+  Ok(())
+}
+
+fn open_text_group(tokenized: &mut Tokenized, grapheme: &str) -> Result<(), InlineError> {
+  if let Some(last) = tokenized.tokens.last() {
+    tokenized.cur_pos.column += last.length();
+  }
+
+  update_open_map(tokenized, false);
+  try_closing_fixated_token(tokenized);
+  
+  // Makes sure to not have formattings over text group borders
+  let outer_open_tokens = tokenized.open_tokens.clone();
+  tokenized.open_tokens = HashMap::default();
+
+  let new_token = Token{ kind: TokenKind::TextGroupOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
+  tokenized.tokens.push(new_token);
+
+  tokenize_until(tokenized, TokenKind::TextGroupClose)?;
+
+  let closing_token = tokenized.tokens.pop().unwrap();
+  try_closing_fixated_token(tokenized);
+  cleanup_loose_open_tokens(tokenized);
+  tokenized.tokens.push(closing_token);
+
+  tokenized.open_tokens = outer_open_tokens;
+
+  Ok(())
+}
+
+fn try_closing_text_group(tokenized: &mut Tokenized, grapheme: &str) {
+  if tokenized.open_tokens.remove(&TokenKind::TextGroupOpen).is_some() {
+    if let Some(last) = tokenized.tokens.last() {
+      tokenized.cur_pos.column += last.length();
+    }
+    tokenized.tokens.push(Token{ kind: TokenKind::TextGroupClose, content: grapheme.to_string(), position: tokenized.cur_pos });
+  } else if let Some(last) = tokenized.tokens.last_mut() {
+    tokenized.cur_pos.column += last.length();
+    let new_token = Token{ kind: TokenKind::Plain, content: grapheme.to_string(), position: tokenized.cur_pos };
+    
+    if last.kind == TokenKind::Plain {
+      last.content.push_str(&new_token.content);
+    } else {
+      tokenized.tokens.push(new_token);
     }
   }
 }
 
+
 /// Function removes any dangling open token between open/close tokens of the last fix token, if it is a closing one
-fn try_closing_last_token(tokenized: &mut Tokenized) {
+fn try_closing_fixated_token(tokenized: &mut Tokenized) {
   if let Some(last) = tokenized.tokens.last() {
     let open_index;
     let mut updated_open_tokens = HashMap::new();
@@ -136,7 +195,7 @@ fn try_closing_last_token(tokenized: &mut Tokenized) {
             open_token.content = TokenKind::ItalicOpen.as_str().to_string();
             updated_open_tokens.insert(open_token.kind, open_index);
             let new_pos = Position { line: open_token.position.line, column: open_token.position.column + open_token.length() };
-            // Note: +1 because the inner token gets closed first
+            // +1 because the inner token gets closed first
             tokenized.tokens.insert(open_index + 1, Token { 
               kind: TokenKind::BoldOpen, content: TokenKind::BoldOpen.as_str().to_string(), position: new_pos
             });
@@ -152,7 +211,7 @@ fn try_closing_last_token(tokenized: &mut Tokenized) {
             open_token.content = TokenKind::BoldOpen.as_str().to_string();
             updated_open_tokens.insert(open_token.kind, open_index);
             let new_pos = Position { line: open_token.position.line, column: open_token.position.column + open_token.length() };
-            // Note: +1 because the inner token gets closed first
+            // +1 because the inner token gets closed first
             tokenized.tokens.insert(open_index + 1, Token { 
               kind: TokenKind::ItalicOpen, content: TokenKind::ItalicOpen.as_str().to_string(), position: new_pos
             });
@@ -187,7 +246,7 @@ fn try_closing_last_token(tokenized: &mut Tokenized) {
 /// Note: Enforces open token contraints, changing a token to plain if a constraint is violated
 fn update_open_map(tokenized: &mut Tokenized, next_token_is_space_or_newline: bool) {
   if let Some(mut prev) = tokenized.tokens.pop() {
-    // Note: Makes sure that no two open tokens of the same kind are before one closing one
+    // Makes sure that no two open tokens of the same kind are before one closing one
     if let Vacant(e) = tokenized.open_tokens.entry(prev.kind) {
       match prev.kind {
         TokenKind::BoldOpen
@@ -201,7 +260,8 @@ fn update_open_map(tokenized: &mut Tokenized, next_token_is_space_or_newline: bo
             e.insert(tokenized.tokens.len());
           }
         },
-        TokenKind::VerbatimOpen => { e.insert(tokenized.tokens.len()); },
+        TokenKind::VerbatimOpen
+        | TokenKind::TextGroupOpen => { e.insert(tokenized.tokens.len()); },
         _ => {  },
       }
     } else {
@@ -278,7 +338,7 @@ fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
         tokenized.tokens.push(last);    
       } else if last.kind == TokenKind::BoldOpen {
         if tokenized.open_tokens.get(&TokenKind::ItalicOpen).is_some() {
-          // Note: handles cases like `*italic***bold**`
+          // Handles cases like `*italic***bold**`
           let preceding_token = tokenized.tokens.last().expect("Tokens must not be empty, because open token exists");
           if preceding_token.is_space_or_newline() {
             // If Space is before `***`, it is split into [plain|italicClose|italicOpen] -> `*before ***after*` = `[io]before *[ic][io]after[ic]
@@ -308,7 +368,7 @@ fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
           tokenized.tokens.push(last);
         }
       } else if last.kind == TokenKind::BoldItalicOpen {
-        // Note: Handles `****` by converting the leftmost `*` to plain.
+        // Handles `****` by converting the leftmost `*` to plain.
         // If no italic, bold or bolditalic open token is present before, bolditalicopen is kept as is.
         // Otherwise, italic, bold or bolditalic closing tokens are taken from the remaining three `*`.
         last.kind = TokenKind::Plain;
@@ -394,14 +454,14 @@ fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
           last.kind = TokenKind::BoldItalicClose;
           tokenized.tokens.push(last);
         } else {
-          // Note: handles `**bold***italic*` -> [bo]bold[bc][io]italic[ic]
+          // Handles `**bold***italic*` -> [bo]bold[bc][io]italic[ic]
           tokenized.cur_pos.column += last.length();
           tokenized.tokens.push(last);
           let new_token = Token{ kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
           tokenized.tokens.push(new_token);
         }
       } else if last.kind == TokenKind::BoldItalicClose {
-        // Note: handles `***bold & italic****italic*` -> [bio]bold & italic[bic][io]italic[ic]
+        // Handles `***bold & italic****italic*` -> [bio]bold & italic[bic][io]italic[ic]
         tokenized.cur_pos.column += last.length();
         tokenized.tokens.push(last);
         let new_token = Token{ kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
@@ -414,7 +474,7 @@ fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
           || tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen) {
 
           if last.is_space_or_newline() {
-            // Note: closing not allowed after space
+            // Closing not allowed after space
             new_token = Token{ kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
           } else {
             new_token = Token{ kind: TokenKind::ItalicClose, content: grapheme.to_string(), position: tokenized.cur_pos };
@@ -456,10 +516,14 @@ fn cleanup_loose_open_tokens(tokenized: &mut Tokenized) {
       if let Some(prev_token) = tokenized.tokens.get_mut(*index - 1) {
         if prev_token.kind == TokenKind::Plain {
           prev_token.content.push_str(&token.content);
+        } else {
+          tokenized.tokens.insert(*index, token);
         }
       } else {
         tokenized.tokens.insert(*index, token);
       }
+    } else {
+      tokenized.tokens.insert(*index, token);
     }
   }
 }
@@ -485,7 +549,7 @@ mod tests {
       Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 18 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -503,7 +567,7 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "text".to_string(), position: Position { line: 0, column: 15 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -523,7 +587,7 @@ mod tests {
       Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 19 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -543,7 +607,7 @@ mod tests {
       Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 19 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -565,7 +629,7 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "plain".to_string(), position: Position { line: 0, column: 22 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -580,7 +644,7 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "italic*".to_string(), position: Position { line: 0, column: 6 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -597,7 +661,7 @@ mod tests {
       Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 14 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -616,7 +680,7 @@ mod tests {
       Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 16 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -628,7 +692,7 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "before****after".to_string(), position: Position { line: 0, column: 0 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -644,7 +708,7 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "after".to_string(), position: Position { line: 0, column: 12 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -661,7 +725,7 @@ mod tests {
       Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 15 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -682,7 +746,7 @@ mod tests {
       Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 26 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -697,7 +761,7 @@ mod tests {
       Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 10 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -712,7 +776,7 @@ mod tests {
       Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 9 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -727,7 +791,7 @@ mod tests {
       Token{ kind: TokenKind::BoldItalicClose, content: "***".to_string(), position: Position { line: 0, column: 17 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -739,7 +803,7 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "*********".to_string(), position: Position { line: 0, column: 0 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -755,7 +819,7 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "italic*".to_string(), position: Position { line: 0, column: 5 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -771,7 +835,7 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "plain**".to_string(), position: Position { line: 0, column: 14 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -785,7 +849,7 @@ mod tests {
       Token{ kind: TokenKind::VerbatimClose, content: "`".to_string(), position: Position { line: 0, column: 9 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
@@ -803,7 +867,110 @@ mod tests {
       Token{ kind: TokenKind::VerbatimClose, content: "`".to_string(), position: Position { line: 0, column: 25 } },
     ];
 
-    let actual = input.tokenize();
+    let actual = input.tokenize().unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_tokenize__simple_text_group() {
+    let input = "[valid text group]";
+    let expected = [
+      Token{ kind: TokenKind::TextGroupOpen, content: "[".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::Plain, content: "valid".to_string(), position: Position { line: 0, column: 1 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 6 } },
+      Token{ kind: TokenKind::Plain, content: "text".to_string(), position: Position { line: 0, column: 7 } },     
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 11 } },
+      Token{ kind: TokenKind::Plain, content: "group".to_string(), position: Position { line: 0, column: 12 } },
+      Token{ kind: TokenKind::TextGroupClose, content: "]".to_string(), position: Position { line: 0, column: 17 } },
+    ];
+
+    let actual = input.tokenize().unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_tokenize__plain_before_text_group() {
+    let input = "plain[valid text group]";
+    let expected = [
+      Token{ kind: TokenKind::Plain, content: "plain".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::TextGroupOpen, content: "[".to_string(), position: Position { line: 0, column: 5 } },
+      Token{ kind: TokenKind::Plain, content: "valid".to_string(), position: Position { line: 0, column: 6 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 11 } },
+      Token{ kind: TokenKind::Plain, content: "text".to_string(), position: Position { line: 0, column: 12 } },     
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 16 } },
+      Token{ kind: TokenKind::Plain, content: "group".to_string(), position: Position { line: 0, column: 17 } },
+      Token{ kind: TokenKind::TextGroupClose, content: "]".to_string(), position: Position { line: 0, column: 22 } },
+    ];
+
+    let actual = input.tokenize().unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_tokenize__plain_after_text_group() {
+    let input = "[valid text group]plain";
+    let expected = [
+      Token{ kind: TokenKind::TextGroupOpen, content: "[".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::Plain, content: "valid".to_string(), position: Position { line: 0, column: 1 } },
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 6 } },
+      Token{ kind: TokenKind::Plain, content: "text".to_string(), position: Position { line: 0, column: 7 } },     
+      Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 11 } },
+      Token{ kind: TokenKind::Plain, content: "group".to_string(), position: Position { line: 0, column: 12 } },
+      Token{ kind: TokenKind::TextGroupClose, content: "]".to_string(), position: Position { line: 0, column: 17 } },
+      Token{ kind: TokenKind::Plain, content: "plain".to_string(), position: Position { line: 0, column: 18 } },
+    ];
+
+    let actual = input.tokenize().unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_tokenize__formatting_inside_text_group() {
+    let input = "[**bold**]";
+    let expected = [
+      Token{ kind: TokenKind::TextGroupOpen, content: "[".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 1 } },
+      Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 3 } },     
+      Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 7 } },
+      Token{ kind: TokenKind::TextGroupClose, content: "]".to_string(), position: Position { line: 0, column: 9 } },
+    ];
+
+    let actual = input.tokenize().unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_tokenize__invalid_formatting_over_text_group_borders() {
+    let input = "[**bold]**";
+    let expected = [
+      Token{ kind: TokenKind::TextGroupOpen, content: "[".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::Plain, content: "**bold".to_string(), position: Position { line: 0, column: 1 } },
+      Token{ kind: TokenKind::TextGroupClose, content: "]".to_string(), position: Position { line: 0, column: 7 } },
+      Token{ kind: TokenKind::Plain, content: "**".to_string(), position: Position { line: 0, column: 8 } },
+    ];
+
+    let actual = input.tokenize().unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_tokenize__formatting_outside_text_group() {
+    let input = "**[bold]**";
+    let expected = [
+      Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::TextGroupOpen, content: "[".to_string(), position: Position { line: 0, column: 2 } },
+      Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 3 } },
+      Token{ kind: TokenKind::TextGroupClose, content: "]".to_string(), position: Position { line: 0, column: 7 } },
+      Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 8 } },
+    ];
+
+    let actual = input.tokenize().unwrap();
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }

@@ -1,6 +1,7 @@
 //mod lexer;
 mod parser;
 mod inlines;
+mod error;
 
 //pub use lexer::*;
 

@@ -1,4 +1,4 @@
-use crate::inlines::InlineKind;
+use crate::{inlines::InlineKind, error::InlineError};
 
 use self::{tokens::Token, tokenizer::Tokenizer};
 
@@ -9,8 +9,8 @@ mod tokenizer;
 pub type Inline = Vec<InlineKind>;
 
 
-pub fn parse(content: &str) -> Inline {
-  return content.tokenize().collect();
+pub fn parse(content: &str) -> Result<Inline, InlineError> {
+  return Ok(content.tokenize()?.collect());
 }
 
 

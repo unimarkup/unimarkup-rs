@@ -18,6 +18,10 @@ impl Token {
   pub fn is_space_or_newline(&self) -> bool {
     self.kind == TokenKind::Space || self.kind == TokenKind::NewLine
   }
+
+  pub fn closes_scope(&self) -> bool {
+    self.kind == TokenKind::TextGroupClose
+  }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,6 +38,8 @@ pub enum SingleTokenKind {
   Asterisk,
   Plus,
   Accent,
+  LeftSquareBracket,
+  RightSquareBracket,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
@@ -49,15 +55,15 @@ pub enum TokenKind {
   Plain,
   EmojiOpen,
   EmojiClose,
-  DirectEmoji,
-  DirectArrow,
   EscapedChar,
   NewLine,
   Space,
   CommentOpen,
   CommentClose,
   DirectUnicode,
-  EOI,
+  TextGroupOpen,
+  TextGroupClose,
+  Eoi,
 }
 
 impl Default for TokenKind {
@@ -81,16 +87,16 @@ impl TokenKind {
       TokenKind::EmojiClose => TokenKind::EmojiOpen.as_str(),  
       TokenKind::CommentOpen => ";;",
       TokenKind::CommentClose => TokenKind::CommentOpen.as_str(),
+      TokenKind::TextGroupOpen => "[",
+      TokenKind::TextGroupClose => "]",
 
       // Note: Below are only placeholder valus
       TokenKind::Plain => "",
-      TokenKind::DirectEmoji => ":D",
-      TokenKind::DirectArrow => "-->",
       TokenKind::EscapedChar => "\\",
       TokenKind::NewLine => "\n",
       TokenKind::Space => " ",
       TokenKind::DirectUnicode => "&U+1F816;",
-      TokenKind::EOI => "",
+      TokenKind::Eoi => "",
     }
   }
 }
@@ -106,6 +112,8 @@ impl AsSingleTokenKind for &str {
         "*" => { SingleTokenKind::Asterisk },
         "\\" => { SingleTokenKind::Backslash },
         "`" => { SingleTokenKind::Accent },
+        "[" => { SingleTokenKind::LeftSquareBracket },
+        "]" => { SingleTokenKind::RightSquareBracket },
         grapheme => {
           if grapheme.is_newline() {
             return SingleTokenKind::Newline;
