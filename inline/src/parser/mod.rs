@@ -33,7 +33,7 @@ struct InlineSection {
 fn collect_until(tokens: &mut Tokens, token_kind: TokenKind) -> InlineSection {
   let mut inline = Vec::new();
   let mut end: Position = Position::default();
-  let mut prev_token_kind: TokenKind = TokenKind::Eoi;
+  let mut prev_token_kind: TokenKind = TokenKind::NewLine; // important to start with space or newline for substitutions
 
   while let Some(mut token) = tokens.pop() {
     end = Position{ line: token.position.line, column: token.position.column + token.length() - 1 }; // -1 to use last grapheme as end position
@@ -76,21 +76,23 @@ fn collect_until(tokens: &mut Tokens, token_kind: TokenKind) -> InlineSection {
         inline.push(InlineKind::Verbatim(nested));
       },
       TokenKind::Plain => {
-        if prev_token_kind.is_space_or_newline() && tokens.last().is_some() && tokens.last().unwrap().is_space_or_newline() {
+        if prev_token_kind.is_space_or_newline() &&
+          ((tokens.last().is_some() && tokens.last().unwrap().is_space_or_newline()) || tokens.last().is_none()) {
+
           token.content = token.content.substitute_arrow().substitute_emoji();
         }
 
-        if let Some(InlineKind::Plain(flat)) = inline.last_mut() {
-          flat.content.push_str(&token.content);
-          flat.span.end = end;
-          continue;
-        }
-        
         let flat = FlatInline{ 
           content: token.content,
           span: Span { start: token.position, end }
         };
-        inline.push(InlineKind::Plain(flat));
+
+        if let Some(InlineKind::Plain(plain)) = inline.last_mut() {
+          plain.content.push_str(&flat.content);
+          plain.span.end = flat.span.end;
+        } else {
+          inline.push(InlineKind::Plain(flat));
+        }        
       },
       TokenKind::EscapedGrapheme => {
         end.column += 1; // add backlash offset
@@ -115,17 +117,17 @@ fn collect_until(tokens: &mut Tokens, token_kind: TokenKind) -> InlineSection {
       | TokenKind::Space => {
         // Newline and space are converted to single ascii whitespace
 
-        if let Some(InlineKind::Plain(flat)) = inline.last_mut() {
-          flat.content.push(' ');
-          flat.span.end = end;
-          continue;
-        }
-        
         let flat = FlatInline{ 
           content: " ".to_string(),
           span: Span { start: token.position, end }
         };
-        inline.push(InlineKind::Plain(flat));
+
+        if let Some(InlineKind::Plain(plain)) = inline.last_mut() {
+          plain.content.push_str(&flat.content);
+          plain.span.end = flat.span.end;
+        } else {
+          inline.push(InlineKind::Plain(flat));
+        }
       },
       TokenKind::TextGroupOpen => todo!(),
       _ => todo!(),
@@ -302,5 +304,102 @@ mod tests {
 
     assert_eq!(actual, expected, "{}", EXPECTED_MSG);
   }
+
+  #[test]
+  pub fn test_parser__arrow_substitution() {
+    let input = "-->";
+    let expected = [
+      InlineKind::Plain(FlatInline{ 
+        content: "🠖".to_string(),
+        span: Span {
+          start: Position{
+            line: 0,
+            column: 0
+          },
+          end: Position{
+            line: 0,
+            column: 2
+          }
+        }
+      }),
+    ];
+
+    let actual = parse(input).unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_parser__emoji_substitution_inside_text() {
+    let input = "substituted :D smiley";
+    let expected = [
+      InlineKind::Plain(FlatInline{ 
+        content: "substituted 😃 smiley".to_string(),
+        span: Span {
+          start: Position{
+            line: 0,
+            column: 0
+          },
+          end: Position{
+            line: 0,
+            column: 20
+          }
+        }
+      }),
+    ];
+
+    let actual = parse(input).unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_parser__smile_emoji_substitution() {
+    let input = "substituted ^^ smile";
+    let expected = [
+      InlineKind::Plain(FlatInline{ 
+        content: "substituted 😄 smile".to_string(),
+        span: Span {
+          start: Position{
+            line: 0,
+            column: 0
+          },
+          end: Position{
+            line: 0,
+            column: 19
+          }
+        }
+      }),
+    ];
+
+    let actual = parse(input).unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_parser__expressionless_emoji_substitution() {
+    let input = "substituted -- expressionless";
+    let expected = [
+      InlineKind::Plain(FlatInline{ 
+        content: "substituted 😑 expressionless".to_string(),
+        span: Span {
+          start: Position{
+            line: 0,
+            column: 0
+          },
+          end: Position{
+            line: 0,
+            column: 28
+          }
+        }
+      }),
+    ];
+
+    let actual = parse(input).unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
 
 }
