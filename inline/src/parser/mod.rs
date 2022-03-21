@@ -1,6 +1,6 @@
 use crate::{inlines::{InlineKind, NestedInline, FlatInline, UnfoldInlineKind}, error::InlineError, Position, Span};
 
-use self::{tokens::{TokenKind, Tokens, Token}, tokenizer::Tokenizer, substitutions::DirectSubstitution};
+use self::{tokens::{TokenKind, Tokens, Token, Newline}, tokenizer::Tokenizer, substitutions::DirectSubstitution};
 
 mod substitutions;
 mod tokens;
@@ -92,7 +92,25 @@ fn collect_until(tokens: &mut Tokens, token_kind: TokenKind) -> InlineSection {
         };
         inline.push(InlineKind::Plain(flat));
       },
-      TokenKind::EscapedChar => todo!(),
+      TokenKind::EscapedGrapheme => {
+        end.column += 1; // add backlash offset
+
+        let flat = FlatInline{ 
+          content: token.content,
+          span: Span { start: token.position, end }
+        };
+
+        if flat.content.is_newline() {
+          inline.push(InlineKind::EscapedNewLine(flat));
+        } else if flat.content.contains(char::is_whitespace) {
+          inline.push(InlineKind::EscapedSpace(flat));
+        } else if let Some(InlineKind::Plain(plain_flat)) = inline.last_mut() {
+          plain_flat.content.push_str(&flat.content);
+          plain_flat.span.end = flat.span.end;
+        } else {
+          inline.push(InlineKind::Plain(flat));
+        }
+      },
       TokenKind::NewLine
       | TokenKind::Space => {
         // Newline and space are converted to single ascii whitespace
@@ -169,6 +187,91 @@ mod tests {
           }
         }
       })
+    ];
+
+    let actual = parse(input).unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_parser__escape_space() {
+    let input = "\\ ";
+    let expected = [
+      InlineKind::EscapedSpace(FlatInline{ 
+        content: " ".to_string(),
+        span: Span {
+          start: Position{
+            line: 0,
+            column: 0
+          },
+          end: Position{
+            line: 0,
+            column: 1
+          }
+        }
+      }),
+    ];
+
+    let actual = parse(input).unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_parser__escape_plain() {
+    let input = "\\plain";
+    let expected = [
+      InlineKind::Plain(FlatInline{ 
+        content: "plain".to_string(),
+        span: Span {
+          start: Position{
+            line: 0,
+            column: 0
+          },
+          end: Position{
+            line: 0,
+            column: 5 // note that the backslash is taken into account
+          }
+        }
+      }),
+    ];
+
+    let actual = parse(input).unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_parser__escape_newline_after_plain() {
+    let input = "plain\\\n";
+    let expected = [
+      InlineKind::Plain(FlatInline{ 
+        content: "plain".to_string(),
+        span: Span {
+          start: Position{
+            line: 0,
+            column: 0
+          },
+          end: Position{
+            line: 0,
+            column: 4
+          }
+        }
+      }),
+      InlineKind::EscapedNewLine(FlatInline{ 
+        content: "\n".to_string(),
+        span: Span {
+          start: Position{
+            line: 0,
+            column: 5
+          },
+          end: Position{
+            line: 0,
+            column: 6
+          }
+        }
+      }),
     ];
 
     let actual = parse(input).unwrap();

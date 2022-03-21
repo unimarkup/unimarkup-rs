@@ -115,7 +115,6 @@ fn update_tokens(tokenized: &mut Tokenized, grapheme: &str) -> Result<(), Inline
       SingleTokenKind::Space => update_space(tokenized, grapheme),
       SingleTokenKind::Backslash => { 
         tokenized.escape_active = true;
-        tokenized.cur_pos.column += 1;
       },
       SingleTokenKind::ExclamationMark => todo!(),
       SingleTokenKind::Ampersand => todo!(),
@@ -300,7 +299,8 @@ fn update_escaped(tokenized: &mut Tokenized, grapheme: &str) {
   if let Some(last) = tokenized.tokens.last() {
     tokenized.cur_pos.column += last.length();
   }
-  tokenized.tokens.push(Token{ kind: TokenKind::EscapedChar, content: grapheme.to_string(), position: tokenized.cur_pos });
+  tokenized.tokens.push(Token{ kind: TokenKind::EscapedGrapheme, content: grapheme.to_string(), position: tokenized.cur_pos });
+  tokenized.cur_pos.column += 1; // add backslash length offset for next token start
 }
 
 fn update_space(tokenized: &mut Tokenized, grapheme: &str) {
@@ -638,7 +638,7 @@ mod tests {
   pub fn test_formatting__escape_open_italic() {
     let input = "\\*not italic*";
     let expected = [
-      Token{ kind: TokenKind::EscapedChar, content: "*".to_string(), position: Position { line: 0, column: 1 } },
+      Token{ kind: TokenKind::EscapedGrapheme, content: "*".to_string(), position: Position { line: 0, column: 0 } },
       Token{ kind: TokenKind::Plain, content: "not".to_string(), position: Position { line: 0, column: 2 } },
       Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 5 } },
       Token{ kind: TokenKind::Plain, content: "italic*".to_string(), position: Position { line: 0, column: 6 } },
@@ -860,7 +860,7 @@ mod tests {
     let expected = [
       Token{ kind: TokenKind::VerbatimOpen, content: "`".to_string(), position: Position { line: 0, column: 0 } },
       Token{ kind: TokenKind::Plain, content: "verbatim".to_string(), position: Position { line: 0, column: 1 } },
-      Token{ kind: TokenKind::EscapedChar, content: "`".to_string(), position: Position { line: 0, column: 10 } },
+      Token{ kind: TokenKind::EscapedGrapheme, content: "`".to_string(), position: Position { line: 0, column: 9 } },
       Token{ kind: TokenKind::Plain, content: "still".to_string(), position: Position { line: 0, column: 11 } },     
       Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 16 } },
       Token{ kind: TokenKind::Plain, content: "verbatim".to_string(), position: Position { line: 0, column: 17 } },

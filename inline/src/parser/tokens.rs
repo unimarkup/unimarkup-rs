@@ -56,7 +56,7 @@ pub enum TokenKind {
   Plain,
   EmojiOpen,
   EmojiClose,
-  EscapedChar,
+  EscapedGrapheme,
   NewLine,
   Space,
   CommentOpen,
@@ -93,7 +93,7 @@ impl TokenKind {
 
       // Note: Below are only placeholder valus
       TokenKind::Plain => "",
-      TokenKind::EscapedChar => "\\",
+      TokenKind::EscapedGrapheme => "\\",
       TokenKind::NewLine => "\n",
       TokenKind::Space => " ",
       TokenKind::DirectUnicode => "&U+1F816;",
@@ -142,6 +142,15 @@ impl Newline for &str {
   fn is_newline(&self) -> bool {
     let s = *self;    
     s == "\n" || s == "\r\n" || s == "\r"
+  }
+}
+
+impl Newline for String {
+  /// Note: Only temporary solution until rust supports is_newline() per default.
+  /// 
+  /// Treats `\n`, `\r\n` and `\r` as one newline.
+  fn is_newline(&self) -> bool {
+    self.as_str().is_newline()
   }
 }
 
