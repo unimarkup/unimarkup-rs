@@ -111,7 +111,7 @@ fn update_tokens(tokenized: &mut Tokenized, grapheme: &str) -> Result<(), Inline
     // Only single grapheme tokens need to be handled here, because only single grapheme is handled per update
     match single_token_kind {
       SingleTokenKind::Plain => update_plain(tokenized, grapheme),
-      SingleTokenKind::Newline => todo!(),
+      SingleTokenKind::Newline => update_newline(tokenized, grapheme),
       SingleTokenKind::Space => update_space(tokenized, grapheme),
       SingleTokenKind::Backslash => { 
         tokenized.escape_active = true;
@@ -316,6 +316,17 @@ fn update_space(tokenized: &mut Tokenized, grapheme: &str) {
     let new_token = Token{ kind: TokenKind::Space, content: grapheme.to_string(), position: tokenized.cur_pos };
     tokenized.tokens.push(new_token);
   }
+}
+
+fn update_newline(tokenized: &mut Tokenized, grapheme: &str) {
+  if let Some(last) = tokenized.tokens.last() {
+    tokenized.cur_pos.column += last.length();
+  }
+
+  let new_token = Token{ kind: TokenKind::NewLine, content: grapheme.to_string(), position: tokenized.cur_pos };
+  tokenized.tokens.push(new_token);
+  tokenized.cur_pos.line += 1;
+  tokenized.cur_pos.column = 0;
 }
 
 fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
@@ -968,6 +979,20 @@ mod tests {
       Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 3 } },
       Token{ kind: TokenKind::TextGroupClose, content: "]".to_string(), position: Position { line: 0, column: 7 } },
       Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 8 } },
+    ];
+
+    let actual = input.tokenize().unwrap();
+
+    assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+  }
+
+  #[test]
+  pub fn test_tokenize__two_plain_lines() {
+    let input = "line1\nline2";
+    let expected = [
+      Token{ kind: TokenKind::Plain, content: "line1".to_string(), position: Position { line: 0, column: 0 } },
+      Token{ kind: TokenKind::NewLine, content: "\n".to_string(), position: Position { line: 0, column: 5 } },
+      Token{ kind: TokenKind::Plain, content: "line2".to_string(), position: Position { line: 1, column: 0 } },
     ];
 
     let actual = input.tokenize().unwrap();

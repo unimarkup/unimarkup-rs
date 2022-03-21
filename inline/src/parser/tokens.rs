@@ -13,6 +13,9 @@ pub struct Token {
 
 impl Token {
   pub fn length(&self) -> usize {
+    if self.kind == TokenKind::NewLine {
+      return 0;
+    }
     self.content.graphemes(true).count()
   }
 
