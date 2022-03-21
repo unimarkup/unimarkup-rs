@@ -4,14 +4,14 @@ use unicode_segmentation::{UnicodeSegmentation, Graphemes};
 
 use crate::{Position, error::InlineError};
 
-use super::tokens::{Token, TokenKind, AsSingleTokenKind, SingleTokenKind};
+use super::tokens::{Token, TokenKind, AsSingleTokenKind, SingleTokenKind, Tokens};
 
 pub(crate) trait Tokenizer {
-  fn tokenize(self) -> Result<Vec<Token>, InlineError>;
+  fn tokenize(self) -> Result<Tokens, InlineError>;
 }
 
 impl Tokenizer for &str {
-  fn tokenize(self) -> Result<Vec<Token>, InlineError> {
+  fn tokenize(self) -> Result<Tokens, InlineError> {
     let mut tokenized = Tokenized::from(self);
     tokenize_until(&mut tokenized, TokenKind::Eoi)?;
     // EOI is treated as newline

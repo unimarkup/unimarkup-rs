@@ -11,3 +11,10 @@ pub struct Position {
   pub column: usize,
 }
 
+
+#[derive(Debug, Default, Clone, PartialEq, Copy)]
+pub struct Span {
+  pub start: Position,
+  pub end: Position,
+}
+

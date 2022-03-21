@@ -2,6 +2,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::Position;
 
+pub type Tokens = Vec<Token>;
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Token {
@@ -16,7 +17,7 @@ impl Token {
   }
 
   pub fn is_space_or_newline(&self) -> bool {
-    self.kind == TokenKind::Space || self.kind == TokenKind::NewLine
+    self.kind.is_space_or_newline()
   }
 
   pub fn closes_scope(&self) -> bool {
@@ -99,6 +100,10 @@ impl TokenKind {
       TokenKind::Eoi => "",
     }
   }
+
+  pub fn is_space_or_newline(&self) -> bool {
+    self == &TokenKind::Space || self == &TokenKind::NewLine
+  }
 }
 
 
@@ -123,29 +128,6 @@ impl AsSingleTokenKind for &str {
           SingleTokenKind::Plain
         }
       }
-    }
-}
-
-pub trait AsTokenKind {
-  fn as_token_kind(&self) -> TokenKind;
-}
-
-impl AsTokenKind for &str {
-    fn as_token_kind(&self) -> TokenKind {
-      let s = *self;
-
-      // Note: Close token is omitted if open and close are equal
-      if s == TokenKind::BoldOpen.as_str() {
-        return TokenKind::BoldOpen;
-      } else if s == TokenKind::ItalicOpen.as_str() {
-        return TokenKind::ItalicOpen;
-      } else if s == TokenKind::BoldItalicOpen.as_str() {
-        return TokenKind::BoldItalicOpen;
-      } else if s == TokenKind::EmojiOpen.as_str() {
-        return TokenKind::EmojiOpen;
-      }
-    
-      TokenKind::Plain
     }
 }
 

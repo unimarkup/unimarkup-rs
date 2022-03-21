@@ -1,21 +1,40 @@
 
 
-// arrows
+// Supported direct arrows
 const SIMPLE_RIGHT_ARROW: &str = "-->";
 
-pub fn substitute_arrow(possible_arrow: String) -> Option<String> {
-  match possible_arrow.as_str() {
-    SIMPLE_RIGHT_ARROW => Some("🠖".to_string()),
-    _ => None,
-  }
-}
 
-// emojis
+
+// Supported direct emojis
 const SMILEY: &str = ":D";
 
-pub fn substitute_emoji(possible_emoji: String) -> Option<String> {
-  match possible_emoji.as_str() {
-    SMILEY => Some("😃".to_string()),
-    _ => None,
+
+
+/// Trait for direct substitution
+pub trait DirectSubstitution {
+  /// Substitutes supported arrows or leaves given input unchanged, if no supported arrow matched.
+  /// 
+  /// - `possible_arrow` ... String that is tried to be substituted
+  fn substitute_arrow(self) -> Self;
+
+  /// Substitutes supported emojis or leaves given input unchanged, if no supported emoji matched.
+  /// 
+  /// - `possible_emoji` ... String that is tried to be substituted
+  fn substitute_emoji(self) -> Self;
+}
+
+impl DirectSubstitution for String {
+  fn substitute_arrow(self) -> Self {
+    match self.as_str() {
+      SIMPLE_RIGHT_ARROW => "🠖".to_string(),
+      _ => self,
+    }
+  }
+
+  fn substitute_emoji(self) -> Self {
+    match self.as_str() {
+      SMILEY => "😃".to_string(),
+      _ => self,
+    }
   }
 }
