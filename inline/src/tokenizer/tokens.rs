@@ -1,6 +1,6 @@
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::Position;
+use super::Position;
 
 pub type Tokens = Vec<Token>;
 
@@ -34,13 +34,13 @@ pub enum SingleTokenKind {
   Newline,
   Space,
   Backslash,
-  ExclamationMark,
-  Ampersand,
-  Colon,
-  Caret,
-  Underscore,
+  // ExclamationMark,
+  // Ampersand,
+  // Colon,
+  // Caret,
+  // Underscore,
   Asterisk,
-  Plus,
+  // Plus,
   Accent,
   LeftSquareBracket,
   RightSquareBracket,
@@ -58,13 +58,13 @@ pub enum TokenKind {
   VerbatimClose,
   Plain,
   EmojiOpen,
-  EmojiClose,
+  // EmojiClose,
   EscapedGrapheme,
   NewLine,
   Space,
-  CommentOpen,
-  CommentClose,
-  DirectUnicode,
+  // CommentOpen,
+  // CommentClose,
+  // DirectUnicode,
   TextGroupOpen,
   TextGroupClose,
   Eoi,
@@ -88,9 +88,9 @@ impl TokenKind {
       TokenKind::VerbatimOpen => "`",
       TokenKind::VerbatimClose => TokenKind::EmojiOpen.as_str(), 
       TokenKind::EmojiOpen => "::",
-      TokenKind::EmojiClose => TokenKind::EmojiOpen.as_str(),  
-      TokenKind::CommentOpen => ";;",
-      TokenKind::CommentClose => TokenKind::CommentOpen.as_str(),
+      // TokenKind::EmojiClose => TokenKind::EmojiOpen.as_str(),  
+      // TokenKind::CommentOpen => ";;",
+      // TokenKind::CommentClose => TokenKind::CommentOpen.as_str(),
       TokenKind::TextGroupOpen => "[",
       TokenKind::TextGroupClose => "]",
 
@@ -99,7 +99,7 @@ impl TokenKind {
       TokenKind::EscapedGrapheme => "\\",
       TokenKind::NewLine => "\n",
       TokenKind::Space => " ",
-      TokenKind::DirectUnicode => "&U+1F816;",
+      // TokenKind::DirectUnicode => "&U+1F816;",
       TokenKind::Eoi => "",
     }
   }
@@ -149,35 +149,7 @@ impl Newline for &str {
 }
 
 impl Newline for String {
-  /// Note: Only temporary solution until rust supports is_newline() per default.
-  /// 
-  /// Treats `\n`, `\r\n` and `\r` as one newline.
   fn is_newline(&self) -> bool {
     self.as_str().is_newline()
   }
 }
-
-// pub fn possible_arrow(s: &str) -> Option<TokenKind> {
-//   if s.contains(|c| c == '-' || c == '=' || c == '<' || c == '>' || c == '|') {
-//     return Some(TokenKind::PossibleDirectArrow);
-//   }
-//   None
-// }
-
-// pub fn possible_emoji(s: &str) -> Option<TokenKind> {
-//   if s.contains(|c| c == '-' || c == '=' || c == '<' || c == '>' || c == ')'
-//     || c == '(' || c == '^' || c == 'O' || c == 'D' || c == 'Y' || c == 'N' || c == 'P'
-//     || c == '3' || c == '/' || c == ':' || c == ';' || c == '_') {
-
-//     return Some(TokenKind::PossibleDirectEmoji);
-//   }
-//   None
-// }
-
-// pub fn possible_direct_unicode(s: &str) -> Option<TokenKind> {
-//   if s.contains(|c: char| c == '&' || c == 'U' || c == '+' || c.is_digit(16) || c == ';') {
-//     return Some(TokenKind::DirectUnicode)
-//   }
-//   None
-// }
-

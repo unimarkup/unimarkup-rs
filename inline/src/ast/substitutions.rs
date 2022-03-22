@@ -1,3 +1,5 @@
+
+
 /// Trait for direct substitution
 pub trait DirectSubstitution {
   /// Substitutes supported arrows or leaves given input unchanged, if no supported arrow matched.
