@@ -7,6 +7,7 @@ mod ast {
   mod escaping;
   mod mixed_nested;
   mod mixed;
+  mod offseted;
   mod substitutions;
   mod whitespaces;
 }

@@ -17,11 +17,17 @@ pub struct Position {
 
 pub trait Tokenizer {
   fn tokenize(self) -> Result<Tokens, InlineError>;
+
+  fn tokenize_with_offset(self, offset: Position) -> Result<Tokens, InlineError>;
 }
 
 impl Tokenizer for &str {
   fn tokenize(self) -> Result<Tokens, InlineError> {
-    let mut tokenized = Tokenized::from(self);
+    self.tokenize_with_offset(Position::default())
+  }
+
+  fn tokenize_with_offset(self, offset: Position) -> Result<Tokens, InlineError> {
+    let mut tokenized = Tokenized::from((self, offset));
     tokenize_until(&mut tokenized, TokenKind::Eoi)?;
     // EOI is treated as newline
     update_open_map(&mut tokenized, true);
@@ -42,13 +48,13 @@ struct Tokenized<'a> {
   open_verbatim: bool,
 }
 
-impl<'a> From<&'a str> for Tokenized<'a> {
-  fn from(content: &'a str) -> Self {
+impl<'a> From<(&'a str, Position)> for Tokenized<'a> {
+  fn from((content, offset): (&'a str, Position)) -> Self {
     Tokenized {
       graphemes: content.graphemes(true),
       tokens: Default::default(),
       open_tokens: Default::default(),
-      cur_pos: Default::default(),
+      cur_pos: offset,
       escape_active: false,
       open_verbatim: false,
     }
