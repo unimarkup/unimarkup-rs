@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    backend::{self, error::BackendError, ParseFromIr, Render},
+    backend::{error::BackendError, ParseFromIr, Render},
     elements::types::{self, UnimarkupBlocks, UnimarkupType},
     frontend::{
         error::{custom_pest_error, FrontendError},
@@ -17,7 +17,9 @@ use crate::{
 use pest::iterators::Pairs;
 use pest::Span;
 
-use super::{error::ElementError, log_id::GeneralErrLogId};
+use unimarkup_inline::{Inline, flat_inline, FlattenInlineKind, Position, parse_with_offset};
+
+use super::{error::ElementError, log_id::{GeneralErrLogId, InlineWarnLogId}};
 
 /// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default, Clone)]
@@ -26,7 +28,7 @@ pub struct ParagraphBlock {
     pub id: String,
 
     /// The content of the paragraph.
-    pub content: String,
+    pub content: Inline,
 
     /// Attributes of the paragraph.
     pub attributes: String,
@@ -88,7 +90,7 @@ impl UmParse for ParagraphBlock {
 
         let paragraph_block = ParagraphBlock {
             id,
-            content,
+            content: flat_inline(&content),
             attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
             line_nr,
         };
@@ -131,9 +133,20 @@ impl ParseFromIr for ParagraphBlock {
                 ir_line.fallback_attributes
             };
 
+            let try_inline = parse_with_offset(&content, Position{line: ir_line.line_nr, ..Default::default()});
+            let parsed_inline;
+            match try_inline {
+                Ok(inline) => parsed_inline = inline,
+                Err(_) => {
+                    parsed_inline = flat_inline(&content);
+                    (InlineWarnLogId::InlineParsingFailed as LogId)
+                        .set_log(&format!("Inline parsing failed for paragraph-id {} => content taken as plain as fallback", ir_line.id), file!(), line!());
+                },
+            }
+
             let block = ParagraphBlock {
                 id: ir_line.id,
-                content,
+                content: parsed_inline,
                 attributes,
                 line_nr: ir_line.line_nr,
             };
@@ -159,25 +172,7 @@ impl Render for ParagraphBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        let try_inline = backend::parse_inline(&self.content);
-
-        if try_inline.is_err() {
-            return Err(ElementError::General(
-                (GeneralErrLogId::FailedInlineParsing as LogId)
-                    .set_log(
-                        &format!(
-                            "Failed parsing inline formats for paragraph block with id: '{}'",
-                            &self.id
-                        ),
-                        file!(),
-                        line!(),
-                    )
-                    .add_info(&format!("Cause: {:?}", try_inline.err())),
-            )
-            .into());
-        }
-
-        html.push_str(&try_inline.unwrap().render_html()?);
+        html.push_str(&self.content.render_html()?);
 
         html.push_str("</p>");
 
@@ -191,7 +186,7 @@ impl AsIrLines<ContentIrLine> for ParagraphBlock {
             &self.id,
             self.line_nr,
             UnimarkupType::Paragraph.to_string(),
-            &self.content,
+            &self.content.clone().flatten(),
             "",
             &self.attributes,
             "",
@@ -204,15 +199,9 @@ impl AsIrLines<ContentIrLine> for ParagraphBlock {
 #[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
-    use std::collections::VecDeque;
+    use unimarkup_inline::parse;
 
-    use crate::{
-        backend::{ParseFromIr, Render},
-        elements::types::UnimarkupType,
-        middleend::ContentIrLine,
-    };
-
-    use super::ParagraphBlock;
+    use super::*;
 
     #[test]
     fn test__render_html__paragraph() {
@@ -221,7 +210,7 @@ mod tests {
 
         let block = ParagraphBlock {
             id: id.clone(),
-            content: content.clone(),
+            content: flat_inline(&content),
             attributes: "{}".into(),
             line_nr: 0,
         };
@@ -250,24 +239,24 @@ mod tests {
 
         assert_eq!(paragraph.id, test_id);
         assert_eq!(paragraph.line_nr, 0);
-        assert_eq!(paragraph.content, content);
+        assert_eq!(paragraph.content, parse(&content).unwrap());
         assert_eq!(paragraph.attributes, String::from("{}"));
     }
 
     #[test]
     fn test__render_html__paragraph_with_inline() {
         let id = String::from("paragraph-id");
-        let content = String::from("This is `the` *content* **of _the_ paragraph**");
+        let content = String::from("This is `the` *content* **of the paragraph**");
 
         let block = ParagraphBlock {
             id: id.clone(),
-            content,
+            content: parse(&content).unwrap(),
             attributes: "{}".into(),
             line_nr: 0,
         };
 
         let expected_html = format!(
-            "<p id='{}'>This is <pre>the</pre> <i>content</i> <b>of <sub>the</sub> paragraph</b></p>",
+            "<p id='{}'>This is <pre>the</pre> <em>content</em> <strong>of the paragraph</strong></p>",
             id
         );
 

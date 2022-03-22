@@ -1,6 +1,7 @@
 use crate::backend::error::BackendError;
 
-use super::RenderBlock;
+/// Abstract type for elements that implement the [`Render`] trait
+pub type RenderBlock = Box<dyn Render>;
 
 /// Used to provide render implementation for supported output formats
 pub trait Render {

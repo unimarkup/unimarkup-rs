@@ -7,25 +7,31 @@ mod substitutions;
 pub type Inline = Vec<InlineKind>;
 
 
+pub fn flat_inline(s: &str) -> Inline {
+  vec![InlineKind::Plain(FlatInline{ content: s.to_string(), span: Span::default() })]
+}
+
+
+
 #[derive(Debug, Default, Clone, PartialEq, Copy)]
 pub struct Span {
   pub start: Position,
   pub end: Position,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct NestedInline {
   pub content: Vec<InlineKind>, 
   pub span: Span
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct FlatInline {
   pub content: String,
   pub span: Span,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum InlineKind {
   Bold(NestedInline),
   Italic(NestedInline),

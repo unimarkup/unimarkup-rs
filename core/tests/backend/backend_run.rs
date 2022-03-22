@@ -2,9 +2,10 @@ use clap::StructOpt;
 use unimarkup_core::{
     backend::{self, Render},
     config::Config,
-    elements::{HeadingBlock, HeadingLevel},
+    elements::{HeadingBlock, HeadingLevel, get_column_offset_from_level},
     middleend::{self, AsIrLines, ContentIrLine},
 };
+use unimarkup_inline::{parse_with_offset, Position};
 
 use super::super::middleend::ir_test_setup;
 
@@ -15,7 +16,7 @@ fn test__backend_run__heading_block() {
     let block = HeadingBlock {
         id: "some-id".into(),
         level: HeadingLevel::Level1,
-        content: "This is a heading".into(),
+        content: parse_with_offset("This is a heading", Position{line: 0, column: get_column_offset_from_level(HeadingLevel::Level1)}).unwrap(),
         attributes: "{}".into(),
         line_nr: 0,
     };

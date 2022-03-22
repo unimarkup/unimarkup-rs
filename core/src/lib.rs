@@ -9,3 +9,4 @@ pub mod frontend;
 pub mod log_id;
 pub mod middleend;
 pub mod unimarkup;
+pub mod unimarkup_block;
