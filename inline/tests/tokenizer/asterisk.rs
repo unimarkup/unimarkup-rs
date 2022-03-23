@@ -59,6 +59,42 @@ pub fn test_tokenize__right_side_nested() {
 }
 
 #[test]
+pub fn test_tokenize__bold_with_unopened_italic() {
+  let input = "**bold no-italic* bold**";
+  let expected = [
+    Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 0 } },
+    Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 2 } },
+    Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 6 } },
+    Token{ kind: TokenKind::Plain, content: "no-italic*".to_string(), position: Position { line: 0, column: 7 } },
+    Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 17 } },
+    Token{ kind: TokenKind::Plain, content: "bold".to_string(), position: Position { line: 0, column: 18 } },
+    Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 22 } },
+  ];
+
+  let actual = input.tokenize().unwrap();
+
+  assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+}
+
+#[test]
+pub fn test_tokenize__italic_with_unopened_bold() {
+  let input = "*italic no-bold** italic*";
+  let expected = [
+    Token{ kind: TokenKind::ItalicOpen, content: "*".to_string(), position: Position { line: 0, column: 0 } },
+    Token{ kind: TokenKind::Plain, content: "italic".to_string(), position: Position { line: 0, column: 1 } },
+    Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 7 } },
+    Token{ kind: TokenKind::Plain, content: "no-bold**".to_string(), position: Position { line: 0, column: 8 } },
+    Token{ kind: TokenKind::Space, content: " ".to_string(), position: Position { line: 0, column: 17 } },
+    Token{ kind: TokenKind::Plain, content: "italic".to_string(), position: Position { line: 0, column: 18 } },
+    Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 24 } },
+  ];
+
+  let actual = input.tokenize().unwrap();
+
+  assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+}
+
+#[test]
 pub fn test_tokenize__left_side_nested() {
   let input = "***italic* and bold**";
   let expected = [

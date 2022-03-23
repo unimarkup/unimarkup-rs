@@ -216,7 +216,7 @@ fn try_closing_text_group(tokenized: &mut Tokenized, grapheme: &str) {
 
 /// Function removes any dangling open token between open/close tokens of the last fix token, if it is a closing one.
 fn try_closing_fixated_token(tokenized: &mut Tokenized) {
-  if let Some(last) = tokenized.tokens.last() {
+  if let Some(mut last) = tokenized.tokens.pop() {
     let open_index;
     let mut updated_open_tokens = HashMap::new();
     match last.kind {
@@ -239,8 +239,8 @@ fn try_closing_fixated_token(tokenized: &mut Tokenized) {
         TokenKind::ItalicClose => { 
           if let Some(index) = tokenized.open_tokens.remove(&TokenKind::ItalicOpen) {
             open_index = index;
-          } else {
-            open_index = tokenized.open_tokens.remove(&TokenKind::BoldItalicOpen).expect("Closing token requires open token");
+          } else if let Some(index) = tokenized.open_tokens.remove(&TokenKind::BoldItalicOpen) {
+            open_index = index;
             let open_token = tokenized.tokens.get_mut(open_index).expect("Got token index from hashmap");
             open_token.kind = TokenKind::BoldOpen;
             open_token.content = TokenKind::BoldOpen.as_str().to_string();
@@ -250,6 +250,17 @@ fn try_closing_fixated_token(tokenized: &mut Tokenized) {
             tokenized.tokens.insert(open_index + 1, Token { 
               kind: TokenKind::ItalicOpen, content: TokenKind::ItalicOpen.as_str().to_string(), position: new_pos
             });
+          } else {
+            // ItalicClose kept open for possible BoldClose, but stayed at ItalicClose
+            last.kind = TokenKind::Plain;
+            if let Some(prev) = tokenized.tokens.last_mut() {
+              if prev.kind == TokenKind::Plain {
+                prev.content.push_str(&last.content);
+                return;
+              }
+            }
+            tokenized.tokens.push(last);
+            return;
           }
         },
         TokenKind::BoldItalicClose => { 
@@ -264,8 +275,13 @@ fn try_closing_fixated_token(tokenized: &mut Tokenized) {
         TokenKind::VerbatimClose => { open_index = tokenized.open_tokens.remove(&TokenKind::VerbatimOpen).unwrap(); },
         // TokenKind::EmojiClose => { open_index = tokenized.open_tokens.remove(&TokenKind::EmojiOpen).unwrap(); },
         // TokenKind::CommentClose => { open_index = tokenized.open_tokens.remove(&TokenKind::CommentOpen).unwrap(); },
-        _ => { return; },
+        _ => { 
+          tokenized.tokens.push(last);
+          return; 
+        },
     }
+
+    tokenized.tokens.push(last);
 
     for (kind, index) in &tokenized.open_tokens {
       if *index < open_index {
