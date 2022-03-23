@@ -1,3 +1,8 @@
+//! This module provides functionality to tokenize a given &str input.
+//! The resulting list of tokens is a flat tokenized representation.
+//! 
+//! e.g. `*text*` --> `[ItalicOpen][Plain][ItalicClose]`
+
 use std::{collections::{HashMap, hash_map::Entry::Vacant}, cmp::min};
 
 use unicode_segmentation::{Graphemes, UnicodeSegmentation};
@@ -7,17 +12,26 @@ pub use tokens::*;
 
 use crate::error::InlineError;
 
-
+/// Struct to link to the grapheme position of a token in the given input.
 #[derive(Debug, Default, Clone, PartialEq, Copy)]
 pub struct Position {
+  /// Line number in the given input.
   pub line: usize,
+  /// Column in the given input.
   pub column: usize,
 }
 
-
+/// Trait to convert a given input into a list of tokens.
 pub trait Tokenizer {
+  /// Takes an input and converts it into a list of tokens.
+  /// 
+  /// Returns an error if inline constraints are violated.
   fn tokenize(self) -> Result<Tokens, InlineError>;
 
+  /// Takes an input and an offset to convert the input into a list of tokens,
+  /// where the first token starts at the given offset.
+  /// 
+  /// Returns an error if inline constraints are violated.
   fn tokenize_with_offset(self, offset: Position) -> Result<Tokens, InlineError>;
 }
 
@@ -38,14 +52,19 @@ impl Tokenizer for &str {
   }
 }
 
+/// Internal structure to keep track of the tokenization process.
 #[derive(Debug)]
 struct Tokenized<'a> {
+  /// Input converted to a grapheme iterator.
   graphemes: Graphemes<'a>,
+  /// List of tokens that were tokenized so far.
   tokens: Vec::<Token>,
+  /// Map of open tokens that were not yet closed
   open_tokens: HashMap::<TokenKind, usize>,
+  /// The position inside the input of the current token being tokenized.
   cur_pos: Position,
+  /// Flag indicating that a grapheme must be escaped.
   escape_active: bool,
-  open_verbatim: bool,
 }
 
 impl<'a> From<(&'a str, Position)> for Tokenized<'a> {
@@ -56,7 +75,6 @@ impl<'a> From<(&'a str, Position)> for Tokenized<'a> {
       open_tokens: Default::default(),
       cur_pos: offset,
       escape_active: false,
-      open_verbatim: false,
     }
   }
 }
@@ -97,6 +115,7 @@ fn tokenize_until(tokenized: &mut Tokenized, token_kind: TokenKind) -> Result<()
   Ok(())
 }
 
+/// Handles verbatim tokens.
 fn update_accent(tokenized: &mut Tokenized, grapheme: &str) {
   if let Some(last) = tokenized.tokens.last() {
     tokenized.cur_pos.column += last.length();
@@ -106,17 +125,15 @@ fn update_accent(tokenized: &mut Tokenized, grapheme: &str) {
     true => {
       let new_token = Token{ kind: TokenKind::VerbatimClose, content: grapheme.to_string(), position: tokenized.cur_pos };
       tokenized.tokens.push(new_token);
-      tokenized.open_verbatim = false;
     },
     false => {
       let new_token = Token{ kind: TokenKind::VerbatimOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
       tokenized.tokens.push(new_token);
-      tokenized.open_verbatim = true;
     },
   }
 }
 
-
+/// Updates the list of tokens by handling the next grapheme of the input.
 fn update_tokens(tokenized: &mut Tokenized, grapheme: &str) -> Result<(), InlineError> {
   if tokenized.escape_active {
     update_escaped(tokenized, grapheme);
@@ -147,6 +164,10 @@ fn update_tokens(tokenized: &mut Tokenized, grapheme: &str) -> Result<(), Inline
   Ok(())
 }
 
+/// Handles text group tokenization by taking precedence over inline formattings.
+/// This is achieved by recursive tokenization expecting text group close token.
+/// 
+/// Note: The recursive approach enforces the closing constraint.
 fn open_text_group(tokenized: &mut Tokenized, grapheme: &str) -> Result<(), InlineError> {
   if let Some(last) = tokenized.tokens.last() {
     tokenized.cur_pos.column += last.length();
@@ -174,6 +195,7 @@ fn open_text_group(tokenized: &mut Tokenized, grapheme: &str) -> Result<(), Inli
   Ok(())
 }
 
+/// Function to close a text group if possible.
 fn try_closing_text_group(tokenized: &mut Tokenized, grapheme: &str) {
   if tokenized.open_tokens.remove(&TokenKind::TextGroupOpen).is_some() {
     if let Some(last) = tokenized.tokens.last() {
@@ -192,8 +214,7 @@ fn try_closing_text_group(tokenized: &mut Tokenized, grapheme: &str) {
   }
 }
 
-
-/// Function removes any dangling open token between open/close tokens of the last fix token, if it is a closing one
+/// Function removes any dangling open token between open/close tokens of the last fix token, if it is a closing one.
 fn try_closing_fixated_token(tokenized: &mut Tokenized) {
   if let Some(last) = tokenized.tokens.last() {
     let open_index;
@@ -257,7 +278,7 @@ fn try_closing_fixated_token(tokenized: &mut Tokenized) {
 
 /// Enteres the last fixed token into the open token hashmap, if it is an open token.
 /// 
-/// Note: Enforces open token contraints, changing a token to plain if a constraint is violated
+/// Note: Enforces open token contraints, changing a token to plain if a constraint is violated.
 fn update_open_map(tokenized: &mut Tokenized, next_token_is_space_or_newline: bool) {
   if let Some(mut prev) = tokenized.tokens.pop() {
     // Makes sure that no two open tokens of the same kind are before one closing one
@@ -295,6 +316,7 @@ fn update_open_map(tokenized: &mut Tokenized, next_token_is_space_or_newline: bo
   }
 }
 
+/// Handles plain text.
 fn update_plain(tokenized: &mut Tokenized, grapheme: &str) {
   if let Some(last) = tokenized.tokens.last_mut() {
     if last.kind == TokenKind::Plain {
@@ -310,6 +332,7 @@ fn update_plain(tokenized: &mut Tokenized, grapheme: &str) {
   }
 }
 
+/// Handles escaped graphemes.
 fn update_escaped(tokenized: &mut Tokenized, grapheme: &str) {
   if let Some(last) = tokenized.tokens.last() {
     tokenized.cur_pos.column += last.length();
@@ -318,6 +341,7 @@ fn update_escaped(tokenized: &mut Tokenized, grapheme: &str) {
   tokenized.cur_pos.column += 1; // add backslash length offset for next token start
 }
 
+/// Handles graphemes with Unicode whitespace property that are not a newline.
 fn update_space(tokenized: &mut Tokenized, grapheme: &str) {
   if let Some(last) = tokenized.tokens.last_mut() {
     if last.kind == TokenKind::Space {
@@ -333,6 +357,7 @@ fn update_space(tokenized: &mut Tokenized, grapheme: &str) {
   }
 }
 
+/// Handles newlines.
 fn update_newline(tokenized: &mut Tokenized, grapheme: &str) {
   if let Some(last) = tokenized.tokens.last() {
     tokenized.cur_pos.column += last.length();
@@ -344,6 +369,7 @@ fn update_newline(tokenized: &mut Tokenized, grapheme: &str) {
   tokenized.cur_pos.column = 0;
 }
 
+/// Handles bold, italic and any combination of them.
 fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
   match tokenized.tokens.pop() {
     Some(mut last) => {
@@ -520,6 +546,8 @@ fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
   }
 }
 
+/// Cleans up open tokens.
+/// 
 /// Remaining open tokens that have no matching close token get converted to plain.
 /// Neighboring plain tokens get merged with the open token. 
 fn cleanup_loose_open_tokens(tokenized: &mut Tokenized) {

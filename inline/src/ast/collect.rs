@@ -1,14 +1,22 @@
+//! This module provides functionality to create a Unimarkup inline AST out of a given list of tokens.
+
 use crate::tokenizer::{Position, TokenKind, Tokens, Newline};
 
 use super::{Span, NestedInline, InlineKind, FlatInline, substitutions::DirectSubstitution, Inline, FlattenInlineKind};
 
-
+/// Struct to store partial collected inline tokens.
+/// 
+/// Needed for nested tokens.
 pub(crate) struct InlineSection {
+  /// Partially collected inline tokens.
   pub(crate) content: Inline,
+  /// End position of the last inline token of the section.
   pub(crate) end: Position,
 }
 
+/// Trait to create an inline AST.
 pub(crate) trait InlineAst {
+  /// Function to create an inline AST from a given input.
   fn collect(self) -> Inline;
 }
 
@@ -19,6 +27,10 @@ impl InlineAst for Tokens {
   }
 }
 
+/// Function to collect inline elements up until a certain token is reached.
+/// 
+/// Note: The token of kind `token_kind` is the last token of the returned section, if it was found.
+/// Otherwise, the given list of tokens is fully emptied.
 pub(crate) fn collect_until(tokens: &mut Tokens, token_kind: TokenKind) -> InlineSection {
   let mut inline = Vec::new();
   let mut end: Position = Position::default();

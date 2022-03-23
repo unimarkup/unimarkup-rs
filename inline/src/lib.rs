@@ -1,3 +1,5 @@
+//! This library provides functionality to get a Unimarkup inline AST from a given string 
+
 use ast::collect::InlineAst;
 use error::InlineError;
 
