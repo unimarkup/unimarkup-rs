@@ -105,6 +105,7 @@ pub enum TokenKind {
     Bold,
     Italic,
     Newline,
+    Whitespace,
     Plain,
 }
 
@@ -115,6 +116,7 @@ impl TokenKind {
             TokenKind::Italic => "*",
             TokenKind::Newline => "\n",
             TokenKind::Plain => "",
+            TokenKind::Whitespace => " ",
         }
     }
 }
