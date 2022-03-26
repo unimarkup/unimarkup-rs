@@ -86,6 +86,18 @@ impl Token {
             None => self.kind.as_str(),
         }
     }
+
+    pub fn kind(&self) -> TokenKind {
+        self.kind
+    }
+
+    pub fn spacing(&self) -> Spacing {
+        self.spacing
+    }
+
+    pub fn span(&self) -> Span {
+        self.span
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
