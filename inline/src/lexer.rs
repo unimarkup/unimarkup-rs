@@ -239,4 +239,25 @@ mod tests {
 
         println!("\nEnd consume_plain test\n\n");
     }
+
+    #[test]
+    fn consume_plain_with_esc() {
+        let input = "Some string \\* with escaped character";
+        let lexer = input.lex();
+
+        let mut iter = lexer.into_iter();
+
+        println!("\n\nTesting consume_plain_with_esc\n");
+        println!("INPUT: {input}");
+
+        let range = 0..3;
+
+        for _ in range {
+            if let Some(token) = iter.next() {
+                println!("{token:?}");
+            }
+        }
+
+        println!("\nEnd consume_plain_with_esc\n");
+    }
 }
