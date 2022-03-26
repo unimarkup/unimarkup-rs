@@ -1,4 +1,75 @@
+use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
+
+pub(crate) struct Invalid;
+pub(crate) struct Valid;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct TokenBuilder<K = Invalid, S = Invalid, W = Invalid> {
+    kind: TokenKind,
+    span: Span,
+    spacing: Spacing,
+    content: Option<String>,
+    _validation: (PhantomData<K>, PhantomData<S>, PhantomData<W>),
+}
+
+impl TokenBuilder<Invalid, Invalid, Invalid> {
+    pub fn new(kind: TokenKind) -> TokenBuilder<Valid, Invalid, Invalid> {
+        let v1: PhantomData<Valid> = PhantomData;
+        let v2: PhantomData<Invalid> = PhantomData;
+        let v3: PhantomData<Invalid> = PhantomData;
+
+        TokenBuilder {
+            kind,
+            span: Span::default(),
+            spacing: Spacing::None,
+            content: None,
+            _validation: (v1, v2, v3),
+        }
+    }
+}
+
+impl<K, S, W> TokenBuilder<K, S, W> {
+    pub fn with_content(mut self, content: String) -> TokenBuilder<K, S, W> {
+        self.content = Some(content);
+        self
+    }
+
+    pub fn span(self, span: Span) -> TokenBuilder<K, Valid, W> {
+        let span_valid: PhantomData<Valid> = PhantomData;
+
+        TokenBuilder {
+            kind: self.kind,
+            span,
+            spacing: self.spacing,
+            content: self.content,
+            _validation: (self._validation.0, span_valid, self._validation.2),
+        }
+    }
+
+    pub fn space(self, spacing: Spacing) -> TokenBuilder<K, S, Valid> {
+        let spacing_valid: PhantomData<Valid> = PhantomData;
+
+        TokenBuilder {
+            kind: self.kind,
+            span: self.span,
+            spacing,
+            content: self.content,
+            _validation: (self._validation.0, self._validation.1, spacing_valid),
+        }
+    }
+}
+
+impl TokenBuilder<Valid, Valid, Valid> {
+    pub fn build(self) -> Token {
+        Token {
+            kind: self.kind,
+            span: self.span,
+            spacing: self.spacing,
+            content: self.content,
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
@@ -9,44 +80,10 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(kind: TokenKind) -> Self {
-        Self {
-            kind,
-            span: Span::default(),
-            spacing: Spacing::default(),
-            content: None,
-        }
-    }
-
-    pub fn with_content(mut self, content: String) -> Self {
-        self.content = Some(content);
-        self
-    }
-
-    pub fn span(mut self, span: Span) -> Self {
-        self.span = span;
-        self
-    }
-
-    pub fn space(mut self, spacing: Spacing) -> Self {
-        self.spacing = spacing;
-        self
-    }
-
-    pub fn kind(&self) -> &TokenKind {
-        &self.kind
-    }
-
-    pub fn spacing(&self) -> Spacing {
-        self.spacing
-    }
-}
-
-impl AsRef<str> for Token {
-    fn as_ref(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         match self.content {
             Some(ref content) => content,
-            None => self.kind.as_ref(),
+            None => self.kind.as_str(),
         }
     }
 }
@@ -59,8 +96,8 @@ pub enum TokenKind {
     Plain,
 }
 
-impl AsRef<str> for TokenKind {
-    fn as_ref(&self) -> &str {
+impl TokenKind {
+    fn as_str(&self) -> &str {
         match *self {
             TokenKind::Bold => "**",
             TokenKind::Italic => "*",
