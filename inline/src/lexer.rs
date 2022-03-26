@@ -180,6 +180,8 @@ impl<'a> Iterator for TokenIterator<'a> {
 trait IsKeyword {
     fn is_keyword(&self) -> bool;
     fn is_esc(&self) -> bool;
+    fn is_whitespace(&self) -> bool;
+    fn is_newline(&self) -> bool;
 }
 
 impl IsKeyword for &str {
@@ -189,6 +191,14 @@ impl IsKeyword for &str {
 
     fn is_esc(&self) -> bool {
         *self == "\\"
+    }
+
+    fn is_whitespace(&self) -> bool {
+        [" ", "\t"].contains(self)
+    }
+
+    fn is_newline(&self) -> bool {
+        ["\n", "\r\n"].contains(self)
     }
 }
 
