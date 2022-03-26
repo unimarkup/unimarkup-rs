@@ -118,14 +118,24 @@ impl TokenIterator<'_> {
 
         // multiple cases:
         // 1. got to end of line -> interpret as end of token
-        // 2. escape grapheme found -> end interpretation
-        // 3. some keyword found -> end interpretation
+        // 2. some keyword found -> end interpretation
+        // 3. escape grapheme found -> end interpretation if grapheme is whitespace | newline;
+        //    otherwise continue from next character
         // 4. any other grapheme -> consume into plain
 
         while let Some(grapheme) = self.curr.get(self.index) {
             if grapheme.is_esc() || grapheme.is_keyword() {
-                // skip the escape character and continue from next character
-                break;
+                // whitespace and newline is special case
+                // rest of characters can be consumed
+                match self.curr.get(self.index) {
+                    Some(symbol) if symbol.is_newline() || symbol.is_whitespace() => break,
+                    Some(symbol) => {
+                        self.index += 1;
+                        content.push_str(symbol);
+                        continue;
+                    }
+                    None => break,
+                }
             } else {
                 content.push_str(grapheme);
                 self.index += 1;
