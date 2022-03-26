@@ -170,10 +170,28 @@ impl Add for Position {
     }
 }
 
+impl Add<(usize, usize)> for Position {
+    type Output = Self;
+
+    fn add(self, (line, column): (usize, usize)) -> Self::Output {
+        Self {
+            line: self.line + line,
+            column: self.column + column,
+        }
+    }
+}
+
 impl AddAssign for Position {
     fn add_assign(&mut self, rhs: Self) {
         self.line += rhs.line;
         self.column += rhs.column;
+    }
+}
+
+impl AddAssign<(usize, usize)> for Position {
+    fn add_assign(&mut self, (line, column): (usize, usize)) {
+        self.line += line;
+        self.column += column;
     }
 }
 
@@ -188,9 +206,27 @@ impl Sub for Position {
     }
 }
 
+impl Sub<(usize, usize)> for Position {
+    type Output = Self;
+
+    fn sub(self, (line, column): (usize, usize)) -> Self::Output {
+        Self {
+            line: self.line - line,
+            column: self.column - column,
+        }
+    }
+}
+
 impl SubAssign for Position {
     fn sub_assign(&mut self, rhs: Self) {
         self.line -= rhs.line;
         self.column -= rhs.column;
+    }
+}
+
+impl SubAssign<(usize, usize)> for Position {
+    fn sub_assign(&mut self, (line, column): (usize, usize)) {
+        self.line -= line;
+        self.column -= column;
     }
 }
