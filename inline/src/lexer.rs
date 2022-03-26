@@ -228,37 +228,76 @@ mod tests {
     }
 
     #[test]
-    fn consume_plain() {
+    fn lex_plain() {
         let lexer = "Some string".lex();
+        let mut iter = lexer.into_iter();
 
-        println!("\nTesting consume_plain: \n\n");
+        let token = iter.next().unwrap();
 
-        for token in &lexer {
-            println!("{token:?}");
-            // assert_eq!(token.kind(), TokenKind::Plain)
-        }
+        assert_eq!(token.kind(), TokenKind::Plain);
+        assert_eq!(token.spacing(), Spacing::None);
 
-        println!("\nEnd consume_plain test\n\n");
+        let start_pos = Position::default();
+        let end_pos = Position {
+            line: 1,
+            column: 11,
+        };
+
+        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
+        assert_eq!(token.as_str(), "Some string");
     }
 
     #[test]
-    fn consume_plain_with_esc() {
+    fn lex_plain_with_esc() {
         let input = "Some string \\* with escaped character";
         let lexer = input.lex();
 
         let mut iter = lexer.into_iter();
 
-        println!("\n\nTesting consume_plain_with_esc\n");
-        println!("INPUT: {input}");
+        assert_eq!(lexer.into_iter().count(), 1);
 
-        let range = 0..3;
+        let token = iter.next().unwrap();
 
-        for _ in range {
-            if let Some(token) = iter.next() {
-                println!("{token:?}");
-            }
-        }
+        println!("Parsed token {token:?}");
 
-        println!("\nEnd consume_plain_with_esc\n");
+        assert_eq!(token.kind(), TokenKind::Plain);
+        assert_eq!(token.spacing(), Spacing::None);
+
+        let start_pos = Position { line: 1, column: 1 };
+        let end_pos = Position {
+            line: 1,
+            column: 37,
+        };
+        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
+
+        let expect_output = "Some string * with escaped character";
+        assert_eq!(token.as_str(), expect_output);
+    }
+
+    #[test]
+    fn lex_plain_with_esc_begin() {
+        let input = "\\*This string has escape sequence at the beginning";
+        let lexer = input.lex();
+
+        let mut iter = lexer.into_iter();
+
+        assert_eq!(lexer.into_iter().count(), 1);
+
+        let token = iter.next().unwrap();
+
+        println!("Parsed token {token:?}");
+
+        assert_eq!(token.kind(), TokenKind::Plain);
+        assert_eq!(token.spacing(), Spacing::None);
+
+        let start_pos = Position { line: 1, column: 1 };
+        let end_pos = Position {
+            line: 1,
+            column: 50,
+        };
+        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
+
+        let expect_output = "*This string has escape sequence at the beginning";
+        assert_eq!(token.as_str(), expect_output);
     }
 }
