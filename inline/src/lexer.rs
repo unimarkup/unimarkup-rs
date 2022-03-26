@@ -191,7 +191,11 @@ impl IsKeyword for &str {
     }
 
     fn is_whitespace(&self) -> bool {
-        [" ", "\t"].contains(self)
+        // NOTE: multi-character grapheme is most probably not a whitespace
+        match self.chars().next() {
+            Some(character) => character.is_whitespace(),
+            None => false,
+        }
     }
 
     fn is_newline(&self) -> bool {
