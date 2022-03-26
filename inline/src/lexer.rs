@@ -14,13 +14,10 @@ pub trait Tokenize {
     }
 }
 
-impl<'a, T> Tokenize for T
-where
-    T: AsRef<str> + 'a,
-{
+impl<'a> Tokenize for &'a str {
     fn lex(&self) -> Lexer {
         Lexer {
-            input: self.as_ref(),
+            input: self,
             pos: Position { line: 0, column: 1 },
         }
     }
