@@ -254,7 +254,7 @@ impl IsKeyword for &str {
     }
 
     fn is_esc(&self) -> bool {
-        *self == "\\"
+        *self == Lexer::ESC
     }
 
     fn is_whitespace(&self) -> bool {
