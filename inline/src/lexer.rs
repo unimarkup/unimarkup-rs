@@ -226,11 +226,26 @@ impl<'a> Iterator for TokenIterator<'a> {
     }
 }
 
+/// Extension trait for graphemes (`&str`)
 trait IsKeyword {
+    /// Checks whether the grapheme is some Unimarkup Inline symbol.
+    /// e.g. "*" can be start of Unimarkup Italic or Bold.
     fn is_keyword(&self) -> bool;
+
+    /// Checks whether the grapheme is "\".
     fn is_esc(&self) -> bool;
+
+    /// Checks whether the grapheme is any of the whitespace characters.
     fn is_whitespace(&self) -> bool;
+
+    /// Checks whether the grapheme is Unix or Windows style newline.
     fn is_newline(&self) -> bool;
+
+    /// Checks whether the grapheme has any significance in escape sequence.
+    /// e.g. The lexer interprets "\ " as a Whitespace `Token`
+    fn is_significant_esc(&self) -> bool {
+        self.is_whitespace() || self.is_newline()
+    }
 }
 
 impl IsKeyword for &str {
