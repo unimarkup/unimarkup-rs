@@ -92,19 +92,14 @@ impl TokenIterator<'_> {
             // load next line into cache
             self.curr.extend(next_line.graphemes(true));
 
-            // update position
-            self.pos.line += 1;
-            self.pos.column = 1;
-
             // update index into current line
             self.index = 0;
 
+            self.pos.line += 1;
+            self.pos.column = 1;
+
             return true;
         }
-
-        // two cases:
-        // 1. next grapheme is keyword -> generate some token
-        // 2. next grapheme is not a keyword -> it is plain text
 
         false
     }
@@ -122,12 +117,11 @@ impl TokenIterator<'_> {
 
         while let Some(grapheme) = self.curr.get(self.index) {
             if grapheme.is_esc() || grapheme.is_keyword() {
-                // whitespace and newline is special case
-                // rest of characters can be consumed
-                match self.curr.get(self.index) {
-                    Some(symbol) if symbol.is_newline() || symbol.is_whitespace() => break,
+                match self.curr.get(self.index + 1) {
+                    // character can be consumed if not significant in escape sequence
+                    Some(symbol) if symbol.is_significant_esc() => break,
                     Some(symbol) => {
-                        self.index += 1;
+                        self.index += 2; // consume and skip the symbol in next iteration
                         content.push_str(symbol);
                         continue;
                     }
@@ -139,14 +133,39 @@ impl TokenIterator<'_> {
             }
         }
 
-        let mut end_pos = self.pos;
-        end_pos.column += self.index;
+        // NOTE: index points to the NEXT character, token Span is UP TO that character
+        let offset = self.index - self.pos.column;
+        let end_pos = self.pos + (0, offset);
 
-        let token = Token::new(TokenKind::Plain)
+        let token = TokenBuilder::new(TokenKind::Plain)
             .with_content(content)
             .span(Span::from((start_pos, end_pos)))
-            .space(Spacing::None);
+            .space(Spacing::None)
+            .build();
 
+        Some(token)
+    }
+
+    fn lex_escape_seq(&mut self) -> Option<Token> {
+        let grapheme = self.curr.get(self.index)?;
+
+        // NOTE: index here is pointing to the current grapheme
+        let start_pos = self.pos; // escape character
+        let end_pos = start_pos + (0, grapheme.len());
+
+        let token_kind = if grapheme.is_whitespace() {
+            TokenKind::Whitespace
+        } else {
+            TokenKind::Newline
+        };
+
+        let token = TokenBuilder::new(token_kind)
+            .with_content(String::from(*grapheme))
+            .span(Span::from((start_pos, end_pos)))
+            .space(Spacing::None)
+            .build();
+
+        self.index += 1;
         Some(token)
     }
 }
@@ -155,16 +174,49 @@ impl<'a> Iterator for TokenIterator<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // NOTE: pos.line is updated only in load_next_line()
+        self.pos.column = self.index + 1;
+
         if self.is_end_of_line() && !self.load_next_line() {
             return None;
         }
 
+        // three cases:
+        // 1. next grapheme is keyword -> generate some token
+        // 2. next grapheme is '\' -> handle escape sequence
+        // 3. next grapheme is not a keyword -> it is plain text
+
         if let Some(grapheme) = self.curr.get(self.index) {
             if grapheme.is_keyword() {
                 // TODO: lex the keyword
-                todo!()
+                println!("keyword found: {grapheme}");
             } else if grapheme.is_esc() {
-                // TODO: lex escape
+                // Three cases:
+                // 1. next character has significance in escape sequence -> some token
+                // 2. next character has no significance -> lex as plain text
+                // 3. there is no next character. That implies that we've got to end of line, which
+                //    implies that the character following '\' is either '\n' or '\r\t' -> lex newline
+
+                match self.curr.get(self.index + 1) {
+                    Some(grapheme) if grapheme.is_significant_esc() => {
+                        self.index += 1;
+                        return self.lex_escape_seq();
+                    }
+                    Some(_) => return self.lex_plain(),
+                    None => {
+                        // is end of line -> newline token!
+                        let start_pos = self.pos + (0, 1);
+                        let end_pos = start_pos;
+
+                        let token = TokenBuilder::new(TokenKind::Newline)
+                            .span(Span::from((start_pos, end_pos)))
+                            .space(Spacing::None)
+                            .with_content(String::from("\n"))
+                            .build();
+
+                        return Some(token);
+                    }
+                }
             } else {
                 return self.lex_plain();
             }
