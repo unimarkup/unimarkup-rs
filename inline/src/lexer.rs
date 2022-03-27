@@ -367,4 +367,110 @@ mod tests {
         let expect_output = "*This string has escape sequence at the beginning";
         assert_eq!(token.as_str(), expect_output);
     }
+
+    #[test]
+    fn lex_simple_space() {
+        let input = "\\ ";
+        let lexer = input.lex();
+
+        let mut iter = lexer.into_iter();
+
+        let token = iter.next().unwrap();
+
+        assert_eq!(token.kind(), TokenKind::Whitespace);
+
+        let start_pos = Position { line: 1, column: 1 };
+        let end_pos = start_pos + (0, 1);
+        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
+
+        assert_eq!(token.spacing(), Spacing::None);
+        assert_eq!(token.as_str(), " ");
+    }
+
+    #[test]
+    fn lex_tab_whitespace() {
+        let input = "\\\t";
+        let lexer = input.lex();
+
+        println!("Input: {input}");
+
+        let grapheme = input.graphemes(true).next().unwrap();
+
+        println!("Grapheme: {grapheme}");
+
+        let mut iter = lexer.into_iter();
+
+        let token = iter.next().unwrap();
+
+        assert_eq!(token.kind(), TokenKind::Whitespace);
+
+        let start_pos = Position { line: 1, column: 1 };
+        let end_pos = start_pos + (0, 1);
+        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
+
+        assert_eq!(token.spacing(), Spacing::None);
+        assert_eq!(token.as_str(), "\t");
+    }
+
+    #[test]
+    fn lex_newline() {
+        let input = "\\\n";
+        let lexer = input.lex();
+
+        let mut iter = lexer.into_iter();
+
+        let token = iter.next().unwrap();
+
+        assert_eq!(token.kind(), TokenKind::Newline);
+
+        let start_pos = Position { line: 1, column: 2 };
+        let end_pos = start_pos;
+        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
+
+        assert_eq!(token.spacing(), Spacing::None);
+        assert_eq!(token.as_str(), "\n");
+    }
+
+    #[test]
+    fn lex_whitespace_plain_combined() {
+        let input = "This is some text \\ with whitespace token";
+        let lexer = input.lex();
+
+        assert_eq!(lexer.iter().count(), 3);
+
+        let mut iter = lexer.iter();
+
+        // PLAIN
+        let first = iter.next().unwrap();
+
+        assert_eq!(first.kind(), TokenKind::Plain);
+        assert_eq!(first.spacing(), Spacing::None);
+
+        let start = Position { line: 1, column: 1 };
+        let end = start + (0, 18 - 1);
+        assert_eq!(first.span(), Span::from((start, end)));
+        assert_eq!(first.as_str(), "This is some text ");
+
+        // WHITESPACE
+        let second = iter.next().unwrap();
+
+        assert_eq!(second.kind(), TokenKind::Whitespace);
+        assert_eq!(second.spacing(), Spacing::None);
+
+        let start = end + (0, 1);
+        let end = start + (0, 1);
+        assert_eq!(second.span(), Span::from((start, end)));
+        assert_eq!(second.as_str(), " ");
+
+        // PLAIN
+        let third = iter.next().unwrap();
+
+        assert_eq!(third.kind(), TokenKind::Plain);
+        assert_eq!(third.spacing(), Spacing::None);
+
+        let start = end + (0, 1);
+        let end = start + (0, 21 - 1);
+        assert_eq!(third.span(), Span::from((start, end)));
+        assert_eq!(third.as_str(), "with whitespace token");
+    }
 }
