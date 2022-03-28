@@ -104,6 +104,13 @@ impl Token {
 pub enum TokenKind {
     Bold,
     Italic,
+    ItalicBold,
+    Underline,
+    Subscript,
+    UnderlineCombo,
+    Superscript,
+    Overline,
+    Strikethrough,
     Newline,
     Whitespace,
     Plain,
@@ -113,10 +120,17 @@ impl TokenKind {
     fn as_str(&self) -> &str {
         match *self {
             TokenKind::Bold => "**",
+            TokenKind::ItalicBold => "***",
             TokenKind::Italic => "*",
             TokenKind::Newline => "\n",
             TokenKind::Plain => "",
             TokenKind::Whitespace => " ",
+            TokenKind::Underline => "__",
+            TokenKind::Subscript => "_",
+            TokenKind::Superscript => "^",
+            TokenKind::UnderlineCombo => "___",
+            TokenKind::Overline => "‾",
+            TokenKind::Strikethrough => "~~",
         }
     }
 }
