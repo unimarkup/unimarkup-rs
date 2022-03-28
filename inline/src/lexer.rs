@@ -626,4 +626,503 @@ mod tests {
         assert_eq!(third.span(), Span::from((start, end)));
         assert_eq!(third.as_str(), "with whitespace token");
     }
+
+    #[test]
+    fn lex_bold() {
+        let input = "**This is text in bold** whereas this isn't.";
+
+        let lexer = input.lex();
+
+        let mut iter = lexer.iter();
+
+        assert_eq!(lexer.iter().count(), 4);
+
+        let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 1);
+
+        assert_token! {
+            token with
+                TokenKind::Bold,
+                Spacing::None,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 20 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "This is text in bold"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 2 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Bold,
+                Spacing::Post,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 20 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                " whereas this isn't."
+        };
+    }
+
+    #[test]
+    fn lex_bold_italic_combined() {
+        let input = "****bold and italic***";
+
+        let lexer = input.lex();
+
+        let iter = lexer.iter();
+
+        assert_eq!(iter.count(), 3);
+
+        for token in &lexer {
+            println!("{token:#?}");
+        }
+    }
+
+    #[test]
+    fn lex_underline() {
+        let mut iter = "__This is underlined__".lex().iter();
+
+        let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 2 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Underline,
+                Spacing::None,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 18 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "This is underlined"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 2 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Underline,
+                Spacing::None,
+                (start, end)
+        };
+    }
+
+    #[test]
+    fn lex_subscript() {
+        let mut iter = "_This is underlined_".lex().iter();
+
+        let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 1 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Subscript,
+                Spacing::None,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 18 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "This is underlined"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 1 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Subscript,
+                Spacing::None,
+                (start, end)
+        };
+    }
+
+    #[test]
+    fn lex_underline_subscript() {
+        let mut iter = "___Bla some__ text_ hehe _bla".lex().iter();
+
+        let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 3 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::UnderlineCombo,
+                Spacing::None,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 8 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "Bla some"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 2 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Underline,
+                Spacing::Post,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 5 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                " text"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 1 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Subscript,
+                Spacing::Post,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 6 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                " hehe "
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 1 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Subscript,
+                Spacing::Pre,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 3 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "bla"
+        };
+    }
+
+    #[test]
+    fn lex_overline() {
+        let input = "‾This is overlined‾";
+
+        let mut iter = input.lex().iter();
+
+        let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 1 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Overline,
+                Spacing::None,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 17 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "This is overlined"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 1 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Overline,
+                Spacing::None,
+                (start, end)
+        };
+    }
+
+    #[test]
+    fn lex_overline_too_long() {
+        let input = "‾‾This is overlined‾‾‾";
+
+        let mut iter = input.lex().iter();
+
+        let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 2 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "‾‾"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 17 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "This is overlined"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 3 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "‾‾‾"
+        };
+    }
+
+    #[test]
+    fn lex_superscript() {
+        let input = "^This is superscript^";
+
+        let mut iter = input.lex().iter();
+
+        let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 1 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Superscript,
+                Spacing::None,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 19 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "This is superscript"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 1 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Superscript,
+                Spacing::None,
+                (start, end)
+        };
+    }
+
+    #[test]
+    fn lex_superscript_too_long() {
+        let input = "^^This is superscript^^^";
+
+        let mut iter = input.lex().iter();
+
+        let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 2 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "^^"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 19 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "This is superscript"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 3 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "^^^"
+        };
+    }
+
+    #[test]
+    fn lex_strikethrough() {
+        let input = "~~This is strikethrough~~";
+
+        let mut iter = input.lex().iter();
+
+        let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 2 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Strikethrough,
+                Spacing::None,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 21 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "This is strikethrough"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 2 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Strikethrough,
+                Spacing::None,
+                (start, end)
+        };
+    }
+
+    #[test]
+    fn lex_strikethrough_too_long() {
+        let input = "~This is strikethrough~~~";
+
+        let mut iter = input.lex().iter();
+
+        let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 1 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "~"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 21 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "This is strikethrough"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 3 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "~~~"
+        };
+    }
 }
