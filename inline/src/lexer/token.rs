@@ -159,28 +159,6 @@ impl Default for Position {
     }
 }
 
-impl Add for Position {
-    type Output = Position;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Position {
-            line: self.line + rhs.line,
-            column: self.column + rhs.column,
-        }
-    }
-}
-
-impl Add<(usize, usize)> for Position {
-    type Output = Self;
-
-    fn add(self, (line, column): (usize, usize)) -> Self::Output {
-        Self {
-            line: self.line + line,
-            column: self.column + column,
-        }
-    }
-}
-
 impl AddAssign for Position {
     fn add_assign(&mut self, rhs: Self) {
         self.line += rhs.line;
@@ -195,25 +173,15 @@ impl AddAssign<(usize, usize)> for Position {
     }
 }
 
-impl Sub for Position {
+impl<T> Add<T> for Position
+where
+    Position: AddAssign<T>,
+{
     type Output = Position;
 
-    fn sub(self, rhs: Self) -> Self::Output {
-        Position {
-            line: self.line - rhs.line,
-            column: self.column - rhs.column,
-        }
-    }
-}
-
-impl Sub<(usize, usize)> for Position {
-    type Output = Self;
-
-    fn sub(self, (line, column): (usize, usize)) -> Self::Output {
-        Self {
-            line: self.line - line,
-            column: self.column - column,
-        }
+    fn add(mut self, rhs: T) -> Self::Output {
+        self += rhs;
+        self
     }
 }
 
@@ -228,5 +196,17 @@ impl SubAssign<(usize, usize)> for Position {
     fn sub_assign(&mut self, (line, column): (usize, usize)) {
         self.line -= line;
         self.column -= column;
+    }
+}
+
+impl<T> Sub<T> for Position
+where
+    Position: SubAssign<T>,
+{
+    type Output = Position;
+
+    fn sub(mut self, rhs: T) -> Self::Output {
+        self -= rhs;
+        self
     }
 }
