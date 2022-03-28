@@ -98,6 +98,13 @@ impl Token {
     pub fn span(&self) -> Span {
         self.span
     }
+
+    pub fn into_plain(self) -> Self {
+        Self {
+            kind: TokenKind::Plain,
+            ..self
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
