@@ -135,6 +135,58 @@ impl Default for Spacing {
     }
 }
 
+impl AddAssign for Spacing {
+    fn add_assign(&mut self, rhs: Self) {
+        match self {
+            Spacing::Both => {}
+            Spacing::None => *self = rhs,
+            Spacing::Pre => match rhs {
+                Spacing::Post | Spacing::Both => *self = Spacing::Both,
+                _ => {}
+            },
+            Spacing::Post => match rhs {
+                Spacing::Pre | Spacing::Both => *self = Spacing::Both,
+                _ => {}
+            },
+        };
+    }
+}
+
+impl SubAssign for Spacing {
+    fn sub_assign(&mut self, rhs: Self) {
+        match self {
+            Spacing::Both => *self = Spacing::None,
+            Spacing::None => {}
+            Spacing::Pre => match rhs {
+                Spacing::Pre | Spacing::Both => *self = Spacing::None,
+                _ => {}
+            },
+            Spacing::Post => match rhs {
+                Spacing::Post | Spacing::Both => *self = Spacing::None,
+                _ => {}
+            },
+        };
+    }
+}
+
+impl Add for Spacing {
+    type Output = Self;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self += rhs;
+        self
+    }
+}
+
+impl Sub for Spacing {
+    type Output = Self;
+
+    fn sub(mut self, rhs: Self) -> Self::Output {
+        self -= rhs;
+        self
+    }
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
     start: Position,
