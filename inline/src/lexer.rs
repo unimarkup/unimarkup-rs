@@ -1,6 +1,6 @@
 mod token;
 
-use std::str::Lines;
+use std::{cmp::Ordering, str::Lines};
 
 use unicode_segmentation::*;
 
@@ -34,6 +34,8 @@ impl<'a> Lexer<'a> {
     const ULINE: &'static str = "_";
     const CARET: &'static str = "^";
     const TICK: &'static str = "`";
+    const OLINE: &'static str = "‾";
+    const TILDE: &'static str = "~";
 
     pub fn iter(&self) -> TokenIterator<'a> {
         TokenIterator {
@@ -53,6 +55,11 @@ impl<'a> IntoIterator for &'a Lexer<'a> {
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
+}
+
+enum Content {
+    Store,
+    Auto,
 }
 
 pub struct TokenIterator<'a> {
@@ -85,6 +92,145 @@ impl TokenIterator<'_> {
         }
 
         false
+    }
+
+    fn lex_keyword(&mut self) -> Option<Token> {
+        let first = self.curr.get(self.index)?;
+
+        // possible options:
+        // - '*' -> Italic, Bold or both
+        // - '_' -> Underline, Subscript or both
+        // - '‾' -> Overline,
+        // - '~' -> Strikethrough
+        // - '^' -> Superscript
+        //
+        // NOT YET IMPLEMENTED :
+        // - '`' -> Verbatim
+        // - '|' -> Highlight
+        // - '"' -> Quote
+        // - '$' -> Math
+        // - ":" -> Custom Emoji, e.g. ::heart::
+        // - '[' | ']' -> OpenBracket, CloseBracket
+        // - '(' | ')' -> OpenParens, CloseParens
+        // - '{' | '}' -> OpenBrace, CloseBrace
+        // ... and more
+
+        match *first {
+            Lexer::STAR => return self.lex_italic_bold(),
+            Lexer::ULINE => return self.lex_underline_subscript(),
+            Lexer::OLINE => return self.lex_overline(),
+            Lexer::CARET => return self.lex_token(Lexer::CARET, 1, TokenKind::Superscript),
+            Lexer::TILDE => return self.lex_token(Lexer::TILDE, 2, TokenKind::Strikethrough),
+            _ => {}
+        }
+
+        None
+    }
+
+    fn lex_token(&mut self, symbol: &str, len: usize, kind: TokenKind) -> Option<Token> {
+        let token = self.lex_by_symbol(symbol, Content::Auto, |lexed_len| {
+            match lexed_len.cmp(&len) {
+                Ordering::Equal => kind,
+                _ => TokenKind::Plain,
+            }
+        });
+
+        Some(token)
+    }
+
+    fn lex_italic_bold(&mut self) -> Option<Token> {
+        let token = self.lex_by_symbol(Lexer::STAR, Content::Store, |len| match len {
+            1 => TokenKind::Italic,
+            2 => TokenKind::Bold,
+            _ => TokenKind::ItalicBold,
+        });
+
+        Some(token)
+    }
+
+    fn lex_underline_subscript(&mut self) -> Option<Token> {
+        let token = self.lex_by_symbol(Lexer::ULINE, Content::Store, |len| match len {
+            2 => TokenKind::Underline,
+            1 => TokenKind::Subscript,
+            _ => TokenKind::UnderlineCombo,
+        });
+
+        Some(token)
+    }
+
+    fn lex_overline(&mut self) -> Option<Token> {
+        let token = self.lex_by_symbol(Lexer::OLINE, Content::Auto, |len| -> TokenKind {
+            match len {
+                1 => TokenKind::Overline,
+                _ => TokenKind::Plain,
+            }
+        });
+
+        Some(token)
+    }
+
+    fn lex_by_symbol<F>(&mut self, symbol: &str, content_option: Content, kind_from_len: F) -> Token
+    where
+        F: Fn(usize) -> TokenKind,
+    {
+        let mut pos = self.index;
+
+        loop {
+            match self.curr.get(pos) {
+                Some(grapheme) if *grapheme == symbol => {
+                    pos += 1;
+                }
+                _ => break,
+            }
+        }
+
+        let len = pos - self.index;
+
+        let kind = kind_from_len(len);
+        let start = self.pos;
+        let end = start + (0, len - 1);
+
+        let mut spacing = Spacing::None;
+
+        if self.is_whitespace_at_offs(-1) {
+            spacing += Spacing::Pre;
+        }
+        if self.is_whitespace_at_offs(len as isize) {
+            spacing += Spacing::Post;
+        }
+
+        let mut token = TokenBuilder::new(kind)
+            .span(Span::from((start, end)))
+            .space(spacing);
+
+        let store_content = match content_option {
+            Content::Store => true,
+            Content::Auto => kind == TokenKind::Plain,
+        };
+
+        if store_content {
+            let content = self.curr[self.index..pos].concat();
+            token = token.with_content(content);
+        }
+
+        self.index = pos;
+
+        token.build()
+    }
+
+    /// Check if character at cursor position with offset is whitespace.
+    fn is_whitespace_at_offs(&self, offset: isize) -> bool {
+        if offset < 0 && offset.abs() as usize > self.index {
+            false
+        } else {
+            let pos = if offset < 0 {
+                self.index - offset.abs() as usize
+            } else {
+                self.index + offset as usize
+            };
+
+            self.curr.get(pos).map_or(false, |ch| ch.is_whitespace())
+        }
     }
 
     fn lex_plain(&mut self) -> Option<Token> {
@@ -173,8 +319,7 @@ impl<'a> Iterator for TokenIterator<'a> {
 
         if let Some(grapheme) = self.curr.get(self.index) {
             if grapheme.is_keyword() {
-                // TODO: lex the keyword
-                println!("keyword found: {grapheme}");
+                return self.lex_keyword();
             } else if grapheme.is_esc() {
                 // Three cases:
                 // 1. next character has significance in escape sequence -> some token
@@ -235,7 +380,15 @@ trait IsKeyword {
 
 impl IsKeyword for &str {
     fn is_keyword(&self) -> bool {
-        [Lexer::STAR, Lexer::ULINE, Lexer::CARET, Lexer::TICK].contains(self)
+        [
+            Lexer::STAR,
+            Lexer::ULINE,
+            Lexer::OLINE,
+            Lexer::CARET,
+            Lexer::TICK,
+            Lexer::TILDE,
+        ]
+        .contains(self)
     }
 
     fn is_esc(&self) -> bool {
