@@ -23,23 +23,6 @@ impl<'a> Tokenize for &'a str {
     }
 }
 
-/*
- * This is a paragraph with \n newline inside
- *
- * OUTPUT: This is a paragraph with n newline inside
- *
- * .chars() -> Chars: Iterator
- *
- * \t, \n, \\, \*
- *
- * **Some text* bla**
- *
- * Bold, Plain, Italic
- *
- *
- *
- * */
-
 pub struct Lexer<'a> {
     input: &'a str,
     pos: Position,
