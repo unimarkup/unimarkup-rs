@@ -99,7 +99,9 @@ impl TokenIterator<'_> {
         // 4. any other grapheme -> consume into plain
 
         while let Some(grapheme) = self.curr.get(self.index) {
-            if grapheme.is_esc() || grapheme.is_keyword() {
+            if grapheme.is_keyword() {
+                break;
+            } else if grapheme.is_esc() {
                 match self.curr.get(self.index + 1) {
                     // character can be consumed if not significant in escape sequence
                     Some(symbol) if symbol.is_significant_esc() => break,
