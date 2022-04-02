@@ -1,8 +1,8 @@
-mod token;
-
 use std::{cmp::Ordering, str::Lines};
 
 use unicode_segmentation::*;
+
+mod token;
 
 pub use token::*;
 
