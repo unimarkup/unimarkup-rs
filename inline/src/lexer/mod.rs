@@ -516,18 +516,16 @@ mod tests {
         let mut iter = lexer.into_iter();
 
         let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 11 - 1);
 
-        assert_eq!(token.kind(), TokenKind::Plain);
-        assert_eq!(token.spacing(), Spacing::None);
-
-        let start_pos = Position::default();
-        let end_pos = Position {
-            line: 1,
-            column: 11,
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "Some string"
         };
-
-        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
-        assert_eq!(token.as_str(), "Some string");
     }
 
     #[test]
@@ -540,21 +538,18 @@ mod tests {
         assert_eq!(lexer.into_iter().count(), 1);
 
         let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 37 - 1);
 
         println!("Parsed token {token:?}");
 
-        assert_eq!(token.kind(), TokenKind::Plain);
-        assert_eq!(token.spacing(), Spacing::None);
-
-        let start_pos = Position { line: 1, column: 1 };
-        let end_pos = Position {
-            line: 1,
-            column: 37,
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "Some string * with escaped character"
         };
-        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
-
-        let expect_output = "Some string * with escaped character";
-        assert_eq!(token.as_str(), expect_output);
     }
 
     #[test]
@@ -570,18 +565,16 @@ mod tests {
 
         println!("Parsed token {token:?}");
 
-        assert_eq!(token.kind(), TokenKind::Plain);
-        assert_eq!(token.spacing(), Spacing::None);
+        let start = Position::default();
+        let end = start + (0, 50 - 1);
 
-        let start_pos = Position { line: 1, column: 1 };
-        let end_pos = Position {
-            line: 1,
-            column: 50,
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "*This string has escape sequence at the beginning"
         };
-        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
-
-        let expect_output = "*This string has escape sequence at the beginning";
-        assert_eq!(token.as_str(), expect_output);
     }
 
     #[test]
@@ -593,14 +586,16 @@ mod tests {
 
         let token = iter.next().unwrap();
 
-        assert_eq!(token.kind(), TokenKind::Whitespace);
+        let start = Position::default();
+        let end = start + (0, 2 - 1);
 
-        let start_pos = Position { line: 1, column: 1 };
-        let end_pos = start_pos + (0, 1);
-        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
-
-        assert_eq!(token.spacing(), Spacing::None);
-        assert_eq!(token.as_str(), " ");
+        assert_token! {
+            token with
+                TokenKind::Whitespace,
+                Spacing::None,
+                (start, end),
+                " "
+        };
     }
 
     #[test]
@@ -608,24 +603,20 @@ mod tests {
         let input = "\\\t";
         let lexer = input.lex();
 
-        println!("Input: {input}");
-
-        let grapheme = input.graphemes(true).next().unwrap();
-
-        println!("Grapheme: {grapheme}");
-
         let mut iter = lexer.into_iter();
 
         let token = iter.next().unwrap();
 
-        assert_eq!(token.kind(), TokenKind::Whitespace);
+        let start = Position::default();
+        let end = start + (0, 2 - 1);
 
-        let start_pos = Position { line: 1, column: 1 };
-        let end_pos = start_pos + (0, 1);
-        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
-
-        assert_eq!(token.spacing(), Spacing::None);
-        assert_eq!(token.as_str(), "\t");
+        assert_token! {
+            token with
+                TokenKind::Whitespace,
+                Spacing::None,
+                (start, end),
+                "\t"
+        };
     }
 
     #[test]
@@ -637,14 +628,16 @@ mod tests {
 
         let token = iter.next().unwrap();
 
-        assert_eq!(token.kind(), TokenKind::Newline);
+        let start = Position::default();
+        let end = start + (0, 2 - 1);
 
-        let start_pos = Position { line: 1, column: 2 };
-        let end_pos = start_pos;
-        assert_eq!(token.span(), Span::from((start_pos, end_pos)));
-
-        assert_eq!(token.spacing(), Spacing::None);
-        assert_eq!(token.as_str(), "\n");
+        assert_token! {
+            token with
+                TokenKind::Newline,
+                Spacing::None,
+                (start, end),
+                "\n"
+        };
     }
 
     #[test]
@@ -658,36 +651,42 @@ mod tests {
 
         // PLAIN
         let first = iter.next().unwrap();
-
-        assert_eq!(first.kind(), TokenKind::Plain);
-        assert_eq!(first.spacing(), Spacing::None);
-
-        let start = Position { line: 1, column: 1 };
+        let start = Position::default();
         let end = start + (0, 18 - 1);
-        assert_eq!(first.span(), Span::from((start, end)));
-        assert_eq!(first.as_str(), "This is some text ");
+
+        assert_token! {
+            first with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "This is some text "
+        };
 
         // WHITESPACE
         let second = iter.next().unwrap();
-
-        assert_eq!(second.kind(), TokenKind::Whitespace);
-        assert_eq!(second.spacing(), Spacing::None);
-
         let start = end + (0, 1);
-        let end = start + (0, 1);
-        assert_eq!(second.span(), Span::from((start, end)));
-        assert_eq!(second.as_str(), " ");
+        let end = start + (0, 2 - 1);
+
+        assert_token! {
+            second with
+                TokenKind::Whitespace,
+                Spacing::None,
+                (start, end),
+                " "
+        };
 
         // PLAIN
         let third = iter.next().unwrap();
-
-        assert_eq!(third.kind(), TokenKind::Plain);
-        assert_eq!(third.spacing(), Spacing::None);
-
         let start = end + (0, 1);
         let end = start + (0, 21 - 1);
-        assert_eq!(third.span(), Span::from((start, end)));
-        assert_eq!(third.as_str(), "with whitespace token");
+
+        assert_token! {
+            third with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "with whitespace token"
+        };
     }
 
     #[test]
@@ -1166,14 +1165,14 @@ mod tests {
 
         let token = iter.next().unwrap();
         let start = end + (0, 1);
-        let end = start + (0, 21 - 1);
+        let end = start + (0, 25 - 1);
 
         assert_token! {
             token with
                 TokenKind::Plain,
                 Spacing::None,
                 (start, end),
-                "This is strikethrough"
+                "This is not strikethrough"
         };
 
         let token = iter.next().unwrap();
