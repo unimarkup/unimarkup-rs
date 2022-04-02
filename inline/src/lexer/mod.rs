@@ -398,7 +398,7 @@ impl<'a> Iterator for TokenIterator<'a> {
                     Some(_) => return self.lex_plain(),
                     None => {
                         // is end of line -> newline token!
-                        let start_pos = self.pos + (0, 1);
+                        let start_pos = self.pos;
                         let end_pos = start_pos;
 
                         let token = TokenBuilder::new(TokenKind::Newline)
