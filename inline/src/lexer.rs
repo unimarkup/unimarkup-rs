@@ -65,6 +65,25 @@ pub(crate) enum Content {
     Auto,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(dead_code)]
+enum LexLength {
+    Unlimited,
+    Limited(usize),
+    Exact(usize),
+}
+
+impl LexLength {
+    #[allow(unused)]
+    pub(crate) fn allows_len(&self, len: usize) -> bool {
+        match *self {
+            LexLength::Unlimited => true,
+            LexLength::Limited(desired_len) => len <= desired_len,
+            LexLength::Exact(exact_len) => len == exact_len,
+        }
+    }
+}
+
 pub struct TokenIterator<'a> {
     lines: Lines<'a>,
     curr: Vec<&'a str>,
@@ -123,7 +142,13 @@ impl TokenIterator<'_> {
             Lexer::ULINE => return self.lex_underline_subscript(),
             Lexer::OLINE => return self.lex_overline(),
             Lexer::CARET => return self.lex_token(Lexer::CARET, 1, TokenKind::Superscript),
-            Lexer::TILDE => return self.lex_token(Lexer::TILDE, 2, TokenKind::Strikethrough),
+            Lexer::TILDE => {
+                return self.lex_token_exact(
+                    Lexer::TILDE,
+                    LexLength::Exact(2),
+                    TokenKind::Strikethrough,
+                )
+            }
             _ => {}
         }
 
@@ -137,6 +162,20 @@ impl TokenIterator<'_> {
                 _ => TokenKind::Plain,
             }
         });
+
+        Some(token)
+    }
+
+    fn lex_token_exact(&mut self, symbol: &str, len: LexLength, kind: TokenKind) -> Option<Token> {
+        let kind_from_len = |lexed_len| {
+            if len.allows_len(lexed_len) {
+                kind
+            } else {
+                TokenKind::Plain
+            }
+        };
+
+        let token = self.lex_token_with_len(symbol, Content::Auto, kind_from_len, len);
 
         Some(token)
     }
@@ -172,20 +211,44 @@ impl TokenIterator<'_> {
         Some(token)
     }
 
-    fn lex_by_symbol<F>(&mut self, symbol: &str, content_option: Content, kind_from_len: F) -> Token
-    where
-        F: Fn(usize) -> TokenKind,
-    {
+    fn find_symbol_end_pos(&self, symbol: &str, lex_len: LexLength) -> usize {
         let mut pos = self.index;
 
         loop {
             match self.curr.get(pos) {
-                Some(grapheme) if *grapheme == symbol => {
-                    pos += 1;
+                Some(grapheme) if *grapheme == symbol => pos += 1,
+                _ => break pos,
+            }
+
+            match lex_len {
+                LexLength::Limited(len) | LexLength::Exact(len) => {
+                    if pos - self.index == len {
+                        break pos;
+                    }
                 }
-                _ => break,
+                _ => continue,
             }
         }
+    }
+
+    fn lex_by_symbol<F>(&mut self, symbol: &str, content_option: Content, kind_from_len: F) -> Token
+    where
+        F: Fn(usize) -> TokenKind,
+    {
+        self.lex_token_with_len(symbol, content_option, kind_from_len, LexLength::Unlimited)
+    }
+
+    fn lex_token_with_len<F>(
+        &mut self,
+        symbol: &str,
+        content_option: Content,
+        kind_from_len: F,
+        lex_len: LexLength,
+    ) -> Token
+    where
+        F: Fn(usize) -> TokenKind,
+    {
+        let pos = self.find_symbol_end_pos(symbol, lex_len);
 
         let len = pos - self.index;
 
