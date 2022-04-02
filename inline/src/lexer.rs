@@ -123,8 +123,8 @@ impl TokenIterator<'_> {
         // - '*' -> Italic, Bold or both
         // - '_' -> Underline, Subscript or both
         // - '‾' -> Overline,
-        // - '~' -> Strikethrough
         // - '^' -> Superscript
+        // - '~' -> Strikethrough
         //
         // NOT YET IMPLEMENTED :
         // - '`' -> Verbatim
@@ -1148,7 +1148,7 @@ mod tests {
 
     #[test]
     fn lex_strikethrough_too_long() {
-        let input = "~This is strikethrough~~~";
+        let input = "~This is not strikethrough~~~";
 
         let mut iter = input.lex().iter();
 
@@ -1178,14 +1178,24 @@ mod tests {
 
         let token = iter.next().unwrap();
         let start = end + (0, 1);
-        let end = start + (0, 3 - 1);
+        let end = start + (0, 2 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Strikethrough,
+                Spacing::None,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 1 - 1);
 
         assert_token! {
             token with
                 TokenKind::Plain,
                 Spacing::None,
-                (start, end),
-                "~~~"
+                (start, end)
         };
     }
 }
