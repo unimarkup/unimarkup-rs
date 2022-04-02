@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
+use super::Content;
+
 pub(crate) struct Invalid;
 pub(crate) struct Valid;
 
@@ -33,6 +35,24 @@ impl<K, S, W> TokenBuilder<K, S, W> {
     pub fn with_content(mut self, content: String) -> TokenBuilder<K, S, W> {
         self.content = Some(content);
         self
+    }
+
+    pub fn optional_content(
+        self,
+        content: &[&str],
+        content_option: Content,
+    ) -> TokenBuilder<K, S, W> {
+        let store_content = match content_option {
+            Content::Store => true,
+            Content::Auto => self.kind == TokenKind::Plain,
+            Content::Discard => false,
+        };
+
+        if store_content {
+            self.with_content(content.concat())
+        } else {
+            self
+        }
     }
 
     pub fn span(self, span: Span) -> TokenBuilder<K, Valid, W> {

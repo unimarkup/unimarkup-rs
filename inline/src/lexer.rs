@@ -57,8 +57,11 @@ impl<'a> IntoIterator for &'a Lexer<'a> {
     }
 }
 
-enum Content {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(dead_code)]
+pub(crate) enum Content {
     Store,
+    Discard,
     Auto,
 }
 
@@ -190,6 +193,19 @@ impl TokenIterator<'_> {
         let start = self.pos;
         let end = start + (0, len - 1);
 
+        let spacing = self.spacing_around(len);
+
+        let token_builder = TokenBuilder::new(kind)
+            .span(Span::from((start, end)))
+            .space(spacing)
+            .optional_content(&self.curr[self.index..pos], content_option);
+
+        self.index = pos;
+
+        token_builder.build()
+    }
+
+    fn spacing_around(&self, len: usize) -> Spacing {
         let mut spacing = Spacing::None;
 
         if self.is_whitespace_at_offs(-1) {
@@ -199,23 +215,7 @@ impl TokenIterator<'_> {
             spacing += Spacing::Post;
         }
 
-        let mut token = TokenBuilder::new(kind)
-            .span(Span::from((start, end)))
-            .space(spacing);
-
-        let store_content = match content_option {
-            Content::Store => true,
-            Content::Auto => kind == TokenKind::Plain,
-        };
-
-        if store_content {
-            let content = self.curr[self.index..pos].concat();
-            token = token.with_content(content);
-        }
-
-        self.index = pos;
-
-        token.build()
+        spacing
     }
 
     /// Check if character at cursor position with offset is whitespace.
