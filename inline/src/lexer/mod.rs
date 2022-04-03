@@ -1215,4 +1215,46 @@ mod tests {
                 (start, end)
         };
     }
+
+    #[test]
+    fn lex_late_highlight() {
+        let input = "|||||Some text";
+
+        let mut iter = input.lex().iter();
+
+        let token = iter.next().unwrap();
+        let start = Position::default();
+        let end = start + (0, 3 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "|||"
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 2 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Highlight,
+                Spacing::None,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 9 - 1);
+
+        assert_token! {
+            token with
+                TokenKind::Plain,
+                Spacing::None,
+                (start, end),
+                "Some text"
+        };
+    }
 }
