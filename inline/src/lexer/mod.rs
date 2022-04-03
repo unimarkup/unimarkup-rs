@@ -416,7 +416,7 @@ impl<'a> Iterator for TokenIterator<'a> {
                     None => {
                         // is end of line -> newline token!
                         let start_pos = self.pos;
-                        let end_pos = start_pos;
+                        let end_pos = start_pos + (0, 1);
 
                         let token = TokenBuilder::new(TokenKind::Newline)
                             .span(Span::from((start_pos, end_pos)))
