@@ -59,18 +59,14 @@ impl<'a> IntoIterator for &'a Lexer<'a> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[allow(dead_code)]
 pub(crate) enum Content {
     Store,
-    Discard,
     Auto,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[allow(dead_code)]
 enum LexLength {
     Unlimited,
-    Limited(usize),
     Exact(usize),
 }
 
@@ -79,7 +75,6 @@ impl LexLength {
     pub(crate) fn allows_len(&self, len: usize) -> bool {
         match *self {
             LexLength::Unlimited => true,
-            LexLength::Limited(desired_len) => len <= desired_len,
             LexLength::Exact(exact_len) => len == exact_len,
         }
     }
@@ -243,7 +238,7 @@ impl TokenIterator<'_> {
             }
 
             match lex_len {
-                LexLength::Limited(len) | LexLength::Exact(len) => {
+                LexLength::Exact(len) => {
                     if pos - self.index == len {
                         break pos;
                     }

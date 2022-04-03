@@ -45,7 +45,6 @@ impl<K, S, W> TokenBuilder<K, S, W> {
         let store_content = match content_option {
             Content::Store => true,
             Content::Auto => self.kind == TokenKind::Plain,
-            Content::Discard => false,
         };
 
         if store_content {
