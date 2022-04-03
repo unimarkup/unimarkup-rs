@@ -35,6 +35,7 @@ impl<'a> Lexer<'a> {
     const CARET: &'static str = "^";
     const TICK: &'static str = "`";
     const OLINE: &'static str = "‾";
+    const VLINE: &'static str = "|";
     const TILDE: &'static str = "~";
 
     pub fn iter(&self) -> TokenIterator<'a> {
@@ -149,6 +150,7 @@ impl TokenIterator<'_> {
                     TokenKind::Strikethrough,
                 )
             }
+            Lexer::VLINE => return self.lex_late_token(Lexer::VLINE, 2, TokenKind::Highlight),
             _ => {}
         }
 
@@ -188,6 +190,26 @@ impl TokenIterator<'_> {
         });
 
         Some(token)
+    }
+
+    fn lex_late_token(&mut self, symbol: &str, len: usize, kind: TokenKind) -> Option<Token> {
+        // if symbol repeats itself more than len times, then leave later symbols as the token
+        // itself, and use all of the earlier symbols as plain.
+        // Example: |||| -> First 2 || will be lexed as plain, the later one as "Highlight"
+        // token (at next iteration)
+
+        let end_pos = self.find_symbol_end_pos(symbol, LexLength::Unlimited);
+        let lexed_len = end_pos - self.index;
+
+        let mut to_lex_len = len;
+        let mut kind = kind;
+
+        if lexed_len != len {
+            to_lex_len = lexed_len - len;
+            kind = TokenKind::Plain;
+        }
+
+        self.lex_token_exact(symbol, LexLength::Exact(to_lex_len), kind)
     }
 
     fn lex_underline_subscript(&mut self) -> Option<Token> {
@@ -450,6 +472,7 @@ impl IsKeyword for &str {
             Lexer::CARET,
             Lexer::TICK,
             Lexer::TILDE,
+            Lexer::VLINE,
         ]
         .contains(self)
     }

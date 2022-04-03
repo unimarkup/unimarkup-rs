@@ -138,6 +138,7 @@ pub enum TokenKind {
     Superscript,
     Overline,
     Strikethrough,
+    Highlight,
     Newline,
     Whitespace,
     Plain,
@@ -156,6 +157,7 @@ impl TokenKind {
             TokenKind::Subscript => "_",
             TokenKind::Superscript => "^",
             TokenKind::UnderlineCombo => "___",
+            TokenKind::Highlight => "||",
             TokenKind::Overline => "‾",
             TokenKind::Strikethrough => "~~",
         }
