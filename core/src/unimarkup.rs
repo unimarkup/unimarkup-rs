@@ -13,8 +13,10 @@ use crate::unimarkup_block::UnimarkupBlockKind;
 
 /// Struct representing a Unimarkup document that can be rendered to supported output formats.
 pub struct UnimarkupDocument {
-    pub(crate) elements: Vec<UnimarkupBlockKind>,
-    pub(crate) config: Config,
+    /// Elements of a Unimarkup document
+    pub elements: Vec<UnimarkupBlockKind>,
+    /// Configuration used to create this Unimarkup document
+    pub config: Config,
 }
 
 impl UnimarkupDocument {
