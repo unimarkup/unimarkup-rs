@@ -9,15 +9,41 @@ pub fn test_parser_with_offset__newline_between_plain() {
   let input = "line1\nline2";
   let expected = [
     InlineKind::Plain(FlatInline{ 
-      content: "line1 line2".to_string(),
+      content: "line1".to_string(),
       span: Span {
         start: Position{
           line: offset.line,
           column: offset.column
         },
         end: Position{
+          line: offset.line,
+          column: offset.column + 5
+        }
+      }
+    }),
+    InlineKind::PlainNewLine(FlatInline{ 
+      content: " ".to_string(),
+      span: Span {
+        start: Position{
+          line: offset.line,
+          column: offset.column + 5
+        },
+        end: Position{
+          line: offset.line,
+          column: offset.column + 5
+        }
+      }
+    }),
+    InlineKind::Plain(FlatInline{ 
+      content: "line2".to_string(),
+      span: Span {
+        start: Position{
           line: offset.line + 1,
-          column: 4
+          column: 0
+        },
+        end: Position{
+          line: offset.line + 1,
+          column: 5
         }
       }
     }),

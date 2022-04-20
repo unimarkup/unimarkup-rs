@@ -29,7 +29,8 @@ impl Render for Inline {
           output.push_str(&verbatim.content);
           output.push_str("</pre>");
         },
-        InlineKind::Plain(plain) => {
+        InlineKind::Plain(plain)
+        | InlineKind::PlainNewLine(plain) => {
           output.push_str(&plain.content);
         },
         InlineKind::EscapedNewLine(_) => {

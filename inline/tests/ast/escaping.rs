@@ -15,7 +15,7 @@ pub fn test_parser__escape_space() {
         },
         end: Position{
           line: 0,
-          column: 1
+          column: 2
         }
       }
     }),
@@ -39,7 +39,7 @@ pub fn test_parser__escape_plain() {
         },
         end: Position{
           line: 0,
-          column: 5 // note that the backslash is taken into account
+          column: 6 // note that the backslash is taken into account
         }
       }
     }),
@@ -63,7 +63,7 @@ pub fn test_parser__escape_newline_after_plain() {
         },
         end: Position{
           line: 0,
-          column: 4
+          column: 5
         }
       }
     }),
@@ -76,7 +76,7 @@ pub fn test_parser__escape_newline_after_plain() {
         },
         end: Position{
           line: 0,
-          column: 6
+          column: 7
         }
       }
     }),

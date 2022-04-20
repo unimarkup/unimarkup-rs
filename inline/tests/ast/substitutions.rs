@@ -15,7 +15,7 @@ pub fn test_parser__arrow_substitution() {
         },
         end: Position{
           line: 0,
-          column: 2
+          column: 3
         }
       }
     }),
@@ -39,7 +39,7 @@ pub fn test_parser__emoji_substitution_inside_text() {
         },
         end: Position{
           line: 0,
-          column: 20
+          column: 21
         }
       }
     }),
@@ -63,7 +63,7 @@ pub fn test_parser__smile_emoji_substitution() {
         },
         end: Position{
           line: 0,
-          column: 19
+          column: 20
         }
       }
     }),
@@ -87,7 +87,7 @@ pub fn test_parser__expressionless_emoji_substitution() {
         },
         end: Position{
           line: 0,
-          column: 28
+          column: 29
         }
       }
     }),

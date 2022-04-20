@@ -15,7 +15,7 @@ pub fn test_parser__plain_before_italic() {
         },
         end: Position{
           line: 0,
-          column: 10
+          column: 11
         }
       }
     }),
@@ -29,7 +29,7 @@ pub fn test_parser__plain_before_italic() {
           },
           end: Position{
             line: 0,
-            column: 17
+            column: 18
           }
         }
       })],
@@ -40,7 +40,7 @@ pub fn test_parser__plain_before_italic() {
         },
         end: Position{
           line: 0,
-          column: 18
+          column: 19
         }
       }
     })

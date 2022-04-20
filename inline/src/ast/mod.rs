@@ -51,6 +51,8 @@ pub enum InlineKind {
   Verbatim(FlatInline),
   /// Representing plain text.
   Plain(FlatInline),
+  /// Representing newline in the original content that is treated as normal whitespace.
+  PlainNewLine(FlatInline),
   /// Representing excplicit newlines.
   EscapedNewLine(FlatInline),
   /// Representing explicit spaces.
@@ -105,7 +107,8 @@ impl FlattenInlineKind for InlineKind {
         s.push_str(TokenKind::VerbatimClose.as_str());
         s
       },
-      InlineKind::Plain(flat) => {
+      InlineKind::Plain(flat)
+      | InlineKind::PlainNewLine(flat) => {
         flat.content
       },
       InlineKind::EscapedNewLine(flat)

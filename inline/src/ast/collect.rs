@@ -37,7 +37,7 @@ pub(crate) fn collect_until(tokens: &mut Tokens, token_kind: TokenKind) -> Inlin
   let mut prev_token_kind: TokenKind = TokenKind::NewLine; // important to start with space or newline for substitutions
 
   while let Some(mut token) = tokens.pop() {
-    end = Position{ line: token.position.line, column: token.position.column + token.length() - 1 }; // -1 to use last grapheme as end position
+    end = Position{ line: token.position.line, column: token.position.column + token.length() }; // -1 to use last grapheme as end position
     
     if token.kind == token_kind {
       return InlineSection{ content: inline, end };
@@ -114,10 +114,15 @@ pub(crate) fn collect_until(tokens: &mut Tokens, token_kind: TokenKind) -> Inlin
           inline.push(InlineKind::Plain(flat));
         }
       },
-      TokenKind::NewLine
-      | TokenKind::Space => {
-        // Newline and space are converted to single ascii whitespace
+      TokenKind::NewLine => {
+        let flat = FlatInline{ 
+          content: " ".to_string(),
+          span: Span { start: token.position, end }
+        };
 
+        inline.push(InlineKind::PlainNewLine(flat));
+      },
+      TokenKind::Space => {
         let flat = FlatInline{ 
           content: " ".to_string(),
           span: Span { start: token.position, end }
