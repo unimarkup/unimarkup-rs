@@ -262,7 +262,7 @@ fn try_closing_fixated_token(tokenized: &mut Tokenized, next_token_is_space_or_n
               }
             } else {
               last.kind = TokenKind::ItalicOpen;
-              tokenized.open_tokens.insert(last.kind, tokenized.open_tokens.len());
+              tokenized.open_tokens.insert(last.kind, tokenized.tokens.len());
             }
             tokenized.tokens.push(last);
             return;
@@ -288,9 +288,11 @@ fn try_closing_fixated_token(tokenized: &mut Tokenized, next_token_is_space_or_n
 
     tokenized.tokens.push(last);
 
-    for (kind, index) in &tokenized.open_tokens {
+    for (kind, index) in &tokenized.open_tokens.clone() {
       if *index < open_index {
         updated_open_tokens.insert(*kind, *index);
+      } else if tokenized.tokens.len() > *index {
+        try_plain_token_merge(tokenized, *index);
       }
     }
     tokenized.open_tokens = updated_open_tokens;
@@ -490,32 +492,11 @@ fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
           tokenized.tokens.push(combined_open_token);
         }
       } else if last.kind == TokenKind::ItalicClose {
-        if tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen) {
+        if tokenized.open_tokens.contains_key(&TokenKind::BoldItalicOpen)
+          || tokenized.open_tokens.contains_key(&TokenKind::BoldOpen) {
           last.kind = TokenKind::BoldClose;
           last.content.push_str(grapheme);
           tokenized.tokens.push(last);
-        } else if let Some(bold_index) = tokenized.open_tokens.get(&TokenKind::BoldOpen) {
-          match tokenized.open_tokens.get(&TokenKind::ItalicOpen) {
-            Some(italic_index) => {
-              if italic_index < bold_index {
-                last.kind = TokenKind::BoldClose;
-                last.content.push_str(grapheme);
-                tokenized.tokens.push(last);
-              } else {
-                last.kind = TokenKind::ItalicClose;
-                tokenized.cur_pos.column += last.length();
-                tokenized.tokens.push(last);
-                tokenized.tokens.push(Token { 
-                  kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos 
-                })
-              }
-            },
-            None => { 
-              last.kind = TokenKind::BoldClose;
-              last.content.push_str(grapheme); 
-              tokenized.tokens.push(last);
-            },
-          }
         } else {
           last.kind = TokenKind::BoldOpen;
           last.content.push_str(grapheme);
@@ -527,11 +508,41 @@ fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
           last.kind = TokenKind::BoldItalicClose;
           tokenized.tokens.push(last);
         } else {
-          // Handles `**bold***italic*` -> [bo]bold[bc][io]italic[ic]
-          tokenized.cur_pos.column += last.length();
-          tokenized.tokens.push(last);
-          let new_token = Token{ kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
-          tokenized.tokens.push(new_token);
+          match tokenized.open_tokens.get(&TokenKind::ItalicOpen) {
+            Some(italic_index) => {
+              let bold_index = tokenized.open_tokens.get(&TokenKind::BoldOpen).unwrap();
+              if italic_index < bold_index {
+                last.kind = TokenKind::BoldClose;
+                last.content = TokenKind::BoldClose.as_str().to_string();
+                tokenized.cur_pos.column += last.length();
+                tokenized.tokens.push(last);
+                let new_token = Token{
+                  kind: TokenKind::ItalicClose, 
+                  content: TokenKind::ItalicClose.as_str().to_string(),
+                  position: tokenized.cur_pos
+                };
+                tokenized.tokens.push(new_token);
+              } else {
+                last.kind = TokenKind::ItalicClose;
+                last.content = TokenKind::ItalicClose.as_str().to_string();
+                tokenized.cur_pos.column += last.length();
+                tokenized.tokens.push(last);
+                let new_token = Token{
+                  kind: TokenKind::BoldClose, 
+                  content: TokenKind::BoldClose.as_str().to_string(),
+                  position: tokenized.cur_pos
+                };
+                tokenized.tokens.push(new_token);
+              }
+            },
+            None => {
+              // Handles `**bold***italic*` -> [bo]bold[bc][io]italic[ic]
+              tokenized.cur_pos.column += last.length();
+              tokenized.tokens.push(last);
+              let new_token = Token{ kind: TokenKind::ItalicOpen, content: grapheme.to_string(), position: tokenized.cur_pos };
+              tokenized.tokens.push(new_token);
+            }
+          }
         }
       } else if last.kind == TokenKind::BoldItalicClose {
         // Handles `***bold & italic****italic*` -> [bio]bold & italic[bic][io]italic[ic]
@@ -572,33 +583,40 @@ fn update_asterisk(tokenized: &mut Tokenized, grapheme: &str) {
 /// Remaining open tokens that have no matching close token get converted to plain.
 /// Neighboring plain tokens get merged with the open token. 
 fn cleanup_loose_open_tokens(tokenized: &mut Tokenized) {
-  let mut open_indizes: Vec<_> = tokenized.open_tokens.values().collect();
+  let open_tokens = tokenized.open_tokens.clone();
+  let mut open_indizes: Vec<_> = open_tokens.values().collect();
   open_indizes.sort();
 
   for index in open_indizes {
-    let mut token = tokenized.tokens.remove(*index);
-    token.kind = TokenKind::Plain;
-    if (*index) < tokenized.tokens.len() {
-      let next_token = tokenized.tokens.remove(*index);
-      if next_token.kind == TokenKind::Plain {
-        token.content.push_str(&next_token.content);
-      } else {
-        tokenized.tokens.insert(*index, next_token);
-      }
-    }
+    try_plain_token_merge(tokenized, *index);
+  }
+}
 
-    if *index > 0 {
-      if let Some(prev_token) = tokenized.tokens.get_mut(*index - 1) {
-        if prev_token.kind == TokenKind::Plain {
-          prev_token.content.push_str(&token.content);
-        } else {
-          tokenized.tokens.insert(*index, token);
-        }
+/// Function that tries to convert a token to `Plain`
+/// and merge it with previous and/or next token, if they are also `Plain`.
+fn try_plain_token_merge(tokenized: &mut Tokenized, index: usize) {
+  let mut token = tokenized.tokens.remove(index);
+  token.kind = TokenKind::Plain;
+  if index < tokenized.tokens.len() {
+    let next_token = tokenized.tokens.remove(index);
+    if next_token.kind == TokenKind::Plain {
+      token.content.push_str(&next_token.content);
+    } else {
+      tokenized.tokens.insert(index, next_token);
+    }
+  }
+
+  if index > 0 {
+    if let Some(prev_token) = tokenized.tokens.get_mut(index - 1) {
+      if prev_token.kind == TokenKind::Plain {
+        prev_token.content.push_str(&token.content);
       } else {
-        tokenized.tokens.insert(*index, token);
+        tokenized.tokens.insert(index, token);
       }
     } else {
-      tokenized.tokens.insert(*index, token);
+      tokenized.tokens.insert(index, token);
     }
+  } else {
+    tokenized.tokens.insert(index, token);
   }
 }

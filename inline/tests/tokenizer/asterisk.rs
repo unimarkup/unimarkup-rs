@@ -359,3 +359,18 @@ pub fn test_tokenize__inner_italic_after_word() {
 
   assert_eq!(actual, expected, "{}", EXPECTED_MSG);
 }
+
+#[test]
+pub fn test_tokenize__bold_after_word_with_inner_asterisk() {
+  let input = "p**b*b**";
+  let expected = [
+    Token{ kind: TokenKind::Plain, content: "p".to_string(), position: Position { line: 0, column: 0 } },
+    Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 1 } },
+    Token{ kind: TokenKind::Plain, content: "b*b".to_string(), position: Position { line: 0, column: 3 } },
+    Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 6 } },
+  ];
+
+  let actual = input.tokenize().unwrap();
+
+  assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+}
