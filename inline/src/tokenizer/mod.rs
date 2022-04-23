@@ -45,7 +45,7 @@ impl Tokenizer for &str {
     tokenize_until(&mut tokenized, TokenKind::Eoi)?;
     // EOI is treated as newline
     update_open_map(&mut tokenized, true);
-    try_closing_fixated_token(&mut tokenized);
+    try_closing_fixated_token(&mut tokenized, true);
     cleanup_loose_open_tokens(&mut tokenized);
 
     Ok(tokenized.tokens)
@@ -92,7 +92,7 @@ fn tokenize_until(tokenized: &mut Tokenized, token_kind: TokenKind) -> Result<()
       let last = tokenized.tokens.pop().unwrap();
       if !last.closes_scope() {
         update_open_map(tokenized, last.is_space_or_newline());
-        try_closing_fixated_token(tokenized);
+        try_closing_fixated_token(tokenized, last.is_space_or_newline());
       }
       
       let last_kind = last.kind;
@@ -174,7 +174,7 @@ fn open_text_group(tokenized: &mut Tokenized, grapheme: &str) -> Result<(), Inli
   }
 
   update_open_map(tokenized, false);
-  try_closing_fixated_token(tokenized);
+  try_closing_fixated_token(tokenized, false);
   
   // Makes sure to not have formattings over text group borders
   let outer_open_tokens = tokenized.open_tokens.clone();
@@ -186,7 +186,7 @@ fn open_text_group(tokenized: &mut Tokenized, grapheme: &str) -> Result<(), Inli
   tokenize_until(tokenized, TokenKind::TextGroupClose)?;
 
   let closing_token = tokenized.tokens.pop().unwrap();
-  try_closing_fixated_token(tokenized);
+  try_closing_fixated_token(tokenized, true);
   cleanup_loose_open_tokens(tokenized);
   tokenized.tokens.push(closing_token);
 
@@ -215,7 +215,7 @@ fn try_closing_text_group(tokenized: &mut Tokenized, grapheme: &str) {
 }
 
 /// Function removes any dangling open token between open/close tokens of the last fix token, if it is a closing one.
-fn try_closing_fixated_token(tokenized: &mut Tokenized) {
+fn try_closing_fixated_token(tokenized: &mut Tokenized, next_token_is_space_or_newline: bool) {
   if let Some(mut last) = tokenized.tokens.pop() {
     let open_index;
     let mut updated_open_tokens = HashMap::new();
@@ -252,12 +252,17 @@ fn try_closing_fixated_token(tokenized: &mut Tokenized) {
             });
           } else {
             // ItalicClose kept open for possible BoldClose, but stayed at ItalicClose
-            last.kind = TokenKind::Plain;
-            if let Some(prev) = tokenized.tokens.last_mut() {
-              if prev.kind == TokenKind::Plain {
-                prev.content.push_str(&last.content);
-                return;
+            if next_token_is_space_or_newline {
+              last.kind = TokenKind::Plain;
+              if let Some(prev) = tokenized.tokens.last_mut() {
+                if prev.kind == TokenKind::Plain {
+                  prev.content.push_str(&last.content);
+                  return;
+                }
               }
+            } else {
+              last.kind = TokenKind::ItalicOpen;
+              tokenized.open_tokens.insert(last.kind, tokenized.open_tokens.len());
             }
             tokenized.tokens.push(last);
             return;

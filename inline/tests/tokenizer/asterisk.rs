@@ -341,3 +341,21 @@ pub fn test_tokenize__escape_open_italic() {
 
   assert_eq!(actual, expected, "{}", EXPECTED_MSG);
 }
+
+#[test]
+pub fn test_tokenize__inner_italic_after_word() {
+  let input = "**b*it*b**";
+  let expected = [
+    Token{ kind: TokenKind::BoldOpen, content: "**".to_string(), position: Position { line: 0, column: 0 } },
+    Token{ kind: TokenKind::Plain, content: "b".to_string(), position: Position { line: 0, column: 2 } },
+    Token{ kind: TokenKind::ItalicOpen, content: "*".to_string(), position: Position { line: 0, column: 3 } },
+    Token{ kind: TokenKind::Plain, content: "it".to_string(), position: Position { line: 0, column: 4 } },
+    Token{ kind: TokenKind::ItalicClose, content: "*".to_string(), position: Position { line: 0, column: 6 } },
+    Token{ kind: TokenKind::Plain, content: "b".to_string(), position: Position { line: 0, column: 7 } },
+    Token{ kind: TokenKind::BoldClose, content: "**".to_string(), position: Position { line: 0, column: 8 } },
+  ];
+
+  let actual = input.tokenize().unwrap();
+
+  assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+}
