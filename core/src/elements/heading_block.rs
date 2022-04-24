@@ -390,7 +390,7 @@ mod tests {
             let html = heading.render_html().unwrap();
 
             let expected = format!(
-                "<h{} id='{}'><pre>This</pre> <em>is a</em> <strong>heading</strong></h{}>",
+                "<h{} id='{}'><code>This</code> <em>is a</em> <strong>heading</strong></h{}>",
                 level, id, level
             );
             assert_eq!(html, expected);

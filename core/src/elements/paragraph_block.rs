@@ -256,7 +256,7 @@ mod tests {
         };
 
         let expected_html = format!(
-            "<p id='{}'>This is <pre>the</pre> <em>content</em> <strong>of the paragraph</strong></p>",
+            "<p id='{}'>This is <code>the</code> <em>content</em> <strong>of the paragraph</strong></p>",
             id
         );
 

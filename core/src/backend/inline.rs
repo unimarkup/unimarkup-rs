@@ -25,9 +25,9 @@ impl Render for Inline {
           output.push_str("</em></strong>");
         },
         InlineKind::Verbatim(verbatim) => {
-          output.push_str("<pre>");
+          output.push_str("<code>");
           output.push_str(&verbatim.render_html()?);
-          output.push_str("</pre>");
+          output.push_str("</code>");
         },
         InlineKind::Plain(plain)
         | InlineKind::PlainNewLine(plain) => {
