@@ -274,7 +274,7 @@ mod tests {
         let ir_line_bad_type = ContentIrLine {
             id: String::from("some-id"),
             line_nr: 2,
-            um_type: format!("{}-more-info", UnimarkupType::Paragraph.to_string()),
+            um_type: format!("{}-more-info", UnimarkupType::Paragraph),
             text: String::from("This is the text of this paragraph"),
             ..Default::default()
         };

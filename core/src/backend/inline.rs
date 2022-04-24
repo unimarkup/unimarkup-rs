@@ -26,7 +26,7 @@ impl Render for Inline {
         },
         InlineKind::Verbatim(verbatim) => {
           output.push_str("<pre>");
-          output.push_str(&verbatim.content);
+          output.push_str(&verbatim.render_html()?);
           output.push_str("</pre>");
         },
         InlineKind::Plain(plain)
@@ -38,6 +38,11 @@ impl Render for Inline {
         },
         InlineKind::EscapedSpace(_) => {
           output.push_str("&nbsp;")
+        },
+        InlineKind::TextGroup(nested, _) => {
+          output.push_str("<span>");
+          output.push_str(&nested.content.render_html()?);
+          output.push_str("</span>");
         },
       }
     }

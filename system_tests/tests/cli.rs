@@ -185,8 +185,8 @@ fn test__config_parse__enable_elements_option_set() {
 
     let options = format!(
         "--enable-elements={},{}",
-        elements[0].to_string(),
-        elements[1].to_string()
+        elements[0],
+        elements[1]
     );
     let args = get_args(&options, um_filename);
 
@@ -210,8 +210,8 @@ fn test__config_parse__disable_elements_option_set() {
 
     let options = format!(
         "--disable-elements={},{}",
-        elements[0].to_string(),
-        elements[1].to_string()
+        elements[0],
+        elements[1]
     );
     let args = get_args(&options, um_filename);
 
