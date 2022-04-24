@@ -9,6 +9,7 @@ mod ast {
   mod mixed;
   mod offseted;
   mod substitutions;
+  mod text_group;
   mod verbatim;
   mod whitespaces;
 }

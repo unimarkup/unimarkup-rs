@@ -1,6 +1,6 @@
 //! This module provides functionality to create a Unimarkup inline AST out of a given list of tokens.
 
-use crate::tokenizer::{Position, TokenKind, Tokens, Newline};
+use crate::{tokenizer::{Position, TokenKind, Tokens, Newline}, TextGroupAttributes};
 
 use super::{Span, NestedInline, InlineKind, FlatInline, substitutions::DirectSubstitution, Inline, FlattenInlineKind};
 
@@ -135,7 +135,14 @@ pub(crate) fn collect_until(tokens: &mut Tokens, token_kind: TokenKind) -> Inlin
           inline.push(InlineKind::Plain(flat));
         }
       },
-      TokenKind::TextGroupOpen => todo!(),
+      TokenKind::TextGroupOpen => {
+        let InlineSection { content, end } = collect_until(tokens, TokenKind::TextGroupClose);
+        let nested = NestedInline{ 
+          content,
+          span: Span { start: token.position, end }
+        };
+        inline.push(InlineKind::TextGroup(nested, TextGroupAttributes{ ..Default::default() }));
+      },
       _ => todo!(),
     }
 

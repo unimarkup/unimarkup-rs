@@ -129,3 +129,41 @@ pub fn test_parser__verbatim_with_plain_newline() {
 
   assert_eq!(actual, expected, "{}", EXPECTED_MSG);
 }
+
+#[test]
+pub fn test_parser__verbatim_with_inner_text_group() {
+  let input = "`[group]`";
+  let expected = [
+    InlineKind::Verbatim(NestedInline{
+      content: vec![
+        InlineKind::Plain(FlatInline{
+          content: "[group]".to_string(),
+          span: Span {
+            start: Position{
+              line: 0,
+              column: 1
+            },
+            end: Position{
+              line: 0,
+              column: 8
+            }
+          }
+        })
+      ],
+      span: Span {
+        start: Position{
+          line: 0,
+          column: 0
+        },
+        end: Position{
+          line: 0,
+          column: 9
+        }
+      }
+    })
+  ];
+
+  let actual = parse(input).unwrap();
+
+  assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+}
