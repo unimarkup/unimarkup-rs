@@ -48,7 +48,7 @@ pub enum InlineKind {
   /// Representing the combined bold and italic inline element.
   BoldItalic(NestedInline),
   /// Representing the verbatim inline element.
-  Verbatim(FlatInline),
+  Verbatim(NestedInline),
   /// Representing plain text.
   Plain(FlatInline),
   /// Representing newline in the original content that is treated as normal whitespace.
@@ -66,6 +66,11 @@ pub trait FlattenInlineKind {
   /// 
   /// e.g. `Bold(Plain(text))` --> `**text**`
   fn flatten(self) -> String;
+
+  /// This function converts an inline element in its verbatim representation.
+  /// 
+  /// e.g. Verbatim(Bold(Plain(b),EscapedSpace(),Plain(b))) --> `` `**b\ b**` ``
+  fn flatten_for_verbatim(self) -> Vec<InlineKind>;
 }
 
 impl FlattenInlineKind for Vec<InlineKind> {
@@ -77,6 +82,27 @@ impl FlattenInlineKind for Vec<InlineKind> {
     }
 
     s
+  }
+
+  fn flatten_for_verbatim(self) -> Vec<InlineKind> {
+    let mut flattened: Vec<InlineKind> = Vec::new();
+
+    for inline in self {
+      let mut inner = inline.flatten_for_verbatim();
+      if let Some(InlineKind::Plain(last_outer)) = flattened.last_mut() {
+        if let Some(InlineKind::Plain(first_inner)) = inner.first() {
+          last_outer.content.push_str(&first_inner.content);
+          last_outer.span.end = first_inner.span.end;
+          flattened.append(&mut inner[1..].into());
+        } else {
+          flattened.append(&mut inner);
+        }
+      } else {
+        flattened.append(&mut inner);
+      }
+    }
+
+    flattened
   }
 }
 
@@ -103,21 +129,85 @@ impl FlattenInlineKind for InlineKind {
       },
       InlineKind::Verbatim(flat) => {
         let mut s = String::from(TokenKind::VerbatimOpen.as_str());
-        s.push_str(&flat.content);
+        s.push_str(&flat.content.flatten());
         s.push_str(TokenKind::VerbatimClose.as_str());
         s
       },
       InlineKind::Plain(flat)
-      | InlineKind::PlainNewLine(flat) => {
+      | InlineKind::PlainNewLine(flat)
+      | InlineKind::EscapedNewLine(flat)
+      | InlineKind::EscapedSpace(flat) => {
         flat.content
       },
-      InlineKind::EscapedNewLine(flat)
-      | InlineKind::EscapedSpace(flat) => {
-        let mut s = String::from("\\");
-        s.push_str(&flat.content);
-        s
-      },
+    }
+  }
+
+  fn flatten_for_verbatim(self) -> Vec<InlineKind> {
+    match self {
+        InlineKind::Bold(nested) => {
+          let mut inner = nested.content.flatten_for_verbatim();
+          merge_flattend_verbatim(&mut inner, TokenKind::BoldOpen.as_str(), nested.span);
+          inner
+        },
+        InlineKind::Italic(nested) => {
+          let mut inner = nested.content.flatten_for_verbatim();
+          merge_flattend_verbatim(&mut inner, TokenKind::ItalicOpen.as_str(), nested.span);
+          inner
+        },
+        InlineKind::BoldItalic(nested) => {
+          let mut inner = nested.content.flatten_for_verbatim();
+          merge_flattend_verbatim(&mut inner, TokenKind::BoldItalicOpen.as_str(), nested.span);
+          inner
+        },
+        _ => {
+          vec![self]
+        },
     }
   }
 }
 
+/// This function merges nested inlines into `Plain` kinds
+fn merge_flattend_verbatim(inner: &mut Vec<InlineKind>, outer_token: &str, outer_span: Span) {
+  if let Some(first) = inner.first_mut() {
+    match first {
+      InlineKind::Plain(plain) => {
+        plain.content.insert_str(0, outer_token);
+        plain.span.start = outer_span.start;
+      },
+      _ => {
+        inner.insert(0,
+          InlineKind::Plain(FlatInline{
+            content: outer_token.to_string(),
+            span: Span { start: outer_span.start,
+              end: Position { line: outer_span.start.line,
+                column: outer_span.start.column + outer_token.len()
+              } 
+            },
+          })
+        );
+      }
+    }
+  }
+
+  if let Some(last) = inner.last_mut() {
+    match last {
+      InlineKind::Plain(plain) => {
+        plain.content.push_str(outer_token);
+        plain.span.end = outer_span.end;
+      },
+      _ => {
+        inner.push(
+          InlineKind::Plain(FlatInline{
+            content: outer_token.to_string(),
+            span: Span { 
+              start: Position { line: outer_span.end.line,
+                column: outer_span.end.column - outer_token.len()
+              },
+              end: outer_span.end,
+            },
+          })
+        );
+      }
+    }
+  }
+}

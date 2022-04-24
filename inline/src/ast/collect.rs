@@ -70,8 +70,8 @@ pub(crate) fn collect_until(tokens: &mut Tokens, token_kind: TokenKind) -> Inlin
       },
       TokenKind::VerbatimOpen => {
         let InlineSection { content, end } = collect_until(tokens, TokenKind::VerbatimClose);
-        let nested = FlatInline{ 
-          content: content.flatten(),
+        let nested = NestedInline{ 
+          content: content.flatten_for_verbatim(),
           span: Span { start: token.position, end }
         };
         inline.push(InlineKind::Verbatim(nested));
