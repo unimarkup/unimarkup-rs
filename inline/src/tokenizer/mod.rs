@@ -595,6 +595,10 @@ fn cleanup_loose_open_tokens(tokenized: &mut Tokenized) {
 /// Function that tries to convert a token to `Plain`
 /// and merge it with previous and/or next token, if they are also `Plain`.
 fn try_plain_token_merge(tokenized: &mut Tokenized, index: usize) {
+  if index >= tokenized.tokens.len() {
+    return;
+  }
+
   let mut token = tokenized.tokens.remove(index);
   token.kind = TokenKind::Plain;
   if index < tokenized.tokens.len() {

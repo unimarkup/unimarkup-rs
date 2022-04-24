@@ -143,7 +143,15 @@ pub(crate) fn collect_until(tokens: &mut Tokens, token_kind: TokenKind) -> Inlin
         };
         inline.push(InlineKind::TextGroup(nested, TextGroupAttributes{ ..Default::default() }));
       },
-      _ => todo!(),
+      unsupported_token => {
+        eprintln!("Not supported token: {:?}", token.kind);
+        inline.push(InlineKind::Plain(
+          FlatInline{
+            content: unsupported_token.as_str().to_string(),
+            span: Span { start: token.position, end },
+        }
+        ));
+      },
     }
 
     prev_token_kind = token.kind;
