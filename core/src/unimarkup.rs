@@ -12,6 +12,7 @@ use crate::middleend;
 use crate::unimarkup_block::UnimarkupBlockKind;
 
 /// Struct representing a Unimarkup document that can be rendered to supported output formats.
+#[derive(Debug, Clone)]
 pub struct UnimarkupDocument {
     /// Elements of a Unimarkup document
     pub elements: Vec<UnimarkupBlockKind>,

@@ -152,20 +152,22 @@ impl HeadingBlock {
             None => None,
         };
 
-        let level = heading_start.as_str().trim().into();
+        let level = heading_start.as_str().trim();
         let (line_nr, _) = heading_start.as_span().start_pos().line_col();
 
-        // unwrap() is ok because heading grammar guarantees that heading has non-empty content
+        let generated_id = match parser::generate_id(heading_content.as_str()) {
+            Some(id) => id.to_lowercase(),
+            None => format!("heading-{}-line-{}", level, line_nr),
+        };
+        
         let id = match attributes {
             Some(ref attrs) if attrs.get("id").is_some() => attrs.get("id").unwrap().to_string(),
-            _ => parser::generate_id(heading_content.as_str())
-                .unwrap()
-                .to_lowercase(),
+            _ => generated_id,
         };
 
         Ok(HeadingBlock {
             id,
-            level,
+            level: level.into(),
             content: flat_inline(heading_content.as_str()),
             attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
             line_nr,

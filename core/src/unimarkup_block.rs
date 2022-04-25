@@ -6,6 +6,7 @@ use crate::elements::ParagraphBlock;
 use crate::elements::VerbatimBlock;
 
 /// Enum of supported Unimarkup block elements
+#[derive(Debug, Clone)]
 pub enum UnimarkupBlockKind {
   /// Represents the heading block
   Heading(HeadingBlock),
