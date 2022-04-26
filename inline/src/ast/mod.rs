@@ -241,3 +241,48 @@ fn merge_flattend_verbatim(inner: &mut Vec<InlineKind>, outer_start: &str, outer
     }
   }
 }
+
+pub struct TokenIdentifier {
+  pub start: String,
+  pub end: String,
+}
+
+pub trait InlineIdentifiers {
+  fn get_identifier(&self) -> TokenIdentifier;
+}
+
+impl InlineIdentifiers for InlineKind {
+  fn get_identifier(&self) -> TokenIdentifier {
+    match self {
+      InlineKind::Bold(_) => TokenIdentifier{
+        start: TokenKind::BoldOpen.as_str().to_string(),
+        end: TokenKind::BoldClose.as_str().to_string(),
+      },
+      InlineKind::Italic(_) => TokenIdentifier{
+        start: TokenKind::ItalicOpen.as_str().to_string(),
+        end: TokenKind::ItalicClose.as_str().to_string(),
+      },
+      InlineKind::BoldItalic(_) => TokenIdentifier{
+        start: TokenKind::BoldItalicOpen.as_str().to_string(),
+        end: TokenKind::BoldItalicClose.as_str().to_string(),
+      },
+      InlineKind::Verbatim(_) => TokenIdentifier{
+        start: TokenKind::VerbatimOpen.as_str().to_string(),
+        end: TokenKind::VerbatimClose.as_str().to_string(),
+      },
+      InlineKind::EscapedNewLine(_)
+      | InlineKind::EscapedSpace(_) => TokenIdentifier{
+        start: "\\".to_string(),
+        end: "".to_string(),
+      },
+      InlineKind::TextGroup(_, _) => TokenIdentifier{
+        start: TokenKind::TextGroupOpen.as_str().to_string(),
+        end: TokenKind::TextGroupClose.as_str().to_string(),
+      },
+      _ => TokenIdentifier{
+        start: "".to_string(),
+        end: "".to_string(),
+      }
+    }
+  }
+}

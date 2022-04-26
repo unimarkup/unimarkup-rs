@@ -56,7 +56,7 @@ impl Default for HeadingLevel {
     }
 }
 
-impl From<HeadingLevel> for usize {
+impl From<HeadingLevel> for u8 {
     fn from(level: HeadingLevel) -> Self {
         match level {
             HeadingLevel::Level1 => 1,
@@ -325,7 +325,7 @@ impl Render for HeadingBlock {
     fn render_html(&self) -> Result<String, BackendError> {
         let mut html = String::default();
 
-        let tag_level = usize::from(self.level).to_string();
+        let tag_level = u8::from(self.level).to_string();
 
         html.push_str("<h");
         html.push_str(&tag_level);
