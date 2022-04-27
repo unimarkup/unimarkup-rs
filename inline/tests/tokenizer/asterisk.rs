@@ -374,3 +374,15 @@ pub fn test_tokenize__bold_after_word_with_inner_asterisk() {
 
   assert_eq!(actual, expected, "{}", EXPECTED_MSG);
 }
+
+#[test]
+pub fn test_tokenize__open_bold_after_italic() {
+  let input = "*i**b";
+  let expected = [
+    Token{ kind: TokenKind::Plain, content: "*i**b".to_string(), position: Position { line: 0, column: 0 } },
+  ];
+
+  let actual = input.tokenize().unwrap();
+
+  assert_eq!(actual, expected, "{}", EXPECTED_MSG);
+}

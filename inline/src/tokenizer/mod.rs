@@ -586,6 +586,7 @@ fn cleanup_loose_open_tokens(tokenized: &mut Tokenized) {
   let open_tokens = tokenized.open_tokens.clone();
   let mut open_indizes: Vec<_> = open_tokens.values().collect();
   open_indizes.sort();
+  open_indizes.reverse();
 
   for index in open_indizes {
     try_plain_token_merge(tokenized, *index);
