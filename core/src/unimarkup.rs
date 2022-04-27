@@ -1,7 +1,7 @@
 //! Entry module for unimarkup-rs.
 
 use crate::backend;
-use crate::backend::RenderBlock;
+use crate::backend::Render;
 use crate::config::Config;
 use crate::config::OutputFormat;
 use crate::error::CoreError;
@@ -9,11 +9,15 @@ use crate::frontend;
 use crate::log_id::LogId;
 use crate::log_id::SetLog;
 use crate::middleend;
+use crate::unimarkup_block::UnimarkupBlockKind;
 
 /// Struct representing a Unimarkup document that can be rendered to supported output formats.
+#[derive(Debug, Clone)]
 pub struct UnimarkupDocument {
-    pub(crate) elements: Vec<RenderBlock>,
-    pub(crate) config: Config,
+    /// Elements of a Unimarkup document
+    pub elements: Vec<UnimarkupBlockKind>,
+    /// Configuration used to create this Unimarkup document
+    pub config: Config,
 }
 
 impl UnimarkupDocument {
@@ -33,7 +37,7 @@ impl UnimarkupDocument {
 
 /// HTML representation of the Unimarkup document
 pub struct Html<'a> {
-    elements: &'a Vec<RenderBlock>,
+    elements: &'a Vec<UnimarkupBlockKind>,
     _metadata: String,
 }
 

@@ -3,13 +3,14 @@ use std::{collections::VecDeque, str::FromStr};
 use rusqlite::Connection;
 
 use crate::{
-    backend::{BackendError, Render},
+    backend::BackendError,
     elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock, VerbatimBlock},
     log_id::{LogId, SetLog},
     middleend::{self, ContentIrLine},
+    unimarkup_block::UnimarkupBlockKind,
 };
 
-use super::{log_id::LoaderErrLogId, RenderBlock};
+use super::log_id::LoaderErrLogId;
 
 /// Trait that must be implemented for a [`UnimarkupType`] to be stored in IR
 pub trait ParseFromIr {
@@ -33,27 +34,31 @@ pub trait ParseFromIr {
 /// # Arguments
 ///
 /// * `connection` - [`rusqlite::Connection`] used for interaction with IR
-pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<RenderBlock>, BackendError> {
-    let mut blocks: Vec<Box<dyn Render>> = vec![];
+pub fn get_blocks_from_ir(
+    connection: &mut Connection,
+) -> Result<Vec<UnimarkupBlockKind>, BackendError> {
+    let mut blocks: Vec<UnimarkupBlockKind> = vec![];
     let mut content_lines: VecDeque<ContentIrLine> =
         middleend::get_content_lines(connection)?.into();
 
     while let Some(line) = content_lines.get(0) {
         let um_type = parse_um_type(&line.um_type)?;
 
-        let block: Box<dyn Render> = match um_type {
+        let block = match um_type {
             // UnimarkupType::List => todo!(),
-            UnimarkupType::Heading => Box::new(HeadingBlock::parse_from_ir(&mut content_lines)?),
+            UnimarkupType::Heading => {
+                UnimarkupBlockKind::Heading(HeadingBlock::parse_from_ir(&mut content_lines)?)
+            }
             UnimarkupType::Paragraph => {
-                Box::new(ParagraphBlock::parse_from_ir(&mut content_lines)?)
+                UnimarkupBlockKind::Paragraph(ParagraphBlock::parse_from_ir(&mut content_lines)?)
             }
             UnimarkupType::VerbatimBlock => {
-                Box::new(VerbatimBlock::parse_from_ir(&mut content_lines)?)
+                UnimarkupBlockKind::Verbatim(VerbatimBlock::parse_from_ir(&mut content_lines)?)
             }
             _ => {
                 let _ = content_lines.pop_front();
 
-                Box::new(HeadingBlock::default())
+                UnimarkupBlockKind::Paragraph(ParagraphBlock::default())
             }
         };
 
