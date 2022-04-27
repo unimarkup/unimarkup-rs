@@ -3,7 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use pest::iterators::{Pair, Pairs};
 use pest::Span;
 use strum_macros::*;
-use unimarkup_inline::{Inline, Position, parse_with_offset, flat_inline, FlattenInlineKind};
+use unimarkup_inline::{flat_inline, parse_with_offset, FlattenInlineKind, Inline, Position};
 
 use crate::backend::{error::BackendError, ParseFromIr, Render};
 use crate::elements::types::{self, UnimarkupBlocks, UnimarkupType};
@@ -159,7 +159,7 @@ impl HeadingBlock {
             Some(id) => id.to_lowercase(),
             None => format!("heading-{}-line-{}", level, line_nr),
         };
-        
+
         let id = match attributes {
             Some(ref attrs) if attrs.get("id").is_some() => attrs.get("id").unwrap().to_string(),
             _ => generated_id,
@@ -273,8 +273,13 @@ impl ParseFromIr for HeadingBlock {
                 ir_line.fallback_attributes
             };
 
-            
-            let try_inline = parse_with_offset(&content, Position{line: ir_line.line_nr, column: get_column_offset_from_level(level)});
+            let try_inline = parse_with_offset(
+                &content,
+                Position {
+                    line: ir_line.line_nr,
+                    column: get_column_offset_from_level(level),
+                },
+            );
             let parsed_inline;
             match try_inline {
                 Ok(inline) => parsed_inline = inline,
@@ -282,7 +287,7 @@ impl ParseFromIr for HeadingBlock {
                     parsed_inline = flat_inline(&content);
                     (InlineWarnLogId::InlineParsingFailed as LogId)
                         .set_log(&format!("Inline parsing failed for heading-id {} => content taken as plain as fallback", ir_line.id), file!(), line!());
-                },
+                }
             }
 
             let block = HeadingBlock {
@@ -354,7 +359,14 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = parse_with_offset("This is a heading", Position{line: 0, column: level + 1}).unwrap();
+            let heading_content = parse_with_offset(
+                "This is a heading",
+                Position {
+                    line: 0,
+                    column: level + 1,
+                },
+            )
+            .unwrap();
             let id = format!("heading-id-{}", level);
 
             let heading = HeadingBlock {
@@ -378,7 +390,14 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = parse_with_offset("`This` *is a* **heading**", Position{line: 0, column: level + 1}).unwrap();
+            let heading_content = parse_with_offset(
+                "`This` *is a* **heading**",
+                Position {
+                    line: 0,
+                    column: level + 1,
+                },
+            )
+            .unwrap();
             let id = format!("heading-id-{}", level);
 
             let heading = HeadingBlock {
@@ -446,7 +465,17 @@ mod tests {
 
             assert_eq!(id, String::from("some_id"));
             assert_eq!(level, HeadingLevel::from(iterations));
-            assert_eq!(content, parse_with_offset("This is a heading", Position{line: block.line_nr, column: get_column_offset_from_level(level)}).unwrap());
+            assert_eq!(
+                content,
+                parse_with_offset(
+                    "This is a heading",
+                    Position {
+                        line: block.line_nr,
+                        column: get_column_offset_from_level(level)
+                    }
+                )
+                .unwrap()
+            );
             assert_eq!(attr, String::from("{}"));
         }
     }

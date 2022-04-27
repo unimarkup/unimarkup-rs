@@ -7,9 +7,9 @@
 use crate::{config::Config, unimarkup::UnimarkupDocument, unimarkup_block::UnimarkupBlockKind};
 use rusqlite::Connection;
 
+mod inline;
 mod loader;
 mod renderer;
-mod inline;
 
 pub use loader::ParseFromIr;
 pub use renderer::*;

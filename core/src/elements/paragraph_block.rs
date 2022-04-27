@@ -17,9 +17,12 @@ use crate::{
 use pest::iterators::Pairs;
 use pest::Span;
 
-use unimarkup_inline::{Inline, flat_inline, FlattenInlineKind, Position, parse_with_offset};
+use unimarkup_inline::{flat_inline, parse_with_offset, FlattenInlineKind, Inline, Position};
 
-use super::{error::ElementError, log_id::{GeneralErrLogId, InlineWarnLogId}};
+use super::{
+    error::ElementError,
+    log_id::{GeneralErrLogId, InlineWarnLogId},
+};
 
 /// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default, Clone)]
@@ -133,7 +136,13 @@ impl ParseFromIr for ParagraphBlock {
                 ir_line.fallback_attributes
             };
 
-            let try_inline = parse_with_offset(&content, Position{line: ir_line.line_nr, ..Default::default()});
+            let try_inline = parse_with_offset(
+                &content,
+                Position {
+                    line: ir_line.line_nr,
+                    ..Default::default()
+                },
+            );
             let parsed_inline;
             match try_inline {
                 Ok(inline) => parsed_inline = inline,
@@ -141,7 +150,7 @@ impl ParseFromIr for ParagraphBlock {
                     parsed_inline = flat_inline(&content);
                     (InlineWarnLogId::InlineParsingFailed as LogId)
                         .set_log(&format!("Inline parsing failed for paragraph-id {} => content taken as plain as fallback", ir_line.id), file!(), line!());
-                },
+                }
             }
 
             let block = ParagraphBlock {

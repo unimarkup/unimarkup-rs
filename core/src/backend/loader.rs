@@ -6,7 +6,8 @@ use crate::{
     backend::BackendError,
     elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock, VerbatimBlock},
     log_id::{LogId, SetLog},
-    middleend::{self, ContentIrLine}, unimarkup_block::UnimarkupBlockKind,
+    middleend::{self, ContentIrLine},
+    unimarkup_block::UnimarkupBlockKind,
 };
 
 use super::log_id::LoaderErrLogId;
@@ -33,7 +34,9 @@ pub trait ParseFromIr {
 /// # Arguments
 ///
 /// * `connection` - [`rusqlite::Connection`] used for interaction with IR
-pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<UnimarkupBlockKind>, BackendError> {
+pub fn get_blocks_from_ir(
+    connection: &mut Connection,
+) -> Result<Vec<UnimarkupBlockKind>, BackendError> {
     let mut blocks: Vec<UnimarkupBlockKind> = vec![];
     let mut content_lines: VecDeque<ContentIrLine> =
         middleend::get_content_lines(connection)?.into();
@@ -43,7 +46,9 @@ pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<Vec<UnimarkupBl
 
         let block = match um_type {
             // UnimarkupType::List => todo!(),
-            UnimarkupType::Heading => UnimarkupBlockKind::Heading(HeadingBlock::parse_from_ir(&mut content_lines)?),
+            UnimarkupType::Heading => {
+                UnimarkupBlockKind::Heading(HeadingBlock::parse_from_ir(&mut content_lines)?)
+            }
             UnimarkupType::Paragraph => {
                 UnimarkupBlockKind::Paragraph(ParagraphBlock::parse_from_ir(&mut content_lines)?)
             }

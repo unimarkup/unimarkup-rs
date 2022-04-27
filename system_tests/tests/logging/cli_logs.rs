@@ -16,23 +16,18 @@ fn test__main_log_trace__attributes_file() {
         .spawn()
         .expect("Failed to spawn 'cargo run'");
 
-    let output = cli_proc.wait_with_output().expect("Failed to execute 'cargo run'");
+    let output = cli_proc
+        .wait_with_output()
+        .expect("Failed to execute 'cargo run'");
     let logs = String::from_utf8_lossy(&output.stderr);
 
     assert!(logs.contains("INFO : 536936448: Writing to file: \""));
-    assert!(logs.contains(&format!(
-        "{}\"",
-        TEST_FILE.replace(".um", ".html")
-    )));
+    assert!(logs.contains(&format!("{}\"", TEST_FILE.replace(".um", ".html"))));
     assert!(logs.contains("TRACE: 536936448: Occured in file"));
     assert!(logs.contains("INFO : 536936449: Finished compiling: \""));
-    assert!(logs.contains(&format!(
-        "{}\"",
-        TEST_FILE
-    )));
+    assert!(logs.contains(&format!("{}\"", TEST_FILE)));
     assert!(logs.contains("TRACE: 536936449: Occured in file"));
 }
-
 
 // Note: Functions below needed to get the test running in 'run' and 'debug' mode
 
@@ -45,7 +40,7 @@ fn get_path() -> PathBuf {
         Err(_) => {
             let path = PathBuf::from("tests/test_files/".to_owned() + TEST_FILE);
             path.canonicalize().unwrap()
-        },
+        }
     }
 }
 

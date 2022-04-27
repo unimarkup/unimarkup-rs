@@ -183,11 +183,7 @@ fn test__config_parse__enable_elements_option_set() {
     let um_filename = "file.um";
     let elements = vec![UnimarkupType::VerbatimBlock, UnimarkupType::DefinitionList];
 
-    let options = format!(
-        "--enable-elements={},{}",
-        elements[0],
-        elements[1]
-    );
+    let options = format!("--enable-elements={},{}", elements[0], elements[1]);
     let args = get_args(&options, um_filename);
 
     let cfg: Config = Config::parse_from(args);
@@ -208,11 +204,7 @@ fn test__config_parse__disable_elements_option_set() {
     let um_filename = "file.um";
     let elements = vec![UnimarkupType::VerbatimBlock, UnimarkupType::DefinitionList];
 
-    let options = format!(
-        "--disable-elements={},{}",
-        elements[0],
-        elements[1]
-    );
+    let options = format!("--disable-elements={},{}", elements[0], elements[1]);
     let args = get_args(&options, um_filename);
 
     let cfg: Config = Config::parse_from(args);
