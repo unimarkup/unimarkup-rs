@@ -17,6 +17,8 @@ pub enum CoreError {
     Element(LogId),
     /// Config error of the core crate
     Config(LogId),
+    /// Security errir of the core crate
+    Security(LogId),
 }
 
 impl From<CoreError> for LogId {
@@ -28,6 +30,7 @@ impl From<CoreError> for LogId {
             CoreError::Backend(log_id) => log_id,
             CoreError::Element(log_id) => log_id,
             CoreError::Config(log_id) => log_id,
+            CoreError::Security(log_id) => log_id,
         }
     }
 }

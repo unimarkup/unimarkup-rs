@@ -19,6 +19,8 @@ pub enum LogSubGrp {
     Element = 4,
     /// Config log-id sub group
     Config = 5,
+    /// Security log-id sub group
+    Security = 6,
 }
 
 enum SubSubGrp {

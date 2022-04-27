@@ -10,6 +10,7 @@ use crate::{
         HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
     },
     log_id::{LogId, SetLog},
+    security,
 };
 
 use super::{
@@ -101,6 +102,7 @@ pub fn parse_unimarkup(
 
     let metadata = Metadata {
         file: config.um_file.clone(),
+        contenthash: security::get_contenthash(um_content),
         preamble: String::new(),
         kind: MetadataKind::Root,
         namespace: ".".to_string(),

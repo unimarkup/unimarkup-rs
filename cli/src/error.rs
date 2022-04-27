@@ -29,6 +29,7 @@ impl From<CoreError> for CliError {
             CoreError::Backend(log_id) => CliError::Core(log_id),
             CoreError::Element(log_id) => CliError::Core(log_id),
             CoreError::Config(log_id) => CliError::Core(log_id),
+            CoreError::Security(log_id) => CliError::Core(log_id),
         }
     }
 }
