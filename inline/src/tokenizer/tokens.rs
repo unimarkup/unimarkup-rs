@@ -129,7 +129,7 @@ impl TokenKind {
       TokenKind::BoldItalicOpen => "***",
       TokenKind::BoldItalicClose => TokenKind::BoldItalicOpen.as_str(),
       TokenKind::VerbatimOpen => "`",
-      TokenKind::VerbatimClose => TokenKind::EmojiOpen.as_str(), 
+      TokenKind::VerbatimClose => TokenKind::VerbatimOpen.as_str(), 
       TokenKind::EmojiOpen => "::",
       // TokenKind::EmojiClose => TokenKind::EmojiOpen.as_str(),  
       // TokenKind::CommentOpen => ";;",
