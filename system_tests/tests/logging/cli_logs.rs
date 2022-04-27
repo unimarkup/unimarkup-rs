@@ -48,10 +48,11 @@ fn get_proc_path() -> PathBuf {
     let filePath = PathBuf::from(file!());
     let fileRoot = filePath.parent().unwrap();
     let repoPath = fileRoot.join("../../../.");
-    let repoPath = repoPath.canonicalize().unwrap();
-    if filePath.canonicalize().is_ok() {
-        repoPath
-    } else {
-        PathBuf::from("./..")
+    if fileRoot.canonicalize().is_ok() {
+        if let Ok(path) = repoPath.canonicalize() {
+            return path;
+        }
     }
+
+    PathBuf::from("./..")
 }
