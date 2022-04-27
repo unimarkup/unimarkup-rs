@@ -80,6 +80,13 @@ impl Html<'_> {
 ///
 /// Returns a [`CoreError`], if error occurs during compilation.
 pub fn compile(um_content: &str, mut config: Config) -> Result<UnimarkupDocument, CoreError> {
+    if um_content.is_empty() {
+        return Ok(UnimarkupDocument {
+            elements: vec![],
+            config,
+        });
+    }
+
     let mut connection = middleend::setup_ir_connection()?;
     middleend::setup_ir(&connection)?;
 
