@@ -196,8 +196,15 @@ impl Render for VerbatimBlock {
             None => PLAIN_SYNTAX.to_string(),
         };
 
-        res.push_str(&format!("<div id='{}' class='code-block language-{}' >", &self.id, &language));
-        res.push_str(&highlight::highlight_html_lines(&self.content, &language, DEFAULT_THEME));
+        res.push_str(&format!(
+            "<div id='{}' class='code-block language-{}' >",
+            &self.id, &language
+        ));
+        res.push_str(&highlight::highlight_html_lines(
+            &self.content,
+            &language,
+            DEFAULT_THEME,
+        ));
         res.push_str("</div>");
 
         Ok(res)
@@ -238,7 +245,9 @@ mod tests {
 
         let expected_html = format!(
             "<div id='{}' class='code-block language-{}' >{}</div>",
-            id, lang, &highlight::highlight_html_lines(&content, &lang, DEFAULT_THEME)
+            id,
+            lang,
+            &highlight::highlight_html_lines(&content, &lang, DEFAULT_THEME)
         );
 
         assert_eq!(expected_html, block.render_html().unwrap());
@@ -261,8 +270,11 @@ mod tests {
             line_nr: 0,
         };
 
-        let expected_html = format!("<div id='{}' class='code-block language-plain' >{}</div>", id, 
-            &highlight::highlight_html_lines(&content, PLAIN_SYNTAX, DEFAULT_THEME));
+        let expected_html = format!(
+            "<div id='{}' class='code-block language-plain' >{}</div>",
+            id,
+            &highlight::highlight_html_lines(&content, PLAIN_SYNTAX, DEFAULT_THEME)
+        );
 
         assert_eq!(expected_html, block.render_html().unwrap());
     }
