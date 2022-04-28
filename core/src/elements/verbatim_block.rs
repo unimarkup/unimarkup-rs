@@ -8,6 +8,7 @@ use crate::elements::log_id::EnclosedErrLogId;
 use crate::elements::types::{UnimarkupBlocks, UnimarkupType};
 use crate::frontend::error::{custom_pest_error, FrontendError};
 use crate::frontend::parser::{Rule, UmParse};
+use crate::highlight::{self, DEFAULT_THEME, PLAIN_SYNTAX};
 use crate::log_id::{LogId, SetLog};
 use crate::middleend::{AsIrLines, ContentIrLine};
 
@@ -190,18 +191,14 @@ impl Render for VerbatimBlock {
         let attributes =
             serde_json::from_str::<VerbatimAttributes>(&self.attributes).unwrap_or_default();
 
-        res.push_str("<pre><code");
-        res.push_str(" id='");
-        res.push_str(&self.id);
+        let language = match attributes.language {
+            Some(language) => language,
+            None => PLAIN_SYNTAX.to_string(),
+        };
 
-        if let Some(language) = attributes.language {
-            res.push_str("' class='language-");
-            res.push_str(&language.trim().to_lowercase());
-        }
-
-        res.push_str("'>");
-        res.push_str(&self.content);
-        res.push_str("</code></pre>");
+        res.push_str(&format!("<div id='{}' class='code-block language-{}' >", &self.id, &language));
+        res.push_str(&highlight::highlight_html_lines(&self.content, &language, DEFAULT_THEME));
+        res.push_str("</div>");
 
         Ok(res)
     }
@@ -240,8 +237,8 @@ mod tests {
         };
 
         let expected_html = format!(
-            "<pre><code id='{}' class='language-{}'>{}</code></pre>",
-            id, lang, content
+            "<div id='{}' class='code-block language-{}' >{}</div>",
+            id, lang, &highlight::highlight_html_lines(&content, &lang, DEFAULT_THEME)
         );
 
         assert_eq!(expected_html, block.render_html().unwrap());
@@ -264,7 +261,8 @@ mod tests {
             line_nr: 0,
         };
 
-        let expected_html = format!("<pre><code id='{}'>{}</code></pre>", id, content);
+        let expected_html = format!("<div id='{}' class='code-block language-plain' >{}</div>", id, 
+            &highlight::highlight_html_lines(&content, PLAIN_SYNTAX, DEFAULT_THEME));
 
         assert_eq!(expected_html, block.render_html().unwrap());
     }
