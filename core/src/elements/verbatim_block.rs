@@ -247,7 +247,7 @@ mod tests {
             "<div id='{}' class='code-block language-{}' >{}</div>",
             id,
             lang,
-            &highlight::highlight_html_lines(&content, &lang, DEFAULT_THEME)
+            &highlight::highlight_html_lines(&content, lang, DEFAULT_THEME)
         );
 
         assert_eq!(expected_html, block.render_html().unwrap());
