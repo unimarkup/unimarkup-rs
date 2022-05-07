@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
+use crate::Lexer;
+
 use super::Content;
 
 pub(crate) struct Invalid;
@@ -106,6 +108,16 @@ impl Token {
         }
     }
 
+    pub fn into_inner(self) -> (String, Span) {
+        let content = if let Some(text) = self.content {
+            text
+        } else {
+            String::default()
+        };
+
+        (content, self.span)
+    }
+
     pub fn kind(&self) -> TokenKind {
         self.kind
     }
@@ -124,6 +136,76 @@ impl Token {
             ..self
         }
     }
+
+    pub fn is_nesting_token(&self) -> bool {
+        !matches!(
+            self.kind,
+            TokenKind::Plain | TokenKind::Newline | TokenKind::Whitespace
+        )
+    }
+
+    pub fn opens(&self) -> bool {
+        let not_followed_by_whitespace = matches!(self.spacing, Spacing::Pre | Spacing::None);
+
+        self.is_nesting_token() && not_followed_by_whitespace
+    }
+
+    pub fn closes(&self) -> bool {
+        let not_preceded_by_whitespace = matches!(self.spacing, Spacing::Post | Spacing::None);
+
+        self.is_nesting_token() && not_preceded_by_whitespace
+    }
+
+    pub fn is_or_contains(&self, other: &Self) -> bool {
+        if self.kind() == other.kind() {
+            true
+        } else {
+            match self.kind() {
+                TokenKind::ItalicBold => {
+                    matches!(other.kind(), TokenKind::Bold | TokenKind::Italic)
+                }
+                TokenKind::UnderlineSubscript => {
+                    matches!(other.kind(), TokenKind::Underline | TokenKind::Subscript)
+                }
+                _ => false,
+            }
+        }
+    }
+
+    pub fn is_ambiguous(&self) -> bool {
+        matches!(
+            self.kind(),
+            TokenKind::ItalicBold | TokenKind::UnderlineSubscript
+        )
+    }
+
+    pub fn remove_partial(&mut self, other_token: &Token) -> Self {
+        let panic_message = "Can't remove partial token, tokens are not overlapping.";
+
+        match self.kind() {
+            TokenKind::ItalicBold => match other_token.kind() {
+                TokenKind::Italic => self.kind = TokenKind::Bold,
+                TokenKind::Bold => self.kind = TokenKind::Italic,
+                _ => panic!("{panic_message}"),
+            },
+            TokenKind::UnderlineSubscript => match other_token.kind() {
+                TokenKind::Underline => self.kind = TokenKind::Subscript,
+                TokenKind::Subscript => self.kind = TokenKind::Underline,
+                _ => panic!("{panic_message}"),
+            },
+            _ => panic!("{panic_message}"),
+        };
+
+        let start = self.span().start();
+        let end = self.span().end() - other_token.span().start();
+
+        self.span = Span::from((start, end));
+
+        TokenBuilder::new(other_token.kind())
+            .span(other_token.span())
+            .space(other_token.spacing())
+            .build()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -133,11 +215,20 @@ pub enum TokenKind {
     ItalicBold,
     Underline,
     Subscript,
-    UnderlineCombo,
+    UnderlineSubscript,
     Superscript,
     Overline,
     Strikethrough,
     Highlight,
+    Verbatim,
+    Quote,
+    Math,
+    OpenParens,
+    CloseParens,
+    OpenBracket,
+    CloseBracket,
+    OpenBrace,
+    CloseBrace,
     Newline,
     Whitespace,
     Plain,
@@ -155,10 +246,35 @@ impl TokenKind {
             TokenKind::Underline => "__",
             TokenKind::Subscript => "_",
             TokenKind::Superscript => "^",
-            TokenKind::UnderlineCombo => "___",
+            TokenKind::UnderlineSubscript => "___",
             TokenKind::Highlight => "||",
             TokenKind::Overline => "‾",
             TokenKind::Strikethrough => "~~",
+            TokenKind::Verbatim => "`",
+            TokenKind::Quote => "\"",
+            TokenKind::Math => "$",
+            TokenKind::OpenParens => "(",
+            TokenKind::CloseParens => ")",
+            TokenKind::OpenBracket => "[",
+            TokenKind::CloseBracket => "]",
+            TokenKind::OpenBrace => "{",
+            TokenKind::CloseBrace => "}",
+        }
+    }
+}
+
+impl From<&str> for TokenKind {
+    fn from(symbol: &str) -> Self {
+        match symbol {
+            Lexer::TICK => Self::Verbatim,
+            Lexer::DOLLAR => Self::Math,
+            Lexer::OPEN_PAREN => Self::OpenParens,
+            Lexer::CLOSE_PAREN => Self::CloseParens,
+            Lexer::OPEN_BRACKET => Self::OpenBracket,
+            Lexer::CLOSE_BRACKET => Self::CloseBracket,
+            Lexer::OPEN_BRACE => Self::OpenBrace,
+            Lexer::CLOSE_BRACE => Self::CloseBrace,
+            _ => Self::Plain,
         }
     }
 }
@@ -233,6 +349,16 @@ impl Sub for Spacing {
 pub struct Span {
     start: Position,
     end: Position,
+}
+
+impl Span {
+    pub fn start(&self) -> Position {
+        self.start
+    }
+
+    pub fn end(&self) -> Position {
+        self.end
+    }
 }
 
 impl From<(Position, Position)> for Span {
