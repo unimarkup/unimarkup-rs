@@ -33,6 +33,16 @@ fn into_iter() {
     }
 
     assert_eq!(lexer.into_iter().count(), 1);
+
+    let lexer = r#"Some string
+                with new line"#
+        .lex();
+
+    for token in &lexer {
+        println!("{token:?}");
+    }
+
+    assert_eq!(lexer.into_iter().count(), 2);
 }
 
 #[test]
@@ -42,6 +52,36 @@ fn lex_plain() {
 
     let token = iter.next().unwrap();
     let start = Position::default();
+    let end = start + (0, 11 - 1);
+
+    assert_token! {
+        token with
+            TokenKind::Plain,
+            Spacing::None,
+            (start, end),
+            "Some string"
+    };
+}
+
+#[test]
+fn lex_parens() {
+    let lexer = "(Some string".lex();
+    let mut iter = lexer.into_iter();
+
+    let token = iter.next().unwrap();
+    let start = Position::default();
+    let end = start + (0, 1 - 1);
+
+    assert_token! {
+        token with
+            TokenKind::OpenParens,
+            Spacing::None,
+            (start, end),
+            "("
+    };
+
+    let token = iter.next().unwrap();
+    let start = end + (0, 1);
     let end = start + (0, 11 - 1);
 
     assert_token! {
@@ -374,7 +414,7 @@ fn lex_underline_subscript() {
 
     assert_token! {
         token with
-            TokenKind::UnderlineCombo,
+            TokenKind::UnderlineSubscript,
             Spacing::None,
             (start, end)
     };

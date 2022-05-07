@@ -12,6 +12,22 @@ pub trait Tokenize {
     fn lex_with_offs(&self, pos: Position) -> Lexer {
         Lexer { pos, ..self.lex() }
     }
+
+    fn lex_iter(&self) -> TokenIterator;
+    fn lex_iter_with_offs(&self, pos: Position) -> TokenIterator {
+        let mut iter = self.lex_iter();
+        let line_offs = pos.line;
+
+        for _ in 0..=line_offs {
+            iter.load_next_line();
+        }
+
+        iter.index += pos.column;
+
+        iter.pos = pos;
+
+        iter
+    }
 }
 
 impl<'a> Tokenize for &'a str {
@@ -20,6 +36,10 @@ impl<'a> Tokenize for &'a str {
             input: self,
             pos: Position { line: 0, column: 1 },
         }
+    }
+
+    fn lex_iter(&self) -> TokenIterator {
+        self.lex().iter()
     }
 }
 
@@ -37,6 +57,15 @@ impl<'a> Lexer<'a> {
     const OLINE: &'static str = "‾";
     const VLINE: &'static str = "|";
     const TILDE: &'static str = "~";
+    const QUOTE: &'static str = "\"";
+    const DOLLAR: &'static str = "$";
+    // const COLON: &'static str = ":";
+    const OPEN_PAREN: &'static str = "(";
+    const CLOSE_PAREN: &'static str = ")";
+    const OPEN_BRACKET: &'static str = "[";
+    const CLOSE_BRACKET: &'static str = "]";
+    const OPEN_BRACE: &'static str = "{";
+    const CLOSE_BRACE: &'static str = "}";
 
     pub fn iter(&self) -> TokenIterator<'a> {
         TokenIterator {
@@ -71,7 +100,6 @@ enum LexLength {
 }
 
 impl LexLength {
-    #[allow(unused)]
     pub(crate) fn allows_len(&self, len: usize) -> bool {
         match *self {
             LexLength::Unlimited => true,
@@ -121,12 +149,12 @@ impl TokenIterator<'_> {
         // - '‾' -> Overline,
         // - '^' -> Superscript
         // - '~' -> Strikethrough
-        //
-        // NOT YET IMPLEMENTED :
-        // - '`' -> Verbatim
         // - '|' -> Highlight
+        // - '`' -> Verbatim
         // - '"' -> Quote
         // - '$' -> Math
+        //
+        // NOT YET IMPLEMENTED :
         // - ":" -> Custom Emoji, e.g. ::heart::
         // - '[' | ']' -> OpenBracket, CloseBracket
         // - '(' | ')' -> OpenParens, CloseParens
@@ -134,22 +162,55 @@ impl TokenIterator<'_> {
         // ... and more
 
         match *first {
-            Lexer::STAR => return self.lex_italic_bold(),
-            Lexer::ULINE => return self.lex_underline_subscript(),
-            Lexer::OLINE => return self.lex_overline(),
-            Lexer::CARET => return self.lex_token(Lexer::CARET, 1, TokenKind::Superscript),
+            Lexer::STAR => self.lex_italic_bold(),
+            Lexer::ULINE => self.lex_underline_subscript(),
+            Lexer::OLINE => self.lex_overline(),
+            Lexer::CARET => self.lex_token(Lexer::CARET, 1, TokenKind::Superscript),
             Lexer::TILDE => {
-                return self.lex_token_exact(
-                    Lexer::TILDE,
-                    LexLength::Exact(2),
-                    TokenKind::Strikethrough,
-                )
+                self.lex_token_exact(Lexer::TILDE, LexLength::Exact(2), TokenKind::Strikethrough)
             }
-            Lexer::VLINE => return self.lex_late_token(Lexer::VLINE, 2, TokenKind::Highlight),
-            _ => {}
+            Lexer::TICK => {
+                self.lex_token_exact(Lexer::TICK, LexLength::Exact(1), TokenKind::Verbatim)
+            }
+            Lexer::QUOTE => {
+                self.lex_token_exact(Lexer::TICK, LexLength::Exact(2), TokenKind::Quote)
+            }
+            Lexer::DOLLAR => {
+                self.lex_token_exact(Lexer::DOLLAR, LexLength::Exact(1), TokenKind::Math)
+            }
+            Lexer::OPEN_PAREN => self.lex_token_exact(
+                Lexer::OPEN_PAREN,
+                LexLength::Exact(1),
+                TokenKind::OpenParens,
+            ),
+            Lexer::CLOSE_PAREN => self.lex_token_exact(
+                Lexer::CLOSE_PAREN,
+                LexLength::Exact(1),
+                TokenKind::OpenParens,
+            ),
+            Lexer::OPEN_BRACKET => self.lex_token_exact(
+                Lexer::OPEN_BRACKET,
+                LexLength::Exact(1),
+                TokenKind::OpenParens,
+            ),
+            Lexer::CLOSE_BRACKET => self.lex_token_exact(
+                Lexer::CLOSE_BRACKET,
+                LexLength::Exact(1),
+                TokenKind::OpenParens,
+            ),
+            Lexer::OPEN_BRACE => self.lex_token_exact(
+                Lexer::OPEN_BRACE,
+                LexLength::Exact(1),
+                TokenKind::OpenParens,
+            ),
+            Lexer::CLOSE_BRACE => self.lex_token_exact(
+                Lexer::CLOSE_BRACE,
+                LexLength::Exact(1),
+                TokenKind::OpenParens,
+            ),
+            Lexer::VLINE => self.lex_late_token(Lexer::VLINE, 2, TokenKind::Highlight),
+            _ => None,
         }
-
-        None
     }
 
     fn lex_token(&mut self, symbol: &str, len: usize, kind: TokenKind) -> Option<Token> {
@@ -211,7 +272,7 @@ impl TokenIterator<'_> {
         let token = self.lex_by_symbol(Lexer::ULINE, Content::Store, |len| match len {
             2 => TokenKind::Underline,
             1 => TokenKind::Subscript,
-            _ => TokenKind::UnderlineCombo,
+            _ => TokenKind::UnderlineSubscript,
         });
 
         Some(token)
@@ -468,6 +529,12 @@ impl IsKeyword for &str {
             Lexer::TICK,
             Lexer::TILDE,
             Lexer::VLINE,
+            Lexer::OPEN_PAREN,
+            Lexer::CLOSE_PAREN,
+            Lexer::OPEN_BRACKET,
+            Lexer::OPEN_BRACKET,
+            Lexer::OPEN_BRACE,
+            Lexer::CLOSE_BRACE,
         ]
         .contains(self)
     }
