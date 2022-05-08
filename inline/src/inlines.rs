@@ -48,7 +48,7 @@ impl InlineContent {
     }
 
     pub fn append_inline(&mut self, inline: Inline) {
-        self.append(inline.into_inner());
+        self.append(InlineContent::Nested(vec![inline]));
     }
 
     pub fn prepend(&mut self, other: Self) {
