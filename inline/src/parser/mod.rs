@@ -49,11 +49,16 @@ impl ParserStack {
 pub struct Parser<'i> {
     iter: TokenIterator<'i>,
     stack: ParserStack,
+    token_cache: Option<Token>,
 }
 
 impl Parser<'_> {
     fn next_token(&mut self) -> Option<Token> {
-        self.iter.next()
+        if self.token_cache.is_some() {
+            self.token_cache.take()
+        } else {
+            self.iter.next()
+        }
     }
 
     fn is_token_open(&self, token: &Token) -> bool {
@@ -74,6 +79,14 @@ impl Parser<'_> {
         // Parse until closing token is found
         // Close inline and return it
 
+        // PROBLEM: AmbiguousToken that comes as next token
+        // example: **Bold Text***Italic text*
+        //            ^^^^^^^^^   ^^^^^^^^^^^
+        //              BOLD        ITALIC
+        //  So the ambiguous token AFTER bold content (***) should be split into
+        //  bold close token and italic open. That means, that the ambiguous token should be split,
+        //  first part taken (based on what part was open) and the second part left for the next
+        //  iteration
         let kind = token.kind();
         let mut content: InlineContent = InlineContent::Nested(Vec::default());
         let start = token.span().start();
@@ -81,7 +94,7 @@ impl Parser<'_> {
 
         self.stack.push(token);
 
-        while let Some(next_token) = self.next_token() {
+        while let Some(mut next_token) = self.next_token() {
             // Multiple cases:
             // 1. token is (nesting one and) already open
             //      - Is it closing one and it was open last? Close Inline
@@ -158,7 +171,7 @@ impl Iterator for Parser<'_> {
         let content: InlineContent;
         let mut _kind: TokenKind;
 
-        if let Some(token) = self.iter.next() {
+        if let Some(token) = self.next_token() {
             if token.opens() {
                 return Some(self.parse_nested_inline(token));
             } else {
