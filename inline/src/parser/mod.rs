@@ -289,4 +289,125 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn parse_simple_italic() {
+        let mut parser = "*Italic text*".parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position { line: 1, column: 2 };
+        let end = start + (0, 11 - 1);
+
+        // no remaining inlines
+        assert_eq!(parser.count(), 0);
+        assert_eq!(inline.kind, TokenKind::Italic);
+        assert_eq!(
+            inline.inner,
+            InlineContent::Plain(PlainInline {
+                content: String::from("Italic text"),
+                span: Span::from((start, end))
+            })
+        );
+    }
+
+    #[test]
+    fn parse_italic_bold() {
+        let mut parser = "*Italic text***Bold text**".parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position { line: 1, column: 2 };
+        let end = start + (0, 11 - 1);
+
+        assert_eq!(inline.kind, TokenKind::Italic);
+        assert_eq!(
+            inline.inner,
+            InlineContent::Plain(PlainInline {
+                content: String::from("Italic text"),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = end + (0, 5 - 1);
+        let end = start + (0, 9 - 1);
+
+        assert_eq!(inline.kind, TokenKind::Bold);
+        assert_eq!(
+            inline.inner,
+            InlineContent::Plain(PlainInline {
+                content: String::from("Bold text"),
+                span: Span::from((start, end))
+            })
+        );
+    }
+
+    #[test]
+    fn parse_bold_italic_nested() {
+        let mut parser = "**This is bold *with* italic inside.**".parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position { line: 1, column: 1 };
+        let end = start + (0, 38 - 1);
+
+        // no remaining inlines
+        assert_eq!(parser.count(), 0);
+
+        // println!("Inline span: {:#?}", inline.span());
+
+        assert_eq!(inline.kind, TokenKind::Bold);
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert!(matches!(inline.inner, InlineContent::Nested(_)));
+
+        if let InlineContent::Nested(inner_content) = inline.into_inner() {
+            assert_eq!(inner_content.len(), 3);
+
+            let inline = &inner_content[0];
+
+            let start = Position { line: 1, column: 3 };
+            let end = start + (0, 13 - 1);
+
+            assert_eq!(inline.kind, TokenKind::Plain);
+            assert_eq!(
+                inline.inner,
+                InlineContent::Plain(PlainInline {
+                    content: String::from("This is bold "),
+                    span: Span::from((start, end))
+                })
+            );
+
+            let inline = &inner_content[1];
+
+            let start = end + (0, 1);
+            let end = start + (0, 6 - 1);
+
+            let inner_start = start + (0, 1);
+            let inner_end = end - (0, 1);
+
+            assert_eq!(inline.kind, TokenKind::Italic);
+            assert_eq!(
+                inline.inner,
+                InlineContent::Plain(PlainInline {
+                    content: String::from("with"),
+                    span: Span::from((inner_start, inner_end))
+                })
+            );
+            assert_eq!(inline.span(), Span::from((start, end)));
+
+            let inline = &inner_content[2];
+
+            let start = end + (0, 1);
+            let end = start + (0, 15 - 1);
+
+            assert_eq!(inline.kind, TokenKind::Plain);
+            assert_eq!(
+                inline.inner,
+                InlineContent::Plain(PlainInline {
+                    content: String::from(" italic inside."),
+                    span: Span::from((start, end))
+                })
+            );
+        } else {
+            panic!("Inner content not nested");
+        }
+    }
 }
