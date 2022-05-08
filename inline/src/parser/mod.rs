@@ -149,7 +149,7 @@ impl Parser<'_> {
         }
 
         // if content contains only plain contents, then merge them and make into one
-        content.try_merge_plain_inlines();
+        content.try_flatten();
 
         Inline {
             span: Span::from((start, end)),

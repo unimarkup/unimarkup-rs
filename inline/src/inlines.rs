@@ -81,7 +81,7 @@ impl InlineContent {
         }
     }
 
-    pub fn try_merge_plain_inlines(&mut self) {
+    pub fn try_flatten(&mut self) {
         match self {
             InlineContent::Plain(_) => (), // do nothing, already plain
             InlineContent::Nested(ref mut content) => {
@@ -90,23 +90,19 @@ impl InlineContent {
                     return;
                 }
 
-                if content
-                    .iter()
-                    .all(|inline| matches!(inline.inner, InlineContent::Plain(_)))
-                {
-                    let last_inline = content.pop().unwrap();
-                    let end = last_inline.span().end();
-                    let mut start = None;
+                if content.iter().all(|inline| {
+                    println!("Matching kind: {:?}", inline.kind);
+                    matches!(inline.kind, TokenKind::Plain)
+                }) {
+                    let first_inline = content.remove(0);
+                    let start = first_inline.span().start();
+                    let mut end = first_inline.span().end();
 
                     // this is checked, it is guaranteed that it is plain variant
-                    let mut inline_content = last_inline.inner.unwrap_plain();
+                    let mut inline_content = first_inline.inner.unwrap_plain();
 
                     for inline in content {
-                        if start.is_none() {
-                            start = Some(inline.span().start());
-
-                            inline_content.span = Span::from((start.unwrap(), end));
-                        }
+                        end = inline.span().end();
 
                         match &inline.inner {
                             InlineContent::Plain(inner_content) => {
@@ -118,6 +114,7 @@ impl InlineContent {
                         }
                     }
 
+                    inline_content.span = Span::from((start, end));
                     *self = InlineContent::Plain(inline_content);
                 }
             }
