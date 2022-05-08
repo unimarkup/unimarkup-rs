@@ -112,7 +112,9 @@ impl Parser<'_> {
                 if self.is_token_open(&next_token) {
                     if self.is_token_latest(&next_token) {
                         // It is closing one and it was open last -> Close Inline
-                        self.stack.pop(&next_token);
+                        end = next_token.span().end();
+
+                        self.stack.pop_last();
                         break;
                     } else {
                         // It might be ambiguous token and part of it is open,
@@ -170,6 +172,8 @@ impl Parser<'_> {
                 }
             } else {
                 // neither opens nor closes - is plain text
+                end = next_token.span().end();
+
                 let inline_content = InlineContent::from(next_token);
                 content.append(inline_content);
             }
@@ -178,8 +182,10 @@ impl Parser<'_> {
         // if content contains only plain contents, then merge them and make into one
         content.try_flatten();
 
+        let span = Span::from((start, end));
+
         Inline {
-            span: Span::from((start, end)),
+            span,
             inner: content,
             kind,
         }
@@ -190,25 +196,21 @@ impl Iterator for Parser<'_> {
     type Item = Inline;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let content: InlineContent;
-        let mut _kind: TokenKind;
+        let inline_content: InlineContent;
 
         if let Some(token) = self.next_token() {
             if token.opens() {
                 return Some(self.parse_nested_inline(token));
             } else {
-                _kind = token.kind();
+                let kind = token.kind();
 
-                let (token_content, token_span) = token.into_inner();
-                content = InlineContent::Plain(PlainInline {
-                    content: token_content,
-                    span: token_span,
-                });
+                let (content, span) = token.into_inner();
+                inline_content = InlineContent::Plain(PlainInline { content, span });
 
                 return Some(Inline {
-                    inner: content,
-                    span: token_span,
-                    kind: TokenKind::Plain,
+                    inner: inline_content,
+                    span,
+                    kind,
                 });
             }
         }
