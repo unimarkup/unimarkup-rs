@@ -22,10 +22,9 @@ impl ParserStack {
         self.data.len() - 1
     }
 
-    // /// Removes and returns the item from stack at the given index
-    // pub fn remove(&mut self, index: usize) -> Token {
-    //     self.data.remove(index)
-    // }
+    pub fn pop_last(&mut self) -> Option<Token> {
+        self.data.pop()
+    }
 
     /// Removes and returns the last item on stack
     pub fn pop(&mut self, token: &Token) -> Option<Token> {
@@ -62,7 +61,9 @@ impl Parser<'_> {
     }
 
     fn is_token_open(&self, token: &Token) -> bool {
-        self.stack.contains(token)
+        self.stack.iter().any(|inner_token| {
+            inner_token.is_or_contains(token) || token.is_or_contains(inner_token)
+        })
     }
 
     fn is_token_latest(&self, token: &Token) -> bool {
@@ -114,19 +115,40 @@ impl Parser<'_> {
                         self.stack.pop(&next_token);
                         break;
                     } else {
-                        // It is closing one, but it was not open last -> Return contents as inline
+                        // It might be ambiguous token and part of it is open,
+                        // for example ** followed by ***. Such token should be split as **|*,
+                        // where first part (**) is being closed, and second part (*) is now in
+                        // token_cache for next iteration
 
-                        // remove the opening token from the stack
-                        let token = self.stack.pop(&next_token).unwrap();
+                        if next_token.is_ambiguous() {
+                            // at this point we know there is at least one token in stack
+                            let last_token = self.stack.last().unwrap();
 
-                        // prepend the token to content as plain text
-                        content.prepend(InlineContent::from(token));
+                            if next_token.is_or_contains(last_token) {
+                                let _parsed_token = next_token.remove_partial(last_token);
 
-                        return Inline {
-                            inner: content,
-                            span: Span::from((start, end)),
-                            kind: TokenKind::Plain,
-                        };
+                                self.stack.pop_last();
+
+                                self.token_cache = Some(next_token);
+
+                                // close this inline
+                                break;
+                            }
+                        } else {
+                            // It is closing one, but it was not open last -> Return contents as inline
+
+                            // remove the opening token from the stack
+                            let token = self.stack.pop(&next_token).unwrap();
+
+                            // prepend the token to content as plain text
+                            content.prepend(InlineContent::from(token));
+
+                            return Inline {
+                                inner: content,
+                                span: Span::from((start, end)),
+                                kind: TokenKind::Plain,
+                            };
+                        }
                     }
                 }
             } else if next_token.opens() {
@@ -210,6 +232,7 @@ where
         Parser {
             iter: self.lex_iter(),
             stack: ParserStack::default(),
+            token_cache: None,
         }
     }
 }
