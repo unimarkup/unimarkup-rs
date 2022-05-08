@@ -145,19 +145,7 @@ impl Inline {
     }
 
     pub fn span(&self) -> Span {
-        match &self.inner {
-            InlineContent::Plain(inline) => inline.span,
-            InlineContent::Nested(nested_inlines) => {
-                if nested_inlines.is_empty() {
-                    Span::default()
-                } else {
-                    let start = nested_inlines.first().unwrap().span.start();
-                    let end = nested_inlines.last().unwrap().span.end();
-
-                    Span::from((start, end))
-                }
-            }
-        }
+        self.span
     }
 }
 
