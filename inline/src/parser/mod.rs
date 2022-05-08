@@ -1,16 +1,8 @@
 use std::ops::Deref;
 
-use crate::Inline;
-use crate::InlineContent;
-use crate::PlainInline;
-use crate::Span;
-use crate::Token;
-// use crate::Lexer;
-use crate::TokenIterator;
-use crate::TokenKind;
-use crate::Tokenize;
+use crate::{Inline, InlineContent, PlainInline, Span, Token, TokenIterator, TokenKind, Tokenize};
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 struct ParserStack {
     data: Vec<Token>,
 }
