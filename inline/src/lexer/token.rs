@@ -101,6 +101,29 @@ pub struct Token {
 }
 
 impl Token {
+    pub fn new(kind: TokenKind, span: Span, spacing: Spacing) -> Self {
+        Self {
+            kind,
+            span,
+            spacing,
+            content: None,
+        }
+    }
+
+    pub fn with_content(
+        kind: TokenKind,
+        span: Span,
+        spacing: Spacing,
+        content: impl Into<String>,
+    ) -> Self {
+        Self {
+            kind,
+            span,
+            spacing,
+            content: Some(content.into()),
+        }
+    }
+
     pub fn as_str(&self) -> &str {
         match self.content {
             Some(ref content) => content,
