@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-use crate::Lexer;
+use crate::Symbol;
 
 use super::Content;
 
@@ -44,15 +44,9 @@ impl<K, S, W> TokenBuilder<K, S, W> {
         content: &[&str],
         content_option: Content,
     ) -> TokenBuilder<K, S, W> {
-        let store_content = match content_option {
-            Content::Store => true,
-            Content::Auto => self.kind == TokenKind::Plain,
-        };
-
-        if store_content {
-            self.with_content(content.concat())
-        } else {
-            self
+        match content_option {
+            Content::Store => self.with_content(content.concat()),
+            _ => self,
         }
     }
 
@@ -264,7 +258,6 @@ impl TokenKind {
             TokenKind::ItalicBold => "***",
             TokenKind::Italic => "*",
             TokenKind::Newline => "\n",
-            TokenKind::Plain => "",
             TokenKind::Whitespace => " ",
             TokenKind::Underline => "__",
             TokenKind::Subscript => "_",
@@ -282,21 +275,81 @@ impl TokenKind {
             TokenKind::CloseBracket => "]",
             TokenKind::OpenBrace => "{",
             TokenKind::CloseBrace => "}",
+            TokenKind::Plain => "",
+        }
+    }
+
+    pub(crate) fn content_matters(&self) -> bool {
+        matches!(self, TokenKind::Plain)
+    }
+
+    pub(crate) fn content_option(&self) -> Content {
+        if self.content_matters() {
+            Content::Store
+        } else {
+            Content::Auto
         }
     }
 }
 
-impl From<&str> for TokenKind {
-    fn from(symbol: &str) -> Self {
-        match symbol {
-            Lexer::TICK => Self::Verbatim,
-            Lexer::DOLLAR => Self::Math,
-            Lexer::OPEN_PAREN => Self::OpenParens,
-            Lexer::CLOSE_PAREN => Self::CloseParens,
-            Lexer::OPEN_BRACKET => Self::OpenBracket,
-            Lexer::CLOSE_BRACKET => Self::CloseBracket,
-            Lexer::OPEN_BRACE => Self::OpenBrace,
-            Lexer::CLOSE_BRACE => Self::CloseBrace,
+impl From<(Symbol, usize)> for TokenKind {
+    fn from((symbol, len): (Symbol, usize)) -> Self {
+        match len {
+            1 => match symbol {
+                Symbol::Star => Self::Italic,
+                Symbol::Underline => Self::Subscript,
+                Symbol::Caret => Self::Superscript,
+                Symbol::Tick => Self::Verbatim,
+                Symbol::Overline => Self::Overline,
+                Symbol::Dollar => Self::Math,
+                Symbol::OpenParens => Self::OpenParens,
+                Symbol::CloseParens => Self::CloseParens,
+                Symbol::OpenBracket => Self::OpenBracket,
+                Symbol::CloseBracket => Self::CloseBracket,
+                Symbol::OpenBrace => Self::OpenBrace,
+                Symbol::CloseBrace => Self::CloseBrace,
+                Symbol::Esc | Symbol::Pipe | Symbol::Tilde | Symbol::Quote | Symbol::Plain => {
+                    Self::Plain
+                }
+            },
+            2 => match symbol {
+                Symbol::Star => Self::Bold,
+                Symbol::Underline => Self::Underline,
+                Symbol::Pipe => Self::Highlight,
+                Symbol::Tilde => Self::Strikethrough,
+                Symbol::Quote => Self::Quote,
+                Symbol::Esc
+                | Symbol::Caret
+                | Symbol::Tick
+                | Symbol::Overline
+                | Symbol::Dollar
+                | Symbol::OpenParens
+                | Symbol::CloseParens
+                | Symbol::OpenBracket
+                | Symbol::CloseBracket
+                | Symbol::OpenBrace
+                | Symbol::CloseBrace
+                | Symbol::Plain => Self::Plain,
+            },
+            3 => match symbol {
+                Symbol::Star => Self::ItalicBold,
+                Symbol::Underline => Self::UnderlineSubscript,
+                Symbol::Esc
+                | Symbol::Caret
+                | Symbol::Tick
+                | Symbol::Overline
+                | Symbol::Pipe
+                | Symbol::Tilde
+                | Symbol::Quote
+                | Symbol::Dollar
+                | Symbol::OpenParens
+                | Symbol::CloseParens
+                | Symbol::OpenBracket
+                | Symbol::CloseBracket
+                | Symbol::OpenBrace
+                | Symbol::CloseBrace
+                | Symbol::Plain => Self::Plain,
+            },
             _ => Self::Plain,
         }
     }

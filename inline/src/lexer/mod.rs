@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, str::Lines};
+use std::str::Lines;
 
 use unicode_segmentation::*;
 
@@ -19,7 +19,7 @@ pub trait Tokenize {
         let line_offs = pos.line;
 
         for _ in 0..=line_offs {
-            iter.load_next_line();
+            iter.next_line();
         }
 
         iter.index += pos.column;
@@ -48,25 +48,123 @@ pub struct Lexer<'a> {
     pos: Position,
 }
 
-impl<'a> Lexer<'a> {
-    const ESC: &'static str = "\\";
-    const STAR: &'static str = "*";
-    const ULINE: &'static str = "_";
-    const CARET: &'static str = "^";
-    const TICK: &'static str = "`";
-    const OLINE: &'static str = "‾";
-    const VLINE: &'static str = "|";
-    const TILDE: &'static str = "~";
-    const QUOTE: &'static str = "\"";
-    const DOLLAR: &'static str = "$";
-    // const COLON: &'static str = ":";
-    const OPEN_PAREN: &'static str = "(";
-    const CLOSE_PAREN: &'static str = ")";
-    const OPEN_BRACKET: &'static str = "[";
-    const CLOSE_BRACKET: &'static str = "]";
-    const OPEN_BRACE: &'static str = "{";
-    const CLOSE_BRACE: &'static str = "}";
+/// Symbols with significance in Unimarkup inline formatting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Symbol {
+    /// The backslash (`\`) is used for escaping other symbols.
+    Esc,
+    /// The start (`*`) literal is used for bold and/or italic formatting.
+    Star,
+    /// The underline (`_`) literal is used for undeline and/or subscript formatting.
+    Underline,
+    /// The caret (`^`) literal is used for superscript formatting.
+    Caret,
+    /// The tick (```) literal is used for verbatim formatting.
+    Tick,
+    /// The overline (`‾`) literal is used for overline formatting.
+    Overline,
+    /// The pipe (`|`) literal is used for highlight formatting.
+    Pipe,
+    /// The tilde (`~`) literal is used for strikethrough formatting.
+    Tilde,
+    /// The quote (`"`) literal is used for quotation formatting.
+    Quote,
+    /// The dollar (`$`) literal is used for math mode formatting.
+    Dollar,
+    /// The open parentheses (`(`) literal is used for additional data to text group elements (e.g.
+    /// image insert).
+    OpenParens,
+    /// The close parentheses (`)`) literal is used to close the additional data to text group.
+    CloseParens,
+    /// The open bracket (`[`) literal is used for text group elements.
+    OpenBracket,
+    /// The close bracket (`]`) literal is used for text group elements.
+    CloseBracket,
+    /// The open brace (`{`) literal is used for inline attributes.
+    OpenBrace,
+    /// The close brace (`}`) literal is used for inline attributes.
+    CloseBrace,
+    /// The plain symbol represents any other literal with no significance in Unimarkup inline
+    /// formatting.
+    Plain,
+    // Colon,
+}
 
+impl AsRef<str> for Symbol {
+    fn as_ref(&self) -> &str {
+        match self {
+            Symbol::Esc => "\\",
+            Symbol::Star => "*",
+            Symbol::Underline => "_",
+            Symbol::Caret => "^",
+            Symbol::Tick => "`",
+            Symbol::Overline => "‾",
+            Symbol::Pipe => "|",
+            Symbol::Tilde => "~",
+            Symbol::Quote => "\"",
+            Symbol::Dollar => "$",
+            Symbol::OpenParens => "(",
+            Symbol::CloseParens => ")",
+            Symbol::OpenBracket => "[",
+            Symbol::CloseBracket => "]",
+            Symbol::OpenBrace => "{",
+            Symbol::CloseBrace => "}",
+            Symbol::Plain => "",
+            // Symbol::Colon => ":",
+        }
+    }
+}
+
+impl From<&str> for Symbol {
+    fn from(input: &str) -> Self {
+        match input {
+            "\\" => Symbol::Esc,
+            "*" => Symbol::Star,
+            "_" => Symbol::Underline,
+            "^" => Symbol::Caret,
+            "`" => Symbol::Tick,
+            "‾" => Symbol::Overline,
+            "|" => Symbol::Pipe,
+            "~" => Symbol::Tilde,
+            "\"" => Symbol::Quote,
+            "$" => Symbol::Dollar,
+            "(" => Symbol::OpenParens,
+            ")" => Symbol::CloseParens,
+            "[" => Symbol::OpenBracket,
+            "]" => Symbol::CloseBracket,
+            "{" => Symbol::OpenBrace,
+            "}" => Symbol::CloseBrace,
+            _ => Symbol::Plain,
+        }
+    }
+}
+
+impl Symbol {
+    pub(crate) fn allowed_len(&self) -> LexLength {
+        match self {
+            Symbol::Star | Symbol::Underline => LexLength::Limited(3),
+
+            Symbol::Esc
+            | Symbol::Caret
+            | Symbol::Overline
+            | Symbol::Tick
+            | Symbol::Dollar
+            | Symbol::OpenParens => LexLength::Limited(1),
+
+            Symbol::CloseParens
+            | Symbol::OpenBracket
+            | Symbol::CloseBracket
+            | Symbol::OpenBrace
+            | Symbol::CloseBrace => LexLength::Exact(1),
+
+            Symbol::Pipe | Symbol::Tilde | Symbol::Quote => LexLength::Limited(2),
+
+            Symbol::Plain => LexLength::Unlimited,
+        }
+    }
+}
+
+impl<'a> Lexer<'a> {
     pub fn iter(&self) -> TokenIterator<'a> {
         TokenIterator {
             lines: self.input.lines(),
@@ -94,17 +192,18 @@ pub(crate) enum Content {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-enum LexLength {
+pub(crate) enum LexLength {
+    /// Any length allowed.
     Unlimited,
+    /// Exact length allowed.
     Exact(usize),
+    /// Any length up to the limit.
+    Limited(usize),
 }
 
-impl LexLength {
-    pub(crate) fn allows_len(&self, len: usize) -> bool {
-        match *self {
-            LexLength::Unlimited => true,
-            LexLength::Exact(exact_len) => len == exact_len,
-        }
+impl From<usize> for LexLength {
+    fn from(len: usize) -> Self {
+        Self::Exact(len)
     }
 }
 
@@ -120,7 +219,7 @@ impl TokenIterator<'_> {
         self.index >= self.curr.len()
     }
 
-    fn load_next_line(&mut self) -> bool {
+    fn next_line(&mut self) -> bool {
         // remove last line from cache
         self.curr.clear();
 
@@ -153,197 +252,64 @@ impl TokenIterator<'_> {
         // - '`' -> Verbatim
         // - '"' -> Quote
         // - '$' -> Math
-        //
-        // NOT YET IMPLEMENTED :
-        // - ":" -> Custom Emoji, e.g. ::heart::
         // - '[' | ']' -> OpenBracket, CloseBracket
         // - '(' | ')' -> OpenParens, CloseParens
         // - '{' | '}' -> OpenBrace, CloseBrace
+        //
+        // NOT YET IMPLEMENTED :
+        // - ":" -> Custom Emoji, e.g. ::heart::
         // ... and more
 
-        match *first {
-            Lexer::STAR => self.lex_italic_bold(),
-            Lexer::ULINE => self.lex_underline_subscript(),
-            Lexer::OLINE => self.lex_overline(),
-            Lexer::CARET => self.lex_token(Lexer::CARET, 1, TokenKind::Superscript),
-            Lexer::TILDE => {
-                self.lex_token_exact(Lexer::TILDE, LexLength::Exact(2), TokenKind::Strikethrough)
-            }
-            Lexer::TICK => {
-                self.lex_token_exact(Lexer::TICK, LexLength::Exact(1), TokenKind::Verbatim)
-            }
-            Lexer::QUOTE => {
-                self.lex_token_exact(Lexer::TICK, LexLength::Exact(2), TokenKind::Quote)
-            }
-            Lexer::DOLLAR => {
-                self.lex_token_exact(Lexer::DOLLAR, LexLength::Exact(1), TokenKind::Math)
-            }
-            Lexer::OPEN_PAREN => self.lex_token_exact(
-                Lexer::OPEN_PAREN,
-                LexLength::Exact(1),
-                TokenKind::OpenParens,
-            ),
-            Lexer::CLOSE_PAREN => self.lex_token_exact(
-                Lexer::CLOSE_PAREN,
-                LexLength::Exact(1),
-                TokenKind::OpenParens,
-            ),
-            Lexer::OPEN_BRACKET => self.lex_token_exact(
-                Lexer::OPEN_BRACKET,
-                LexLength::Exact(1),
-                TokenKind::OpenParens,
-            ),
-            Lexer::CLOSE_BRACKET => self.lex_token_exact(
-                Lexer::CLOSE_BRACKET,
-                LexLength::Exact(1),
-                TokenKind::OpenParens,
-            ),
-            Lexer::OPEN_BRACE => self.lex_token_exact(
-                Lexer::OPEN_BRACE,
-                LexLength::Exact(1),
-                TokenKind::OpenParens,
-            ),
-            Lexer::CLOSE_BRACE => self.lex_token_exact(
-                Lexer::CLOSE_BRACE,
-                LexLength::Exact(1),
-                TokenKind::OpenParens,
-            ),
-            Lexer::VLINE => self.lex_late_token(Lexer::VLINE, 2, TokenKind::Highlight),
-            _ => None,
-        }
-    }
+        // NOTE: General variant of lexing:
+        // If some literal occurs the maximal symbol length + 1 times, then it's lexed as plain.
 
-    fn lex_token(&mut self, symbol: &str, len: usize, kind: TokenKind) -> Option<Token> {
-        let token = self.lex_by_symbol(symbol, Content::Auto, |lexed_len| {
-            match lexed_len.cmp(&len) {
-                Ordering::Equal => kind,
-                _ => TokenKind::Plain,
-            }
-        });
+        let symbol = Symbol::from(*first);
 
-        Some(token)
-    }
+        let lex_len = symbol.allowed_len();
 
-    fn lex_token_exact(&mut self, symbol: &str, len: LexLength, kind: TokenKind) -> Option<Token> {
-        let kind_from_len = |lexed_len| {
-            if len.allows_len(lexed_len) {
-                kind
-            } else {
-                TokenKind::Plain
-            }
-        };
+        let symbol_len = self.symbol_len(symbol, lex_len);
 
-        let token = self.lex_token_with_len(symbol, Content::Auto, kind_from_len, len);
+        let start_pos = self.pos;
+        let end_pos = start_pos + (0, symbol_len - 1);
 
-        Some(token)
-    }
+        let spacing = self.spacing_around(symbol_len);
 
-    fn lex_italic_bold(&mut self) -> Option<Token> {
-        let token = self.lex_by_symbol(Lexer::STAR, Content::Store, |len| match len {
-            1 => TokenKind::Italic,
-            2 => TokenKind::Bold,
-            _ => TokenKind::ItalicBold,
-        });
+        let kind = TokenKind::from((symbol, symbol_len));
 
-        Some(token)
-    }
+        let pos = self.index + symbol_len;
 
-    fn lex_late_token(&mut self, symbol: &str, len: usize, kind: TokenKind) -> Option<Token> {
-        // if symbol repeats itself more than len times, then leave later symbols as the token
-        // itself, and use all of the earlier symbols as plain.
-        // Example: |||| -> First 2 || will be lexed as plain, the later one as "Highlight"
-        // token (at next iteration)
-
-        let end_pos = self.find_symbol_end_pos(symbol, LexLength::Unlimited);
-        let lexed_len = end_pos - self.index;
-
-        let mut to_lex_len = len;
-        let mut kind = kind;
-
-        if lexed_len != len {
-            to_lex_len = lexed_len - len;
-            kind = TokenKind::Plain;
-        }
-
-        self.lex_token_exact(symbol, LexLength::Exact(to_lex_len), kind)
-    }
-
-    fn lex_underline_subscript(&mut self) -> Option<Token> {
-        let token = self.lex_by_symbol(Lexer::ULINE, Content::Store, |len| match len {
-            2 => TokenKind::Underline,
-            1 => TokenKind::Subscript,
-            _ => TokenKind::UnderlineSubscript,
-        });
-
-        Some(token)
-    }
-
-    fn lex_overline(&mut self) -> Option<Token> {
-        let token = self.lex_by_symbol(Lexer::OLINE, Content::Auto, |len| -> TokenKind {
-            match len {
-                1 => TokenKind::Overline,
-                _ => TokenKind::Plain,
-            }
-        });
-
-        Some(token)
-    }
-
-    fn find_symbol_end_pos(&self, symbol: &str, lex_len: LexLength) -> usize {
-        let mut pos = self.index;
-
-        loop {
-            match self.curr.get(pos) {
-                Some(grapheme) if *grapheme == symbol => pos += 1,
-                _ => break pos,
-            }
-
-            match lex_len {
-                LexLength::Exact(len) => {
-                    if pos - self.index == len {
-                        break pos;
-                    }
-                }
-                _ => continue,
-            }
-        }
-    }
-
-    fn lex_by_symbol<F>(&mut self, symbol: &str, content_option: Content, kind_from_len: F) -> Token
-    where
-        F: Fn(usize) -> TokenKind,
-    {
-        self.lex_token_with_len(symbol, content_option, kind_from_len, LexLength::Unlimited)
-    }
-
-    fn lex_token_with_len<F>(
-        &mut self,
-        symbol: &str,
-        content_option: Content,
-        kind_from_len: F,
-        lex_len: LexLength,
-    ) -> Token
-    where
-        F: Fn(usize) -> TokenKind,
-    {
-        let pos = self.find_symbol_end_pos(symbol, lex_len);
-
-        let len = pos - self.index;
-
-        let kind = kind_from_len(len);
-        let start = self.pos;
-        let end = start + (0, len - 1);
-
-        let spacing = self.spacing_around(len);
-
-        let token_builder = TokenBuilder::new(kind)
-            .span(Span::from((start, end)))
+        let token = TokenBuilder::new(kind)
+            .span(Span::from((start_pos, end_pos)))
             .space(spacing)
-            .optional_content(&self.curr[self.index..pos], content_option);
+            .optional_content(&self.curr[self.index..pos], kind.content_option())
+            .build();
 
         self.index = pos;
 
-        token_builder.build()
+        Some(token)
+    }
+
+    fn symbol_len(&self, symbol: Symbol, lex_len: LexLength) -> usize {
+        let end_pos = self.literal_end_index(symbol);
+        let scanned_len = end_pos - self.index;
+
+        match lex_len {
+            // check if potentially less literals found
+            LexLength::Exact(len) => scanned_len.min(len),
+            _ => scanned_len,
+        }
+    }
+
+    fn literal_end_index(&self, symbol: impl AsRef<str>) -> usize {
+        let mut pos = self.index;
+        let literal = symbol.as_ref();
+
+        loop {
+            match self.curr.get(pos) {
+                Some(grapheme) if *grapheme == literal => pos += 1,
+                _ => break pos,
+            }
+        }
     }
 
     fn spacing_around(&self, len: usize) -> Spacing {
@@ -446,10 +412,10 @@ impl<'a> Iterator for TokenIterator<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // NOTE: pos.line is updated only in load_next_line()
+        // NOTE: pos.line is updated only in next_line() function
         self.pos.column = self.index + 1;
 
-        if self.is_end_of_line() && !self.load_next_line() {
+        if self.is_end_of_line() && !self.next_line() {
             return None;
         }
 
@@ -521,26 +487,28 @@ trait IsKeyword {
 
 impl IsKeyword for &str {
     fn is_keyword(&self) -> bool {
-        [
-            Lexer::STAR,
-            Lexer::ULINE,
-            Lexer::OLINE,
-            Lexer::CARET,
-            Lexer::TICK,
-            Lexer::TILDE,
-            Lexer::VLINE,
-            Lexer::OPEN_PAREN,
-            Lexer::CLOSE_PAREN,
-            Lexer::OPEN_BRACKET,
-            Lexer::OPEN_BRACKET,
-            Lexer::OPEN_BRACE,
-            Lexer::CLOSE_BRACE,
-        ]
-        .contains(self)
+        matches!(
+            Symbol::from(*self),
+            Symbol::Star
+                | Symbol::Underline
+                | Symbol::Caret
+                | Symbol::Tick
+                | Symbol::Overline
+                | Symbol::Pipe
+                | Symbol::Tilde
+                | Symbol::Quote
+                | Symbol::Dollar
+                | Symbol::OpenParens
+                | Symbol::CloseParens
+                | Symbol::OpenBracket
+                | Symbol::CloseBracket
+                | Symbol::OpenBrace
+                | Symbol::CloseBrace
+        )
     }
 
     fn is_esc(&self) -> bool {
-        *self == Lexer::ESC
+        matches!(Symbol::from(*self), Symbol::Esc)
     }
 
     fn is_whitespace(&self) -> bool {
