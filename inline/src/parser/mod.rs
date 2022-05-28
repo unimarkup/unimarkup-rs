@@ -142,6 +142,10 @@ impl Parser<'_> {
                             // remove the opening token from the stack
                             let token = self.stack.pop(&next_token).unwrap();
 
+                            // NOTE: when coming from nested, while loop will be continued -> takes
+                            // another token from iterator or cache
+                            self.token_cache = Some(next_token);
+
                             // prepend the token to content as plain text
                             content.prepend(InlineContent::from(token));
 
@@ -200,22 +204,24 @@ impl Iterator for Parser<'_> {
 
         if let Some(token) = self.next_token() {
             if token.opens() {
-                return Some(self.parse_nested_inline(token));
+                Some(self.parse_nested_inline(token))
             } else {
                 let kind = token.kind();
 
                 let (content, span) = token.into_inner();
                 inline_content = InlineContent::Plain(PlainInline { content, span });
 
-                return Some(Inline {
+                Some(Inline {
                     inner: inline_content,
                     span,
                     kind,
-                });
+                })
             }
-        }
+        } else {
+            // TODO: check if parser stack empty
 
-        None
+            None
+        }
     }
 }
 
