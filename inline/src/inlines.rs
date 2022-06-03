@@ -90,10 +90,10 @@ impl InlineContent {
                     return;
                 }
 
-                if content.iter().all(|inline| {
-                    println!("Matching kind: {:?}", inline.kind);
-                    matches!(inline.kind, TokenKind::Plain)
-                }) {
+                if content
+                    .iter()
+                    .all(|inline| matches!(inline.kind, InlineKind::Plain))
+                {
                     let first_inline = content.remove(0);
                     let start = first_inline.span().start();
                     let mut end = first_inline.span().end();
@@ -132,12 +132,16 @@ impl From<Token> for InlineContent {
 pub struct Inline {
     pub(crate) inner: InlineContent,
     pub(crate) span: Span,
-    pub(crate) kind: TokenKind,
+    pub(crate) kind: InlineKind,
 }
 
 impl Inline {
     pub fn new(span: Span, inner: InlineContent, kind: TokenKind) -> Self {
-        Self { inner, span, kind }
+        Self {
+            inner,
+            span,
+            kind: InlineKind::from(kind),
+        }
     }
 
     pub fn into_inner(self) -> InlineContent {
@@ -154,7 +158,54 @@ impl From<PlainInline> for Inline {
         Self {
             span: plain_inline.span,
             inner: InlineContent::Plain(plain_inline),
-            kind: TokenKind::Plain,
+            kind: InlineKind::Plain,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InlineKind {
+    Bold,
+    Italic,
+    Underline,
+    Subscript,
+    Superscript,
+    Overline,
+    Strikethrough,
+    Highlight,
+    Verbatim,
+    Quote,
+    Math,
+    Parens,
+    TextGroup,
+    Attributes,
+    Newline,
+    Whitespace,
+    Plain,
+}
+
+impl From<TokenKind> for InlineKind {
+    fn from(token_kind: TokenKind) -> Self {
+        match token_kind {
+            TokenKind::Bold => Self::Bold,
+            TokenKind::Italic => Self::Italic,
+            TokenKind::Underline => Self::Underline,
+            TokenKind::Subscript => Self::Subscript,
+            TokenKind::Superscript => Self::Superscript,
+            TokenKind::Overline => Self::Overline,
+            TokenKind::Strikethrough => Self::Strikethrough,
+            TokenKind::Highlight => Self::Highlight,
+            TokenKind::Verbatim => Self::Verbatim,
+            TokenKind::Quote => Self::Quote,
+            TokenKind::Math => Self::Math,
+            TokenKind::OpenParens | TokenKind::CloseParens => Self::Parens,
+            TokenKind::OpenBracket | TokenKind::CloseBracket => Self::TextGroup,
+            TokenKind::OpenBrace | TokenKind::CloseBrace => Self::Attributes,
+            TokenKind::Newline => Self::Newline,
+            TokenKind::Whitespace => Self::Whitespace,
+            TokenKind::Plain => Self::Plain,
+            TokenKind::UnderlineSubscript => Self::Plain,
+            TokenKind::ItalicBold => Self::Plain,
         }
     }
 }

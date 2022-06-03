@@ -1,6 +1,8 @@
 use std::ops::Deref;
 
-use crate::{Inline, InlineContent, PlainInline, Span, Token, TokenIterator, TokenKind, Tokenize};
+use crate::{
+    Inline, InlineContent, InlineKind, PlainInline, Span, Token, TokenIterator, TokenKind, Tokenize,
+};
 
 #[derive(Debug, Default, Clone)]
 struct ParserStack {
@@ -49,6 +51,8 @@ pub struct Parser<'i> {
     iter: TokenIterator<'i>,
     stack: ParserStack,
     token_cache: Option<Token>,
+    stack_cache: Vec<ParserStack>,
+    stack_was_empty: bool,
 }
 
 impl Parser<'_> {
@@ -61,16 +65,97 @@ impl Parser<'_> {
     }
 
     fn is_token_open(&self, token: &Token) -> bool {
-        self.stack.iter().any(|inner_token| {
-            inner_token.is_or_contains(token) || token.is_or_contains(inner_token)
-        })
+        let res = self.stack.iter().any(|inner_token| {
+            inner_token.is_or_contains(token)
+                || token.is_or_contains(inner_token)
+                || inner_token.matches_pair(token)
+        });
+
+        res
     }
 
     fn is_token_latest(&self, token: &Token) -> bool {
-        match self.stack.last() {
-            Some(last_open_token) => last_open_token.is_or_contains(token),
+        match self.stack().last() {
+            Some(last_open_token) => {
+                last_open_token.is_or_contains(token) || last_open_token.matches_pair(token)
+            }
             None => false,
         }
+    }
+
+    /// Returns a mutable reference to the currently active stack - corresponding to current scope.
+    fn stack_mut(&mut self) -> &mut ParserStack {
+        &mut self.stack
+    }
+
+    /// Returns a reference to the currently active stack - corresponding to current scope.
+    fn stack(&self) -> &ParserStack {
+        &self.stack
+    }
+
+    /// Creates a new stack for the scope and sets it as the currently active stack.
+    fn enter_scope(&mut self) {
+        let new_stack = ParserStack::default();
+
+        let old_stack = std::mem::replace(&mut self.stack, new_stack);
+
+        self.stack_cache.push(old_stack);
+
+        // println!("Stack after enter scope: {:#?}", self.stack())
+    }
+
+    /// Removes the currently active stack and restores the stack of the outer scope.
+    fn exit_scope(&mut self) {
+        self.stack_was_empty = self.stack().len() == 0;
+
+        match self.stack_cache.pop() {
+            Some(old_stack) => self.stack = old_stack,
+            None => self.stack = ParserStack::default(),
+        }
+    }
+
+    /// Pushes a token to the currently active stack.
+    fn push_to_stack(&mut self, token: Token) -> usize {
+        if matches!(token.kind(), TokenKind::OpenBracket) {
+            self.enter_scope();
+        }
+
+        self.stack_mut().push(token)
+    }
+
+    /// Pops the token last added to the currently active stack.
+    fn pop_last(&mut self) -> Option<Token> {
+        match self.stack_mut().pop_last() {
+            Some(token) => {
+                if matches!(token.kind(), TokenKind::OpenBracket) {
+                    self.exit_scope();
+                }
+
+                Some(token)
+            }
+
+            None => None,
+        }
+    }
+
+    /// Pops the (part of) token that matches the token reference passed to the function.
+    ///
+    /// In case that token on stack contains the passed token, only the part that matches the
+    /// passed token gets removed, and the rest of the token stays on the stack.
+    /// This means that even if there is only one token on the stack and `pop()` is called,
+    /// there might still be one token left on the stack.
+    fn pop(&mut self, token: &Token) -> Option<Token> {
+        let removed_token = self.stack_mut().pop(token)?;
+
+        if matches!(removed_token.kind(), TokenKind::OpenBracket) {
+            self.exit_scope();
+        }
+
+        Some(removed_token)
+    }
+
+    fn last_token(&self) -> Option<&Token> {
+        self.stack().last()
     }
 
     fn parse_nested_inline(&mut self, token: Token) -> Inline {
@@ -88,12 +173,13 @@ impl Parser<'_> {
         //  bold close token and italic open. That means, that the ambiguous token should be split,
         //  first part taken (based on what part was open) and the second part left for the next
         //  iteration
-        let kind = token.kind();
+
+        let mut kind = token.kind();
         let mut content: InlineContent = InlineContent::Nested(Vec::default());
         let start = token.span().start();
         let mut end = start;
 
-        self.stack.push(token);
+        self.push_to_stack(token);
 
         while let Some(mut next_token) = self.next_token() {
             // Multiple cases:
@@ -114,7 +200,7 @@ impl Parser<'_> {
                         // It is closing one and it was open last -> Close Inline
                         end = next_token.span().end();
 
-                        self.stack.pop_last();
+                        self.pop_last();
                         break;
                     } else {
                         // It might be ambiguous token and part of it is open,
@@ -124,12 +210,12 @@ impl Parser<'_> {
 
                         if next_token.is_ambiguous() {
                             // at this point we know there is at least one token in stack
-                            let last_token = self.stack.last().unwrap();
+                            let last_token = self.last_token().unwrap();
 
                             if next_token.is_or_contains(last_token) {
                                 let _parsed_token = next_token.remove_partial(last_token);
 
-                                self.stack.pop_last();
+                                self.pop_last();
 
                                 self.token_cache = Some(next_token);
 
@@ -140,7 +226,7 @@ impl Parser<'_> {
                             // It is closing one, but it was not open last -> Return contents as inline
 
                             // remove the opening token from the stack
-                            let token = self.stack.pop(&next_token).unwrap();
+                            let token = self.pop(&next_token).unwrap();
 
                             // NOTE: when coming from nested, while loop will be continued -> takes
                             // another token from iterator or cache
@@ -152,10 +238,16 @@ impl Parser<'_> {
                             return Inline {
                                 inner: content,
                                 span: Span::from((start, end)),
-                                kind: TokenKind::Plain,
+                                kind: InlineKind::Plain,
                             };
                         }
                     }
+                } else {
+                    // plain text
+                    end = next_token.span().end();
+
+                    // consume plain text
+                    content.append(InlineContent::from(next_token));
                 }
             } else if next_token.opens() {
                 if self.is_token_open(&next_token) {
@@ -183,16 +275,24 @@ impl Parser<'_> {
             }
         }
 
+        let span = Span::from((start, end));
+
+        let is_inline_closed = if let Some(token) = self.last_token() {
+            token.kind() != kind
+        } else {
+            true
+        };
+
+        if !is_inline_closed {
+            if let Some(last_token) = self.pop_last() {
+                content.prepend(InlineContent::from(last_token));
+            }
+        }
+
         // if content contains only plain contents, then merge them and make into one
         content.try_flatten();
 
-        let span = Span::from((start, end));
-
-        Inline {
-            span,
-            inner: content,
-            kind,
-        }
+        Inline::new(span, content, kind)
     }
 }
 
@@ -200,27 +300,17 @@ impl Iterator for Parser<'_> {
     type Item = Inline;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let inline_content: InlineContent;
+        let next_token = self.next_token()?;
 
-        if let Some(token) = self.next_token() {
-            if token.opens() {
-                Some(self.parse_nested_inline(token))
-            } else {
-                let kind = token.kind();
-
-                let (content, span) = token.into_inner();
-                inline_content = InlineContent::Plain(PlainInline { content, span });
-
-                Some(Inline {
-                    inner: inline_content,
-                    span,
-                    kind,
-                })
-            }
+        if next_token.opens() {
+            Some(self.parse_nested_inline(next_token))
         } else {
-            // TODO: check if parser stack empty
+            let kind = next_token.kind();
 
-            None
+            let (content, span) = next_token.into_inner();
+            let inline_content = InlineContent::Plain(PlainInline { content, span });
+
+            Some(Inline::new(span, inline_content, kind))
         }
     }
 }
@@ -241,27 +331,11 @@ where
             iter: self.lex_iter(),
             stack: ParserStack::default(),
             token_cache: None,
+            stack_cache: Vec::default(),
+            stack_was_empty: true,
         }
     }
 }
-
-// IMPLEMENTATION IDEA
-//
-// consume (stackable) tokens from TokenIterator and push them to the stack.
-// Plain tokens are to be used as content
-// Each time some token is closed, remove it's corresponding part from stack (resolve ambiguity)
-// Once the stack is empty, that is one Inline parsed and should be returned (if we want to have
-// iterator-like API)
-
-// impl<'i> From<&'i str> for Parser<'i> {
-//     fn from(input: &'i str) -> Self {
-//         let lexer: Lexer<'i> = input.lex();
-//
-//         Self { lexer }
-//     }
-// }
-
-// So let's think about the API
 
 #[cfg(test)]
 mod tests {
@@ -286,7 +360,7 @@ mod tests {
 
         // no remaining inlines
         assert_eq!(parser.count(), 0);
-        assert_eq!(inline.kind, TokenKind::Bold);
+        assert_eq!(inline.kind, InlineKind::Bold);
         assert_eq!(
             inline.inner,
             InlineContent::Plain(PlainInline {
@@ -306,7 +380,7 @@ mod tests {
 
         // no remaining inlines
         assert_eq!(parser.count(), 0);
-        assert_eq!(inline.kind, TokenKind::Italic);
+        assert_eq!(inline.kind, InlineKind::Italic);
         assert_eq!(
             inline.inner,
             InlineContent::Plain(PlainInline {
@@ -324,7 +398,7 @@ mod tests {
         let start = Position { line: 1, column: 2 };
         let end = start + (0, 11 - 1);
 
-        assert_eq!(inline.kind, TokenKind::Italic);
+        assert_eq!(inline.kind, InlineKind::Italic);
         assert_eq!(
             inline.inner,
             InlineContent::Plain(PlainInline {
@@ -337,7 +411,7 @@ mod tests {
         let start = end + (0, 5 - 1);
         let end = start + (0, 9 - 1);
 
-        assert_eq!(inline.kind, TokenKind::Bold);
+        assert_eq!(inline.kind, InlineKind::Bold);
         assert_eq!(
             inline.inner,
             InlineContent::Plain(PlainInline {
@@ -360,7 +434,7 @@ mod tests {
 
         // println!("Inline span: {:#?}", inline.span());
 
-        assert_eq!(inline.kind, TokenKind::Bold);
+        assert_eq!(inline.kind, InlineKind::Bold);
         assert_eq!(inline.span(), Span::from((start, end)));
         assert!(matches!(inline.inner, InlineContent::Nested(_)));
 
@@ -372,7 +446,7 @@ mod tests {
             let start = Position { line: 1, column: 3 };
             let end = start + (0, 13 - 1);
 
-            assert_eq!(inline.kind, TokenKind::Plain);
+            assert_eq!(inline.kind, InlineKind::Plain);
             assert_eq!(
                 inline.inner,
                 InlineContent::Plain(PlainInline {
@@ -389,7 +463,7 @@ mod tests {
             let inner_start = start + (0, 1);
             let inner_end = end - (0, 1);
 
-            assert_eq!(inline.kind, TokenKind::Italic);
+            assert_eq!(inline.kind, InlineKind::Italic);
             assert_eq!(
                 inline.inner,
                 InlineContent::Plain(PlainInline {
@@ -404,7 +478,7 @@ mod tests {
             let start = end + (0, 1);
             let end = start + (0, 15 - 1);
 
-            assert_eq!(inline.kind, TokenKind::Plain);
+            assert_eq!(inline.kind, InlineKind::Plain);
             assert_eq!(
                 inline.inner,
                 InlineContent::Plain(PlainInline {
@@ -415,5 +489,69 @@ mod tests {
         } else {
             panic!("Inner content not nested");
         }
+    }
+
+    #[test]
+    fn parse_text_group_simple() {
+        let mut parser = "This is text [with text group] as part of it.".parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position { line: 1, column: 1 };
+        let end = start + (0, 13 - 1);
+
+        assert_eq!(inline.kind, InlineKind::Plain);
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert!(matches!(inline.inner, InlineContent::Plain(_)));
+
+        let inline = parser.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 17 - 1);
+
+        assert_eq!(inline.kind, InlineKind::TextGroup);
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert!(matches!(inline.inner, InlineContent::Plain(_)));
+
+        let inline = parser.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 15 - 1);
+
+        assert_eq!(inline.kind, InlineKind::Plain);
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert!(matches!(inline.inner, InlineContent::Plain(_)));
+    }
+
+    #[test]
+    fn parse_text_group_interrupt_bold() {
+        let input = "This is **text [with text** group] as part of it.";
+        let parser = input.parse_unimarkup_inlines();
+
+        println!("Parsing following text: \"{input}\"");
+        for inline in parser {
+            println!("{inline:#?}");
+        }
+
+        // let inline = parser.next().unwrap();
+        // let start = Position { line: 1, column: 1 };
+        // let end = start + (0, 13 - 1);
+        //
+        // assert_eq!(inline.kind, TokenKind::Plain);
+        // assert_eq!(inline.span(), Span::from((start, end)));
+        // assert!(matches!(inline.inner, InlineContent::Plain(_)));
+        //
+        // let inline = parser.next().unwrap();
+        // let start = end + (0, 1);
+        // let end = start + (0, 17 - 1);
+        //
+        // assert_eq!(inline.kind, TokenKind::OpenBracket);
+        // assert_eq!(inline.span(), Span::from((start, end)));
+        // assert!(matches!(inline.inner, InlineContent::Plain(_)));
+        //
+        // let inline = parser.next().unwrap();
+        // let start = end + (0, 1);
+        // let end = start + (0, 15 - 1);
+        //
+        // assert_eq!(inline.kind, TokenKind::Plain);
+        // assert_eq!(inline.span(), Span::from((start, end)));
+        // assert!(matches!(inline.inner, InlineContent::Plain(_)));
     }
 }

@@ -162,15 +162,23 @@ impl Token {
     }
 
     pub fn opens(&self) -> bool {
-        let not_followed_by_whitespace = matches!(self.spacing, Spacing::Pre | Spacing::None);
+        if self.kind().is_open_parentheses() {
+            true
+        } else {
+            let not_followed_by_whitespace = matches!(self.spacing, Spacing::Pre | Spacing::None);
 
-        self.is_nesting_token() && not_followed_by_whitespace
+            self.is_nesting_token() && not_followed_by_whitespace
+        }
     }
 
     pub fn closes(&self) -> bool {
-        let not_preceded_by_whitespace = matches!(self.spacing, Spacing::Post | Spacing::None);
+        if self.kind().is_close_parentheses() {
+            true
+        } else {
+            let not_preceded_by_whitespace = matches!(self.spacing, Spacing::Post | Spacing::None);
 
-        self.is_nesting_token() && not_preceded_by_whitespace
+            self.is_nesting_token() && not_preceded_by_whitespace
+        }
     }
 
     pub fn is_or_contains(&self, other: &Self) -> bool {
@@ -186,6 +194,18 @@ impl Token {
                 }
                 _ => false,
             }
+        }
+    }
+
+    pub fn matches_pair(&self, other: &Self) -> bool {
+        match self.kind() {
+            TokenKind::OpenParens => matches!(other.kind(), TokenKind::CloseParens),
+            TokenKind::CloseParens => matches!(other.kind(), TokenKind::OpenParens),
+            TokenKind::OpenBracket => matches!(other.kind(), TokenKind::CloseBracket),
+            TokenKind::CloseBracket => matches!(other.kind(), TokenKind::OpenBracket),
+            TokenKind::OpenBrace => matches!(other.kind(), TokenKind::CloseBrace),
+            TokenKind::CloseBrace => matches!(other.kind(), TokenKind::OpenBrace),
+            _ => false,
         }
     }
 
@@ -289,6 +309,17 @@ impl TokenKind {
         } else {
             Content::Auto
         }
+    }
+
+    fn is_open_parentheses(&self) -> bool {
+        matches!(self, Self::OpenParens | Self::OpenBracket | Self::OpenBrace)
+    }
+
+    fn is_close_parentheses(&self) -> bool {
+        matches!(
+            self,
+            Self::CloseParens | Self::CloseBracket | Self::CloseBrace
+        )
     }
 }
 
