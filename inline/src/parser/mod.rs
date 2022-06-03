@@ -1,7 +1,8 @@
 use std::ops::Deref;
 
 use crate::{
-    Inline, InlineContent, InlineKind, PlainInline, Span, Token, TokenIterator, TokenKind, Tokenize,
+    Inline, InlineContent, InlineKind, NestedContent, Span, Token, TokenIterator, TokenKind,
+    Tokenize,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -175,9 +176,13 @@ impl Parser<'_> {
         //  iteration
 
         let mut kind = token.kind();
-        let mut content: InlineContent = InlineContent::Nested(Vec::default());
         let start = token.span().start();
         let mut end = start;
+        let mut content: InlineContent = NestedContent {
+            content: Vec::default(),
+            span: (start, end).into(),
+        }
+        .into();
 
         self.push_to_stack(token);
 
@@ -233,13 +238,15 @@ impl Parser<'_> {
                             self.token_cache = Some(next_token);
 
                             // prepend the token to content as plain text
-                            content.prepend(InlineContent::from(token));
+                            content.prepend(InlineContent::from_token_as_plain(token));
 
-                            return Inline {
-                                inner: content,
-                                span: Span::from((start, end)),
-                                kind: InlineKind::Plain,
-                            };
+                            return Inline::Plain(content);
+
+                            // return Inline {
+                            //     inner: content,
+                            //     span: Span::from((start, end)),
+                            //     kind: InlineKind::Plain,
+                            // };
                         }
                     }
                 } else {
