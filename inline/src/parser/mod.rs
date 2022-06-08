@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use crate::{
-    Inline, InlineContent, InlineKind, NestedContent, Span, Token, TokenIterator, TokenKind,
+    Inline, InlineContent, NestedContent, PlainContent, Span, Token, TokenIterator, TokenKind,
     Tokenize,
 };
 
@@ -101,8 +101,6 @@ impl Parser<'_> {
         let old_stack = std::mem::replace(&mut self.stack, new_stack);
 
         self.stack_cache.push(old_stack);
-
-        // println!("Stack after enter scope: {:#?}", self.stack())
     }
 
     /// Removes the currently active stack and restores the stack of the outer scope.
@@ -178,7 +176,7 @@ impl Parser<'_> {
         let mut kind = token.kind();
         let start = token.span().start();
         let mut end = start;
-        let mut content: InlineContent = NestedContent {
+        let mut content: InlineContent<_, _> = NestedContent {
             content: Vec::default(),
             span: (start, end).into(),
         }
@@ -218,11 +216,12 @@ impl Parser<'_> {
                             let last_token = self.last_token().unwrap();
 
                             if next_token.is_or_contains(last_token) {
-                                let _parsed_token = next_token.remove_partial(last_token);
+                                let parsed_token = next_token.remove_partial(last_token);
 
                                 self.pop_last();
-
                                 self.token_cache = Some(next_token);
+
+                                end = parsed_token.span().end();
 
                                 // close this inline
                                 break;
@@ -240,13 +239,7 @@ impl Parser<'_> {
                             // prepend the token to content as plain text
                             content.prepend(InlineContent::from_token_as_plain(token));
 
-                            return Inline::Plain(content);
-
-                            // return Inline {
-                            //     inner: content,
-                            //     span: Span::from((start, end)),
-                            //     kind: InlineKind::Plain,
-                            // };
+                            return Inline::Plain(content.into_plain());
                         }
                     }
                 } else {
@@ -285,7 +278,7 @@ impl Parser<'_> {
         let span = Span::from((start, end));
 
         let is_inline_closed = if let Some(token) = self.last_token() {
-            token.kind() != kind
+            token.kind() != kind && token.span().start() != start
         } else {
             true
         };
@@ -293,13 +286,15 @@ impl Parser<'_> {
         if !is_inline_closed {
             if let Some(last_token) = self.pop_last() {
                 content.prepend(InlineContent::from(last_token));
+                kind = TokenKind::Plain;
             }
         }
 
         // if content contains only plain contents, then merge them and make into one
         content.try_flatten();
+        content.set_span(span);
 
-        Inline::new(span, content, kind)
+        Inline::new(content, kind)
     }
 }
 
