@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{collections::VecDeque, ops::Deref};
 
 use crate::{
     Inline, InlineContent, NestedContent, PlainContent, Span, Token, TokenIterator, TokenKind,
@@ -54,6 +54,7 @@ pub struct Parser<'i> {
     token_cache: Option<Token>,
     stack_cache: Vec<ParserStack>,
     stack_was_empty: bool,
+    inline_cache: VecDeque<Inline>,
 }
 
 impl Parser<'_> {
@@ -296,24 +297,55 @@ impl Parser<'_> {
 
         Inline::new(content, kind)
     }
+
+    fn parse_inline(&mut self) -> Option<Inline> {
+        if !self.inline_cache.is_empty() {
+            self.inline_cache.pop_front()
+        } else {
+            let next_token = self.next_token()?;
+
+            let inline = if next_token.opens() {
+                self.parse_nested_inline(next_token)
+            } else {
+                let kind = next_token.kind();
+
+                let (content, span) = next_token.into_inner();
+                let inline_content = InlineContent::Plain(PlainContent { content, span });
+
+                Inline::new(inline_content, kind)
+            };
+
+            Some(inline)
+        }
+    }
 }
 
 impl Iterator for Parser<'_> {
     type Item = Inline;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next_token = self.next_token()?;
+        let mut curr_inline = self.parse_inline()?;
 
-        if next_token.opens() {
-            Some(self.parse_nested_inline(next_token))
-        } else {
-            let kind = next_token.kind();
+        while let Some(next_inline) = self.parse_inline() {
+            let is_kind_same = curr_inline.matches_kind(&next_inline);
+            if is_kind_same {
+                let (combined_inline, mut rest_of_inlines) = curr_inline.merge(next_inline);
 
-            let (content, span) = next_token.into_inner();
-            let inline_content = InlineContent::Plain(PlainInline { content, span });
+                curr_inline = combined_inline;
 
-            Some(Inline::new(span, inline_content, kind))
+                if rest_of_inlines.is_empty() {
+                    continue;
+                } else {
+                    self.inline_cache.append(&mut rest_of_inlines);
+                    break;
+                }
+            } else {
+                self.inline_cache.push_back(next_inline);
+                break;
+            }
         }
+
+        Some(curr_inline)
     }
 }
 
@@ -335,6 +367,7 @@ where
             token_cache: None,
             stack_cache: Vec::default(),
             stack_was_empty: true,
+            inline_cache: VecDeque::default(),
         }
     }
 }
