@@ -374,7 +374,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::Position;
+    use crate::{PlainContent, Position};
 
     use super::*;
 
@@ -395,12 +395,16 @@ mod tests {
 
         // no remaining inlines
         assert_eq!(parser.count(), 0);
-        assert_eq!(inline.kind, InlineKind::Bold);
+        assert!(matches!(inline, Inline::Bold(_)));
+        // assert_eq!(inline.kind, InlineKind::Bold);
         assert_eq!(
-            inline.inner,
-            InlineContent::Plain(PlainInline {
-                content: String::from("Bold text"),
-                span: Span::from((start, end))
+            inline.as_ref(),
+            InlineContent::Nested(&NestedContent {
+                content: vec![Inline::Plain(PlainContent {
+                    content: String::from("Bold text"),
+                    span: (start, end).into()
+                })],
+                span: (start - (0, 2), end + (0, 2)).into(),
             })
         );
     }
@@ -415,12 +419,15 @@ mod tests {
 
         // no remaining inlines
         assert_eq!(parser.count(), 0);
-        assert_eq!(inline.kind, InlineKind::Italic);
+        assert!(matches!(inline, Inline::Italic(_)));
         assert_eq!(
-            inline.inner,
-            InlineContent::Plain(PlainInline {
-                content: String::from("Italic text"),
-                span: Span::from((start, end))
+            inline.as_ref(),
+            InlineContent::Nested(&NestedContent {
+                content: vec![Inline::Plain(PlainContent {
+                    content: String::from("Italic text"),
+                    span: Span::from((start, end))
+                })],
+                span: (start - (0, 1), end + (0, 1)).into()
             })
         );
     }
@@ -433,12 +440,15 @@ mod tests {
         let start = Position { line: 1, column: 2 };
         let end = start + (0, 11 - 1);
 
-        assert_eq!(inline.kind, InlineKind::Italic);
+        assert!(matches!(inline, Inline::Italic(_)));
         assert_eq!(
-            inline.inner,
-            InlineContent::Plain(PlainInline {
-                content: String::from("Italic text"),
-                span: Span::from((start, end))
+            inline.as_ref(),
+            InlineContent::Nested(&NestedContent {
+                content: vec![Inline::Plain(PlainContent {
+                    content: String::from("Italic text"),
+                    span: (start, end).into()
+                })],
+                span: (start - (0, 1), end + (0, 1)).into()
             })
         );
 
@@ -446,12 +456,15 @@ mod tests {
         let start = end + (0, 5 - 1);
         let end = start + (0, 9 - 1);
 
-        assert_eq!(inline.kind, InlineKind::Bold);
+        assert!(matches!(inline, Inline::Bold(_)));
         assert_eq!(
-            inline.inner,
-            InlineContent::Plain(PlainInline {
-                content: String::from("Bold text"),
-                span: Span::from((start, end))
+            inline.as_ref(),
+            InlineContent::Nested(&NestedContent {
+                content: vec![Inline::Plain(PlainContent {
+                    content: String::from("Bold text"),
+                    span: Span::from((start, end))
+                })],
+                span: (start - (0, 2), end + (0, 2)).into()
             })
         );
     }
@@ -467,24 +480,22 @@ mod tests {
         // no remaining inlines
         assert_eq!(parser.count(), 0);
 
-        // println!("Inline span: {:#?}", inline.span());
-
-        assert_eq!(inline.kind, InlineKind::Bold);
+        assert!(matches!(inline, Inline::Bold(_)));
         assert_eq!(inline.span(), Span::from((start, end)));
-        assert!(matches!(inline.inner, InlineContent::Nested(_)));
+        assert!(matches!(inline.as_ref(), InlineContent::Nested(_)));
 
         if let InlineContent::Nested(inner_content) = inline.into_inner() {
-            assert_eq!(inner_content.len(), 3);
+            assert_eq!(inner_content.count(), 3);
 
             let inline = &inner_content[0];
 
             let start = Position { line: 1, column: 3 };
             let end = start + (0, 13 - 1);
 
-            assert_eq!(inline.kind, InlineKind::Plain);
+            assert!(matches!(inline, Inline::Plain(_)));
             assert_eq!(
-                inline.inner,
-                InlineContent::Plain(PlainInline {
+                inline.as_ref(),
+                InlineContent::Plain(&PlainContent {
                     content: String::from("This is bold "),
                     span: Span::from((start, end))
                 })
@@ -498,12 +509,15 @@ mod tests {
             let inner_start = start + (0, 1);
             let inner_end = end - (0, 1);
 
-            assert_eq!(inline.kind, InlineKind::Italic);
+            assert!(matches!(inline, Inline::Italic(_)));
             assert_eq!(
-                inline.inner,
-                InlineContent::Plain(PlainInline {
-                    content: String::from("with"),
-                    span: Span::from((inner_start, inner_end))
+                inline.as_ref(),
+                InlineContent::Nested(&NestedContent {
+                    content: vec![Inline::Plain(PlainContent {
+                        content: String::from("with"),
+                        span: Span::from((inner_start, inner_end))
+                    })],
+                    span: (inner_start - (0, 1), inner_end + (0, 1)).into()
                 })
             );
             assert_eq!(inline.span(), Span::from((start, end)));
@@ -513,10 +527,10 @@ mod tests {
             let start = end + (0, 1);
             let end = start + (0, 15 - 1);
 
-            assert_eq!(inline.kind, InlineKind::Plain);
+            assert!(matches!(inline, Inline::Plain(_)));
             assert_eq!(
-                inline.inner,
-                InlineContent::Plain(PlainInline {
+                inline.as_ref(),
+                InlineContent::Plain(&PlainContent {
                     content: String::from(" italic inside."),
                     span: Span::from((start, end))
                 })
@@ -534,25 +548,34 @@ mod tests {
         let start = Position { line: 1, column: 1 };
         let end = start + (0, 13 - 1);
 
-        assert_eq!(inline.kind, InlineKind::Plain);
+        assert!(matches!(inline, Inline::Plain(_)));
         assert_eq!(inline.span(), Span::from((start, end)));
-        assert!(matches!(inline.inner, InlineContent::Plain(_)));
+        assert!(matches!(inline.as_ref(), InlineContent::Plain(_)));
 
         let inline = parser.next().unwrap();
         let start = end + (0, 1);
         let end = start + (0, 17 - 1);
 
-        assert_eq!(inline.kind, InlineKind::TextGroup);
+        assert!(matches!(inline, Inline::TextGroup(_)));
         assert_eq!(inline.span(), Span::from((start, end)));
-        assert!(matches!(inline.inner, InlineContent::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Nested(&NestedContent {
+                content: vec![Inline::Plain(PlainContent {
+                    content: String::from("with text group"),
+                    span: (start + (0, 1), end - (0, 1)).into()
+                })],
+                span: (start, end).into()
+            })
+        );
 
         let inline = parser.next().unwrap();
         let start = end + (0, 1);
         let end = start + (0, 15 - 1);
 
-        assert_eq!(inline.kind, InlineKind::Plain);
+        assert!(matches!(inline, Inline::Plain(_)));
         assert_eq!(inline.span(), Span::from((start, end)));
-        assert!(matches!(inline.inner, InlineContent::Plain(_)));
+        assert!(matches!(inline.as_ref(), InlineContent::Plain(_)));
     }
 
     #[test]
@@ -560,33 +583,11 @@ mod tests {
         let input = "This is **text [with text** group] as part of it.";
         let parser = input.parse_unimarkup_inlines();
 
-        println!("Parsing following text: \"{input}\"");
+        println!("\n\nParsing following text: \"{input}\"\n");
         for inline in parser {
-            println!("{inline:#?}");
+            println!("{inline:#?}\n");
         }
 
-        // let inline = parser.next().unwrap();
-        // let start = Position { line: 1, column: 1 };
-        // let end = start + (0, 13 - 1);
-        //
-        // assert_eq!(inline.kind, TokenKind::Plain);
-        // assert_eq!(inline.span(), Span::from((start, end)));
-        // assert!(matches!(inline.inner, InlineContent::Plain(_)));
-        //
-        // let inline = parser.next().unwrap();
-        // let start = end + (0, 1);
-        // let end = start + (0, 17 - 1);
-        //
-        // assert_eq!(inline.kind, TokenKind::OpenBracket);
-        // assert_eq!(inline.span(), Span::from((start, end)));
-        // assert!(matches!(inline.inner, InlineContent::Plain(_)));
-        //
-        // let inline = parser.next().unwrap();
-        // let start = end + (0, 1);
-        // let end = start + (0, 15 - 1);
-        //
-        // assert_eq!(inline.kind, TokenKind::Plain);
-        // assert_eq!(inline.span(), Span::from((start, end)));
-        // assert!(matches!(inline.inner, InlineContent::Plain(_)));
+        println!("\n\n");
     }
 }
