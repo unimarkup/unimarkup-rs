@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-use crate::Symbol;
+use crate::{Inline, Symbol};
 
 use super::Content;
 
@@ -147,6 +147,10 @@ impl Token {
         self.span
     }
 
+    pub fn set_span(&mut self, span: Span) {
+        self.span = span;
+    }
+
     pub fn into_plain(self) -> Self {
         Self {
             kind: TokenKind::Plain,
@@ -233,13 +237,12 @@ impl Token {
             _ => panic!("{panic_message}"),
         };
 
-        let start = self.span().start();
-        let end = self.span().end() - other_token.span().start();
+        let (resulting_span, removed_span) = self.span.remove(other_token.span());
 
-        self.span = Span::from((start, end));
+        self.span = resulting_span;
 
         TokenBuilder::new(other_token.kind())
-            .span(other_token.span())
+            .span(removed_span)
             .space(other_token.spacing())
             .build()
     }
@@ -272,7 +275,7 @@ pub enum TokenKind {
 }
 
 impl TokenKind {
-    fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         match *self {
             TokenKind::Bold => "**",
             TokenKind::ItalicBold => "***",
@@ -299,6 +302,36 @@ impl TokenKind {
         }
     }
 
+    pub fn delimiters(&self) -> (&str, &str) {
+        match self {
+            TokenKind::Bold
+            | TokenKind::Italic
+            | TokenKind::ItalicBold
+            | TokenKind::Underline
+            | TokenKind::Subscript
+            | TokenKind::UnderlineSubscript
+            | TokenKind::Superscript
+            | TokenKind::Overline
+            | TokenKind::Strikethrough
+            | TokenKind::Highlight
+            | TokenKind::Verbatim
+            | TokenKind::Quote
+            | TokenKind::Math => (self.as_str(), self.as_str()),
+
+            TokenKind::Newline | TokenKind::Whitespace | TokenKind::Plain => ("", ""),
+
+            TokenKind::OpenParens | TokenKind::CloseParens => {
+                (Self::OpenParens.as_str(), Self::CloseParens.as_str())
+            }
+            TokenKind::OpenBracket | TokenKind::CloseBracket => {
+                (Self::OpenBracket.as_str(), Self::CloseBracket.as_str())
+            }
+            TokenKind::OpenBrace | TokenKind::CloseBrace => {
+                (Self::OpenBrace.as_str(), Self::CloseBrace.as_str())
+            }
+        }
+    }
+
     pub(crate) fn content_matters(&self) -> bool {
         matches!(self, TokenKind::Plain)
     }
@@ -320,6 +353,31 @@ impl TokenKind {
             self,
             Self::CloseParens | Self::CloseBracket | Self::CloseBrace
         )
+    }
+}
+
+impl From<&Inline> for TokenKind {
+    fn from(inline: &Inline) -> Self {
+        match inline {
+            Inline::Bold(_) => Self::Bold,
+            Inline::Italic(_) => Self::Italic,
+            Inline::Underline(_) => Self::Underline,
+            Inline::Subscript(_) => Self::Subscript,
+            Inline::Superscript(_) => Self::Superscript,
+            Inline::Overline(_) => Self::Overline,
+            Inline::Strikethrough(_) => Self::Strikethrough,
+            Inline::Highlight(_) => Self::Highlight,
+            Inline::Verbatim(_) => Self::Verbatim,
+            Inline::Quote(_) => Self::Quote,
+            Inline::Math(_) => Self::Math,
+            Inline::Parens(_) => Self::OpenParens,
+            Inline::TextGroup(_) => Self::OpenBracket,
+            Inline::Attributes(_) => Self::OpenBrace,
+            Inline::Newline(_) => Self::Newline,
+            Inline::Whitespace(_) => Self::Whitespace,
+            Inline::Plain(_) => Self::Plain,
+            Inline::Multiple(_) => Self::Plain,
+        }
     }
 }
 
@@ -466,6 +524,63 @@ impl Span {
     pub fn end(&self) -> Position {
         self.end
     }
+
+    /// Returns the difference between end and start [`Position`] of this [`Span`].
+    ///
+    /// [`Position`]: crate::Position
+    /// [`Span`]: crate::Span
+    pub fn len(&self) -> Position {
+        self.end - self.start
+    }
+
+    fn overlaps(&self, other: Span) -> bool {
+        (self.start >= other.start && self.start <= other.end)
+            || (self.end >= other.start && self.end <= other.end)
+    }
+
+    /// Removes the `other` [`Span`] from `self`. In case the spans do not overlap, the `other`
+    /// span will be laid over `self` in following manner:
+    ///
+    /// 1. `other` starts at the beginning of `self` if it originally comes before the `self` span.
+    /// 2. `other` ends at the end of `self` if it originally comes after the `self` span.
+    ///
+    /// In both cases, the lenght of the `other` span will not be changed.
+    ///
+    /// # Returns
+    /// Tuple containing the resulting span and the removed span.
+    fn remove(self, other: Span) -> (Span, Span) {
+        let other = if self.overlaps(other) {
+            other
+        } else if other.end < self.start {
+            let start = self.start;
+            let end = start + other.len();
+
+            Span::from((start, end))
+        } else {
+            // !self.overlaps implies that in this case other.start > self.end
+            let end = self.end;
+            let start = end - other.len();
+
+            Span::from((start, end))
+        };
+
+        let start = if self.start < other.start {
+            self.start
+        } else {
+            other.end + (0, 1)
+        };
+
+        let end = if self.end > other.end {
+            self.end
+        } else {
+            other.start - (0, 1)
+        };
+
+        let removed_span = other;
+        let resulting_span = Span::from((start, end));
+
+        (resulting_span, removed_span)
+    }
 }
 
 impl From<(Position, Position)> for Span {
@@ -474,7 +589,7 @@ impl From<(Position, Position)> for Span {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Position {
     pub line: usize,
     pub column: usize,
