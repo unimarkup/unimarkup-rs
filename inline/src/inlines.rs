@@ -19,6 +19,7 @@ pub enum Inline {
     Newline(PlainContent),
     Whitespace(PlainContent),
     Plain(PlainContent),
+    Multiple(NestedContent),
 }
 
 impl Inline {
