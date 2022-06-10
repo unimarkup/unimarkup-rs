@@ -581,13 +581,59 @@ mod tests {
     #[test]
     fn parse_text_group_interrupt_bold() {
         let input = "This is **text [with text** group] as part of it.";
-        let parser = input.parse_unimarkup_inlines();
+        let mut parser = input.parse_unimarkup_inlines();
 
-        println!("\n\nParsing following text: \"{input}\"\n");
-        for inline in parser {
-            println!("{inline:#?}\n");
-        }
+        println!("\n\nParsing following text: {input}\n\n");
 
-        println!("\n\n");
+        let inline = parser.next().unwrap();
+        println!("{inline:#?}\n");
+
+        let start = Position { line: 1, column: 1 };
+        let end = start + (0, 15 - 1);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This is **text "),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        println!("{inline:#?}\n");
+
+        let start = end + (0, 1);
+        let end = start + (0, 19 - 1);
+
+        assert!(matches!(inline, Inline::TextGroup(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Nested(&NestedContent {
+                content: vec![Inline::Plain(PlainContent {
+                    content: String::from("with text** group"),
+                    span: Span::from((start + (0, 1), end - (0, 1)))
+                })],
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        println!("{inline:#?}\n");
+
+        let start = end + (0, 1);
+        let end = start + (0, 15 - 1);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from(" as part of it."),
+                span: Span::from((start, end))
+            })
+        );
     }
 }
