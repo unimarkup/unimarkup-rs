@@ -180,30 +180,6 @@ impl Inline {
         }
     }
 
-    pub fn as_mut(&mut self) -> InlineContent<&mut PlainContent, &mut NestedContent> {
-        match self {
-            Inline::Verbatim(ref mut content)
-            | Inline::Parens(ref mut content)
-            | Inline::Newline(ref mut content)
-            | Inline::Whitespace(ref mut content)
-            | Inline::Plain(ref mut content) => InlineContent::Plain(content),
-
-            Inline::Bold(ref mut content)
-            | Inline::Italic(ref mut content)
-            | Inline::Underline(ref mut content)
-            | Inline::Subscript(ref mut content)
-            | Inline::Superscript(ref mut content)
-            | Inline::Overline(ref mut content)
-            | Inline::Strikethrough(ref mut content)
-            | Inline::Highlight(ref mut content)
-            | Inline::Quote(ref mut content)
-            | Inline::Math(ref mut content)
-            | Inline::TextGroup(ref mut content)
-            | Inline::Multiple(ref mut content)
-            | Inline::Attributes(ref mut content) => InlineContent::Nested(content),
-        }
-    }
-
     pub(crate) fn merge(self, next_inline: Inline) -> (Inline, VecDeque<Inline>) {
         let kind = TokenKind::from(&self);
         let is_multiple = next_inline.is_multiple();
