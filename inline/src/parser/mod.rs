@@ -720,4 +720,70 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn parse_nested_text_group() {
+        let input = "[This text group [has another one inside] of it.]";
+        let mut parser = input.parse_unimarkup_inlines();
+
+        println!("\n\nParsing following text: {input}\n\n");
+
+        let inline = parser.next().unwrap();
+        println!("{inline:#?}\n");
+
+        let start = Position { line: 1, column: 1 };
+        let end = start + (0, 49 - 1);
+
+        assert!(matches!(inline, Inline::TextGroup(_)));
+        assert!(matches!(inline.as_ref(), InlineContent::Nested(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+
+        let inline_content = inline.into_inner().into_nested();
+        let mut inner_inlines = inline_content.content.iter();
+
+        let inline = inner_inlines.next().unwrap();
+
+        let start = Position::new(1, 2);
+        let end = start + (0, 16 - 1);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This text group "),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = inner_inlines.next().unwrap();
+
+        let start = end + (0, 1);
+        let end = start + (0, 24 - 1);
+
+        assert!(matches!(inline, Inline::TextGroup(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Nested(&NestedContent {
+                content: vec![Inline::Plain(PlainContent {
+                    content: String::from("has another one inside"),
+                    span: Span::from((start + (0, 1), end - (0, 1)))
+                })],
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = inner_inlines.next().unwrap();
+
+        let start = end + (0, 1);
+        let end = start + (0, 7 - 1);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from(" of it."),
+                span: Span::from((start, end))
+            })
+        );
+    }
 }
