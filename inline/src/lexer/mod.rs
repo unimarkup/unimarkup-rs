@@ -207,6 +207,7 @@ impl From<usize> for LexLength {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct TokenIterator<'a> {
     lines: Lines<'a>,
     curr: Vec<&'a str>,
