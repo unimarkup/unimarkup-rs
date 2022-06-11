@@ -685,4 +685,39 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn parse_open_italic_closed_bold() {
+        let input = "***This is input**";
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 1);
+        let end = start;
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("*"),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = end + (0, 1);
+        let end = start + (0, 17 - 1);
+
+        assert!(matches!(inline, Inline::Bold(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Nested(&NestedContent {
+                content: vec![Inline::Plain(PlainContent {
+                    content: String::from("This is input"),
+                    span: Span::from((start + (0, 2), end - (0, 2)))
+                })],
+                span: Span::from((start, end))
+            })
+        );
+    }
 }
