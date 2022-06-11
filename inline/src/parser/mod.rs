@@ -628,6 +628,10 @@ mod tests {
         let input = "This is **text [with text** group] as part of it.";
         let mut parser = input.parse_unimarkup_inlines();
 
+        for inline in parser.clone() {
+            println!("{inline:#?}");
+        }
+
         println!("\n\nParsing following text: {input}\n\n");
 
         let inline = parser.next().unwrap();
