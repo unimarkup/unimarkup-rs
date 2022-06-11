@@ -48,6 +48,7 @@ impl ParserStack {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Parser<'i> {
     iter: TokenIterator<'i>,
     stack: ParserStack,
@@ -305,7 +306,30 @@ impl Parser<'_> {
             let next_token = self.next_token()?;
 
             let inline = if next_token.opens() {
-                self.parse_nested_inline(next_token)
+                let parsed_inline = self.parse_nested_inline(next_token);
+
+                if !self.stack().is_empty() {
+                    // cache parsed inline for next iteration
+
+                    // return remaining tokens as plain inline
+                    if let Some(content) = self
+                        .stack_mut()
+                        .data
+                        .drain(..)
+                        .map(InlineContent::from_token_as_plain)
+                        .reduce(|mut accumulated_content, content| {
+                            accumulated_content.append(content);
+                            accumulated_content
+                        })
+                    {
+                        self.inline_cache.push_front(parsed_inline);
+                        Inline::new(content, TokenKind::Plain)
+                    } else {
+                        parsed_inline
+                    }
+                } else {
+                    parsed_inline
+                }
             } else {
                 let kind = next_token.kind();
 
