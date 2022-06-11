@@ -54,7 +54,7 @@ pub struct Parser<'i> {
     stack: ParserStack,
     token_cache: Option<Token>,
     stack_cache: Vec<ParserStack>,
-    stack_was_empty: bool,
+    scope_cleared: bool,
     inline_cache: VecDeque<Inline>,
 }
 
@@ -74,7 +74,7 @@ impl Parser<'_> {
                 || inner_token.matches_pair(token)
         });
 
-        res
+        !matches!(token.kind(), TokenKind::OpenBracket) && res
     }
 
     fn is_token_latest(&self, token: &Token) -> bool {
@@ -107,7 +107,9 @@ impl Parser<'_> {
 
     /// Removes the currently active stack and restores the stack of the outer scope.
     fn exit_scope(&mut self) {
-        self.stack_was_empty = self.stack().len() == 0;
+        if !self.scope_cleared {
+            return;
+        }
 
         match self.stack_cache.pop() {
             Some(old_stack) => self.stack = old_stack,
@@ -128,14 +130,15 @@ impl Parser<'_> {
     fn pop_last(&mut self) -> Option<Token> {
         match self.stack_mut().pop_last() {
             Some(token) => {
-                if matches!(token.kind(), TokenKind::OpenBracket) {
-                    self.exit_scope();
-                }
+                self.scope_cleared = token.kind().is_open_parentheses() && self.stack().is_empty();
+                self.exit_scope();
 
                 Some(token)
             }
-
-            None => None,
+            None => {
+                // stack might be empty for current scope, try to exit scope and try again
+                None
+            }
         }
     }
 
@@ -146,17 +149,37 @@ impl Parser<'_> {
     /// This means that even if there is only one token on the stack and `pop()` is called,
     /// there might still be one token left on the stack.
     fn pop(&mut self, token: &Token) -> Option<Token> {
-        let removed_token = self.stack_mut().pop(token)?;
+        match self.stack_mut().pop(token) {
+            Some(token) => {
+                self.scope_cleared = token.kind().is_open_parentheses() && self.stack().is_empty();
 
-        if matches!(removed_token.kind(), TokenKind::OpenBracket) {
-            self.exit_scope();
+                self.exit_scope();
+
+                Some(token)
+            }
+            None => {
+                // stack might be empty for current scope, try to exit scope and try again
+                None
+            }
         }
-
-        Some(removed_token)
     }
 
     fn last_token(&self) -> Option<&Token> {
-        self.stack().last()
+        match self.stack().last() {
+            Some(token) => Some(token),
+            None => match self.stack_cache.last() {
+                Some(stack) => stack.last(),
+                None => None,
+            },
+        }
+    }
+
+    fn inline_closed(&self, kind: TokenKind, span: Span) -> bool {
+        if let Some(token) = self.last_token() {
+            !(token.kind() == kind && token.span().start() == span.start())
+        } else {
+            true
+        }
     }
 
     fn parse_nested_inline(&mut self, token: Token) -> Inline {
@@ -176,7 +199,7 @@ impl Parser<'_> {
         //  iteration
 
         let mut kind = token.kind();
-        let start = token.span().start();
+        let mut start = token.span().start();
         let mut end = start;
         let mut content: InlineContent<_, _> = NestedContent {
             content: Vec::default(),
@@ -205,7 +228,11 @@ impl Parser<'_> {
                         // It is closing one and it was open last -> Close Inline
                         end = next_token.span().end();
 
-                        self.pop_last();
+                        if let Some(token) = self.pop(&next_token) {
+                            start = token.span().start();
+                            kind = token.kind();
+                        }
+
                         break;
                     } else {
                         // It might be ambiguous token and part of it is open,
@@ -279,13 +306,7 @@ impl Parser<'_> {
 
         let span = Span::from((start, end));
 
-        let is_inline_closed = if let Some(token) = self.last_token() {
-            token.kind() != kind && token.span().start() != start
-        } else {
-            true
-        };
-
-        if !is_inline_closed {
+        if !self.inline_closed(kind, span) {
             if let Some(last_token) = self.pop_last() {
                 content.prepend(InlineContent::from(last_token));
                 kind = TokenKind::Plain;
@@ -390,7 +411,7 @@ where
             stack: ParserStack::default(),
             token_cache: None,
             stack_cache: Vec::default(),
-            stack_was_empty: true,
+            scope_cleared: true,
             inline_cache: VecDeque::default(),
         }
     }
