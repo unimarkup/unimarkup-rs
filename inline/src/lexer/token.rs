@@ -344,11 +344,11 @@ impl TokenKind {
         }
     }
 
-    fn is_open_parentheses(&self) -> bool {
+    pub(crate) fn is_open_parentheses(&self) -> bool {
         matches!(self, Self::OpenParens | Self::OpenBracket | Self::OpenBrace)
     }
 
-    fn is_close_parentheses(&self) -> bool {
+    pub(crate) fn is_close_parentheses(&self) -> bool {
         matches!(
             self,
             Self::CloseParens | Self::CloseBracket | Self::CloseBrace
