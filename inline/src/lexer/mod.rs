@@ -38,7 +38,7 @@ impl<'a> Tokenize for &'a str {
     fn lex(&self) -> Lexer {
         Lexer {
             input: self,
-            pos: Position { line: 0, column: 1 },
+            pos: Position { line: 1, column: 1 },
         }
     }
 
@@ -170,10 +170,19 @@ impl Symbol {
 
 impl<'a> Lexer<'a> {
     pub fn iter(&self) -> TokenIterator<'a> {
+        let ignored_line_upto_index = self.pos.line.saturating_sub(1);
+        let mut lines = self.input.lines();
+
+        let curr = if let Some(line) = lines.nth(ignored_line_upto_index) {
+            Vec::from_iter(line.graphemes(true))
+        } else {
+            Vec::default()
+        };
+
         TokenIterator {
-            lines: self.input.lines(),
-            curr: Vec::new(),
-            index: 0,
+            lines,
+            curr,
+            index: self.pos.column - 1,
             pos: self.pos,
         }
     }
@@ -238,10 +247,10 @@ impl TokenIterator<'_> {
             self.pos.line += 1;
             self.pos.column = 1;
 
-            return true;
+            true
+        } else {
+            false
         }
-
-        false
     }
 
     fn lex_keyword(&mut self) -> Option<Token> {
