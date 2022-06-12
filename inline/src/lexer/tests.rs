@@ -25,6 +25,84 @@ fn lines() {
 }
 
 #[test]
+fn test_lex_with_offs() {
+    let pos_offs = Position::new(1, 5);
+    let lexer = "Some string".lex_with_offs(pos_offs);
+    let mut iter = lexer.into_iter();
+
+    let token = iter.next().unwrap();
+    let start = Position::new(1, 5);
+    let end = start + (0, 7 - 1);
+
+    assert_token! {
+        token with
+            TokenKind::Plain,
+            Spacing::None,
+            (start, end),
+            " string"
+    };
+}
+
+#[test]
+fn test_lex_with_line_offs() {
+    let input = "This is some\ntext with multiple lines.";
+
+    let pos_offs = Position::new(2, 20);
+    let lexer = input.lex_with_offs(pos_offs);
+    let mut iter = lexer.into_iter();
+
+    let token = iter.next().unwrap();
+    let start = Position::new(2, 20);
+    let end = start + (0, 6 - 1);
+
+    assert_token! {
+        token with
+            TokenKind::Plain,
+            Spacing::None,
+            (start, end),
+            "lines."
+    };
+}
+
+#[test]
+fn test_iter_with_offs() {
+    let pos = Position::new(1, 5);
+    let mut iter = "Some string".lex_iter_with_offs(pos);
+
+    let token = iter.next().unwrap();
+    let start = Position::new(1, 5);
+    let end = start + (0, 7 - 1);
+
+    assert_token! {
+        token with
+            TokenKind::Plain,
+            Spacing::None,
+            (start, end),
+            " string"
+    };
+}
+
+#[test]
+fn test_iter_with_line_offs() {
+    let input = "This is some\ntext with multiple lines.";
+
+    let pos_offs = Position::new(2, 20);
+    let mut iter = input.lex_iter_with_offs(pos_offs);
+
+    let token = iter.next().unwrap();
+    let start = Position::new(2, 20);
+    let end = start + (0, 6 - 1);
+
+    assert_token! {
+        token with
+            TokenKind::Plain,
+            Spacing::None,
+            (start, end),
+            "lines."
+    };
+}
+
+#[test]
 fn into_iter() {
     let lexer = "Some string".lex();
 
