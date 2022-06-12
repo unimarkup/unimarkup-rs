@@ -170,14 +170,12 @@ impl Symbol {
 
 impl<'a> Lexer<'a> {
     pub fn iter(&self) -> TokenIterator<'a> {
-        let ignored_line_upto_index = self.pos.line.saturating_sub(1);
+        let skip_lines_upto_index = self.pos.line.saturating_sub(1);
         let mut lines = self.input.lines();
 
-        let curr = if let Some(line) = lines.nth(ignored_line_upto_index) {
-            Vec::from_iter(line.graphemes(true))
-        } else {
-            Vec::default()
-        };
+        let curr = lines
+            .nth(skip_lines_upto_index)
+            .map_or(Vec::default(), |line| Vec::from_iter(line.graphemes(true)));
 
         TokenIterator {
             lines,
