@@ -180,7 +180,7 @@ impl<'a> Lexer<'a> {
         TokenIterator {
             lines,
             curr,
-            index: self.pos.column - 1,
+            index: self.pos.column.saturating_sub(1),
             pos: self.pos,
         }
     }
