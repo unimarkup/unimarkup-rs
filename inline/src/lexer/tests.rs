@@ -317,13 +317,41 @@ fn lex_bold_italic_combined() {
 
     let lexer = input.lex();
 
-    // let iter = lexer.iter();
-    //
-    // assert_eq!(iter.count(), 3);
+    let mut iter = lexer.iter();
+    let token = iter.next().unwrap();
+    let start = Position::new(1, 1);
+    let end = start + (0, 4 - 1);
 
-    for token in &lexer {
-        println!("{token:#?}");
-    }
+    assert_token! {
+        token with
+            TokenKind::Plain,
+            Spacing::None,
+            (start, end),
+            "****"
+    };
+
+    let token = iter.next().unwrap();
+    let start = end + (0, 1);
+    let end = start + (0, 15 - 1);
+
+    assert_token! {
+        token with
+            TokenKind::Plain,
+            Spacing::None,
+            (start, end),
+            "bold and italic"
+    };
+
+    let token = iter.next().unwrap();
+    let start = end + (0, 1);
+    let end = start + (0, 3 - 1);
+
+    assert_token! {
+        token with
+            TokenKind::ItalicBold,
+            Spacing::None,
+            (start, end)
+    };
 }
 
 #[test]
