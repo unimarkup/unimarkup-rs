@@ -6,27 +6,31 @@ mod token;
 
 pub use token::*;
 
+/// Used to create a Unimarkup [`Lexer`] over some data structure, most typically over some kind of
+/// string, i.e. [`&str`].
+///
+/// [`Lexer`]: crate::Lexer
 pub trait Tokenize {
+    /// Creates the `Lexer` from this type.
     fn lex(&self) -> Lexer;
 
+    /// Creates the `Lexer` from this type starting at the given offset.
     fn lex_with_offs(&self, pos: Position) -> Lexer {
         Lexer { pos, ..self.lex() }
     }
 
+    /// Creates an [`TokenIterator`] from this type.
+    ///
+    /// [`TokenIterator`]: crate::TokenIterator
     fn lex_iter(&self) -> TokenIterator;
+
+    /// Creates an [`TokenIterator`] from this type starting at the given offset.
+    ///
+    /// [`TokenIterator`]: crate::TokenIterator
     fn lex_iter_with_offs(&self, pos: Position) -> TokenIterator {
-        let mut iter = self.lex_iter();
-        let line_offs = pos.line;
+        let lexer = self.lex_with_offs(pos);
 
-        for _ in 0..=line_offs {
-            iter.next_line();
-        }
-
-        iter.index += pos.column;
-
-        iter.pos = pos;
-
-        iter
+        lexer.iter()
     }
 }
 
