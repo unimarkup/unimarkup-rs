@@ -419,8 +419,9 @@ where
     fn parse_unimarkup_inlines(&'i self) -> Parser<'p>;
 }
 
-impl<'p, 'i> ParseUnimarkupInlines<'p, 'i> for &str
+impl<'p, 'i, T> ParseUnimarkupInlines<'p, 'i> for T
 where
+    T: Tokenize,
     'i: 'p,
 {
     fn parse_unimarkup_inlines(&'i self) -> Parser<'p> {
