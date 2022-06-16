@@ -541,9 +541,7 @@ impl From<(Symbol, usize)> for TokenKind {
                 Symbol::CloseBracket => Self::CloseBracket,
                 Symbol::OpenBrace => Self::OpenBrace,
                 Symbol::CloseBrace => Self::CloseBrace,
-                Symbol::Esc | Symbol::Pipe | Symbol::Tilde | Symbol::Quote | Symbol::Plain => {
-                    Self::Plain
-                }
+                _ => Self::Plain,
             },
             2 => match symbol {
                 Symbol::Star => Self::Bold,
@@ -551,37 +549,12 @@ impl From<(Symbol, usize)> for TokenKind {
                 Symbol::Pipe => Self::Highlight,
                 Symbol::Tilde => Self::Strikethrough,
                 Symbol::Quote => Self::Quote,
-                Symbol::Esc
-                | Symbol::Caret
-                | Symbol::Tick
-                | Symbol::Overline
-                | Symbol::Dollar
-                | Symbol::OpenParens
-                | Symbol::CloseParens
-                | Symbol::OpenBracket
-                | Symbol::CloseBracket
-                | Symbol::OpenBrace
-                | Symbol::CloseBrace
-                | Symbol::Plain => Self::Plain,
+                _ => Self::Plain,
             },
             3 => match symbol {
                 Symbol::Star => Self::ItalicBold,
                 Symbol::Underline => Self::UnderlineSubscript,
-                Symbol::Esc
-                | Symbol::Caret
-                | Symbol::Tick
-                | Symbol::Overline
-                | Symbol::Pipe
-                | Symbol::Tilde
-                | Symbol::Quote
-                | Symbol::Dollar
-                | Symbol::OpenParens
-                | Symbol::CloseParens
-                | Symbol::OpenBracket
-                | Symbol::CloseBracket
-                | Symbol::OpenBrace
-                | Symbol::CloseBrace
-                | Symbol::Plain => Self::Plain,
+                _ => Self::Plain,
             },
             _ => Self::Plain,
         }
