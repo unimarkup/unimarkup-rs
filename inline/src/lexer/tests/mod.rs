@@ -16,6 +16,7 @@ macro_rules! assert_token {
 }
 
 mod star;
+mod underline;
 
 #[test]
 fn lines() {
