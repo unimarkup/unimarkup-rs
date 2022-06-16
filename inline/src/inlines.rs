@@ -547,9 +547,12 @@ impl InlineContent<PlainContent, NestedContent> {
     /// Converts self into [`PlainContent`], with any inline contained inside of self converted into
     /// the original textual representation.
     pub fn into_plain(self) -> PlainContent {
-        PlainContent {
-            content: self.as_string(),
-            span: self.span(),
+        match self {
+            InlineContent::Plain(plain_content) => plain_content,
+            InlineContent::Nested(nested_content) => PlainContent {
+                content: nested_content.as_string(),
+                span: nested_content.span,
+            },
         }
     }
 
