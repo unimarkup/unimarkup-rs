@@ -254,6 +254,8 @@ impl TokenIterator<'_> {
     }
 
     /// Consumes the next line in buffer and sets the cursor to the first grapheme on it.
+    ///
+    /// Returns false if no new line available.
     fn next_line(&mut self) -> bool {
         // remove last line from cache
         self.curr.clear();
