@@ -374,7 +374,7 @@ pub enum TokenKind {
     /// Verbatim delimiter token (`` ` ``).
     Verbatim,
 
-    /// Qotation delimiter token (`"`).
+    /// Qotation delimiter token (`""`).
     Quote,
 
     /// Math delimiter token (`$`).
@@ -425,7 +425,7 @@ impl TokenKind {
             TokenKind::Overline => "‾",
             TokenKind::Strikethrough => "~~",
             TokenKind::Verbatim => "`",
-            TokenKind::Quote => "\"",
+            TokenKind::Quote => "\"\"",
             TokenKind::Math => "$",
             TokenKind::OpenParens => "(",
             TokenKind::CloseParens => ")",
