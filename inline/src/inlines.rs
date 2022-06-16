@@ -470,15 +470,10 @@ impl InlineContent<PlainContent, NestedContent> {
             InlineContent::Nested(self_nested) => {
                 match other {
                     InlineContent::Plain(other_plain) => {
-                        let mut content = Vec::with_capacity(1 + self_nested.content.len());
-                        content.push(Inline::from(other_plain));
-                        content.append(&mut self_nested.content);
-
-                        self_nested.content = content;
+                        self_nested.content.insert(0, Inline::from(other_plain));
                     }
                     InlineContent::Nested(mut other_inlines) => {
                         std::mem::swap(&mut self_nested.content, &mut other_inlines.content);
-
                         self_nested.content.append(&mut other_inlines.content);
                     }
                 }
