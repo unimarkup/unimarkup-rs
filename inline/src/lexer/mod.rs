@@ -47,6 +47,9 @@ impl<'a> Tokenize for &'a str {
     }
 }
 
+/// Lexer of Unimarkup inline formatted text. Generates a stream of [`Token`]s from input.
+///
+/// [`Token`]: crate::Token
 pub struct Lexer<'a> {
     input: &'a str,
     pos: Position,
@@ -144,6 +147,7 @@ impl From<&str> for Symbol {
 }
 
 impl Symbol {
+    /// Returns the [`LexLength`] a given symbol may have.
     pub(crate) fn allowed_len(&self) -> LexLength {
         match self {
             Symbol::Star | Symbol::Underline => LexLength::Limited(3),
@@ -169,6 +173,7 @@ impl Symbol {
 }
 
 impl<'a> Lexer<'a> {
+    /// Creates a [`TokenIterator`] from [`Lexer`].
     pub fn iter(&self) -> TokenIterator<'a> {
         let skip_lines_upto_index = self.pos.line.saturating_sub(1);
         let mut lines = self.input.lines();
@@ -196,12 +201,14 @@ impl<'a> IntoIterator for &'a Lexer<'a> {
     }
 }
 
+/// Enum used for annotating whether the literal content for some [`Symbol`] should be stored into [`Token`] or not.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Content {
     Store,
     Auto,
 }
 
+/// Helper enum for annotation of allowed length for some given [`Symbol`]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum LexLength {
     /// Any length allowed.
@@ -218,6 +225,7 @@ impl From<usize> for LexLength {
     }
 }
 
+/// Iterator over Unimarkup [`Token`]s, performs the actual lexing.
 #[derive(Debug, Clone)]
 pub struct TokenIterator<'a> {
     lines: Lines<'a>,
@@ -227,10 +235,12 @@ pub struct TokenIterator<'a> {
 }
 
 impl TokenIterator<'_> {
+    /// Returns true if no more characters are available in currently observed line.
     fn is_end_of_line(&self) -> bool {
         self.index >= self.curr.len()
     }
 
+    /// Consumes the next line in buffer and sets the cursor to the first grapheme on it.
     fn next_line(&mut self) -> bool {
         // remove last line from cache
         self.curr.clear();
@@ -251,6 +261,7 @@ impl TokenIterator<'_> {
         }
     }
 
+    /// Lexes a given [`Symbol`] with significance, i.e. `**` and produces a [`Token`] out of it, if possible.
     fn lex_keyword(&mut self) -> Option<Token> {
         let first = self.curr.get(self.index)?;
 
@@ -301,6 +312,7 @@ impl TokenIterator<'_> {
         Some(token)
     }
 
+    /// Returns the lexed length of a given [`Symbol`] with the given [`LexLength`] constraint.
     fn symbol_len(&self, symbol: Symbol, lex_len: LexLength) -> usize {
         let end_pos = self.literal_end_index(symbol);
         let scanned_len = end_pos - self.index;
@@ -312,6 +324,11 @@ impl TokenIterator<'_> {
         }
     }
 
+    /// Finds the furthest grapheme in line where, starting from the current cursor position, each grapheme
+    /// matches the one provided as the `symbol`.
+    ///
+    /// Note that the current cursor position will be returned if the grapheme under cursor doesn't match the
+    /// `symbol` grapheme provided as the function parameter.
     fn literal_end_index(&self, symbol: impl AsRef<str>) -> usize {
         let mut pos = self.index;
         let literal = symbol.as_ref();
@@ -324,6 +341,7 @@ impl TokenIterator<'_> {
         }
     }
 
+    /// Calculates the [`Spacing`] just before the cursor position and after cursor position and the given len.
     fn spacing_around(&self, len: usize) -> Spacing {
         let mut spacing = Spacing::None;
 
@@ -352,6 +370,7 @@ impl TokenIterator<'_> {
         }
     }
 
+    /// Lexes a [`Token`] with [`TokenKind::Plain`], so a [`Token`] containing just regular text.
     fn lex_plain(&mut self) -> Option<Token> {
         let start_pos = self.pos;
         let mut content = String::with_capacity(self.curr.len());
@@ -396,6 +415,8 @@ impl TokenIterator<'_> {
         Some(token)
     }
 
+    /// Lexes an escaped [`Symbol`], creating [`Token`] with either [`TokenKind::Plain`] or some
+    /// kind of significant escape, such es escaped newline.
     fn lex_escape_seq(&mut self) -> Option<Token> {
         let grapheme = self.curr.get(self.index)?;
 
