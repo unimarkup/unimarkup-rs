@@ -15,6 +15,8 @@ macro_rules! assert_token {
     }
 }
 
+mod star;
+
 #[test]
 fn lines() {
     let input = r#"first line
