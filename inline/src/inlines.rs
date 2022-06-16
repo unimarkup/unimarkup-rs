@@ -446,41 +446,34 @@ impl InlineContent<PlainContent, NestedContent> {
         let start = other.span().end();
         let end = self.span().start();
 
-        let span = (start, end).into();
-
         match self {
             InlineContent::Plain(plain_content) => match other {
                 InlineContent::Plain(mut other_plain) => {
                     std::mem::swap(&mut plain_content.content, &mut other_plain.content);
 
                     plain_content.content.push_str(&other_plain.content);
-                    plain_content.span = span;
                 }
                 InlineContent::Nested(mut other_inlines) => {
                     other_inlines
                         .content
                         .push(Inline::from(std::mem::take(plain_content)));
 
-                    other_inlines.span = span;
-
                     *self = InlineContent::Nested(other_inlines);
                 }
             },
 
-            InlineContent::Nested(self_nested) => {
-                match other {
-                    InlineContent::Plain(other_plain) => {
-                        self_nested.content.insert(0, Inline::from(other_plain));
-                    }
-                    InlineContent::Nested(mut other_inlines) => {
-                        std::mem::swap(&mut self_nested.content, &mut other_inlines.content);
-                        self_nested.content.append(&mut other_inlines.content);
-                    }
+            InlineContent::Nested(self_nested) => match other {
+                InlineContent::Plain(other_plain) => {
+                    self_nested.content.insert(0, Inline::from(other_plain));
                 }
-
-                self_nested.span = span;
-            }
+                InlineContent::Nested(mut other_inlines) => {
+                    std::mem::swap(&mut self_nested.content, &mut other_inlines.content);
+                    self_nested.content.append(&mut other_inlines.content);
+                }
+            },
         }
+
+        self.set_span(Span::from((start, end)));
     }
 
     /// Apends an [`Inline`] to this content.
@@ -496,60 +489,45 @@ impl InlineContent<PlainContent, NestedContent> {
                 // specified inline content type as it's inner value. Therefore, if some inline has
                 // plain as content, then it can't have nested content. append the inline as text
                 // to the current inline is the solution.
-                plain_content.span = (start, end).into();
-
                 plain_content.content.push_str(&inline.as_string());
             }
-            InlineContent::Nested(ref mut nested_inlines) => {
-                nested_inlines.span = (start, end).into();
-                nested_inlines.content.push(inline)
-            }
+            InlineContent::Nested(ref mut nested_inlines) => nested_inlines.content.push(inline),
         }
+
+        self.set_span(Span::from((start, end)));
     }
 
     /// Appends another [`InlineContent`] to this [`InlineContent`].
     ///
     /// [`InlineContent`]: self::InlineContent
     pub fn append(&mut self, mut other: InlineContent<PlainContent, NestedContent>) {
+        let span = (self.span().start(), other.span().end()).into();
+
         match self {
             InlineContent::Plain(plain_content) => match other {
                 InlineContent::Plain(ref other_plain) => {
                     plain_content.content.push_str(&other_plain.content);
-                    plain_content.span =
-                        (plain_content.span.start(), other_plain.span.end()).into();
                 }
                 InlineContent::Nested(ref mut other_inlines) => {
-                    let start = plain_content.span.start();
-                    let end = other_inlines.span.end();
-
                     let mut content = std::mem::take(&mut other_inlines.content);
                     content.insert(0, Inline::from(std::mem::take(plain_content)));
 
-                    *self = InlineContent::Nested(NestedContent {
-                        content,
-                        span: (start, end).into(),
-                    })
+                    *self = InlineContent::Nested(NestedContent { content, span });
                 }
             },
 
             InlineContent::Nested(nested_inlines) => match other {
                 InlineContent::Plain(plain_content) => {
-                    let start = nested_inlines.span.start();
-                    let end = plain_content.span.end();
-
                     nested_inlines.content.push(Inline::from(plain_content));
-                    nested_inlines.span = (start, end).into();
                 }
 
                 InlineContent::Nested(ref mut other_inlines) => {
-                    let start = nested_inlines.span.start();
-                    let end = other_inlines.span.end();
-
                     nested_inlines.content.append(&mut other_inlines.content);
-                    nested_inlines.span = (start, end).into();
                 }
             },
         }
+
+        self.set_span(span);
     }
 
     /// Creates a [`InlineContent::Plain`] from any given [`Token`], discarding it's [`TokenKind`].
