@@ -18,6 +18,7 @@ macro_rules! assert_token {
 mod caret;
 mod dollar;
 mod overline;
+mod parenthesis;
 mod pipe;
 mod quote;
 mod star;
