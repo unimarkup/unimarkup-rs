@@ -291,9 +291,7 @@ impl TokenIterator<'_> {
 
         let symbol = Symbol::from(*first);
 
-        let lex_len = symbol.allowed_len();
-
-        let symbol_len = self.symbol_len(symbol, lex_len);
+        let symbol_len = self.symbol_len(symbol);
 
         let start_pos = self.pos;
         let end_pos = start_pos + (0, symbol_len - 1);
@@ -347,12 +345,11 @@ impl TokenIterator<'_> {
     /// [`TokenKind::Italic`]: self::token::TokenKind::Italic
     /// [`TokenKind::Bold`]: self::token::TokenKind::Bold
     /// [`TokenKind::ItalicBold`]: self::token::TokenKind::ItalicBold
-    fn symbol_len(&self, symbol: Symbol, lex_len: LexLength) -> usize {
+    fn symbol_len(&self, symbol: Symbol) -> usize {
         let end_pos = self.literal_end_index(symbol);
         let scanned_len = end_pos - self.index;
 
-        match lex_len {
-            // check if potentially less literals found
+        match symbol.allowed_len() {
             LexLength::Exact(len) => scanned_len.min(len),
             _ => scanned_len,
         }
