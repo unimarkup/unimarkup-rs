@@ -280,26 +280,11 @@ impl TokenIterator<'_> {
     /// [`Symbol`]: self::Symbol
     fn lex_keyword(&mut self) -> Option<Token> {
         let first = self.curr.get(self.index)?;
-
-        // possible options:
-        // - '*' -> Italic, Bold or both
-        // - '_' -> Underline, Subscript or both
-        // - '‾' -> Overline,
-        // - '^' -> Superscript
-        // - '~' -> Strikethrough
-        // - '|' -> Highlight
-        // - '`' -> Verbatim
-        // - '"' -> Quote
-        // - '$' -> Math
-        // - '[' | ']' -> OpenBracket, CloseBracket
-        // - '(' | ')' -> OpenParens, CloseParens
-        // - '{' | '}' -> OpenBrace, CloseBrace
-        //
         // NOT YET IMPLEMENTED :
         // - ":" -> Custom Emoji, e.g. ::heart::
         // ... and more
 
-        // NOTE: General variant of lexing:
+        // NOTE: General invariant of lexing:
         // If some literal occurs the maximal symbol length + 1 times, then it's lexed as plain.
 
         let symbol = Symbol::from(*first);
