@@ -58,7 +58,7 @@ pub struct Lexer<'a> {
 
 /// Symbols with significance in Unimarkup inline formatting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Symbol {
+pub(crate) enum Symbol<'a> {
     /// The backslash (`\`) is used for escaping other symbols.
     Esc,
     /// The start (`*`) literal is used for bold and/or italic formatting.
@@ -94,11 +94,15 @@ pub(crate) enum Symbol {
     CloseBrace,
     /// The plain symbol represents any other literal with no significance in Unimarkup inline
     /// formatting.
-    Plain,
+    Plain(&'a str),
+    /// A whitespace literal (` `)
+    Whitespace(&'a str),
+    /// A newline literal (`\n` or '\r\n')
+    Newline,
     // Colon,
 }
 
-impl AsRef<str> for Symbol {
+impl AsRef<str> for Symbol<'_> {
     fn as_ref(&self) -> &str {
         match self {
             Symbol::Esc => "\\",
@@ -117,14 +121,16 @@ impl AsRef<str> for Symbol {
             Symbol::CloseBracket => "]",
             Symbol::OpenBrace => "{",
             Symbol::CloseBrace => "}",
-            Symbol::Plain => "",
+            Symbol::Plain(content) => content,
+            Symbol::Whitespace(literal) => literal,
+            Symbol::Newline => "\n",
             // Symbol::Colon => ":",
         }
     }
 }
 
-impl From<&str> for Symbol {
-    fn from(input: &str) -> Self {
+impl<'a> From<&'a str> for Symbol<'a> {
+    fn from(input: &'a str) -> Self {
         match input {
             "\\" => Symbol::Esc,
             "*" => Symbol::Star,
@@ -142,12 +148,29 @@ impl From<&str> for Symbol {
             "]" => Symbol::CloseBracket,
             "{" => Symbol::OpenBrace,
             "}" => Symbol::CloseBrace,
-            _ => Symbol::Plain,
+            "\n" | "\r\n" => Symbol::Newline,
+            other => match other.chars().next() {
+                // NOTE: multi-character grapheme is most probably not a whitespace
+                Some(literal) if literal.is_whitespace() => Symbol::Whitespace(other),
+                _ => Symbol::Plain(input),
+            },
         }
     }
 }
 
-impl Symbol {
+impl<'a> From<&&'a str> for Symbol<'a> {
+    fn from(input: &&'a str) -> Self {
+        Self::from(*input)
+    }
+}
+
+impl From<Symbol<'_>> for String {
+    fn from(symbol: Symbol) -> Self {
+        String::from(symbol.as_ref())
+    }
+}
+
+impl Symbol<'_> {
     /// Returns the [`LexLength`] a given symbol may have.
     ///
     /// [`LexLength`]: self::LexLength
@@ -170,8 +193,56 @@ impl Symbol {
 
             Symbol::Pipe | Symbol::Tilde | Symbol::Quote => LexLength::Limited(2),
 
-            Symbol::Plain => LexLength::Unlimited,
+            Symbol::Whitespace(_) | Symbol::Newline | Symbol::Plain(_) => LexLength::Unlimited,
         }
+    }
+
+    fn len(&self) -> usize {
+        self.as_ref().len()
+    }
+
+    /// Checks whether the grapheme is some Unimarkup Inline symbol.
+    /// e.g. "*" can be start of Unimarkup Italic or Bold.
+    fn is_keyword(&self) -> bool {
+        matches!(
+            self,
+            Symbol::Star
+                | Symbol::Underline
+                | Symbol::Caret
+                | Symbol::Tick
+                | Symbol::Overline
+                | Symbol::Pipe
+                | Symbol::Tilde
+                | Symbol::Quote
+                | Symbol::Dollar
+                | Symbol::OpenParens
+                | Symbol::CloseParens
+                | Symbol::OpenBracket
+                | Symbol::CloseBracket
+                | Symbol::OpenBrace
+                | Symbol::CloseBrace
+        )
+    }
+
+    /// Checks whether the grapheme is "\".
+    fn is_esc(&self) -> bool {
+        matches!(self, Symbol::Esc)
+    }
+
+    /// Checks whether the grapheme is any of the whitespace characters.
+    fn is_whitespace(&self) -> bool {
+        matches!(self, Self::Whitespace(_))
+    }
+
+    /// Checks whether the grapheme is Unix or Windows style newline.
+    fn is_newline(&self) -> bool {
+        matches!(self, Self::Newline)
+    }
+
+    /// Checks whether the grapheme has any significance in escape sequence.
+    /// e.g. The lexer interprets "\ " as a Whitespace `Token`
+    fn is_significant_esc(&self) -> bool {
+        self.is_whitespace() || self.is_newline()
     }
 }
 
@@ -274,6 +345,10 @@ impl TokenIterator<'_> {
         } else {
             false
         }
+    }
+
+    fn get_symbol(&self, index: usize) -> Option<Symbol> {
+        self.curr.get(index).map(Symbol::from)
     }
 
     /// Lexes a given [`Symbol`] with significance, i.e. `**` and produces a [`Token`] out of it, if possible.
@@ -396,7 +471,7 @@ impl TokenIterator<'_> {
             self.index.saturating_add(offset as usize)
         };
 
-        self.curr.get(pos).map_or(false, |ch| ch.is_whitespace())
+        self.get_symbol(pos).map_or(false, |ch| ch.is_whitespace())
     }
 
     /// Lexes a [`Token`] with [`TokenKind::Plain`], so a [`Token`] containing just regular text.
@@ -414,22 +489,26 @@ impl TokenIterator<'_> {
         //    otherwise continue from next character
         // 4. any other grapheme -> consume into plain
 
-        while let Some(grapheme) = self.curr.get(self.index) {
-            if grapheme.is_keyword() {
+        while let Some(symbol) = self.get_symbol(self.index) {
+            if symbol.is_keyword() {
                 break;
-            } else if grapheme.is_esc() {
-                match self.curr.get(self.index + 1) {
+            } else if symbol.is_esc() {
+                match self
+                    .curr
+                    .get(self.index + 1)
+                    .map(|literal| Symbol::from(*literal))
+                {
                     // character can be consumed if not significant in escape sequence
                     Some(symbol) if symbol.is_significant_esc() => break,
                     Some(symbol) => {
                         self.index += 2; // consume and skip the symbol in next iteration
-                        content.push_str(symbol);
+                        content.push_str(symbol.as_ref());
                         continue;
                     }
                     None => break,
                 }
             } else {
-                content.push_str(grapheme);
+                content.push_str(symbol.as_ref());
                 self.index += 1;
             }
         }
@@ -454,20 +533,20 @@ impl TokenIterator<'_> {
     /// [`Token`]: self::token::Token
     /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
     fn lex_escape_seq(&mut self) -> Option<Token> {
-        let grapheme = self.curr.get(self.index)?;
+        let symbol = self.get_symbol(self.index)?;
 
         // NOTE: index here is pointing to the current grapheme
         let start_pos = self.pos; // escape character
-        let end_pos = start_pos + (0, grapheme.len());
+        let end_pos = start_pos + (0, symbol.len());
 
-        let token_kind = if grapheme.is_whitespace() {
+        let token_kind = if symbol.is_whitespace() {
             TokenKind::Whitespace
         } else {
             TokenKind::Newline
         };
 
         let token = TokenBuilder::new(token_kind)
-            .with_content(String::from(*grapheme))
+            .with_content(String::from(symbol))
             .span(Span::from((start_pos, end_pos)))
             .space(Spacing::None)
             .build();
@@ -493,17 +572,17 @@ impl<'a> Iterator for TokenIterator<'a> {
         // 2. next grapheme is '\' -> handle escape sequence
         // 3. next grapheme is not a keyword -> it is plain text
 
-        if let Some(grapheme) = self.curr.get(self.index) {
-            if grapheme.is_keyword() {
+        if let Some(symbol) = self.get_symbol(self.index) {
+            if symbol.is_keyword() {
                 return self.lex_keyword();
-            } else if grapheme.is_esc() {
+            } else if symbol.is_esc() {
                 // Three cases:
                 // 1. next character has significance in escape sequence -> some token
                 // 2. next character has no significance -> lex as plain text
                 // 3. there is no next character. That implies that we've got to end of line, which
                 //    implies that the character following '\' is either '\n' or '\r\t' -> lex newline
 
-                match self.curr.get(self.index + 1) {
+                match self.get_symbol(self.index + 1) {
                     Some(grapheme) if grapheme.is_significant_esc() => {
                         self.index += 1;
                         return self.lex_escape_seq();

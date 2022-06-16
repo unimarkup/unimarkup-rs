@@ -525,7 +525,7 @@ impl From<&Inline> for TokenKind {
     }
 }
 
-impl From<(Symbol, usize)> for TokenKind {
+impl From<(Symbol<'_>, usize)> for TokenKind {
     fn from((symbol, len): (Symbol, usize)) -> Self {
         match len {
             1 => match symbol {
