@@ -301,10 +301,7 @@ impl NestedContent {
 
     /// Returns a textual representation of inner [`Inline`]s combined.
     pub fn as_string(&self) -> String {
-        self.content
-            .iter()
-            .map(|inline| inline.as_string())
-            .collect()
+        self.content.iter().map(Inline::as_string).collect()
     }
 
     /// Returns the number of [`Inline`]s contained.
