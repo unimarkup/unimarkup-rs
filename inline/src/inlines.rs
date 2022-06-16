@@ -330,7 +330,7 @@ impl NestedContent {
     ///
     /// [`Inline`]: self::Inline
     pub fn content_len(&self) -> usize {
-        self.content.iter().map(|inline| inline.content_len()).sum()
+        self.content.iter().map(Inline::content_len).sum()
     }
 
     /// Returns a textual representation of inner [`Inline`]s combined.
