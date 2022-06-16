@@ -9,7 +9,8 @@ pub use token::*;
 /// Used to create a Unimarkup [`Lexer`] over some data structure, most typically over some kind of
 /// string, i.e. [`&str`].
 ///
-/// [`Lexer`]: crate::Lexer
+/// [`Lexer`]: self::Lexer
+/// [`&str`]: &str
 pub trait Tokenize {
     /// Creates the `Lexer` from this type.
     fn lex(&self) -> Lexer;
@@ -21,12 +22,12 @@ pub trait Tokenize {
 
     /// Creates an [`TokenIterator`] from this type.
     ///
-    /// [`TokenIterator`]: crate::TokenIterator
+    /// [`TokenIterator`]: self::TokenIterator
     fn lex_iter(&self) -> TokenIterator;
 
     /// Creates an [`TokenIterator`] from this type starting at the given offset.
     ///
-    /// [`TokenIterator`]: crate::TokenIterator
+    /// [`TokenIterator`]: self::TokenIterator
     fn lex_iter_with_offs(&self, pos: Position) -> TokenIterator {
         let lexer = self.lex_with_offs(pos);
 
@@ -49,7 +50,7 @@ impl<'a> Tokenize for &'a str {
 
 /// Lexer of Unimarkup inline formatted text. Generates a stream of [`Token`]s from input.
 ///
-/// [`Token`]: crate::Token
+/// [`Token`]: self::token::Token
 pub struct Lexer<'a> {
     input: &'a str,
     pos: Position,
@@ -148,6 +149,8 @@ impl From<&str> for Symbol {
 
 impl Symbol {
     /// Returns the [`LexLength`] a given symbol may have.
+    ///
+    /// [`LexLength`]: self::LexLength
     pub(crate) fn allowed_len(&self) -> LexLength {
         match self {
             Symbol::Star | Symbol::Underline => LexLength::Limited(3),
@@ -174,6 +177,9 @@ impl Symbol {
 
 impl<'a> Lexer<'a> {
     /// Creates a [`TokenIterator`] from [`Lexer`].
+    ///
+    /// [`TokenIterator`]: self::TokenIterator
+    /// [`Lexer`]: self::Lexer
     pub fn iter(&self) -> TokenIterator<'a> {
         let skip_lines_upto_index = self.pos.line.saturating_sub(1);
         let mut lines = self.input.lines();
@@ -202,6 +208,9 @@ impl<'a> IntoIterator for &'a Lexer<'a> {
 }
 
 /// Enum used for annotating whether the literal content for some [`Symbol`] should be stored into [`Token`] or not.
+///
+/// [`Symbol`]: self::Symbol
+/// [`Token`]: self::token::Token
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Content {
     Store,
@@ -209,6 +218,8 @@ pub(crate) enum Content {
 }
 
 /// Helper enum for annotation of allowed length for some given [`Symbol`]
+///
+/// [`Symbol`]: self::Symbol
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum LexLength {
     /// Any length allowed.
@@ -226,6 +237,8 @@ impl From<usize> for LexLength {
 }
 
 /// Iterator over Unimarkup [`Token`]s, performs the actual lexing.
+///
+/// [`Token`]: self::token::Token
 #[derive(Debug, Clone)]
 pub struct TokenIterator<'a> {
     lines: Lines<'a>,
@@ -262,6 +275,9 @@ impl TokenIterator<'_> {
     }
 
     /// Lexes a given [`Symbol`] with significance, i.e. `**` and produces a [`Token`] out of it, if possible.
+    ///
+    /// [`Token`]: self::token::Token
+    /// [`Symbol`]: self::Symbol
     fn lex_keyword(&mut self) -> Option<Token> {
         let first = self.curr.get(self.index)?;
 
@@ -313,6 +329,9 @@ impl TokenIterator<'_> {
     }
 
     /// Returns the lexed length of a given [`Symbol`] with the given [`LexLength`] constraint.
+    ///
+    /// [`Symbol`]: self::Symbol
+    /// [`LexLength`]: self::LexLength
     fn symbol_len(&self, symbol: Symbol, lex_len: LexLength) -> usize {
         let end_pos = self.literal_end_index(symbol);
         let scanned_len = end_pos - self.index;
@@ -342,6 +361,8 @@ impl TokenIterator<'_> {
     }
 
     /// Calculates the [`Spacing`] just before the cursor position and after cursor position and the given len.
+    ///
+    /// [`Spacing`]: self::token::Spacing
     fn spacing_around(&self, len: usize) -> Spacing {
         let mut spacing = Spacing::None;
 
@@ -371,6 +392,9 @@ impl TokenIterator<'_> {
     }
 
     /// Lexes a [`Token`] with [`TokenKind::Plain`], so a [`Token`] containing just regular text.
+    ///
+    /// [`Token`]: self::token::Token
+    /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
     fn lex_plain(&mut self) -> Option<Token> {
         let start_pos = self.pos;
         let mut content = String::with_capacity(self.curr.len());
@@ -417,6 +441,10 @@ impl TokenIterator<'_> {
 
     /// Lexes an escaped [`Symbol`], creating [`Token`] with either [`TokenKind::Plain`] or some
     /// kind of significant escape, such es escaped newline.
+    ///
+    /// [`Symbol`]: self::Symbol
+    /// [`Token`]: self::token::Token
+    /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
     fn lex_escape_seq(&mut self) -> Option<Token> {
         let grapheme = self.curr.get(self.index)?;
 

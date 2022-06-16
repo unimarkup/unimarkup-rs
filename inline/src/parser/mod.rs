@@ -6,6 +6,8 @@ use crate::{
 };
 
 /// Internal data structure used for parsing of Unimarkup [`Inline`]s.
+///
+/// [`Inline`]: crate::Inline
 #[derive(Debug, Default, Clone)]
 struct ParserStack {
     data: Vec<Token>,
@@ -52,6 +54,9 @@ impl ParserStack {
 
 /// Parser of Unimarkup inline formatting. Implemented as an [`Iterator`], yields one
 /// self-contained Unimarkup [`Inline`] with every iteration.
+///
+/// [`Iterator`]: Iterator
+/// [`Inline`]: crate::Inline
 #[derive(Debug, Clone)]
 pub struct Parser<'i> {
     iter: TokenIterator<'i>,
@@ -64,6 +69,9 @@ pub struct Parser<'i> {
 
 impl Parser<'_> {
     /// Returns the next [`Token`] either from [`Lexer`] directly or from internal token cache.
+    ///
+    /// [`Token`]: crate::Token
+    /// [`Lexer`]: crate::Lexer
     fn next_token(&mut self) -> Option<Token> {
         if self.token_cache.is_some() {
             self.token_cache.take()
@@ -73,6 +81,8 @@ impl Parser<'_> {
     }
 
     /// Checks whether any given opening [`Token`] is already encountered and not yet closed.
+    ///
+    /// [`Token`]: crate::Token
     fn is_token_open(&self, token: &Token) -> bool {
         let res = self.stack.iter().any(|inner_token| {
             inner_token.is_or_contains(token)
@@ -84,6 +94,8 @@ impl Parser<'_> {
     }
 
     /// Checks whether the given [`Token`] is the last one encountered.
+    ///
+    /// [`Token`]: crate::Token
     fn is_token_latest(&self, token: &Token) -> bool {
         match self.stack().last() {
             Some(last_open_token) => {
@@ -172,6 +184,8 @@ impl Parser<'_> {
     }
 
     /// Returns the last encountered [`Token`], if any.
+    ///
+    /// [`Token`]: crate::Token
     fn last_token(&self) -> Option<&Token> {
         match self.stack().last() {
             Some(token) => Some(token),
@@ -183,6 +197,8 @@ impl Parser<'_> {
     }
 
     /// Checks whether the [`Inline`] that's currently being parsed is correctly closed.
+    ///
+    /// [`Inline`]: crate::Inline
     fn inline_closed(&self, kind: TokenKind, span: Span) -> bool {
         if let Some(token) = self.last_token() {
             !(token.kind() == kind && token.span().start() == span.start())
@@ -193,6 +209,9 @@ impl Parser<'_> {
 
     /// Parses one Unimarkup [`Inline`] that contains [`NestedContent`] as it's content. That
     /// corresponds to any [`Inline`] that is enclosed between two delimiters.
+    ///
+    /// [`Inline`]: crate::Inline
+    /// [`NestedContent`]: crate::NestedContent
     fn parse_nested_inline(&mut self, token: Token) -> Inline {
         // Push token kind to stack
         // Open corresponding inline
@@ -332,6 +351,8 @@ impl Parser<'_> {
     }
 
     /// Parses one single Unimarkup [`Inline`].
+    ///
+    /// [`Inline`]: crate::Inline
     fn parse_inline(&mut self) -> Option<Inline> {
         if !self.inline_cache.is_empty() {
             self.inline_cache.pop_front()
@@ -409,7 +430,7 @@ impl Iterator for Parser<'_> {
 /// Extension trait for adding [`Parser`] implementation for any type that implements
 /// [`Tokenize`] trait.
 ///
-/// [`Parser`]: crate::Parser
+/// [`Parser`]: self::Parser
 /// [`Tokenize`]: crate::Tokenize
 pub trait ParseUnimarkupInlines<'p, 'i>
 where
