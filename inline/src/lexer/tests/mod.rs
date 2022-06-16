@@ -20,6 +20,7 @@ mod overline;
 mod pipe;
 mod star;
 mod tick;
+mod tilde;
 mod underline;
 
 #[test]
