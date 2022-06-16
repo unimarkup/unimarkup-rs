@@ -19,6 +19,7 @@ mod brace;
 mod bracket;
 mod caret;
 mod dollar;
+mod other;
 mod overline;
 mod parenthesis;
 mod pipe;
