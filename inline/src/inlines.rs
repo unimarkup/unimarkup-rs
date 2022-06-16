@@ -522,10 +522,8 @@ impl InlineContent<PlainContent, NestedContent> {
                     let start = plain_content.span.start();
                     let end = other_inlines.span.end();
 
-                    let mut content = Vec::with_capacity(other_inlines.content.len() + 1);
-                    content.push(Inline::from(std::mem::take(plain_content)));
-
-                    content.append(&mut other_inlines.content);
+                    let mut content = std::mem::take(&mut other_inlines.content);
+                    content.insert(0, Inline::from(std::mem::take(plain_content)));
 
                     *self = InlineContent::Nested(NestedContent {
                         content,
