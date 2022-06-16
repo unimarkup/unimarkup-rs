@@ -15,6 +15,7 @@ macro_rules! assert_token {
     }
 }
 
+mod brace;
 mod bracket;
 mod caret;
 mod dollar;
