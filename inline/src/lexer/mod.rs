@@ -365,17 +365,13 @@ impl TokenIterator<'_> {
 
     /// Check if character at cursor position with offset is whitespace.
     fn is_whitespace_at_offs(&self, offset: isize) -> bool {
-        if offset < 0 && offset.abs() as usize > self.index {
-            false
+        let pos = if offset < 0 {
+            self.index.saturating_sub(offset.abs() as usize)
         } else {
-            let pos = if offset < 0 {
-                self.index - offset.abs() as usize
-            } else {
-                self.index + offset as usize
-            };
+            self.index.saturating_add(offset as usize)
+        };
 
-            self.curr.get(pos).map_or(false, |ch| ch.is_whitespace())
-        }
+        self.curr.get(pos).map_or(false, |ch| ch.is_whitespace())
     }
 
     /// Lexes a [`Token`] with [`TokenKind::Plain`], so a [`Token`] containing just regular text.
