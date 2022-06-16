@@ -432,20 +432,16 @@ impl Iterator for Parser<'_> {
 ///
 /// [`Parser`]: self::Parser
 /// [`Tokenize`]: crate::Tokenize
-pub trait ParseUnimarkupInlines<'p, 'i>
-where
-    'i: 'p,
-{
+pub trait ParseUnimarkupInlines<'p> {
     /// Returns a parser over this type.
-    fn parse_unimarkup_inlines(&'i self) -> Parser<'p>;
+    fn parse_unimarkup_inlines(&'p self) -> Parser<'p>;
 }
 
-impl<'p, 'i, T> ParseUnimarkupInlines<'p, 'i> for T
+impl<T> ParseUnimarkupInlines<'_> for T
 where
     T: Tokenize,
-    'i: 'p,
 {
-    fn parse_unimarkup_inlines(&'i self) -> Parser<'p> {
+    fn parse_unimarkup_inlines(&self) -> Parser<'_> {
         Parser {
             iter: self.lex_iter(),
             stack: ParserStack::default(),
