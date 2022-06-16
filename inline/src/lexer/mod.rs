@@ -315,10 +315,38 @@ impl TokenIterator<'_> {
         Some(token)
     }
 
-    /// Returns the lexed length of a given [`Symbol`] with the given [`LexLength`] constraint.
+    /// Returns the lexed length of a given [`Symbol`] based on the allowed [`LexLength`]
+    /// constraint of the [`Symbol`].
+    ///
+    /// For [`Symbol`] with exact [`LexLength::Exact`], the length returned is equal or smaller
+    /// than that exact length. This behavior is used to temporarily disable lexing invariant.
+    ///
+    /// The invariant in general is that, for any given [`Symbol`], scanning more symbols than
+    /// it's expected to produce a valid [`Token`], the [`TokenKind`] is changed to
+    /// [`TokenKind::Plain`] no matter what the first [`Symbol`] implies.
+    ///
+    /// For example:
+    /// - `*` is seen as one [`Symbol::Star`] literals, and is lexed as [`TokenKind::Italic`]
+    /// - `**` is seen as two [`Symbol::Star`] literals, and is lexed as [`TokenKind::Bold`]
+    /// - `***` is seen as three [`Symbol::Star`] literals, and is lexed as [`TokenKind::ItalicBold`]
+    /// - `****` is seen as four [`Symbol::Star`] literals, so it's more than expected and is lexed
+    /// as [`TokenKind::Plain`].
+    ///
+    /// Disabling the invariant is necessary for some [`Token`]s where we want to stop further
+    /// scanning soon as one valid [`Token`] is lexed. That is the case for [`Symbol::OpenBracket`].
+    /// Consecutive `[` literals are seen as distinct starts of a text group inline format.
     ///
     /// [`Symbol`]: self::Symbol
+    /// [`Symbol::Star`]: self::Symbol::Star
+    /// [`Symbol::OpenBracket`]: self::Symbol::OpenBracket
     /// [`LexLength`]: self::LexLength
+    /// [`LexLength::Exact`]: self::LexLength::Exact
+    /// [`Token`]: self::token::Token
+    /// [`TokenKind`]: self::token::TokenKind
+    /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
+    /// [`TokenKind::Italic`]: self::token::TokenKind::Italic
+    /// [`TokenKind::Bold`]: self::token::TokenKind::Bold
+    /// [`TokenKind::ItalicBold`]: self::token::TokenKind::ItalicBold
     fn symbol_len(&self, symbol: Symbol, lex_len: LexLength) -> usize {
         let end_pos = self.literal_end_index(symbol);
         let scanned_len = end_pos - self.index;
