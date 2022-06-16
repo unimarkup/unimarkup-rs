@@ -250,7 +250,9 @@ impl Token {
         } else {
             let not_followed_by_whitespace = matches!(self.spacing, Spacing::Pre | Spacing::None);
 
-            self.is_nesting_token() && not_followed_by_whitespace
+            !self.kind.is_close_parentheses()
+                && self.is_nesting_token()
+                && not_followed_by_whitespace
         }
     }
 
@@ -263,7 +265,9 @@ impl Token {
         } else {
             let not_preceded_by_whitespace = matches!(self.spacing, Spacing::Post | Spacing::None);
 
-            self.is_nesting_token() && not_preceded_by_whitespace
+            !self.kind().is_open_parentheses()
+                && self.is_nesting_token()
+                && not_preceded_by_whitespace
         }
     }
 

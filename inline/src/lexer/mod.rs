@@ -178,14 +178,12 @@ impl Symbol<'_> {
         match self {
             Symbol::Star | Symbol::Underline => LexLength::Limited(3),
 
-            Symbol::Esc
-            | Symbol::Caret
-            | Symbol::Overline
-            | Symbol::Tick
-            | Symbol::Dollar
-            | Symbol::OpenParens => LexLength::Limited(1),
+            Symbol::Esc | Symbol::Caret | Symbol::Overline | Symbol::Tick | Symbol::Dollar => {
+                LexLength::Limited(1)
+            }
 
-            Symbol::CloseParens
+            Symbol::OpenParens
+            | Symbol::CloseParens
             | Symbol::OpenBracket
             | Symbol::CloseBracket
             | Symbol::OpenBrace
