@@ -354,7 +354,6 @@ impl TokenIterator<'_> {
     /// [`Token`]: self::token::Token
     /// [`Symbol`]: self::Symbol
     fn lex_keyword(&mut self) -> Option<Token> {
-        let first = self.curr.get(self.index)?;
         // NOT YET IMPLEMENTED :
         // - ":" -> Custom Emoji, e.g. ::heart::
         // ... and more
@@ -362,7 +361,7 @@ impl TokenIterator<'_> {
         // NOTE: General invariant of lexing:
         // If some literal occurs the maximal symbol length + 1 times, then it's lexed as plain.
 
-        let symbol = Symbol::from(*first);
+        let symbol = self.get_symbol(self.index)?;
 
         let symbol_len = self.symbol_len(symbol);
 
@@ -433,13 +432,12 @@ impl TokenIterator<'_> {
     ///
     /// Note that the current cursor position will be returned if the grapheme under cursor doesn't match the
     /// `symbol` grapheme provided as the function parameter.
-    fn literal_end_index(&self, symbol: impl AsRef<str>) -> usize {
+    fn literal_end_index(&self, symbol: Symbol) -> usize {
         let mut pos = self.index;
-        let literal = symbol.as_ref();
 
         loop {
-            match self.curr.get(pos) {
-                Some(grapheme) if *grapheme == literal => pos += 1,
+            match self.get_symbol(pos) {
+                Some(sym) if sym == symbol => pos += 1,
                 _ => break pos,
             }
         }
@@ -491,16 +489,13 @@ impl TokenIterator<'_> {
             if symbol.is_keyword() {
                 break;
             } else if symbol.is_esc() {
-                match self
-                    .curr
-                    .get(self.index + 1)
-                    .map(|literal| Symbol::from(*literal))
-                {
+                match self.get_symbol(self.index + 1) {
                     // character can be consumed if not significant in escape sequence
                     Some(symbol) if symbol.is_significant_esc() => break,
                     Some(symbol) => {
-                        self.index += 2; // consume and skip the symbol in next iteration
+                        // consume and skip the symbol in next iteration
                         content.push_str(symbol.as_ref());
+                        self.index += 2;
                         continue;
                     }
                     None => break,
