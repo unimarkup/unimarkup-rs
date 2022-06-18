@@ -1,7 +1,6 @@
 use std::{
     collections::VecDeque,
     ops::{Index, IndexMut},
-    slice::SliceIndex,
 };
 
 use crate::{Span, Token, TokenKind};
@@ -312,7 +311,7 @@ pub enum InlineContent<Plain, Nested> {
 /// [`Inline`]: self::Inline
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NestedContent {
-    pub(crate) content: Vec<Inline>,
+    pub(crate) content: VecDeque<Inline>,
     pub(crate) span: Span,
 }
 
@@ -348,23 +347,17 @@ impl NestedContent {
     }
 }
 
-impl<Idx> Index<Idx> for NestedContent
-where
-    Idx: SliceIndex<[Inline], Output = Inline>,
-{
+impl Index<usize> for NestedContent {
     type Output = Inline;
 
-    fn index(&self, index: Idx) -> &Self::Output {
-        &self.content[index]
+    fn index(&self, index: usize) -> &Self::Output {
+        self.content.get(index).unwrap()
     }
 }
 
-impl<Idx> IndexMut<Idx> for NestedContent
-where
-    Idx: SliceIndex<[Inline], Output = Inline>,
-{
-    fn index_mut(&mut self, index: Idx) -> &mut Self::Output {
-        &mut self.content[index]
+impl IndexMut<usize> for NestedContent {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.content.get_mut(index).unwrap()
     }
 }
 
@@ -413,24 +406,24 @@ impl InlineContent<PlainContent, NestedContent> {
 
             let curr_content = std::mem::take(&mut nested_inlines.content);
 
-            let mut res_vec: Vec<Inline> = Vec::with_capacity(curr_content.len());
+            let mut res_vec: VecDeque<Inline> = VecDeque::with_capacity(curr_content.len());
 
             for inline in curr_content {
                 let matches_prev = res_vec
-                    .last()
+                    .back()
                     .map_or(false, |prev_inline| prev_inline.matches_kind(&inline));
 
                 if matches_prev {
-                    if let Some(prev_inline) = res_vec.pop() {
+                    if let Some(prev_inline) = res_vec.pop_back() {
                         let token_kind = TokenKind::from(&prev_inline);
 
                         let mut prev_content = prev_inline.into_inner();
                         prev_content.append_inline(inline);
 
-                        res_vec.push(Inline::new(prev_content, token_kind));
+                        res_vec.push_back(Inline::new(prev_content, token_kind));
                     }
                 } else {
-                    res_vec.push(inline);
+                    res_vec.push_back(inline);
                 }
             }
 
@@ -455,7 +448,7 @@ impl InlineContent<PlainContent, NestedContent> {
                 InlineContent::Nested(mut other_inlines) => {
                     other_inlines
                         .content
-                        .push(Inline::from(std::mem::take(plain_content)));
+                        .push_back(Inline::from(std::mem::take(plain_content)));
 
                     *self = InlineContent::Nested(other_inlines);
                 }
@@ -463,7 +456,7 @@ impl InlineContent<PlainContent, NestedContent> {
 
             InlineContent::Nested(self_nested) => match other {
                 InlineContent::Plain(other_plain) => {
-                    self_nested.content.insert(0, Inline::from(other_plain));
+                    self_nested.content.push_front(Inline::from(other_plain));
                 }
                 InlineContent::Nested(mut other_inlines) => {
                     std::mem::swap(&mut self_nested.content, &mut other_inlines.content);
@@ -490,7 +483,9 @@ impl InlineContent<PlainContent, NestedContent> {
                 // to the current inline is the solution.
                 plain_content.content.push_str(&inline.as_string());
             }
-            InlineContent::Nested(ref mut nested_inlines) => nested_inlines.content.push(inline),
+            InlineContent::Nested(ref mut nested_inlines) => {
+                nested_inlines.content.push_back(inline)
+            }
         }
 
         self.set_span(Span::from((start, end)));
@@ -509,7 +504,7 @@ impl InlineContent<PlainContent, NestedContent> {
                 }
                 InlineContent::Nested(ref mut other_inlines) => {
                     let mut content = std::mem::take(&mut other_inlines.content);
-                    content.insert(0, Inline::from(std::mem::take(plain_content)));
+                    content.push_front(Inline::from(std::mem::take(plain_content)));
 
                     *self = InlineContent::Nested(NestedContent { content, span });
                 }
@@ -517,7 +512,9 @@ impl InlineContent<PlainContent, NestedContent> {
 
             InlineContent::Nested(nested_inlines) => match other {
                 InlineContent::Plain(plain_content) => {
-                    nested_inlines.content.push(Inline::from(plain_content));
+                    nested_inlines
+                        .content
+                        .push_back(Inline::from(plain_content));
                 }
 
                 InlineContent::Nested(ref mut other_inlines) => {
@@ -586,7 +583,7 @@ impl InlineContent<PlainContent, NestedContent> {
         match self {
             InlineContent::Plain(plain_content) => {
                 let span = plain_content.span;
-                let content = vec![Inline::from(plain_content)];
+                let content = VecDeque::from(vec![Inline::from(plain_content)]);
                 NestedContent { content, span }
             }
 

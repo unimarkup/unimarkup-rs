@@ -232,7 +232,7 @@ impl Parser<'_> {
         let mut start = token.span().start();
         let mut end = start;
         let mut content: InlineContent<_, _> = NestedContent {
-            content: Vec::default(),
+            content: VecDeque::default(),
             span: (start, end).into(),
         }
         .into();
