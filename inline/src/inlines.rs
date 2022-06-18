@@ -414,24 +414,23 @@ impl InlineContent<PlainContent, NestedContent> {
             let curr_content = std::mem::take(&mut nested_inlines.content);
 
             let mut res_vec: Vec<Inline> = Vec::with_capacity(curr_content.len());
-            let mut curr_index = 0;
 
             for inline in curr_content {
                 let matches_prev = res_vec
-                    .get(curr_index)
+                    .last()
                     .map_or(false, |prev_inline| prev_inline.matches_kind(&inline));
 
                 if matches_prev {
-                    let prev_inline = res_vec.remove(curr_index);
-                    let token_kind = TokenKind::from(&prev_inline);
+                    if let Some(prev_inline) = res_vec.pop() {
+                        let token_kind = TokenKind::from(&prev_inline);
 
-                    let mut prev_content = prev_inline.into_inner();
-                    prev_content.append_inline(inline);
+                        let mut prev_content = prev_inline.into_inner();
+                        prev_content.append_inline(inline);
 
-                    res_vec.push(Inline::new(prev_content, token_kind));
+                        res_vec.push(Inline::new(prev_content, token_kind));
+                    }
                 } else {
                     res_vec.push(inline);
-                    curr_index = res_vec.len() - 1;
                 }
             }
 
