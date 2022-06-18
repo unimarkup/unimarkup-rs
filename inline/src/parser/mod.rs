@@ -484,7 +484,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("Bold text"),
                     span: (start, end).into()
-                })],
+                })]
+                .into(),
                 span: (start - (0, 2), end + (0, 2)).into(),
             })
         );
@@ -507,7 +508,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("Italic text"),
                     span: Span::from((start, end))
-                })],
+                })]
+                .into(),
                 span: (start - (0, 1), end + (0, 1)).into()
             })
         );
@@ -528,7 +530,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("Italic text"),
                     span: (start, end).into()
-                })],
+                })]
+                .into(),
                 span: (start - (0, 1), end + (0, 1)).into()
             })
         );
@@ -544,7 +547,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("Bold text"),
                     span: Span::from((start, end))
-                })],
+                })]
+                .into(),
                 span: (start - (0, 2), end + (0, 2)).into()
             })
         );
@@ -568,7 +572,7 @@ mod tests {
         if let InlineContent::Nested(inner_content) = inline.into_inner() {
             assert_eq!(inner_content.count(), 3);
 
-            let inline = &inner_content[0];
+            let inline = &inner_content.content.get(0).unwrap();
 
             let start = Position { line: 1, column: 3 };
             let end = start + (0, 13 - 1);
@@ -597,7 +601,8 @@ mod tests {
                     content: vec![Inline::Plain(PlainContent {
                         content: String::from("with"),
                         span: Span::from((inner_start, inner_end))
-                    })],
+                    })]
+                    .into(),
                     span: (inner_start - (0, 1), inner_end + (0, 1)).into()
                 })
             );
@@ -645,7 +650,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("with text group"),
                     span: (start + (0, 1), end - (0, 1)).into()
-                })],
+                })]
+                .into(),
                 span: (start, end).into()
             })
         );
@@ -700,7 +706,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("with text** group"),
                     span: Span::from((start + (0, 1), end - (0, 1)))
-                })],
+                })]
+                .into(),
                 span: Span::from((start, end))
             })
         );
@@ -751,7 +758,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("This is input"),
                     span: Span::from((start + (0, 2), end - (0, 2)))
-                })],
+                })]
+                .into(),
                 span: Span::from((start, end))
             })
         );
@@ -803,7 +811,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("has another one inside"),
                     span: Span::from((start + (0, 1), end - (0, 1)))
-                })],
+                })]
+                .into(),
                 span: Span::from((start, end))
             })
         );
