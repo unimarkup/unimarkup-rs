@@ -324,7 +324,7 @@ pub enum InlineContent<Plain, Nested> {
 /// Nested content of an [`Inline`] consisting of multiple other [`Inline`].
 ///
 /// [`Inline`]: self::Inline
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct NestedContent {
     pub(crate) content: VecDeque<Inline>,
     pub(crate) span: Span,
@@ -337,6 +337,15 @@ pub struct NestedContent {
 pub struct PlainContent {
     pub(crate) content: String,
     pub(crate) span: Span,
+}
+
+impl From<Inline> for NestedContent {
+    fn from(inline: Inline) -> Self {
+        let span = inline.span();
+        let content = vec![inline].into();
+
+        NestedContent { content, span }
+    }
 }
 
 impl NestedContent {
