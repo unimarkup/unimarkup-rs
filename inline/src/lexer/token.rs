@@ -484,6 +484,14 @@ impl TokenKind {
         }
     }
 
+    /// Returns the length of this particular [`TokenKind`] occupied in original Unimarkup text.
+    ///
+    /// [`TokenKind`]: self::TokenKind
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        self.as_str().len()
+    }
+
     /// Returns the pair of delimiters for this kind as [`&str`].
     ///
     /// [`&str`]: &str
