@@ -89,7 +89,17 @@ impl Parser<'_> {
                 || inner_token.matches_pair(token)
         });
 
-        !matches!(token.kind(), TokenKind::OpenBracket) && res
+        !token.kind().is_open_parentheses() && res
+    }
+
+    /// Checks whether there is a [`Token`] stored in token cache that is a closing one and is
+    /// already open.
+    ///
+    /// [`Token`]: crate::Token
+    fn cached_token_open(&self) -> bool {
+        self.token_cache
+            .as_ref()
+            .map_or(false, |token| token.closes() && self.is_token_open(token))
     }
 
     /// Checks whether the given [`Token`] is the last one encountered.
