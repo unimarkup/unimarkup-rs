@@ -340,6 +340,49 @@ impl Token {
             .space(other_token.spacing())
             .build()
     }
+
+    /// Splits ambiguous token into two non-ambiguous tokens. If this token is NOT ambiguous, then
+    /// two copies of self are returned.
+    pub fn split_ambiguous(self) -> (Self, Self) {
+        if !self.is_ambiguous() {
+            (self.clone(), self)
+        } else {
+            let (first_kind, second_kind) = match self.kind() {
+                TokenKind::ItalicBold => (TokenKind::Italic, TokenKind::Bold),
+                TokenKind::UnderlineSubscript => (TokenKind::Subscript, TokenKind::Underline),
+                any_other_kind => (any_other_kind, any_other_kind),
+            };
+
+            let first_span = Span::from((
+                self.span.start(),
+                self.span.start() + (0, first_kind.len() - 1),
+            ));
+
+            let second_span = Span::from((
+                first_span.end() + (0, 1),
+                first_span.end() + (0, second_kind.len()),
+            ));
+
+            let first_spacing = self.spacing() - Spacing::Post;
+            let second_spacing = self.spacing() - Spacing::Pre;
+
+            let first = Self {
+                kind: first_kind,
+                span: first_span,
+                spacing: first_spacing,
+                content: None,
+            };
+
+            let second = Self {
+                kind: second_kind,
+                span: second_span,
+                spacing: second_spacing,
+                content: None,
+            };
+
+            (first, second)
+        }
+    }
 }
 
 /// The kind of the token found in Unimarkup document.
