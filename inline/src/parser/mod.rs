@@ -185,10 +185,7 @@ impl Parser<'_> {
 
                 Some(token)
             }
-            None => {
-                // stack might be empty for current scope, try to exit scope and try again
-                None
-            }
+            None => None,
         }
     }
 
