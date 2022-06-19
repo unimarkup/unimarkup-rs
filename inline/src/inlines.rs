@@ -103,6 +103,21 @@ impl Inline {
         }
     }
 
+    /// creates a new [`Inline`] with the given content updated with the provided [`Span`] and
+    /// corresponding to the given [`TokenKind`].
+    ///
+    /// [`Inline`]: self::Inline
+    /// [`TokenKind`]: crate::TokenKind
+    /// [`SPan`]: crate::TokenKind
+    pub fn with_span(
+        mut content: InlineContent<PlainContent, NestedContent>,
+        kind: TokenKind,
+        span: Span,
+    ) -> Self {
+        content.set_span(span);
+        Self::new(content, kind)
+    }
+
     /// Checks whether this [`Inline`] and `other` are of the same kind.
     ///
     /// [`Inline`]: self::Inline
