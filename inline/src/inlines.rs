@@ -277,7 +277,7 @@ impl Inline {
                 VecDeque::default()
             }
             InlineContent::Nested(nested_inlines) => {
-                let mut content = VecDeque::from(nested_inlines.content);
+                let mut content = nested_inlines.content;
 
                 while let Some(inline) = content.get(0) {
                     let token_kind = TokenKind::from(inline);
