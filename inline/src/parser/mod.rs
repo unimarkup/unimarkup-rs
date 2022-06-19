@@ -38,15 +38,14 @@ impl ParserStack {
         if self.data.is_empty() {
             None
         } else {
-            let last_open_token = self.data.last_mut().unwrap();
+            match self.data.last_mut() {
+                Some(last_open) if last_open.is_ambiguous() && last_open.kind() != token.kind() => {
+                    // remove the ambiguous part...
+                    let removed_token = last_open.remove_partial(token);
 
-            if last_open_token.is_ambiguous() {
-                // remove the ambiguous part...
-                let removed_token = last_open_token.remove_partial(token);
-
-                Some(removed_token)
-            } else {
-                self.data.pop()
+                    Some(removed_token)
+                }
+                _ => self.data.pop(),
             }
         }
     }
