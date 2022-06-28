@@ -102,33 +102,6 @@ pub(crate) enum Symbol<'a> {
     // Colon,
 }
 
-impl AsRef<str> for Symbol<'_> {
-    fn as_ref(&self) -> &str {
-        match self {
-            Symbol::Esc => "\\",
-            Symbol::Star => "*",
-            Symbol::Underline => "_",
-            Symbol::Caret => "^",
-            Symbol::Tick => "`",
-            Symbol::Overline => "‾",
-            Symbol::Pipe => "|",
-            Symbol::Tilde => "~",
-            Symbol::Quote => "\"",
-            Symbol::Dollar => "$",
-            Symbol::OpenParens => "(",
-            Symbol::CloseParens => ")",
-            Symbol::OpenBracket => "[",
-            Symbol::CloseBracket => "]",
-            Symbol::OpenBrace => "{",
-            Symbol::CloseBrace => "}",
-            Symbol::Plain(content) => content,
-            Symbol::Whitespace(literal) => literal,
-            Symbol::Newline => "\n",
-            // Symbol::Colon => ":",
-        }
-    }
-}
-
 impl<'a> From<&'a str> for Symbol<'a> {
     fn from(input: &'a str) -> Self {
         match input {
@@ -166,7 +139,7 @@ impl<'a> From<&&'a str> for Symbol<'a> {
 
 impl From<Symbol<'_>> for String {
     fn from(symbol: Symbol) -> Self {
-        String::from(symbol.as_ref())
+        String::from(symbol.as_str())
     }
 }
 
@@ -195,8 +168,33 @@ impl Symbol<'_> {
         }
     }
 
+    fn as_str(&self) -> &str {
+        match self {
+            Symbol::Esc => "\\",
+            Symbol::Star => "*",
+            Symbol::Underline => "_",
+            Symbol::Caret => "^",
+            Symbol::Tick => "`",
+            Symbol::Overline => "‾",
+            Symbol::Pipe => "|",
+            Symbol::Tilde => "~",
+            Symbol::Quote => "\"",
+            Symbol::Dollar => "$",
+            Symbol::OpenParens => "(",
+            Symbol::CloseParens => ")",
+            Symbol::OpenBracket => "[",
+            Symbol::CloseBracket => "]",
+            Symbol::OpenBrace => "{",
+            Symbol::CloseBrace => "}",
+            Symbol::Plain(content) => content,
+            Symbol::Whitespace(literal) => literal,
+            Symbol::Newline => "\n",
+            // Symbol::Colon => ":",
+        }
+    }
+
     fn len(&self) -> usize {
-        self.as_ref().len()
+        self.as_str().len()
     }
 
     /// Checks whether the grapheme is some Unimarkup Inline symbol.
@@ -494,14 +492,14 @@ impl TokenIterator<'_> {
                     Some(symbol) if symbol.is_significant_esc() => break,
                     Some(symbol) => {
                         // consume and skip the symbol in next iteration
-                        content.push_str(symbol.as_ref());
+                        content.push_str(symbol.as_str());
                         self.index += 2;
                         continue;
                     }
                     None => break,
                 }
             } else {
-                content.push_str(symbol.as_ref());
+                content.push_str(symbol.as_str());
                 self.index += 1;
             }
         }
