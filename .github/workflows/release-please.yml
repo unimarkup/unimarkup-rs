@@ -12,7 +12,7 @@ jobs:
       - uses: GoogleCloudPlatform/release-please-action@v2
         with:
           release-type: rust
-          package-name: unimarkup-rs
+          package-name: capillary
           changelog-types: >
             [
             {"type":"feat","section":"Features","hidden":false},
