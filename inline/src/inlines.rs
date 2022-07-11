@@ -1,34 +1,75 @@
 use std::{
     collections::VecDeque,
     ops::{Index, IndexMut},
-    slice::SliceIndex,
 };
 
 use crate::{Span, Token, TokenKind};
 
+/// Representation of Unimarkup inline-formatted text.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Inline {
+    /// Bold formatted content.
     Bold(NestedContent),
+
+    /// Italic formatted content.
     Italic(NestedContent),
+
+    /// Underlined content.
     Underline(NestedContent),
+
+    /// Content in a subscript.   
     Subscript(NestedContent),
+
+    /// Content in a superscript.
     Superscript(NestedContent),
+
+    /// Overlined content.
     Overline(NestedContent),
+
+    /// Content with a strikethrough.
     Strikethrough(NestedContent),
+
+    /// Highlighted content.
     Highlight(NestedContent),
+
+    /// Verbatim (monospaced) content.
     Verbatim(PlainContent),
+
+    /// Content as a quotation.
     Quote(NestedContent),
+
+    /// LaTeX-like math content.
     Math(NestedContent),
+
+    /// Content inside a pair of parenthesis `()`.
     Parens(PlainContent),
+
+    /// Content of a TextGroup `[]`.
     TextGroup(NestedContent),
+
+    /// Unimarkup attributes for some content.
     Attributes(NestedContent),
+
+    /// Explicit newline.
     Newline(PlainContent),
+
+    /// Explicit whitespace.
     Whitespace(PlainContent),
+
+    /// Plain text without any formatting.
     Plain(PlainContent),
+
+    /// Wrapper without any special formatting for multiple other [`Inline`]s.
+    ///
+    /// [`Inline`]: self::Inline
     Multiple(NestedContent),
 }
 
 impl Inline {
+    /// creates a new [`Inline`] with the given content and corresponding to the given [`TokenKind`].
+    ///
+    /// [`Inline`]: self::Inline
+    /// [`TokenKind`]: crate::TokenKind
     pub fn new(content: InlineContent<PlainContent, NestedContent>, kind: TokenKind) -> Self {
         match kind {
             TokenKind::Bold => Self::Bold(content.into()),
@@ -62,6 +103,24 @@ impl Inline {
         }
     }
 
+    /// creates a new [`Inline`] with the given content updated with the provided [`Span`] and
+    /// corresponding to the given [`TokenKind`].
+    ///
+    /// [`Inline`]: self::Inline
+    /// [`TokenKind`]: crate::TokenKind
+    /// [`SPan`]: crate::TokenKind
+    pub fn with_span(
+        mut content: InlineContent<PlainContent, NestedContent>,
+        kind: TokenKind,
+        span: Span,
+    ) -> Self {
+        content.set_span(span);
+        Self::new(content, kind)
+    }
+
+    /// Checks whether this [`Inline`] and `other` are of the same kind.
+    ///
+    /// [`Inline`]: self::Inline
     pub fn matches_kind(&self, other: &Inline) -> bool {
         match self {
             Inline::Bold(_) => matches!(other, Self::Bold(_)),
@@ -85,10 +144,17 @@ impl Inline {
         }
     }
 
+    /// Checks whether this [`Inline`] is a `Plain` text constructed from multiple other [`Inline`]s.
+    ///
+    /// [`Inline`]: self::Inline
     fn is_multiple(&self) -> bool {
         matches!(self, Inline::Multiple(_))
     }
 
+    /// Consumes this [`Inline`] and returns the inner [`InlineContent`] of it.
+    ///
+    /// [`Inline`]: self::Inline
+    /// [`InlineContent`]: self::InlineContent
     pub fn into_inner(self) -> InlineContent<PlainContent, NestedContent> {
         match self {
             Inline::Verbatim(plain_content)
@@ -113,6 +179,9 @@ impl Inline {
         }
     }
 
+    /// Returns a textual representation of this [`Inline`] as found in original input.
+    ///
+    /// [`Inline`]: self::Inline
     pub fn as_string(&self) -> String {
         let token_kind = TokenKind::from(self);
         let (begin_delim, end_delim) = token_kind.delimiters();
@@ -128,6 +197,9 @@ impl Inline {
         res
     }
 
+    /// Returns the length of content of this [`Inline`].
+    ///
+    /// [`Inline`]: self::Inline
     pub fn content_len(&self) -> usize {
         match self {
             Inline::Verbatim(plain_content)
@@ -152,10 +224,15 @@ impl Inline {
         }
     }
 
+    /// Returns the [`Span`] that this [`Inline`] occupies.
+    ///
+    /// [`Inline`]: self::Inline
+    /// [`Span`]: crate::Span
     pub fn span(&self) -> Span {
         self.as_ref().span()
     }
 
+    /// Returns the inner content as an immutable reference.
     pub fn as_ref(&self) -> InlineContent<&PlainContent, &NestedContent> {
         match self {
             Inline::Verbatim(content)
@@ -180,6 +257,12 @@ impl Inline {
         }
     }
 
+    /// Merges this [`Inline`] with another into one combined [`Inline`]. Since the other [`Inline`] might
+    /// contain multiple inlines inside, some of which aren't compatible with this one, the remaining [`Inline`]s
+    /// are returned in a [`VecDeque`].
+    ///
+    /// [`Inline`]: self::Inline
+    /// [`VecDeque`]: std::collections::VecDeque
     pub(crate) fn merge(self, next_inline: Inline) -> (Inline, VecDeque<Inline>) {
         let kind = TokenKind::from(&self);
         let is_multiple = next_inline.is_multiple();
@@ -194,7 +277,7 @@ impl Inline {
                 VecDeque::default()
             }
             InlineContent::Nested(nested_inlines) => {
-                let mut content = VecDeque::from(nested_inlines.content);
+                let mut content = nested_inlines.content;
 
                 while let Some(inline) = content.get(0) {
                     let token_kind = TokenKind::from(inline);
@@ -222,70 +305,102 @@ impl From<PlainContent> for Inline {
     }
 }
 
+/// Content of an [`Inline`].
+///
+/// [`Inline`]: self::Inline
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InlineContent<Plain, Nested> {
+    /// Simple non-nested content of an inline, like [`Inline::Plain`].
+    ///
+    /// [`Inline::Plain`]: self::Inline::Plain
     Plain(Plain),
+
+    /// Nested content, might consist of multiple other [`Inline`]s.
+    ///
+    /// [`Inline`]: self::Inline
     Nested(Nested),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Nested content of an [`Inline`] consisting of multiple other [`Inline`].
+///
+/// [`Inline`]: self::Inline
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct NestedContent {
-    pub(crate) content: Vec<Inline>,
+    pub(crate) content: VecDeque<Inline>,
     pub(crate) span: Span,
 }
 
+/// Plain content of an [`Inline`] consisting of simple text.
+///
+/// [`Inline`]: self::Inline
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct PlainContent {
     pub(crate) content: String,
     pub(crate) span: Span,
 }
 
+impl From<Inline> for NestedContent {
+    fn from(inline: Inline) -> Self {
+        let span = inline.span();
+        let content = vec![inline].into();
+
+        NestedContent { content, span }
+    }
+}
+
 impl NestedContent {
+    /// Returns the combined length of all [`Inline`]s contained.
+    ///
+    /// [`Inline`]: self::Inline
     pub fn content_len(&self) -> usize {
-        self.content.iter().map(|inline| inline.content_len()).sum()
+        self.content.iter().map(Inline::content_len).sum()
     }
 
+    /// Returns a textual representation of inner [`Inline`]s combined.
+    ///
+    /// [`Inline`]: self::Inline
     pub fn as_string(&self) -> String {
-        self.content
-            .iter()
-            .map(|inline| inline.as_string())
-            .collect()
+        self.content.iter().map(Inline::as_string).collect()
     }
 
+    /// Returns the number of [`Inline`]s contained.
+    ///
+    /// [`Inline`]: self::Inline
     pub fn count(&self) -> usize {
         self.content.len()
     }
 }
 
-impl<Idx> Index<Idx> for NestedContent
-where
-    Idx: SliceIndex<[Inline], Output = Inline>,
-{
+impl Index<usize> for NestedContent {
     type Output = Inline;
 
-    fn index(&self, index: Idx) -> &Self::Output {
-        &self.content[index]
+    fn index(&self, index: usize) -> &Self::Output {
+        self.content.get(index).unwrap()
     }
 }
 
-impl<Idx> IndexMut<Idx> for NestedContent
-where
-    Idx: SliceIndex<[Inline], Output = Inline>,
-{
-    fn index_mut(&mut self, index: Idx) -> &mut Self::Output {
-        &mut self.content[index]
+impl IndexMut<usize> for NestedContent {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.content.get_mut(index).unwrap()
     }
 }
 
 impl PlainContent {
+    /// Returns the content as [`&str`].
+    ///
+    /// [`&str`]: &str
     pub fn as_str(&self) -> &str {
         &self.content
     }
 
+    /// Returns the content as [`String`].
+    ///
+    /// [String]: String
     pub fn as_string(&self) -> String {
         self.content.clone()
     }
 
+    /// Returns the lenght of the content.
     pub fn content_len(&self) -> usize {
         self.content.len()
     }
@@ -304,48 +419,48 @@ impl From<InlineContent<PlainContent, NestedContent>> for NestedContent {
 }
 
 impl InlineContent<PlainContent, NestedContent> {
+    /// If possible combines multiple consecutive [`Inline`]s of same kind.
+    ///
+    /// [`Inline`]: self::Inline
     pub fn try_flatten(&mut self) {
         if let InlineContent::Nested(nested_inlines) = self {
             if nested_inlines.content.is_empty() {
                 return;
             }
 
-            // idea is to fuse the same inlines together
             let curr_content = std::mem::take(&mut nested_inlines.content);
 
-            let mut res_vec: Vec<Inline> = Vec::with_capacity(curr_content.len());
-            let mut curr_index = 0;
+            let mut res_vec: VecDeque<Inline> = VecDeque::with_capacity(curr_content.len());
 
             for inline in curr_content {
-                let matches_prev = match res_vec.get(curr_index) {
-                    Some(prev_inline) => prev_inline.matches_kind(&inline),
-                    None => false,
-                };
+                let matches_prev = res_vec
+                    .back()
+                    .map_or(false, |prev_inline| prev_inline.matches_kind(&inline));
 
-                if !matches_prev {
-                    res_vec.push(inline);
+                if matches_prev {
+                    if let Some(prev_inline) = res_vec.pop_back() {
+                        let token_kind = TokenKind::from(&prev_inline);
+
+                        let mut prev_content = prev_inline.into_inner();
+                        prev_content.append_inline(inline);
+
+                        res_vec.push_back(Inline::new(prev_content, token_kind));
+                    }
                 } else {
-                    let prev_inline = res_vec.remove(curr_index);
-                    let token_kind = TokenKind::from(&prev_inline);
-
-                    let mut prev_content = prev_inline.into_inner();
-                    prev_content.append_inline(inline);
-
-                    res_vec.push(Inline::new(prev_content, token_kind));
+                    res_vec.push_back(inline);
                 }
-
-                curr_index = res_vec.len() - 1;
             }
 
             nested_inlines.content = res_vec;
         }
     }
 
+    /// Prepends another [`InlineContent`] to this [`InlineContent`].
+    ///
+    /// [`InlineContent`]: self::InlineContent
     pub fn prepend(&mut self, other: InlineContent<PlainContent, NestedContent>) {
         let start = other.span().end();
         let end = self.span().start();
-
-        let span = (start, end).into();
 
         match self {
             InlineContent::Plain(plain_content) => match other {
@@ -353,40 +468,33 @@ impl InlineContent<PlainContent, NestedContent> {
                     std::mem::swap(&mut plain_content.content, &mut other_plain.content);
 
                     plain_content.content.push_str(&other_plain.content);
-                    plain_content.span = span;
                 }
                 InlineContent::Nested(mut other_inlines) => {
                     other_inlines
                         .content
-                        .push(Inline::from(std::mem::take(plain_content)));
-
-                    other_inlines.span = span;
+                        .push_back(Inline::from(std::mem::take(plain_content)));
 
                     *self = InlineContent::Nested(other_inlines);
                 }
             },
 
-            InlineContent::Nested(self_nested) => {
-                match other {
-                    InlineContent::Plain(other_plain) => {
-                        let mut content = Vec::with_capacity(1 + self_nested.content.len());
-                        content.push(Inline::from(other_plain));
-                        content.append(&mut self_nested.content);
-
-                        self_nested.content = content;
-                    }
-                    InlineContent::Nested(mut other_inlines) => {
-                        std::mem::swap(&mut self_nested.content, &mut other_inlines.content);
-
-                        self_nested.content.append(&mut other_inlines.content);
-                    }
+            InlineContent::Nested(self_nested) => match other {
+                InlineContent::Plain(other_plain) => {
+                    self_nested.content.push_front(Inline::from(other_plain));
                 }
-
-                self_nested.span = span;
-            }
+                InlineContent::Nested(mut other_inlines) => {
+                    std::mem::swap(&mut self_nested.content, &mut other_inlines.content);
+                    self_nested.content.append(&mut other_inlines.content);
+                }
+            },
         }
+
+        self.set_span(Span::from((start, end)));
     }
 
+    /// Apends an [`Inline`] to this content.
+    ///
+    /// [`Inline`]: self::Inline
     pub fn append_inline(&mut self, inline: Inline) {
         let start = self.span().start();
         let end = inline.span().end();
@@ -397,61 +505,56 @@ impl InlineContent<PlainContent, NestedContent> {
                 // specified inline content type as it's inner value. Therefore, if some inline has
                 // plain as content, then it can't have nested content. append the inline as text
                 // to the current inline is the solution.
-                plain_content.span = (start, end).into();
-
                 plain_content.content.push_str(&inline.as_string());
             }
             InlineContent::Nested(ref mut nested_inlines) => {
-                nested_inlines.span = (start, end).into();
-                nested_inlines.content.push(inline)
+                nested_inlines.content.push_back(inline)
             }
         }
+
+        self.set_span(Span::from((start, end)));
     }
 
+    /// Appends another [`InlineContent`] to this [`InlineContent`].
+    ///
+    /// [`InlineContent`]: self::InlineContent
     pub fn append(&mut self, mut other: InlineContent<PlainContent, NestedContent>) {
+        let span = (self.span().start(), other.span().end()).into();
+
         match self {
             InlineContent::Plain(plain_content) => match other {
                 InlineContent::Plain(ref other_plain) => {
                     plain_content.content.push_str(&other_plain.content);
-                    plain_content.span =
-                        (plain_content.span.start(), other_plain.span.end()).into();
                 }
                 InlineContent::Nested(ref mut other_inlines) => {
-                    let start = plain_content.span.start();
-                    let end = other_inlines.span.end();
+                    let mut content = std::mem::take(&mut other_inlines.content);
+                    content.push_front(Inline::from(std::mem::take(plain_content)));
 
-                    let mut content = Vec::with_capacity(other_inlines.content.len() + 1);
-                    content.push(Inline::from(std::mem::take(plain_content)));
-
-                    content.append(&mut other_inlines.content);
-
-                    *self = InlineContent::Nested(NestedContent {
-                        content,
-                        span: (start, end).into(),
-                    })
+                    *self = InlineContent::Nested(NestedContent { content, span });
                 }
             },
 
             InlineContent::Nested(nested_inlines) => match other {
                 InlineContent::Plain(plain_content) => {
-                    let start = nested_inlines.span.start();
-                    let end = plain_content.span.end();
-
-                    nested_inlines.content.push(Inline::from(plain_content));
-                    nested_inlines.span = (start, end).into();
+                    nested_inlines
+                        .content
+                        .push_back(Inline::from(plain_content));
                 }
 
                 InlineContent::Nested(ref mut other_inlines) => {
-                    let start = nested_inlines.span.start();
-                    let end = other_inlines.span.end();
-
                     nested_inlines.content.append(&mut other_inlines.content);
-                    nested_inlines.span = (start, end).into();
                 }
             },
         }
+
+        self.set_span(span);
     }
 
+    /// Creates a [`InlineContent::Plain`] from any given [`Token`], discarding it's [`TokenKind`].
+    ///
+    /// [`InlineContent::Plain`]: self::InlineContent::Plain
+    /// [`Token`]: crate::Token
+    /// [`TokenKind`]: crate::TokenKind
     pub fn from_token_as_plain(token: Token) -> Self {
         let content = String::from(token.as_str());
         let span = token.span();
@@ -459,6 +562,7 @@ impl InlineContent<PlainContent, NestedContent> {
         InlineContent::Plain(PlainContent { content, span })
     }
 
+    /// Returns the span that this content occupies.
     pub fn span(&self) -> Span {
         match self {
             InlineContent::Plain(plain_content) => plain_content.span,
@@ -466,6 +570,7 @@ impl InlineContent<PlainContent, NestedContent> {
         }
     }
 
+    /// Returns the textual representation of content.
     pub fn as_string(&self) -> String {
         match self {
             InlineContent::Plain(content) => content.as_str().to_string(),
@@ -473,6 +578,7 @@ impl InlineContent<PlainContent, NestedContent> {
         }
     }
 
+    /// Returns the lenght of content.
     pub fn content_len(&self) -> usize {
         match self {
             InlineContent::Plain(plain_content) => plain_content.content_len(),
@@ -480,18 +586,28 @@ impl InlineContent<PlainContent, NestedContent> {
         }
     }
 
+    /// Converts self into [`PlainContent`], with any inline contained inside of self converted into
+    /// the original textual representation.
+    ///
+    /// [`PlainContent`]: self::PlainContent
     pub fn into_plain(self) -> PlainContent {
-        PlainContent {
-            content: self.as_string(),
-            span: self.span(),
+        match self {
+            InlineContent::Plain(plain_content) => plain_content,
+            InlineContent::Nested(nested_content) => PlainContent {
+                content: nested_content.as_string(),
+                span: nested_content.span,
+            },
         }
     }
 
+    /// Converts self into [`NestedContent`].
+    ///
+    /// [`NestedContent`]: self::NestedContent
     pub fn into_nested(self) -> NestedContent {
         match self {
             InlineContent::Plain(plain_content) => {
                 let span = plain_content.span;
-                let content = vec![Inline::from(plain_content)];
+                let content = VecDeque::from(vec![Inline::from(plain_content)]);
                 NestedContent { content, span }
             }
 
@@ -499,6 +615,9 @@ impl InlineContent<PlainContent, NestedContent> {
         }
     }
 
+    /// Updates the [`Span`] that this content occupies.
+    ///
+    /// [`Span`]: crate::Span
     pub(crate) fn set_span(&mut self, span: Span) {
         match self {
             InlineContent::Plain(ref mut plain_content) => plain_content.span = span,
@@ -508,6 +627,7 @@ impl InlineContent<PlainContent, NestedContent> {
 }
 
 impl InlineContent<&PlainContent, &NestedContent> {
+    /// Returns the span that this content occupies.
     pub fn span(&self) -> Span {
         match self {
             InlineContent::Plain(plain_content) => plain_content.span,
@@ -515,6 +635,7 @@ impl InlineContent<&PlainContent, &NestedContent> {
         }
     }
 
+    /// Returns the textual representation of content.
     pub fn as_string(&self) -> String {
         match self {
             InlineContent::Plain(content) => content.as_str().to_string(),
@@ -522,6 +643,7 @@ impl InlineContent<&PlainContent, &NestedContent> {
         }
     }
 
+    /// Returns the combined length of the content.
     pub fn content_len(&self) -> usize {
         match self {
             InlineContent::Plain(plain_content) => plain_content.content_len(),

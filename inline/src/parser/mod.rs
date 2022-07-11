@@ -1,10 +1,13 @@
 use std::{collections::VecDeque, ops::Deref};
 
 use crate::{
-    Inline, InlineContent, NestedContent, PlainContent, Span, Token, TokenIterator, TokenKind,
-    Tokenize,
+    Inline, InlineContent, NestedContent, PlainContent, Position, Span, Token, TokenIterator,
+    TokenKind, Tokenize,
 };
 
+/// Internal data structure used for parsing of Unimarkup [`Inline`]s.
+///
+/// [`Inline`]: crate::Inline
 #[derive(Debug, Default, Clone)]
 struct ParserStack {
     data: Vec<Token>,
@@ -25,6 +28,7 @@ impl ParserStack {
         self.data.len() - 1
     }
 
+    /// Removes the last element pushed to the stack, if any.
     pub fn pop_last(&mut self) -> Option<Token> {
         self.data.pop()
     }
@@ -34,20 +38,24 @@ impl ParserStack {
         if self.data.is_empty() {
             None
         } else {
-            let last_open_token = self.data.last_mut().unwrap();
+            match self.data.last_mut() {
+                Some(last_open) if last_open.is_ambiguous() && last_open.kind() != token.kind() => {
+                    // remove the ambiguous part...
+                    let removed_token = last_open.remove_partial(token);
 
-            if last_open_token.is_ambiguous() {
-                // remove the ambiguous part...
-                let removed_token = last_open_token.remove_partial(token);
-
-                Some(removed_token)
-            } else {
-                self.data.pop()
+                    Some(removed_token)
+                }
+                _ => self.data.pop(),
             }
         }
     }
 }
 
+/// Parser of Unimarkup inline formatting. Implemented as an [`Iterator`], yields one
+/// self-contained Unimarkup [`Inline`] with every iteration.
+///
+/// [`Iterator`]: Iterator
+/// [`Inline`]: crate::Inline
 #[derive(Debug, Clone)]
 pub struct Parser<'i> {
     iter: TokenIterator<'i>,
@@ -59,6 +67,10 @@ pub struct Parser<'i> {
 }
 
 impl Parser<'_> {
+    /// Returns the next [`Token`] either from [`Lexer`] directly or from internal token cache.
+    ///
+    /// [`Token`]: crate::Token
+    /// [`Lexer`]: crate::Lexer
     fn next_token(&mut self) -> Option<Token> {
         if self.token_cache.is_some() {
             self.token_cache.take()
@@ -67,6 +79,9 @@ impl Parser<'_> {
         }
     }
 
+    /// Checks whether any given opening [`Token`] is already encountered and not yet closed.
+    ///
+    /// [`Token`]: crate::Token
     fn is_token_open(&self, token: &Token) -> bool {
         let res = self.stack.iter().any(|inner_token| {
             inner_token.is_or_contains(token)
@@ -74,13 +89,28 @@ impl Parser<'_> {
                 || inner_token.matches_pair(token)
         });
 
-        !matches!(token.kind(), TokenKind::OpenBracket) && res
+        !token.kind().is_open_parentheses() && res
     }
 
+    /// Checks whether there is a [`Token`] stored in token cache that is a closing one and is
+    /// already open.
+    ///
+    /// [`Token`]: crate::Token
+    fn cached_token_open(&self) -> bool {
+        self.token_cache
+            .as_ref()
+            .map_or(false, |token| token.closes() && self.is_token_open(token))
+    }
+
+    /// Checks whether the given [`Token`] is the last one encountered.
+    ///
+    /// [`Token`]: crate::Token
     fn is_token_latest(&self, token: &Token) -> bool {
         match self.stack().last() {
             Some(last_open_token) => {
-                last_open_token.is_or_contains(token) || last_open_token.matches_pair(token)
+                last_open_token.is_or_contains(token)
+                    || token.is_or_contains(last_open_token)
+                    || last_open_token.matches_pair(token)
             }
             None => false,
         }
@@ -157,13 +187,13 @@ impl Parser<'_> {
 
                 Some(token)
             }
-            None => {
-                // stack might be empty for current scope, try to exit scope and try again
-                None
-            }
+            None => None,
         }
     }
 
+    /// Returns the last encountered [`Token`], if any.
+    ///
+    /// [`Token`]: crate::Token
     fn last_token(&self) -> Option<&Token> {
         match self.stack().last() {
             Some(token) => Some(token),
@@ -174,6 +204,9 @@ impl Parser<'_> {
         }
     }
 
+    /// Checks whether the [`Inline`] that's currently being parsed is correctly closed.
+    ///
+    /// [`Inline`]: crate::Inline
     fn inline_closed(&self, kind: TokenKind, span: Span) -> bool {
         if let Some(token) = self.last_token() {
             !(token.kind() == kind && token.span().start() == span.start())
@@ -182,125 +215,134 @@ impl Parser<'_> {
         }
     }
 
+    /// Constructs an [`Inline::Plain`] from [`Inline`] that was parsed up to the `next_token`.
+    ///
+    /// This is used when parsing of some inner [`Inline`] is started, but before it's being
+    /// closed the outer [`Inline`] is closed.
+    ///
+    /// [`Inline`]: crate::Inline
+    /// [`Inline::Plain`]: crate::Inline::Plain
+    fn nested_inline_as_plain(
+        &mut self,
+        next_token: Token,
+        mut content: InlineContent<PlainContent, NestedContent>,
+    ) -> Inline {
+        // It is closing one, but it was not open last -> Return contents as inline
+
+        // remove the opening token from the stack
+        let token = self.pop(&next_token).unwrap();
+
+        // NOTE: when coming from nested, while loop will be continued -> takes
+        // another token from iterator or cache
+        self.token_cache = Some(next_token);
+
+        // prepend the token to content as plain text
+        content.prepend(InlineContent::from_token_as_plain(token));
+
+        Inline::Plain(content.into_plain())
+    }
+
+    /// Consumes the [`Token`] as [`Inline::Plain`] and appends it to the current
+    /// [`InlineContent`].
+    ///
+    /// [`Token`]: crate::Token
+    /// [`Inline::Plain`]: crate::Inline::Plain
+    /// [`InlineContent`]: crate::InlineContent
+    fn consume_as_plain(
+        next_token: Token,
+        content: &mut InlineContent<PlainContent, NestedContent>,
+    ) -> Position {
+        // plain text
+        let end = next_token.span().end();
+
+        // consume plain text
+        content.append(InlineContent::from(next_token));
+
+        end
+    }
+
+    /// Resolves the [`Token`] that's assumed to be the closing one. If the [`Token`] is ambiguous
+    /// it will be split into two non-ambiguous tokens.
+    ///
+    /// There are three cases:
+    /// 1. Opening [`Token`] is not ambiguous, but `next_token` is. In this case, the opening
+    ///    [`Token`] will be removed from `next_token`, removed token will be returned and the
+    ///    remaining pairt of `next_token` will be stored into the token cache.
+    /// 2. Both opening and `next_token` are ambiguous. They will be split into their non-ambiguous
+    ///    parts and one part will be returned, and other stored into the token cache.
+    /// 3. `next_token` is not ambiguous, so the opening [`Token`] is not relevant. The
+    ///    `next_token` will be simply returned.
+    ///
+    /// # Panics
+    ///
+    /// In the first case the opened [`Token`] will be removed from `next_token`. It's up to the
+    /// caller to make sure that these two [`Token`]s are compatible for partial removal. They're
+    /// compatible `next_token` contains the opened [`Token`].
+    ///
+    /// [`Token`]: crate::Token
+    fn resolve_closing_token(&mut self, mut next_token: Token) -> Token {
+        match self.last_token() {
+            Some(last_token) if next_token.is_ambiguous() => {
+                // ambiguous token must be split into non-ambiguous tokens
+                let (closing_token, next_token) = if !last_token.is_ambiguous() {
+                    let closing_token = next_token.remove_partial(last_token);
+                    self.pop_last();
+                    (closing_token, next_token)
+                } else {
+                    next_token.split_ambiguous()
+                };
+
+                self.token_cache = Some(next_token);
+                closing_token
+            }
+            _ => next_token,
+        }
+    }
+
+    /// Parses one Unimarkup [`Inline`] that contains [`NestedContent`] as it's content. That
+    /// corresponds to any [`Inline`] that is enclosed between two delimiters.
+    ///
+    /// [`Inline`]: crate::Inline
+    /// [`NestedContent`]: crate::NestedContent
     fn parse_nested_inline(&mut self, token: Token) -> Inline {
-        // Push token kind to stack
-        // Open corresponding inline
-        // If nesting of inline occurs, parse inner inline -> PROBLEM: Ambiguous tokens?
-        // Parse until closing token is found
-        // Close inline and return it
-
-        // PROBLEM: AmbiguousToken that comes as next token
-        // example: **Bold Text***Italic text*
-        //            ^^^^^^^^^   ^^^^^^^^^^^
-        //              BOLD        ITALIC
-        //  So the ambiguous token AFTER bold content (***) should be split into
-        //  bold close token and italic open. That means, that the ambiguous token should be split,
-        //  first part taken (based on what part was open) and the second part left for the next
-        //  iteration
-
         let mut kind = token.kind();
         let mut start = token.span().start();
         let mut end = start;
-        let mut content: InlineContent<_, _> = NestedContent {
-            content: Vec::default(),
-            span: (start, end).into(),
-        }
-        .into();
+        let mut content: InlineContent<_, _> = NestedContent::default().into();
 
         self.push_to_stack(token);
 
-        while let Some(mut next_token) = self.next_token() {
-            // Multiple cases:
-            // 1. token is (nesting one and) already open
-            //      - Is it closing one and it was open last? Close Inline
-            //      - Is it closing one, but it was not open last? Return inline and merge into outer one
-            //      - If not closing one, then it's plain text
-            //      - If no more tokens available, then:
-            //          -> First token (opening one) should be treated as plain text
-            //          -> All inlines found inside should be given as such
-            //          -> That means that the inline becomes: (PlainInline, Inline, Inline...)
-            // 2. token is not already open
-            //      - content until token is plain text
+        while let Some(next_token) = self.next_token() {
+            if next_token.closes() && self.is_token_open(&next_token) {
+                if self.is_token_latest(&next_token) {
+                    let closing_token = self.resolve_closing_token(next_token);
 
-            if next_token.closes() {
-                if self.is_token_open(&next_token) {
-                    if self.is_token_latest(&next_token) {
-                        // It is closing one and it was open last -> Close Inline
-                        end = next_token.span().end();
+                    end = closing_token.span().end();
 
-                        if let Some(token) = self.pop(&next_token) {
-                            start = token.span().start();
-                            kind = token.kind();
-                        }
+                    if let Some(token) = self.pop(&closing_token) {
+                        start = token.span().start();
+                        kind = token.kind();
+                    }
 
-                        break;
+                    if self.cached_token_open() {
+                        content.try_flatten();
+
+                        let inner_inline = Inline::with_span(content, kind, (start, end).into());
+
+                        content = NestedContent::from(inner_inline).into();
                     } else {
-                        // It might be ambiguous token and part of it is open,
-                        // for example ** followed by ***. Such token should be split as **|*,
-                        // where first part (**) is being closed, and second part (*) is now in
-                        // token_cache for next iteration
-
-                        if next_token.is_ambiguous() {
-                            // at this point we know there is at least one token in stack
-                            let last_token = self.last_token().unwrap();
-
-                            if next_token.is_or_contains(last_token) {
-                                let parsed_token = next_token.remove_partial(last_token);
-
-                                self.pop_last();
-                                self.token_cache = Some(next_token);
-
-                                end = parsed_token.span().end();
-
-                                // close this inline
-                                break;
-                            }
-                        } else {
-                            // It is closing one, but it was not open last -> Return contents as inline
-
-                            // remove the opening token from the stack
-                            let token = self.pop(&next_token).unwrap();
-
-                            // NOTE: when coming from nested, while loop will be continued -> takes
-                            // another token from iterator or cache
-                            self.token_cache = Some(next_token);
-
-                            // prepend the token to content as plain text
-                            content.prepend(InlineContent::from_token_as_plain(token));
-
-                            return Inline::Plain(content.into_plain());
-                        }
+                        break;
                     }
                 } else {
-                    // plain text
-                    end = next_token.span().end();
-
-                    // consume plain text
-                    content.append(InlineContent::from(next_token));
+                    return self.nested_inline_as_plain(next_token, content);
                 }
-            } else if next_token.opens() {
-                if self.is_token_open(&next_token) {
-                    // plain text
+            } else if next_token.opens() && !self.is_token_open(&next_token) {
+                let nested = self.parse_nested_inline(next_token);
+                end = nested.span().end();
 
-                    // update end position
-                    end = next_token.span().end();
-
-                    // consume plain text
-                    content.append(InlineContent::from(next_token));
-                } else {
-                    // parse open and merge into upper one
-                    let nested = self.parse_nested_inline(next_token);
-
-                    end = nested.span().end();
-
-                    content.append_inline(nested);
-                }
+                content.append_inline(nested);
             } else {
-                // neither opens nor closes - is plain text
-                end = next_token.span().end();
-
-                let inline_content = InlineContent::from(next_token);
-                content.append(inline_content);
+                end = Self::consume_as_plain(next_token, &mut content);
             }
         }
 
@@ -313,13 +355,13 @@ impl Parser<'_> {
             }
         }
 
-        // if content contains only plain contents, then merge them and make into one
         content.try_flatten();
-        content.set_span(span);
-
-        Inline::new(content, kind)
+        Inline::with_span(content, kind, span)
     }
 
+    /// Parses one single Unimarkup [`Inline`].
+    ///
+    /// [`Inline`]: crate::Inline
     fn parse_inline(&mut self) -> Option<Inline> {
         if !self.inline_cache.is_empty() {
             self.inline_cache.pop_front()
@@ -394,18 +436,21 @@ impl Iterator for Parser<'_> {
     }
 }
 
-pub trait ParseUnimarkupInlines<'p, 'i>
-where
-    'i: 'p,
-{
-    fn parse_unimarkup_inlines(&'i self) -> Parser<'p>;
+/// Extension trait for adding [`Parser`] implementation for any type that implements
+/// [`Tokenize`] trait.
+///
+/// [`Parser`]: self::Parser
+/// [`Tokenize`]: crate::Tokenize
+pub trait ParseUnimarkupInlines<'p> {
+    /// Returns a parser over this type.
+    fn parse_unimarkup_inlines(&'p self) -> Parser<'p>;
 }
 
-impl<'p, 'i> ParseUnimarkupInlines<'p, 'i> for &str
+impl<T> ParseUnimarkupInlines<'_> for T
 where
-    'i: 'p,
+    T: Tokenize,
 {
-    fn parse_unimarkup_inlines(&'i self) -> Parser<'p> {
+    fn parse_unimarkup_inlines(&self) -> Parser<'_> {
         Parser {
             iter: self.lex_iter(),
             stack: ParserStack::default(),
@@ -448,7 +493,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("Bold text"),
                     span: (start, end).into()
-                })],
+                })]
+                .into(),
                 span: (start - (0, 2), end + (0, 2)).into(),
             })
         );
@@ -471,7 +517,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("Italic text"),
                     span: Span::from((start, end))
-                })],
+                })]
+                .into(),
                 span: (start - (0, 1), end + (0, 1)).into()
             })
         );
@@ -492,7 +539,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("Italic text"),
                     span: (start, end).into()
-                })],
+                })]
+                .into(),
                 span: (start - (0, 1), end + (0, 1)).into()
             })
         );
@@ -508,7 +556,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("Bold text"),
                     span: Span::from((start, end))
-                })],
+                })]
+                .into(),
                 span: (start - (0, 2), end + (0, 2)).into()
             })
         );
@@ -532,7 +581,7 @@ mod tests {
         if let InlineContent::Nested(inner_content) = inline.into_inner() {
             assert_eq!(inner_content.count(), 3);
 
-            let inline = &inner_content[0];
+            let inline = &inner_content.content.get(0).unwrap();
 
             let start = Position { line: 1, column: 3 };
             let end = start + (0, 13 - 1);
@@ -561,7 +610,8 @@ mod tests {
                     content: vec![Inline::Plain(PlainContent {
                         content: String::from("with"),
                         span: Span::from((inner_start, inner_end))
-                    })],
+                    })]
+                    .into(),
                     span: (inner_start - (0, 1), inner_end + (0, 1)).into()
                 })
             );
@@ -609,7 +659,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("with text group"),
                     span: (start + (0, 1), end - (0, 1)).into()
-                })],
+                })]
+                .into(),
                 span: (start, end).into()
             })
         );
@@ -664,7 +715,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("with text** group"),
                     span: Span::from((start + (0, 1), end - (0, 1)))
-                })],
+                })]
+                .into(),
                 span: Span::from((start, end))
             })
         );
@@ -715,7 +767,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("This is input"),
                     span: Span::from((start + (0, 2), end - (0, 2)))
-                })],
+                })]
+                .into(),
                 span: Span::from((start, end))
             })
         );
@@ -767,7 +820,8 @@ mod tests {
                 content: vec![Inline::Plain(PlainContent {
                     content: String::from("has another one inside"),
                     span: Span::from((start + (0, 1), end - (0, 1)))
-                })],
+                })]
+                .into(),
                 span: Span::from((start, end))
             })
         );
