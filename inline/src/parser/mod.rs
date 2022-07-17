@@ -919,4 +919,34 @@ mod tests {
             })
         )
     }
+
+    #[test]
+    fn interrupt_italic() {
+        let input = "**This *is input**";
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 1);
+        let end = start + (0, 18 - 1);
+
+        assert!(matches!(inline, Inline::Bold(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert!(matches!(inline.as_ref(), InlineContent::Nested(_)));
+
+        let mut inner = inline.into_inner().into_nested();
+        let mut inner = inner.content.drain(..);
+
+        let inline = inner.next().unwrap();
+        let start = start + (0, 2);
+        let end = start + (0, 14 - 1);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This *is input"),
+                span: Span::from((start, end))
+            })
+        );
+    }
 }
