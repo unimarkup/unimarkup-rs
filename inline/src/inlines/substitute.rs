@@ -1,4 +1,4 @@
-/// ASCII Emojis that can be replaced in a Unimarkup text.
+/// ASCII Emojis that can be replaced with their Unicode versions in a Unimarkup text.
 pub const EMOJIS: [(&str, &str); 18] = [
     (":)", "1F642"),
     (";)", "1F609"),
@@ -20,9 +20,32 @@ pub const EMOJIS: [(&str, &str); 18] = [
     ("(N)", "1F44E"),
 ];
 
-/// Aliases for the [`EMOJIS`] that can be replaced in a Unimarkup text.
+/// ASCII Arrows that can be replaced with their Unicode versions in a Unimarkup text.
+pub const ARROWS: [(&str, &str); 18] = [
+    ("-->", "\u{1F816}"),
+    ("|-->", "\u{21A6}"),
+    ("---->", "\u{27F6}"),
+    ("|---->", "\u{27FC}"),
+    ("==>", "\u{21D2}"),
+    ("|==>", "\u{2907}"),
+    ("====>", "\u{27F9}"),
+    ("|====>", "\u{27FE}"),
+    ("<--", "\u{1F814}"),
+    ("<--|", "\u{21A4}"),
+    ("<----", "\u{27F5}"),
+    ("<----|", "\u{27FB}"),
+    ("<==", "\u{21D0}"),
+    ("<==|", "\u{2906}"),
+    ("<====", "\u{27F8}"),
+    ("<====|", "\u{27F8}"),
+    ("<-->", "\u{27F7}"),
+    ("<==>", "\u{21D4}"),
+];
+
+/// Aliases for the [`EMOJIS`] and [`ARROWS`] that can be replaced in a Unimarkup text.
 ///
 /// [`EMOJIS`]: self::EMOJIS
+/// [`ARROWS`]: self::ARROWS
 pub const ALIASES: [(&str, &str); 20] = [
     ("::slightly_smiling_face::", "\u{1F642}"),
     ("::wink::", "\u{1F609}"),
@@ -79,7 +102,11 @@ impl Substitute {
     /// [`EMOJIS`]: self::EMOJIS
     /// [`ALIASES`]: self::ALIASES
     pub fn substitute(content: &mut String) {
-        for (key, value) in EMOJIS.into_iter().chain(ALIASES.into_iter()) {
+        for (key, value) in EMOJIS
+            .into_iter()
+            .chain(ALIASES.into_iter())
+            .chain(ARROWS.into_iter())
+        {
             *content = content.replace(key, value);
         }
     }
