@@ -109,7 +109,7 @@ impl Inline {
     ///
     /// [`Inline`]: self::Inline
     /// [`TokenKind`]: crate::TokenKind
-    /// [`SPan`]: crate::TokenKind
+    /// [`Span`]: crate::TokenKind
     pub fn with_span(
         mut content: InlineContent<PlainContent, NestedContent>,
         kind: TokenKind,
