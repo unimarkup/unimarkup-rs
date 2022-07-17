@@ -840,4 +840,72 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn parse_open_italic_closed_bold_in_tg() {
+        let input = "This huhuu [***This is input**]";
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+
+        let start = Position::new(1, 1);
+        let end = start + (0, 11 - 1);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This huhuu "),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+
+        let start = end + (0, 1);
+        let end = start + (0, 20 - 1);
+
+        assert!(matches!(inline, Inline::TextGroup(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+
+        let mut inner = inline.into_inner().into_nested();
+        let mut inner = inner.content.drain(..);
+
+        let inline = inner.next().unwrap();
+        let start = start + (0, 1);
+        let end = start;
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("*"),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = inner.next().unwrap();
+        let start = start + (0, 1);
+        let end = start + (0, 17 - 1);
+
+        assert!(matches!(inline, Inline::Bold(_)));
+        assert!(matches!(inline.as_ref(), InlineContent::Nested(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+
+        let mut inner = inline.into_inner().into_nested();
+        let mut inner = inner.content.drain(..);
+
+        let inline = inner.next().unwrap();
+        let start = start + (0, 2);
+        let end = start + (0, 13 - 1);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This is input"),
+                span: Span::from((start, end))
+            })
+        )
+    }
 }
