@@ -238,7 +238,6 @@ impl Parser<'_> {
         mut content: InlineContent<PlainContent, NestedContent>,
     ) -> Inline {
         // It is closing one, but it was not open last -> Return contents as inline
-
         while !self.is_token_latest(&next_token) {
             match self.pop_last() {
                 Some(token) => {
@@ -249,16 +248,26 @@ impl Parser<'_> {
             }
         }
 
-        if let Some(last_token) = self.pop(&next_token) {
-            let start = last_token.span().start();
-            let end = next_token.span().end();
+        let last_token = self.pop(&next_token);
 
-            Inline::with_span(content, last_token.kind(), Span::from((start, end)))
-        } else {
-            // NOTE: when coming from nested, while loop will be continued -> takes
-            // another token from iterator or cache
-            self.token_cache = Some(next_token);
-            Inline::new(content, TokenKind::Plain)
+        match last_token {
+            Some(token) if token.kind().is_open_parentheses() => {
+                let start = token.span().start();
+                let end = next_token.span().end();
+
+                Inline::with_span(content, token.kind(), Span::from((start, end)))
+            }
+            _ => {
+                if let Some(last_token) = last_token {
+                    self.push_to_stack(last_token);
+                }
+
+                let start = content.span().start();
+                let end = next_token.span().start() - (0, 1);
+
+                self.token_cache = Some(next_token);
+                Inline::with_span(content, TokenKind::Plain, Span::from((start, end)))
+            }
         }
     }
 
