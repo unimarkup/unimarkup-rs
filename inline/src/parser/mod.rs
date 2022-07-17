@@ -239,17 +239,27 @@ impl Parser<'_> {
     ) -> Inline {
         // It is closing one, but it was not open last -> Return contents as inline
 
-        // remove the opening token from the stack
-        let token = self.pop(&next_token).unwrap();
+        while !self.is_token_latest(&next_token) {
+            match self.pop_last() {
+                Some(token) => {
+                    // prepend the token to content as plain text
+                    content.prepend(InlineContent::from_token_as_plain(token));
+                }
+                None => break,
+            }
+        }
 
-        // NOTE: when coming from nested, while loop will be continued -> takes
-        // another token from iterator or cache
-        self.token_cache = Some(next_token);
+        if let Some(last_token) = self.pop(&next_token) {
+            let start = last_token.span().start();
+            let end = next_token.span().end();
 
-        // prepend the token to content as plain text
-        content.prepend(InlineContent::from_token_as_plain(token));
-
-        Inline::Plain(content.into_plain())
+            Inline::with_span(content, last_token.kind(), Span::from((start, end)))
+        } else {
+            // NOTE: when coming from nested, while loop will be continued -> takes
+            // another token from iterator or cache
+            self.token_cache = Some(next_token);
+            Inline::new(content, TokenKind::Plain)
+        }
     }
 
     /// Consumes the [`Token`] as [`Inline::Plain`] and appends it to the current
