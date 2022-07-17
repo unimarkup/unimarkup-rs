@@ -418,7 +418,7 @@ impl Parser<'_> {
             let kind = next_token.kind();
 
             let (content, span) = next_token.into_inner();
-            let inline_content = InlineContent::Plain(PlainContent { content, span });
+            let inline_content = InlineContent::Plain(PlainContent::new(content, span));
 
             Inline::new(inline_content, kind)
         };

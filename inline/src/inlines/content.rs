@@ -3,7 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::{Inline, Span, Token, TokenKind};
+use crate::{Inline, Span, Substitute, Token, TokenKind};
 
 /// Content of an [`Inline`].
 ///
@@ -86,6 +86,17 @@ impl IndexMut<usize> for NestedContent {
 }
 
 impl PlainContent {
+    /// Creates a new `PlainContent` with the given text and [`Span`].
+    ///
+    /// [`Span`]: crate::Span
+    pub fn new(mut content: String, span: Span) -> Self {
+        // TODO: check if config flag is set to substitute emojis etc.
+        // NOTE: checking config implies that substitution should take place somewhere else...
+        Substitute::substitute(&mut content);
+
+        Self { content, span }
+    }
+
     /// Returns the content as [`&str`].
     ///
     /// [`&str`]: &str
@@ -259,7 +270,7 @@ impl InlineContent<PlainContent, NestedContent> {
         let content = String::from(token.as_str());
         let span = token.span();
 
-        InlineContent::Plain(PlainContent { content, span })
+        InlineContent::Plain(PlainContent::new(content, span))
     }
 
     /// Returns the span that this content occupies.
@@ -293,10 +304,9 @@ impl InlineContent<PlainContent, NestedContent> {
     pub fn into_plain(self) -> PlainContent {
         match self {
             InlineContent::Plain(plain_content) => plain_content,
-            InlineContent::Nested(nested_content) => PlainContent {
-                content: nested_content.as_string(),
-                span: nested_content.span,
-            },
+            InlineContent::Nested(nested_content) => {
+                PlainContent::new(nested_content.as_string(), nested_content.span)
+            }
         }
     }
 
@@ -366,9 +376,9 @@ impl<T> From<PlainContent> for InlineContent<PlainContent, T> {
 
 impl From<Token> for InlineContent<PlainContent, NestedContent> {
     fn from(token: Token) -> Self {
-        Self::Plain(PlainContent {
-            content: String::from(token.as_str()),
-            span: token.span(),
-        })
+        Self::Plain(PlainContent::new(
+            String::from(token.as_str()),
+            token.span(),
+        ))
     }
 }

@@ -3,8 +3,10 @@ use std::collections::VecDeque;
 use crate::{Span, TokenDelimiters, TokenKind};
 
 mod content;
+mod substitute;
 
 pub use content::*;
+pub use substitute::*;
 
 /// Representation of Unimarkup inline-formatted text.
 #[derive(Debug, Clone, PartialEq, Eq)]
