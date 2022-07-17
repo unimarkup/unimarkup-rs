@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::{Span, TokenKind};
+use crate::{Span, TokenDelimiters, TokenKind};
 
 mod content;
 
@@ -185,17 +185,28 @@ impl Inline {
     /// [`Inline`]: self::Inline
     pub fn as_string(&self) -> String {
         let token_kind = TokenKind::from(self);
-        let (begin_delim, end_delim) = token_kind.delimiters();
+        let delimiters = token_kind.delimiters();
 
-        let delim_len = begin_delim.len() + end_delim.len();
+        let (begin_delim, end_delim) = delimiters.as_str();
+
+        let delim_len = begin_delim.len() + end_delim.map(str::len).unwrap_or(0);
 
         let mut res = String::with_capacity(self.content_len() + delim_len);
 
         res.push_str(begin_delim);
         res.push_str(&self.as_ref().as_string());
-        res.push_str(end_delim);
+        res.push_str(end_delim.unwrap_or(""));
 
         res
+    }
+
+    /// Returns the opening and, if available, closing [`TokenKind`] for the given [`Inline`].
+    ///
+    /// [`Inline`]: self::Inline
+    /// [`TokenKind`]: crate::TokenKind
+    pub fn delimiters(&self) -> TokenDelimiters {
+        let kind = TokenKind::from(self);
+        TokenDelimiters::from(&kind)
     }
 
     /// Returns the length of content of this [`Inline`].

@@ -495,34 +495,8 @@ impl TokenKind {
     /// Returns the pair of delimiters for this kind as [`&str`].
     ///
     /// [`&str`]: &str
-    pub fn delimiters(&self) -> (&str, &str) {
-        match self {
-            TokenKind::Bold
-            | TokenKind::Italic
-            | TokenKind::ItalicBold
-            | TokenKind::Underline
-            | TokenKind::Subscript
-            | TokenKind::UnderlineSubscript
-            | TokenKind::Superscript
-            | TokenKind::Overline
-            | TokenKind::Strikethrough
-            | TokenKind::Highlight
-            | TokenKind::Verbatim
-            | TokenKind::Quote
-            | TokenKind::Math => (self.as_str(), self.as_str()),
-
-            TokenKind::Newline | TokenKind::Whitespace | TokenKind::Plain => ("", ""),
-
-            TokenKind::OpenParens | TokenKind::CloseParens => {
-                (Self::OpenParens.as_str(), Self::CloseParens.as_str())
-            }
-            TokenKind::OpenBracket | TokenKind::CloseBracket => {
-                (Self::OpenBracket.as_str(), Self::CloseBracket.as_str())
-            }
-            TokenKind::OpenBrace | TokenKind::CloseBrace => {
-                (Self::OpenBrace.as_str(), Self::CloseBrace.as_str())
-            }
-        }
+    pub fn delimiters(&self) -> TokenDelimiters {
+        TokenDelimiters::from(self)
     }
 
     /// Checks whether the content of this token is significant - should be stored.
@@ -613,6 +587,75 @@ impl From<(Symbol<'_>, usize)> for TokenKind {
             },
             _ => Self::Plain,
         }
+    }
+}
+
+impl From<TokenDelimiters> for (TokenKind, Option<TokenKind>) {
+    fn from(delimiters: TokenDelimiters) -> Self {
+        (delimiters.open, delimiters.close)
+    }
+}
+
+/// Delimiters
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TokenDelimiters {
+    open: TokenKind,
+    close: Option<TokenKind>,
+}
+
+impl From<&TokenKind> for TokenDelimiters {
+    fn from(kind: &TokenKind) -> Self {
+        match kind {
+            TokenKind::Bold
+            | TokenKind::Italic
+            | TokenKind::ItalicBold
+            | TokenKind::Underline
+            | TokenKind::Subscript
+            | TokenKind::UnderlineSubscript
+            | TokenKind::Superscript
+            | TokenKind::Overline
+            | TokenKind::Strikethrough
+            | TokenKind::Highlight
+            | TokenKind::Verbatim
+            | TokenKind::Quote
+            | TokenKind::Math => Self {
+                open: *kind,
+                close: Some(*kind),
+            },
+
+            TokenKind::OpenParens | TokenKind::CloseParens => Self {
+                open: TokenKind::OpenParens,
+                close: Some(TokenKind::CloseParens),
+            },
+            TokenKind::OpenBracket | TokenKind::CloseBracket => Self {
+                open: TokenKind::OpenBracket,
+                close: Some(TokenKind::CloseBracket),
+            },
+            TokenKind::OpenBrace | TokenKind::CloseBrace => Self {
+                open: TokenKind::OpenBrace,
+                close: Some(TokenKind::CloseBrace),
+            },
+            TokenKind::Newline | TokenKind::Whitespace | TokenKind::Plain => Self {
+                open: TokenKind::Plain,
+                close: Some(TokenKind::Plain),
+            },
+        }
+    }
+}
+
+impl From<&Token> for TokenDelimiters {
+    fn from(token: &Token) -> Self {
+        Self::from(&token.kind())
+    }
+}
+
+impl TokenDelimiters {
+    /// Returns the [`&str`] representation of opening and, if available, closing delimiter.
+    pub fn as_str(&self) -> (&str, Option<&str>) {
+        (
+            self.open.as_str(),
+            self.close.as_ref().map(TokenKind::as_str),
+        )
     }
 }
 
