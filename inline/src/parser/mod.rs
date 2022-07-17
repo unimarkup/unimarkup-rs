@@ -49,6 +49,16 @@ impl ParserStack {
             }
         }
     }
+
+    fn drain_as_plain(&mut self) -> Option<InlineContent<PlainContent, NestedContent>> {
+        self.data
+            .drain(..)
+            .map(InlineContent::from_token_as_plain)
+            .reduce(|mut accumulated_content, content| {
+                accumulated_content.append(content);
+                accumulated_content
+            })
+    }
 }
 
 /// Parser of Unimarkup inline formatting. Implemented as an [`Iterator`], yields one
@@ -364,46 +374,37 @@ impl Parser<'_> {
     /// [`Inline`]: crate::Inline
     fn parse_inline(&mut self) -> Option<Inline> {
         if !self.inline_cache.is_empty() {
-            self.inline_cache.pop_front()
-        } else {
-            let next_token = self.next_token()?;
+            return self.inline_cache.pop_front();
+        }
 
-            let inline = if next_token.opens() {
-                let parsed_inline = self.parse_nested_inline(next_token);
+        let next_token = self.next_token()?;
 
-                if !self.stack().is_empty() {
-                    // cache parsed inline for next iteration
+        let inline = if next_token.opens() {
+            let parsed_inline = self.parse_nested_inline(next_token);
 
-                    // return remaining tokens as plain inline
-                    if let Some(content) = self
-                        .stack_mut()
-                        .data
-                        .drain(..)
-                        .map(InlineContent::from_token_as_plain)
-                        .reduce(|mut accumulated_content, content| {
-                            accumulated_content.append(content);
-                            accumulated_content
-                        })
-                    {
-                        self.inline_cache.push_front(parsed_inline);
-                        Inline::new(content, TokenKind::Plain)
-                    } else {
-                        parsed_inline
-                    }
+            if !self.stack().is_empty() {
+                // cache parsed inline for next iteration
+
+                // return remaining tokens as plain inline
+                if let Some(content) = self.stack_mut().drain_as_plain() {
+                    self.inline_cache.push_front(parsed_inline);
+                    Inline::new(content, TokenKind::Plain)
                 } else {
                     parsed_inline
                 }
             } else {
-                let kind = next_token.kind();
+                parsed_inline
+            }
+        } else {
+            let kind = next_token.kind();
 
-                let (content, span) = next_token.into_inner();
-                let inline_content = InlineContent::Plain(PlainContent { content, span });
+            let (content, span) = next_token.into_inner();
+            let inline_content = InlineContent::Plain(PlainContent { content, span });
 
-                Inline::new(inline_content, kind)
-            };
+            Inline::new(inline_content, kind)
+        };
 
-            Some(inline)
-        }
+        Some(inline)
     }
 }
 
