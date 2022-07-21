@@ -460,12 +460,18 @@ impl TokenIterator<'_> {
     /// Check if character at cursor position with offset is whitespace.
     fn is_whitespace_at_offs(&self, offset: isize) -> bool {
         let pos = if offset < 0 {
-            self.index.saturating_sub(offset.abs() as usize)
+            let offset = offset.unsigned_abs();
+
+            match offset.saturating_sub(self.index) {
+                1 => return true, // NOTE: right before begin of line counts as whitespace
+                2.. => return false,
+                _ => self.index.saturating_sub(offset),
+            }
         } else {
             self.index.saturating_add(offset as usize)
         };
 
-        self.get_symbol(pos).map_or(false, |ch| ch.is_whitespace())
+        self.get_symbol(pos).map_or(true, |ch| ch.is_whitespace())
     }
 
     /// Lexes a [`Token`] with [`TokenKind::Plain`], so a [`Token`] containing just regular text.
@@ -505,14 +511,22 @@ impl TokenIterator<'_> {
         }
 
         // NOTE: index points to the NEXT character, token Span is UP TO that character
-        let offset = self.index - self.pos.column;
+        let offset = self.index - start_pos.column;
         let end_pos = self.pos + (0, offset);
+
+        let len = self.index - start_pos.column.saturating_sub(1);
+
+        // TODO: improve this logic
+        let temp_idx = self.index;
+        self.index = self.pos.column.saturating_sub(1);
 
         let token = TokenBuilder::new(TokenKind::Plain)
             .with_content(content)
             .span(Span::from((start_pos, end_pos)))
-            .space(Spacing::None)
+            .space(self.spacing_around(len))
             .build();
+
+        self.index = temp_idx;
 
         Some(token)
     }
