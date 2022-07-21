@@ -6,7 +6,7 @@ mod token;
 
 pub use token::*;
 
-use crate::Substitute;
+use crate::{Substitute, Substitutor};
 
 /// Used to create a Unimarkup [`Lexer`] over some data structure, most typically over some kind of
 /// string, i.e. [`&str`].
@@ -219,7 +219,11 @@ impl Symbol<'_> {
                 | Symbol::CloseBracket
                 | Symbol::OpenBrace
                 | Symbol::CloseBrace
-        ) || Substitute::is_start_of_subst(self)
+        )
+    }
+
+    fn is_start_of_subst(&self, substitutor: &Substitutor) -> bool {
+        substitutor.is_start_of_subst(self)
     }
 
     /// Checks whether the grapheme is "\".
@@ -262,6 +266,7 @@ impl<'a> Lexer<'a> {
             curr,
             index: self.pos.column.saturating_sub(1),
             pos: self.pos,
+            substitutor: Substitutor::new(),
         }
     }
 }
@@ -314,6 +319,7 @@ pub struct TokenIterator<'a> {
     curr: Vec<&'a str>,
     index: usize,
     pos: Position, // in input text
+    substitutor: Substitutor<'a>,
 }
 
 impl TokenIterator<'_> {
@@ -502,7 +508,7 @@ impl TokenIterator<'_> {
         // 4. any other grapheme -> consume into plain
 
         while let Some(symbol) = self.get_symbol(self.index) {
-            if symbol.is_keyword() {
+            if symbol.is_keyword() || symbol.is_start_of_subst(&self.substitutor) {
                 break;
             } else if symbol.is_esc() {
                 match self.get_symbol(self.index + 1) {
@@ -573,18 +579,18 @@ impl TokenIterator<'_> {
     }
 
     fn try_lex_substitution(&self, symbol: &Symbol) -> Option<Substitute> {
-        if Substitute::is_start_of_subst(symbol) {
+        if self.substitutor.is_start_of_subst(symbol) {
             let slice: String = {
                 self.curr[self.index..]
                     .iter()
-                    .take(Substitute::MAX_LEN)
+                    .take(self.substitutor.max_len())
                     .take_while(|inner| !Symbol::from(*inner).is_whitespace())
                     .copied()
                     .collect()
             };
 
             if let Spacing::Both = self.spacing_around(slice.len()) {
-                Substitute::try_subst(&slice)
+                self.substitutor.try_subst(&slice)
             } else {
                 None
             }
@@ -611,7 +617,7 @@ impl<'a> Iterator for TokenIterator<'a> {
         // 3. next grapheme is not a keyword -> it is plain text
 
         if let Some(symbol) = self.get_symbol(self.index) {
-            if symbol.is_keyword() {
+            if symbol.is_keyword() || symbol.is_start_of_subst(&self.substitutor) {
                 return self.lex_keyword();
             } else if symbol.is_esc() {
                 // Three cases:

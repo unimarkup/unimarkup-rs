@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use crate::Symbol;
 
 /// ASCII Emojis that can be replaced with their Unicode versions in a Unimarkup text.
@@ -71,6 +73,47 @@ pub const ALIASES: [(&str, &str); 20] = [
     ("::thumbsdown::", "\u{1F44E}"),
 ];
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Substitutor<'a> {
+    direct: HashMap<&'a str, &'a str>,
+    aliased: HashMap<&'a str, &'a str>,
+    max_len: usize,
+    first_grapheme: HashSet<&'a str>,
+}
+
+impl Substitutor<'_> {
+    pub(crate) fn new() -> Self {
+        let direct: HashMap<_, _> = EMOJIS.into_iter().chain(ARROWS.into_iter()).collect();
+        let aliased = ALIASES.into_iter().collect();
+        let max_len = direct.keys().map(|key| key.len()).max().unwrap_or(0);
+        let first_grapheme = direct.keys().map(|key| &key[0..1]).collect();
+
+        Self {
+            direct,
+            aliased,
+            max_len,
+            first_grapheme,
+        }
+    }
+
+    pub(crate) fn try_subst(&self, slice: &str) -> Option<Substitute> {
+        let val = self.direct.get(slice)?;
+
+        Some(Substitute {
+            content: String::from(*val),
+            original_len: slice.len(),
+        })
+    }
+
+    pub(crate) fn is_start_of_subst(&self, symbol: &Symbol) -> bool {
+        self.first_grapheme.contains(symbol.as_str())
+    }
+
+    pub(crate) fn max_len(&self) -> usize {
+        self.max_len
+    }
+}
+
 /// Substitution found in a Unimarkup document. Using the implementation of the [`From<&str>`] trait
 /// it is possible to generate a `Substitute` for some given input.
 ///
@@ -100,16 +143,6 @@ where
 }
 
 impl Substitute {
-    pub(crate) const MAX_LEN: usize = 6;
-
-    pub(crate) fn is_start_of_subst(symbol: &Symbol) -> bool {
-        EMOJIS
-            .into_iter()
-            .chain(ARROWS.into_iter())
-            .map(|(key, _)| &key[0..1])
-            .any(|first_char| first_char == symbol.as_str())
-    }
-
     /// Substitutes all occurrences of [`EMOJIS`] and [`ALIASES`] with their Unicode values in place.
     ///
     /// [`EMOJIS`]: self::EMOJIS
@@ -138,18 +171,5 @@ impl Substitute {
     /// Returns the length of the content of this Substitute before substitutions have taken place.
     pub fn original_len(&self) -> usize {
         self.original_len
-    }
-
-    pub(crate) fn try_subst(slice: &str) -> Option<Self> {
-        for (key, val) in EMOJIS.into_iter().chain(ARROWS.into_iter()) {
-            if key == slice {
-                return Some(Self {
-                    content: String::from(val),
-                    original_len: slice.len(),
-                });
-            }
-        }
-
-        None
     }
 }
