@@ -1,23 +1,25 @@
+use crate::Symbol;
+
 /// ASCII Emojis that can be replaced with their Unicode versions in a Unimarkup text.
 pub const EMOJIS: [(&str, &str); 18] = [
-    (":)", "1F642"),
-    (";)", "1F609"),
-    (":D", "1F603"),
-    ("^^", "1F604"),
-    ("=)", "1F60A"),
-    (":(", "1F641"),
-    (";(", "1F622"),
-    (":P", "1F61B"),
-    (";P", "1F61C"),
-    ("O:)", "1F607"),
-    (":O", "1F628"),
-    (">:(", "1F92C"),
-    (":/", "1F615"),
-    ("3:)", "1F608"),
-    ("--", "1F611"),
-    ("<3", "2764"),
-    ("(Y)", "1F44D"),
-    ("(N)", "1F44E"),
+    (":)", "\u{1F642}"),
+    (";)", "\u{1F609}"),
+    (":D", "\u{1F603}"),
+    ("^^", "\u{1F604}"),
+    ("=)", "\u{1F60A}"),
+    (":(", "\u{1F641}"),
+    (";(", "\u{1F622}"),
+    (":P", "\u{1F61B}"),
+    (";P", "\u{1F61C}"),
+    ("O:)", "\u{1F607}"),
+    (":O", "\u{1F628}"),
+    (">:(", "\u{1F92C}"),
+    (":/", "\u{1F615}"),
+    ("3:)", "\u{1F608}"),
+    ("--", "\u{1F611}"),
+    ("<3", "\u{2764}"),
+    ("(Y)", "\u{1F44D}"),
+    ("(N)", "\u{1F44E}"),
 ];
 
 /// ASCII Arrows that can be replaced with their Unicode versions in a Unimarkup text.
@@ -74,6 +76,7 @@ pub const ALIASES: [(&str, &str); 20] = [
 ///
 /// If there’s no defined substitution for given input in Unimarkup specification, a Substitute with
 /// original input as its content is generated.
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Substitute {
     content: String,
     original_len: usize,
@@ -97,6 +100,16 @@ where
 }
 
 impl Substitute {
+    pub(crate) const MAX_LEN: usize = 6;
+
+    pub(crate) fn is_start_of_subst(symbol: &Symbol) -> bool {
+        EMOJIS
+            .into_iter()
+            .chain(ARROWS.into_iter())
+            .map(|(key, _)| &key[0..1])
+            .any(|first_char| first_char == symbol.as_str())
+    }
+
     /// Substitutes all occurrences of [`EMOJIS`] and [`ALIASES`] with their Unicode values in place.
     ///
     /// [`EMOJIS`]: self::EMOJIS
@@ -125,5 +138,18 @@ impl Substitute {
     /// Returns the length of the content of this Substitute before substitutions have taken place.
     pub fn original_len(&self) -> usize {
         self.original_len
+    }
+
+    pub(crate) fn try_subst(slice: &str) -> Option<Self> {
+        for (key, val) in EMOJIS.into_iter().chain(ARROWS.into_iter()) {
+            if key == slice {
+                return Some(Self {
+                    content: String::from(val),
+                    original_len: slice.len(),
+                });
+            }
+        }
+
+        None
     }
 }
