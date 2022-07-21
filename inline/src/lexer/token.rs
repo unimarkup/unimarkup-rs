@@ -63,11 +63,11 @@ impl<K, S, W> TokenBuilder<K, S, W> {
     /// [`Content`]: crate::Content
     pub fn optional_content(
         self,
-        content: &[&str],
+        content: String,
         content_option: Content,
     ) -> TokenBuilder<K, S, W> {
         match content_option {
-            Content::Store => self.with_content(content.concat()),
+            Content::Store => self.with_content(content),
             _ => self,
         }
     }

@@ -6,6 +6,8 @@ mod token;
 
 pub use token::*;
 
+use crate::Substitute;
+
 /// Used to create a Unimarkup [`Lexer`] over some data structure, most typically over some kind of
 /// string, i.e. [`&str`].
 ///
@@ -168,7 +170,7 @@ impl Symbol<'_> {
         }
     }
 
-    fn as_str(&self) -> &str {
+    pub(crate) fn as_str(&self) -> &str {
         match self {
             Symbol::Esc => "\\",
             Symbol::Star => "*",
@@ -217,7 +219,7 @@ impl Symbol<'_> {
                 | Symbol::CloseBracket
                 | Symbol::OpenBrace
                 | Symbol::CloseBrace
-        )
+        ) || Substitute::is_start_of_subst(self)
     }
 
     /// Checks whether the grapheme is "\".
@@ -360,22 +362,32 @@ impl TokenIterator<'_> {
         // If some literal occurs the maximal symbol length + 1 times, then it's lexed as plain.
 
         let symbol = self.get_symbol(self.index)?;
+        let subst = self.try_lex_substitution(&symbol);
 
-        let symbol_len = self.symbol_len(symbol);
+        let symbol_len = subst
+            .as_ref()
+            .map_or_else(|| self.symbol_len(symbol), |subst| subst.original_len());
 
         let start_pos = self.pos;
         let end_pos = start_pos + (0, symbol_len - 1);
 
         let spacing = self.spacing_around(symbol_len);
 
-        let kind = TokenKind::from((symbol, symbol_len));
+        let kind = subst.as_ref().map_or_else(
+            || TokenKind::from((symbol, symbol_len)),
+            |_| TokenKind::Plain,
+        );
 
         let pos = self.index + symbol_len;
+        let content = subst.map_or_else(
+            || self.curr[self.index..pos].concat(),
+            |subst| subst.as_str().to_string(),
+        );
 
         let token = TokenBuilder::new(kind)
             .span(Span::from((start_pos, end_pos)))
             .space(spacing)
-            .optional_content(&self.curr[self.index..pos], kind.content_option())
+            .optional_content(content, kind.content_option())
             .build();
 
         self.index = pos;
@@ -558,6 +570,27 @@ impl TokenIterator<'_> {
 
         self.index += 1;
         Some(token)
+    }
+
+    fn try_lex_substitution(&self, symbol: &Symbol) -> Option<Substitute> {
+        if Substitute::is_start_of_subst(symbol) {
+            let slice: String = {
+                self.curr[self.index..]
+                    .iter()
+                    .take(Substitute::MAX_LEN)
+                    .take_while(|inner| !Symbol::from(*inner).is_whitespace())
+                    .copied()
+                    .collect()
+            };
+
+            if let Spacing::Both = self.spacing_around(slice.len()) {
+                Substitute::try_subst(&slice)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 }
 
