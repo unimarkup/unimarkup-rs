@@ -25,6 +25,7 @@ mod parenthesis;
 mod pipe;
 mod quote;
 mod star;
+mod substitute;
 mod tick;
 mod tilde;
 mod underline;
