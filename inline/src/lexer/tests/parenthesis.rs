@@ -6,11 +6,11 @@ mod single {
 
         #[test]
         fn no_spacing() {
-            let input = "(";
+            let input = "a(a";
 
-            let token = input.lex_iter().next().unwrap();
-            let start = Position::new(1, 1);
-            let end = Position::new(1, 1);
+            let token = input.lex_iter().nth(1).unwrap();
+            let start = Position::new(1, 2);
+            let end = Position::new(1, 2);
 
             assert!(token.opens());
             assert!(!token.closes());
@@ -26,7 +26,7 @@ mod single {
 
         #[test]
         fn spacing_pre() {
-            let input = " (";
+            let input = " (a";
 
             let token = input.lex_iter().nth(1).unwrap();
             let start = Position::new(1, 2);
@@ -46,11 +46,13 @@ mod single {
 
         #[test]
         fn spacing_post() {
-            let input = "( ";
+            let input = "a( ";
 
-            let token = input.lex_iter().next().unwrap();
-            let start = Position::new(1, 1);
-            let end = Position::new(1, 1);
+            let token = input.lex_iter().nth(1).unwrap();
+            let start = Position::new(1, 2);
+            let end = Position::new(1, 2);
+
+            dbg!(&token);
 
             assert!(token.opens());
             assert!(!token.closes());
@@ -90,11 +92,11 @@ mod single {
 
         #[test]
         fn no_spacing() {
-            let input = ")";
+            let input = "a)a";
 
-            let token = input.lex_iter().next().unwrap();
-            let start = Position::new(1, 1);
-            let end = Position::new(1, 1);
+            let token = input.lex_iter().nth(1).unwrap();
+            let start = Position::new(1, 2);
+            let end = Position::new(1, 2);
 
             assert!(!token.opens());
             assert!(token.closes());
@@ -110,7 +112,7 @@ mod single {
 
         #[test]
         fn spacing_pre() {
-            let input = " )";
+            let input = " )a";
 
             let token = input.lex_iter().nth(1).unwrap();
             let start = Position::new(1, 2);
@@ -130,11 +132,11 @@ mod single {
 
         #[test]
         fn spacing_post() {
-            let input = ") ";
+            let input = "a) ";
 
-            let token = input.lex_iter().next().unwrap();
-            let start = Position::new(1, 1);
-            let end = Position::new(1, 1);
+            let token = input.lex_iter().nth(1).unwrap();
+            let start = Position::new(1, 2);
+            let end = Position::new(1, 2);
 
             assert!(!token.opens());
             assert!(token.closes());
@@ -176,13 +178,13 @@ mod multiple {
 
         #[test]
         fn no_spacing() {
-            let input = "((";
+            let input = "a((a";
 
             let mut iter = input.lex_iter();
 
-            let token = iter.next().unwrap();
-            let start = Position::new(1, 1);
-            let end = Position::new(1, 1);
+            let token = iter.nth(1).unwrap();
+            let start = Position::new(1, 2);
+            let end = Position::new(1, 2);
 
             assert!(token.opens());
             assert!(!token.closes());
@@ -196,8 +198,8 @@ mod multiple {
             };
 
             let token = iter.next().unwrap();
-            let start = Position::new(1, 2);
-            let end = Position::new(1, 2);
+            let start = Position::new(1, 3);
+            let end = Position::new(1, 3);
 
             assert!(token.opens());
             assert!(!token.closes());
@@ -213,7 +215,7 @@ mod multiple {
 
         #[test]
         fn spacing_pre() {
-            let input = " ((";
+            let input = " ((a";
 
             let mut iter = input.lex_iter();
 
@@ -250,13 +252,13 @@ mod multiple {
 
         #[test]
         fn spacing_post() {
-            let input = "(( ";
+            let input = "a(( ";
 
             let mut iter = input.lex_iter();
 
-            let token = iter.next().unwrap();
-            let start = Position::new(1, 1);
-            let end = Position::new(1, 1);
+            let token = iter.nth(1).unwrap();
+            let start = Position::new(1, 2);
+            let end = Position::new(1, 2);
 
             assert!(token.opens());
             assert!(!token.closes());
@@ -270,8 +272,8 @@ mod multiple {
             };
 
             let token = iter.next().unwrap();
-            let start = Position::new(1, 2);
-            let end = Position::new(1, 2);
+            let start = Position::new(1, 3);
+            let end = Position::new(1, 3);
 
             assert!(token.opens());
             assert!(!token.closes());
@@ -328,13 +330,13 @@ mod multiple {
 
         #[test]
         fn no_spacing() {
-            let input = "))";
+            let input = "a))a";
 
             let mut iter = input.lex_iter();
 
-            let token = iter.next().unwrap();
-            let start = Position::new(1, 1);
-            let end = Position::new(1, 1);
+            let token = iter.nth(1).unwrap();
+            let start = Position::new(1, 2);
+            let end = Position::new(1, 2);
 
             assert!(!token.opens());
             assert!(token.closes());
@@ -348,8 +350,8 @@ mod multiple {
             };
 
             let token = iter.next().unwrap();
-            let start = Position::new(1, 2);
-            let end = Position::new(1, 2);
+            let start = Position::new(1, 3);
+            let end = Position::new(1, 3);
 
             assert!(!token.opens());
             assert!(token.closes());
@@ -365,7 +367,7 @@ mod multiple {
 
         #[test]
         fn spacing_pre() {
-            let input = " ))";
+            let input = " ))a";
 
             let mut iter = input.lex_iter();
 
@@ -402,13 +404,13 @@ mod multiple {
 
         #[test]
         fn spacing_post() {
-            let input = ")) ";
+            let input = "a)) ";
 
             let mut iter = input.lex_iter();
 
-            let token = iter.next().unwrap();
-            let start = Position::new(1, 1);
-            let end = Position::new(1, 1);
+            let token = iter.nth(1).unwrap();
+            let start = Position::new(1, 2);
+            let end = Position::new(1, 2);
 
             assert!(!token.opens());
             assert!(token.closes());
@@ -422,8 +424,8 @@ mod multiple {
             };
 
             let token = iter.next().unwrap();
-            let start = Position::new(1, 2);
-            let end = Position::new(1, 2);
+            let start = Position::new(1, 3);
+            let end = Position::new(1, 3);
 
             assert!(!token.opens());
             assert!(token.closes());

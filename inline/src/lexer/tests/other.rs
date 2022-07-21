@@ -16,7 +16,7 @@ mod lex_offset {
             assert_token! {
                 token with
                     TokenKind::Plain,
-                    Spacing::None,
+                    Spacing::Both,
                     (start, end),
                     "lines of text."
             };
@@ -36,7 +36,7 @@ mod lex_offset {
             assert_token! {
                 token with
                     TokenKind::Plain,
-                    Spacing::None,
+                    Spacing::Both,
                     (start, end),
                     "lines of text."
             };
@@ -63,7 +63,7 @@ mod plain {
         assert_token! {
             token with
                 TokenKind::Plain,
-                Spacing::None,
+                Spacing::Both,
                 (start, end),
                 input
         };
@@ -82,7 +82,7 @@ mod plain {
         assert_token! {
             token with
                 TokenKind::Plain,
-                Spacing::None,
+                Spacing::Both,
                 (start, end),
                 "This is first line"
         };
@@ -94,7 +94,7 @@ mod plain {
         assert_token! {
             token with
                 TokenKind::Plain,
-                Spacing::None,
+                Spacing::Both,
                 (start, end),
                 "And this second"
         };
@@ -106,7 +106,7 @@ mod plain {
         assert_token! {
             token with
                 TokenKind::Plain,
-                Spacing::None,
+                Spacing::Both,
                 (start, end),
                 "And third."
         };
@@ -180,10 +180,12 @@ mod escape {
             let start = Position::new(1, 1);
             let end = Position::new(1, 34);
 
+            dbg!(&token);
+
             assert_token! {
                 token with
                     TokenKind::Plain,
-                    Spacing::None,
+                    Spacing::Both,
                     (start, end),
                     "This is * text with escaped star."
             };

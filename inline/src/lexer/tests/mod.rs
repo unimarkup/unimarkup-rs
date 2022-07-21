@@ -4,7 +4,7 @@ macro_rules! assert_token {
     ($token:ident with $kind:expr, $spacing:expr, $span:expr) => {
         assert_eq!($token.kind(), $kind);
         assert_eq!($token.spacing(), $spacing);
-        assert_eq!($token.span(), Span::from($span));
+        assert_eq!($token.span(), crate::Span::from($span));
         true
     };
 
