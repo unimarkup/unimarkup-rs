@@ -445,8 +445,11 @@ pub enum TokenKind {
     /// Close brace token (`}`).
     CloseBrace,
 
-    /// Escaped newline token (`\n`).
+    /// Escaped newline token (`\\n`).
     Newline,
+
+    /// End of line - regular newline token ('\n').
+    EndOfLine,
 
     /// Escaped whitespace token (``\ ``).
     Whitespace,
@@ -462,7 +465,7 @@ impl TokenKind {
             TokenKind::Bold => "**",
             TokenKind::ItalicBold => "***",
             TokenKind::Italic => "*",
-            TokenKind::Newline => "\n",
+            TokenKind::Newline | TokenKind::EndOfLine => "\n",
             TokenKind::Whitespace => " ",
             TokenKind::Underline => "__",
             TokenKind::Subscript => "_",
@@ -548,6 +551,7 @@ impl From<&Inline> for TokenKind {
             Inline::Attributes(_) => Self::OpenBrace,
             Inline::Newline(_) => Self::Newline,
             Inline::Whitespace(_) => Self::Whitespace,
+            Inline::EndOfLine(_) => Self::EndOfLine,
             Inline::Plain(_) => Self::Plain,
             Inline::Multiple(_) => Self::Plain,
         }
@@ -635,7 +639,10 @@ impl From<&TokenKind> for TokenDelimiters {
                 open: TokenKind::OpenBrace,
                 close: Some(TokenKind::CloseBrace),
             },
-            TokenKind::Newline | TokenKind::Whitespace | TokenKind::Plain => Self {
+            TokenKind::Newline
+            | TokenKind::EndOfLine
+            | TokenKind::Whitespace
+            | TokenKind::Plain => Self {
                 open: TokenKind::Plain,
                 close: Some(TokenKind::Plain),
             },

@@ -330,9 +330,17 @@ impl TokenIterator<'_> {
 
     /// Consumes the next line in buffer and sets the cursor to the first grapheme on it.
     ///
-    /// Returns false if no new line available.
-    fn next_line(&mut self) -> bool {
+    /// Returns `Some` end of line token if next line exists, `None` otherwise.
+    fn next_line(&mut self) -> Option<Token> {
         // remove last line from cache
+        let start = self.pos;
+        let end = self.pos;
+        let spacing = if self.is_whitespace_at_offs(-1) {
+            Spacing::Pre
+        } else {
+            Spacing::None
+        };
+
         self.curr.clear();
 
         if let Some(next_line) = self.lines.next() {
@@ -345,9 +353,13 @@ impl TokenIterator<'_> {
             self.pos.line += 1;
             self.pos.column = 1;
 
-            true
+            Some(Token::new(
+                TokenKind::EndOfLine,
+                Span::from((start, end)),
+                spacing,
+            ))
         } else {
-            false
+            None
         }
     }
 
@@ -607,8 +619,8 @@ impl<'a> Iterator for TokenIterator<'a> {
         // NOTE: pos.line is updated only in next_line() function
         self.pos.column = self.index + 1;
 
-        if self.is_end_of_line() && !self.next_line() {
-            return None;
+        if self.is_end_of_line() {
+            return self.next_line();
         }
 
         // three cases:
