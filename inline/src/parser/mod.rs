@@ -958,4 +958,81 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn parse_multi_line() {
+        let input = "This is\ninput with\nmulti-line content.";
+
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 1);
+        let end = Position::new(1, 7);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This is"),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 8);
+        let end = Position::new(1, 8);
+
+        assert!(matches!(inline, Inline::EndOfLine(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from(""),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(2, 1);
+        let end = Position::new(2, 10);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("input with"),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(2, 11);
+        let end = Position::new(2, 11);
+
+        assert!(matches!(inline, Inline::EndOfLine(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from(""),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(3, 1);
+        let end = Position::new(3, 19);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("multi-line content."),
+                span: Span::from((start, end))
+            })
+        );
+    }
 }
