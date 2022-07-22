@@ -237,7 +237,7 @@ impl Token {
     pub fn is_nesting_token(&self) -> bool {
         !matches!(
             self.kind,
-            TokenKind::Plain | TokenKind::Newline | TokenKind::Whitespace
+            TokenKind::Plain | TokenKind::Newline | TokenKind::Whitespace | TokenKind::EndOfLine
         )
     }
 

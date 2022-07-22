@@ -59,6 +59,9 @@ pub enum Inline {
     /// Explicit whitespace.
     Whitespace(PlainContent),
 
+    /// End of line (regular newline)
+    EndOfLine(PlainContent),
+
     /// Plain text without any formatting.
     Plain(PlainContent),
 
@@ -74,6 +77,11 @@ impl Inline {
     /// [`Inline`]: self::Inline
     /// [`TokenKind`]: crate::TokenKind
     pub fn new(content: InlineContent<PlainContent, NestedContent>, kind: TokenKind) -> Self {
+        let consume_as_plain = |content| match content {
+            InlineContent::Plain(plain_content) => Self::Plain(plain_content),
+            InlineContent::Nested(nested_content) => Self::Multiple(nested_content),
+        };
+
         match kind {
             TokenKind::Bold => Self::Bold(content.into()),
             TokenKind::Italic => Self::Italic(content.into()),
@@ -91,18 +99,16 @@ impl Inline {
 
             TokenKind::Verbatim => Self::Verbatim(content.into()),
             TokenKind::Newline => Self::Newline(content.into()),
+            TokenKind::EndOfLine => Self::EndOfLine(content.into()),
             TokenKind::Whitespace => Self::Whitespace(content.into()),
-            TokenKind::Plain => match content {
-                InlineContent::Plain(plain_content) => Self::Plain(plain_content),
-                InlineContent::Nested(nested_content) => Self::Multiple(nested_content),
-            },
+            TokenKind::Plain => consume_as_plain(content),
 
             // These cases should never be reached
-            TokenKind::UnderlineSubscript => Self::Plain(content.into()),
-            TokenKind::ItalicBold => Self::Plain(content.into()),
-            TokenKind::CloseParens => Self::Plain(content.into()),
-            TokenKind::CloseBracket => Self::Plain(content.into()),
-            TokenKind::CloseBrace => Self::Plain(content.into()),
+            TokenKind::UnderlineSubscript
+            | TokenKind::ItalicBold
+            | TokenKind::CloseParens
+            | TokenKind::CloseBracket
+            | TokenKind::CloseBrace => consume_as_plain(content),
         }
     }
 
@@ -142,6 +148,7 @@ impl Inline {
             Inline::Attributes(_) => matches!(other, Self::Attributes(_)),
             Inline::Newline(_) => matches!(other, Self::Newline(_)),
             Inline::Whitespace(_) => matches!(other, Self::Whitespace(_)),
+            Inline::EndOfLine(_) => matches!(other, Self::EndOfLine(_)),
             Inline::Plain(_) => matches!(other, Self::Plain(_) | Self::Multiple(_)),
             Inline::Multiple(_) => matches!(other, Self::Multiple(_) | Self::Plain(_)),
         }
@@ -164,6 +171,7 @@ impl Inline {
             | Inline::Parens(plain_content)
             | Inline::Newline(plain_content)
             | Inline::Whitespace(plain_content)
+            | Inline::EndOfLine(plain_content)
             | Inline::Plain(plain_content) => InlineContent::Plain(plain_content),
 
             Inline::Bold(nested_content)
@@ -220,6 +228,7 @@ impl Inline {
             | Inline::Parens(plain_content)
             | Inline::Newline(plain_content)
             | Inline::Whitespace(plain_content)
+            | Inline::EndOfLine(plain_content)
             | Inline::Plain(plain_content) => plain_content.content_len(),
 
             Inline::Bold(nested_content)
@@ -253,6 +262,7 @@ impl Inline {
             | Inline::Parens(content)
             | Inline::Newline(content)
             | Inline::Whitespace(content)
+            | Inline::EndOfLine(content)
             | Inline::Plain(content) => InlineContent::Plain(content),
 
             Inline::Bold(content)
