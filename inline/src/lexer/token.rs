@@ -245,14 +245,17 @@ impl Token {
     ///
     /// [`Token`]: self::Token
     pub fn opens(&self) -> bool {
-        if self.kind().is_open_parentheses() {
-            true
-        } else {
-            let not_followed_by_whitespace = matches!(self.spacing, Spacing::Pre | Spacing::None);
+        match self.kind() {
+            TokenKind::Substitution => true,
+            some_kind if some_kind.is_open_parentheses() => true,
+            _ => {
+                let not_followed_by_whitespace =
+                    matches!(self.spacing, Spacing::Pre | Spacing::None);
 
-            !self.kind.is_close_parentheses()
-                && self.is_nesting_token()
-                && not_followed_by_whitespace
+                !self.kind.is_close_parentheses()
+                    && self.is_nesting_token()
+                    && not_followed_by_whitespace
+            }
         }
     }
 
@@ -260,14 +263,17 @@ impl Token {
     ///
     /// [`Token`]: self::Token
     pub fn closes(&self) -> bool {
-        if self.kind().is_close_parentheses() {
-            true
-        } else {
-            let not_preceded_by_whitespace = matches!(self.spacing, Spacing::Post | Spacing::None);
+        match self.kind() {
+            TokenKind::Substitution => true,
+            some_kind if some_kind.is_close_parentheses() => true,
+            _ => {
+                let not_preceded_by_whitespace =
+                    matches!(self.spacing, Spacing::Post | Spacing::None);
 
-            !self.kind().is_open_parentheses()
-                && self.is_nesting_token()
-                && not_preceded_by_whitespace
+                !self.kind().is_open_parentheses()
+                    && self.is_nesting_token()
+                    && not_preceded_by_whitespace
+            }
         }
     }
 
@@ -445,6 +451,9 @@ pub enum TokenKind {
     /// Close brace token (`}`).
     CloseBrace,
 
+    /// Double colon for substitution (`::`).
+    Substitution,
+
     /// Escaped newline token (`\\n`).
     Newline,
 
@@ -483,6 +492,7 @@ impl TokenKind {
             TokenKind::CloseBracket => "]",
             TokenKind::OpenBrace => "{",
             TokenKind::CloseBrace => "}",
+            TokenKind::Substitution => "::",
             TokenKind::Plain => "",
         }
     }
@@ -554,6 +564,7 @@ impl From<&Inline> for TokenKind {
             Inline::EndOfLine(_) => Self::EndOfLine,
             Inline::Plain(_) => Self::Plain,
             Inline::Multiple(_) => Self::Plain,
+            Inline::Substitution(_) => todo!(),
         }
     }
 }
@@ -582,6 +593,7 @@ impl From<(Symbol<'_>, usize)> for TokenKind {
                 Symbol::Pipe => Self::Highlight,
                 Symbol::Tilde => Self::Strikethrough,
                 Symbol::Quote => Self::Quote,
+                Symbol::Colon => Self::Substitution,
                 _ => Self::Plain,
             },
             3 => match symbol {
@@ -622,6 +634,7 @@ impl From<&TokenKind> for TokenDelimiters {
             | TokenKind::Highlight
             | TokenKind::Verbatim
             | TokenKind::Quote
+            | TokenKind::Substitution
             | TokenKind::Math => Self {
                 open: *kind,
                 close: Some(*kind),

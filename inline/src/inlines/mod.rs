@@ -53,6 +53,9 @@ pub enum Inline {
     /// Unimarkup attributes for some content.
     Attributes(NestedContent),
 
+    /// Alias substitution ( i.e. `::heart::`).
+    Substitution(NestedContent),
+
     /// Explicit newline.
     Newline(PlainContent),
 
@@ -96,6 +99,7 @@ impl Inline {
             TokenKind::OpenParens => Self::Parens(content.into()),
             TokenKind::OpenBracket => Self::TextGroup(content.into()),
             TokenKind::OpenBrace => Self::Attributes(content.into()),
+            TokenKind::Substitution => Self::Substitution(content.into()),
 
             TokenKind::Verbatim => Self::Verbatim(content.into()),
             TokenKind::Newline => Self::Newline(content.into()),
@@ -146,6 +150,7 @@ impl Inline {
             Inline::Parens(_) => matches!(other, Self::Parens(_)),
             Inline::TextGroup(_) => matches!(other, Self::TextGroup(_)),
             Inline::Attributes(_) => matches!(other, Self::Attributes(_)),
+            Inline::Substitution(_) => matches!(other, Self::Substitution(_)),
             Inline::Newline(_) => matches!(other, Self::Newline(_)),
             Inline::Whitespace(_) => matches!(other, Self::Whitespace(_)),
             Inline::EndOfLine(_) => matches!(other, Self::EndOfLine(_)),
@@ -186,7 +191,8 @@ impl Inline {
             | Inline::Math(nested_content)
             | Inline::TextGroup(nested_content)
             | Inline::Multiple(nested_content)
-            | Inline::Attributes(nested_content) => InlineContent::Nested(nested_content),
+            | Inline::Attributes(nested_content)
+            | Inline::Substitution(nested_content) => InlineContent::Nested(nested_content),
         }
     }
 
@@ -243,7 +249,8 @@ impl Inline {
             | Inline::Math(nested_content)
             | Inline::TextGroup(nested_content)
             | Inline::Multiple(nested_content)
-            | Inline::Attributes(nested_content) => nested_content.content_len(),
+            | Inline::Attributes(nested_content)
+            | Inline::Substitution(nested_content) => nested_content.content_len(),
         }
     }
 
@@ -277,7 +284,8 @@ impl Inline {
             | Inline::Math(content)
             | Inline::TextGroup(content)
             | Inline::Multiple(content)
-            | Inline::Attributes(content) => InlineContent::Nested(content),
+            | Inline::Attributes(content)
+            | Inline::Substitution(content) => InlineContent::Nested(content),
         }
     }
 

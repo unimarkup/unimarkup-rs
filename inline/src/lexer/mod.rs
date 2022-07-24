@@ -101,7 +101,8 @@ pub(crate) enum Symbol<'a> {
     Whitespace(&'a str),
     /// A newline literal (`\n` or '\r\n')
     Newline,
-    // Colon,
+    /// A colon literal used for alias substitutions (`::heart::`).
+    Colon,
 }
 
 impl<'a> From<&'a str> for Symbol<'a> {
@@ -124,6 +125,7 @@ impl<'a> From<&'a str> for Symbol<'a> {
             "{" => Symbol::OpenBrace,
             "}" => Symbol::CloseBrace,
             "\n" | "\r\n" => Symbol::Newline,
+            ":" => Symbol::Colon,
             other => match other.chars().next() {
                 // NOTE: multi-character grapheme is most probably not a whitespace
                 Some(literal) if literal.is_whitespace() => Symbol::Whitespace(other),
@@ -164,7 +166,7 @@ impl Symbol<'_> {
             | Symbol::OpenBrace
             | Symbol::CloseBrace => LexLength::Exact(1),
 
-            Symbol::Pipe | Symbol::Tilde | Symbol::Quote => LexLength::Limited(2),
+            Symbol::Pipe | Symbol::Tilde | Symbol::Quote | Symbol::Colon => LexLength::Limited(2),
 
             Symbol::Whitespace(_) | Symbol::Newline | Symbol::Plain(_) => LexLength::Unlimited,
         }
@@ -191,7 +193,7 @@ impl Symbol<'_> {
             Symbol::Plain(content) => content,
             Symbol::Whitespace(literal) => literal,
             Symbol::Newline => "\n",
-            // Symbol::Colon => ":",
+            Symbol::Colon => ":",
         }
     }
 
