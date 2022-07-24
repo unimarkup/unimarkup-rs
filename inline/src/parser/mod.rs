@@ -1035,4 +1035,64 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn parse_subst_alias() {
+        let input = "This is text::with_alias::substitution inside.";
+
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 1);
+        let end = Position::new(1, 12);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This is text"),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 13);
+        let end = Position::new(1, 26);
+
+        assert!(matches!(inline, Inline::Substitution(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+
+        assert!(matches!(inline.as_ref(), InlineContent::Nested(_)));
+
+        let inner_inline = &inline.into_inner().into_nested().content[0];
+        let inner_start = Position::new(1, 15);
+        let inner_end = Position::new(1, 24);
+        let span = Span::from((inner_start, inner_end));
+
+        assert!(matches!(inner_inline, Inline::Plain(_)));
+        assert_eq!(
+            inner_inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("with_alias"),
+                span,
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 27);
+        let end = Position::new(1, 46);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("substitution inside."),
+                span: Span::from((start, end))
+            })
+        );
+    }
 }
