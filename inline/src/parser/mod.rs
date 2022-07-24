@@ -49,6 +49,16 @@ impl ParserStack {
             }
         }
     }
+
+    fn drain_as_plain(&mut self) -> Option<InlineContent<PlainContent, NestedContent>> {
+        self.data
+            .drain(..)
+            .map(InlineContent::from_token_as_plain)
+            .reduce(|mut accumulated_content, content| {
+                accumulated_content.append(content);
+                accumulated_content
+            })
+    }
 }
 
 /// Parser of Unimarkup inline formatting. Implemented as an [`Iterator`], yields one
@@ -228,18 +238,37 @@ impl Parser<'_> {
         mut content: InlineContent<PlainContent, NestedContent>,
     ) -> Inline {
         // It is closing one, but it was not open last -> Return contents as inline
+        while !self.is_token_latest(&next_token) {
+            match self.pop_last() {
+                Some(token) => {
+                    // prepend the token to content as plain text
+                    content.prepend(InlineContent::from_token_as_plain(token));
+                }
+                None => break,
+            }
+        }
 
-        // remove the opening token from the stack
-        let token = self.pop(&next_token).unwrap();
+        let last_token = self.pop(&next_token);
 
-        // NOTE: when coming from nested, while loop will be continued -> takes
-        // another token from iterator or cache
-        self.token_cache = Some(next_token);
+        match last_token {
+            Some(token) if token.kind().is_open_parentheses() => {
+                let start = token.span().start();
+                let end = next_token.span().end();
 
-        // prepend the token to content as plain text
-        content.prepend(InlineContent::from_token_as_plain(token));
+                Inline::with_span(content, token.kind(), Span::from((start, end)))
+            }
+            _ => {
+                if let Some(last_token) = last_token {
+                    self.push_to_stack(last_token);
+                }
 
-        Inline::Plain(content.into_plain())
+                let start = content.span().start();
+                let end = next_token.span().start() - (0, 1);
+
+                self.token_cache = Some(next_token);
+                Inline::with_span(content, TokenKind::Plain, Span::from((start, end)))
+            }
+        }
     }
 
     /// Consumes the [`Token`] as [`Inline::Plain`] and appends it to the current
@@ -364,46 +393,37 @@ impl Parser<'_> {
     /// [`Inline`]: crate::Inline
     fn parse_inline(&mut self) -> Option<Inline> {
         if !self.inline_cache.is_empty() {
-            self.inline_cache.pop_front()
-        } else {
-            let next_token = self.next_token()?;
+            return self.inline_cache.pop_front();
+        }
 
-            let inline = if next_token.opens() {
-                let parsed_inline = self.parse_nested_inline(next_token);
+        let next_token = self.next_token()?;
 
-                if !self.stack().is_empty() {
-                    // cache parsed inline for next iteration
+        let inline = if next_token.opens() {
+            let parsed_inline = self.parse_nested_inline(next_token);
 
-                    // return remaining tokens as plain inline
-                    if let Some(content) = self
-                        .stack_mut()
-                        .data
-                        .drain(..)
-                        .map(InlineContent::from_token_as_plain)
-                        .reduce(|mut accumulated_content, content| {
-                            accumulated_content.append(content);
-                            accumulated_content
-                        })
-                    {
-                        self.inline_cache.push_front(parsed_inline);
-                        Inline::new(content, TokenKind::Plain)
-                    } else {
-                        parsed_inline
-                    }
+            if !self.stack().is_empty() {
+                // cache parsed inline for next iteration
+
+                // return remaining tokens as plain inline
+                if let Some(content) = self.stack_mut().drain_as_plain() {
+                    self.inline_cache.push_front(parsed_inline);
+                    Inline::new(content, TokenKind::Plain)
                 } else {
                     parsed_inline
                 }
             } else {
-                let kind = next_token.kind();
+                parsed_inline
+            }
+        } else {
+            let kind = next_token.kind();
 
-                let (content, span) = next_token.into_inner();
-                let inline_content = InlineContent::Plain(PlainContent { content, span });
+            let (content, span) = next_token.into_inner();
+            let inline_content = InlineContent::Plain(PlainContent::new(content, span));
 
-                Inline::new(inline_content, kind)
-            };
+            Inline::new(inline_content, kind)
+        };
 
-            Some(inline)
-        }
+        Some(inline)
     }
 }
 
@@ -836,6 +856,241 @@ mod tests {
             inline.as_ref(),
             InlineContent::Plain(&PlainContent {
                 content: String::from(" of it."),
+                span: Span::from((start, end))
+            })
+        );
+    }
+
+    #[test]
+    fn parse_open_italic_closed_bold_in_tg() {
+        let input = "This huhuu [***This is input**]";
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+
+        let start = Position::new(1, 1);
+        let end = start + (0, 11 - 1);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This huhuu "),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+
+        let start = end + (0, 1);
+        let end = start + (0, 20 - 1);
+
+        assert!(matches!(inline, Inline::TextGroup(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+
+        let mut inner = inline.into_inner().into_nested();
+        let mut inner = inner.content.drain(..);
+
+        let inline = inner.next().unwrap();
+        let start = start + (0, 1);
+        let end = start;
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("*"),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = inner.next().unwrap();
+        let start = start + (0, 1);
+        let end = start + (0, 17 - 1);
+
+        assert!(matches!(inline, Inline::Bold(_)));
+        assert!(matches!(inline.as_ref(), InlineContent::Nested(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+
+        let mut inner = inline.into_inner().into_nested();
+        let mut inner = inner.content.drain(..);
+
+        let inline = inner.next().unwrap();
+        let start = start + (0, 2);
+        let end = start + (0, 13 - 1);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This is input"),
+                span: Span::from((start, end))
+            })
+        )
+    }
+
+    #[test]
+    fn interrupt_italic() {
+        let input = "**This *is input**";
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 1);
+        let end = start + (0, 18 - 1);
+
+        assert!(matches!(inline, Inline::Bold(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert!(matches!(inline.as_ref(), InlineContent::Nested(_)));
+
+        let mut inner = inline.into_inner().into_nested();
+        let mut inner = inner.content.drain(..);
+
+        let inline = inner.next().unwrap();
+        let start = start + (0, 2);
+        let end = start + (0, 14 - 1);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This *is input"),
+                span: Span::from((start, end))
+            })
+        );
+    }
+
+    #[test]
+    fn parse_multi_line() {
+        let input = "This is\ninput with\nmulti-line content.";
+
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 1);
+        let end = Position::new(1, 7);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This is"),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 8);
+        let end = Position::new(1, 8);
+
+        assert!(matches!(inline, Inline::EndOfLine(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from(""),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(2, 1);
+        let end = Position::new(2, 10);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("input with"),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(2, 11);
+        let end = Position::new(2, 11);
+
+        assert!(matches!(inline, Inline::EndOfLine(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from(""),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(3, 1);
+        let end = Position::new(3, 19);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("multi-line content."),
+                span: Span::from((start, end))
+            })
+        );
+    }
+
+    #[test]
+    fn parse_subst_alias() {
+        let input = "This is text::with_alias::substitution inside.";
+
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 1);
+        let end = Position::new(1, 12);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("This is text"),
+                span: Span::from((start, end))
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 13);
+        let end = Position::new(1, 26);
+
+        assert!(matches!(inline, Inline::Substitution(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+
+        assert!(matches!(inline.as_ref(), InlineContent::Nested(_)));
+
+        let inner_inline = &inline.into_inner().into_nested().content[0];
+        let inner_start = Position::new(1, 15);
+        let inner_end = Position::new(1, 24);
+        let span = Span::from((inner_start, inner_end));
+
+        assert!(matches!(inner_inline, Inline::Plain(_)));
+        assert_eq!(
+            inner_inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("with_alias"),
+                span,
+            })
+        );
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 27);
+        let end = Position::new(1, 46);
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("substitution inside."),
                 span: Span::from((start, end))
             })
         );

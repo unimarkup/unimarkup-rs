@@ -63,11 +63,11 @@ impl<K, S, W> TokenBuilder<K, S, W> {
     /// [`Content`]: crate::Content
     pub fn optional_content(
         self,
-        content: &[&str],
+        content: String,
         content_option: Content,
     ) -> TokenBuilder<K, S, W> {
         match content_option {
-            Content::Store => self.with_content(content.concat()),
+            Content::Store => self.with_content(content),
             _ => self,
         }
     }
@@ -237,7 +237,7 @@ impl Token {
     pub fn is_nesting_token(&self) -> bool {
         !matches!(
             self.kind,
-            TokenKind::Plain | TokenKind::Newline | TokenKind::Whitespace
+            TokenKind::Plain | TokenKind::Newline | TokenKind::Whitespace | TokenKind::EndOfLine
         )
     }
 
@@ -245,14 +245,17 @@ impl Token {
     ///
     /// [`Token`]: self::Token
     pub fn opens(&self) -> bool {
-        if self.kind().is_open_parentheses() {
-            true
-        } else {
-            let not_followed_by_whitespace = matches!(self.spacing, Spacing::Pre | Spacing::None);
+        match self.kind() {
+            TokenKind::Substitution => true,
+            some_kind if some_kind.is_open_parentheses() => true,
+            _ => {
+                let not_followed_by_whitespace =
+                    matches!(self.spacing, Spacing::Pre | Spacing::None);
 
-            !self.kind.is_close_parentheses()
-                && self.is_nesting_token()
-                && not_followed_by_whitespace
+                !self.kind.is_close_parentheses()
+                    && self.is_nesting_token()
+                    && not_followed_by_whitespace
+            }
         }
     }
 
@@ -260,14 +263,17 @@ impl Token {
     ///
     /// [`Token`]: self::Token
     pub fn closes(&self) -> bool {
-        if self.kind().is_close_parentheses() {
-            true
-        } else {
-            let not_preceded_by_whitespace = matches!(self.spacing, Spacing::Post | Spacing::None);
+        match self.kind() {
+            TokenKind::Substitution => true,
+            some_kind if some_kind.is_close_parentheses() => true,
+            _ => {
+                let not_preceded_by_whitespace =
+                    matches!(self.spacing, Spacing::Post | Spacing::None);
 
-            !self.kind().is_open_parentheses()
-                && self.is_nesting_token()
-                && not_preceded_by_whitespace
+                !self.kind().is_open_parentheses()
+                    && self.is_nesting_token()
+                    && not_preceded_by_whitespace
+            }
         }
     }
 
@@ -445,8 +451,14 @@ pub enum TokenKind {
     /// Close brace token (`}`).
     CloseBrace,
 
-    /// Escaped newline token (`\n`).
+    /// Double colon for substitution (`::`).
+    Substitution,
+
+    /// Escaped newline token (`\\n`).
     Newline,
+
+    /// End of line - regular newline token ('\n').
+    EndOfLine,
 
     /// Escaped whitespace token (``\ ``).
     Whitespace,
@@ -462,7 +474,7 @@ impl TokenKind {
             TokenKind::Bold => "**",
             TokenKind::ItalicBold => "***",
             TokenKind::Italic => "*",
-            TokenKind::Newline => "\n",
+            TokenKind::Newline | TokenKind::EndOfLine => "\n",
             TokenKind::Whitespace => " ",
             TokenKind::Underline => "__",
             TokenKind::Subscript => "_",
@@ -480,6 +492,7 @@ impl TokenKind {
             TokenKind::CloseBracket => "]",
             TokenKind::OpenBrace => "{",
             TokenKind::CloseBrace => "}",
+            TokenKind::Substitution => "::",
             TokenKind::Plain => "",
         }
     }
@@ -495,34 +508,8 @@ impl TokenKind {
     /// Returns the pair of delimiters for this kind as [`&str`].
     ///
     /// [`&str`]: &str
-    pub fn delimiters(&self) -> (&str, &str) {
-        match self {
-            TokenKind::Bold
-            | TokenKind::Italic
-            | TokenKind::ItalicBold
-            | TokenKind::Underline
-            | TokenKind::Subscript
-            | TokenKind::UnderlineSubscript
-            | TokenKind::Superscript
-            | TokenKind::Overline
-            | TokenKind::Strikethrough
-            | TokenKind::Highlight
-            | TokenKind::Verbatim
-            | TokenKind::Quote
-            | TokenKind::Math => (self.as_str(), self.as_str()),
-
-            TokenKind::Newline | TokenKind::Whitespace | TokenKind::Plain => ("", ""),
-
-            TokenKind::OpenParens | TokenKind::CloseParens => {
-                (Self::OpenParens.as_str(), Self::CloseParens.as_str())
-            }
-            TokenKind::OpenBracket | TokenKind::CloseBracket => {
-                (Self::OpenBracket.as_str(), Self::CloseBracket.as_str())
-            }
-            TokenKind::OpenBrace | TokenKind::CloseBrace => {
-                (Self::OpenBrace.as_str(), Self::CloseBrace.as_str())
-            }
-        }
+    pub fn delimiters(&self) -> TokenDelimiters {
+        TokenDelimiters::from(self)
     }
 
     /// Checks whether the content of this token is significant - should be stored.
@@ -574,8 +561,10 @@ impl From<&Inline> for TokenKind {
             Inline::Attributes(_) => Self::OpenBrace,
             Inline::Newline(_) => Self::Newline,
             Inline::Whitespace(_) => Self::Whitespace,
+            Inline::EndOfLine(_) => Self::EndOfLine,
             Inline::Plain(_) => Self::Plain,
             Inline::Multiple(_) => Self::Plain,
+            Inline::Substitution(_) => todo!(),
         }
     }
 }
@@ -604,6 +593,7 @@ impl From<(Symbol<'_>, usize)> for TokenKind {
                 Symbol::Pipe => Self::Highlight,
                 Symbol::Tilde => Self::Strikethrough,
                 Symbol::Quote => Self::Quote,
+                Symbol::Colon => Self::Substitution,
                 _ => Self::Plain,
             },
             3 => match symbol {
@@ -613,6 +603,79 @@ impl From<(Symbol<'_>, usize)> for TokenKind {
             },
             _ => Self::Plain,
         }
+    }
+}
+
+impl From<TokenDelimiters> for (TokenKind, Option<TokenKind>) {
+    fn from(delimiters: TokenDelimiters) -> Self {
+        (delimiters.open, delimiters.close)
+    }
+}
+
+/// Delimiters
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TokenDelimiters {
+    open: TokenKind,
+    close: Option<TokenKind>,
+}
+
+impl From<&TokenKind> for TokenDelimiters {
+    fn from(kind: &TokenKind) -> Self {
+        match kind {
+            TokenKind::Bold
+            | TokenKind::Italic
+            | TokenKind::ItalicBold
+            | TokenKind::Underline
+            | TokenKind::Subscript
+            | TokenKind::UnderlineSubscript
+            | TokenKind::Superscript
+            | TokenKind::Overline
+            | TokenKind::Strikethrough
+            | TokenKind::Highlight
+            | TokenKind::Verbatim
+            | TokenKind::Quote
+            | TokenKind::Substitution
+            | TokenKind::Math => Self {
+                open: *kind,
+                close: Some(*kind),
+            },
+
+            TokenKind::OpenParens | TokenKind::CloseParens => Self {
+                open: TokenKind::OpenParens,
+                close: Some(TokenKind::CloseParens),
+            },
+            TokenKind::OpenBracket | TokenKind::CloseBracket => Self {
+                open: TokenKind::OpenBracket,
+                close: Some(TokenKind::CloseBracket),
+            },
+            TokenKind::OpenBrace | TokenKind::CloseBrace => Self {
+                open: TokenKind::OpenBrace,
+                close: Some(TokenKind::CloseBrace),
+            },
+            TokenKind::Newline
+            | TokenKind::EndOfLine
+            | TokenKind::Whitespace
+            | TokenKind::Plain => Self {
+                open: TokenKind::Plain,
+                close: Some(TokenKind::Plain),
+            },
+        }
+    }
+}
+
+impl From<&Token> for TokenDelimiters {
+    fn from(token: &Token) -> Self {
+        Self::from(&token.kind())
+    }
+}
+
+impl TokenDelimiters {
+    /// Returns the [`&str`] representation of opening and, if available, closing delimiter.
+    pub fn as_str(&self) -> (&str, Option<&str>) {
+        (
+            self.open.as_str(),
+            self.close.as_ref().map(TokenKind::as_str),
+        )
     }
 }
 

@@ -5,11 +5,11 @@ mod quotation {
 
     #[test]
     fn no_spacing() {
-        let input = r#""""#;
+        let input = r#"a""a"#;
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 2);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 3);
 
         dbg!(&token);
 
@@ -27,7 +27,7 @@ mod quotation {
 
     #[test]
     fn spacing_pre() {
-        let input = r#" """#;
+        let input = r#" ""a"#;
 
         let token = input.lex_iter().nth(1).unwrap();
         let start = Position::new(1, 2);
@@ -47,11 +47,11 @@ mod quotation {
 
     #[test]
     fn spacing_post() {
-        let input = r#""" "#;
+        let input = r#"a"" "#;
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 2);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 3);
 
         assert!(!token.opens());
         assert!(token.closes());
@@ -91,11 +91,11 @@ mod plain {
 
     #[test]
     fn no_spacing() {
-        let input = r#"""""#;
+        let input = r#"a"""a"#;
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 3);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 4);
 
         dbg!(&token);
 
@@ -113,7 +113,7 @@ mod plain {
 
     #[test]
     fn spacing_pre() {
-        let input = r#" """"#;
+        let input = r#" """a"#;
 
         let token = input.lex_iter().nth(1).unwrap();
         let start = Position::new(1, 2);
@@ -133,11 +133,11 @@ mod plain {
 
     #[test]
     fn spacing_post() {
-        let input = r#"""" "#;
+        let input = r#"a""" "#;
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 3);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 4);
 
         assert!(!token.opens());
         assert!(!token.closes());

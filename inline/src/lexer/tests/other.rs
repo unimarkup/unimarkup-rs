@@ -16,7 +16,7 @@ mod lex_offset {
             assert_token! {
                 token with
                     TokenKind::Plain,
-                    Spacing::None,
+                    Spacing::Both,
                     (start, end),
                     "lines of text."
             };
@@ -36,7 +36,7 @@ mod lex_offset {
             assert_token! {
                 token with
                     TokenKind::Plain,
-                    Spacing::None,
+                    Spacing::Both,
                     (start, end),
                     "lines of text."
             };
@@ -63,7 +63,7 @@ mod plain {
         assert_token! {
             token with
                 TokenKind::Plain,
-                Spacing::None,
+                Spacing::Both,
                 (start, end),
                 input
         };
@@ -71,7 +71,7 @@ mod plain {
 
     #[test]
     fn multi_line() {
-        let input = "This is first line\nAnd this second\nAnd third.";
+        let input = "This is first line\nAnd this second \nAnd third.";
 
         let mut iter = input.lex_iter();
 
@@ -82,21 +82,43 @@ mod plain {
         assert_token! {
             token with
                 TokenKind::Plain,
-                Spacing::None,
+                Spacing::Both,
                 (start, end),
                 "This is first line"
         };
 
         let token = iter.next().unwrap();
+        let start = Position::new(1, 19);
+        let end = Position::new(1, 19);
+
+        assert_token! {
+            token with
+                TokenKind::EndOfLine,
+                Spacing::None,
+                (start, end)
+        };
+
+        let token = iter.next().unwrap();
         let start = Position::new(2, 1);
-        let end = Position::new(2, 15);
+        let end = Position::new(2, 16);
 
         assert_token! {
             token with
                 TokenKind::Plain,
-                Spacing::None,
+                Spacing::Both,
                 (start, end),
-                "And this second"
+                "And this second "
+        };
+
+        let token = iter.next().unwrap();
+        let start = Position::new(2, 17);
+        let end = Position::new(2, 17);
+
+        assert_token! {
+            token with
+                TokenKind::EndOfLine,
+                Spacing::Pre,
+                (start, end)
         };
 
         let token = iter.next().unwrap();
@@ -106,10 +128,13 @@ mod plain {
         assert_token! {
             token with
                 TokenKind::Plain,
-                Spacing::None,
+                Spacing::Both,
                 (start, end),
                 "And third."
         };
+
+        let token = iter.next();
+        assert_eq!(token, None);
     }
 }
 
@@ -180,10 +205,12 @@ mod escape {
             let start = Position::new(1, 1);
             let end = Position::new(1, 34);
 
+            dbg!(&token);
+
             assert_token! {
                 token with
                     TokenKind::Plain,
-                    Spacing::None,
+                    Spacing::Both,
                     (start, end),
                     "This is * text with escaped star."
             };

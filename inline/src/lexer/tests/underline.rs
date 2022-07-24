@@ -5,11 +5,11 @@ mod subscript {
 
     #[test]
     fn no_spacing() {
-        let input = "_";
+        let input = "a_a";
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 1);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 2);
 
         assert!(token.opens());
         assert!(token.closes());
@@ -25,7 +25,7 @@ mod subscript {
 
     #[test]
     fn spacing_pre() {
-        let input = " _";
+        let input = " _a";
 
         let token = input.lex_iter().nth(1).unwrap();
         let start = Position::new(1, 2);
@@ -45,11 +45,11 @@ mod subscript {
 
     #[test]
     fn spacing_post() {
-        let input = "_ ";
+        let input = "a_ ";
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 1);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 2);
 
         assert!(!token.opens());
         assert!(token.closes());
@@ -89,11 +89,11 @@ mod underline_token {
 
     #[test]
     fn no_spacing() {
-        let input = "__";
+        let input = "a__a";
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 2);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 3);
 
         assert!(token.opens());
         assert!(token.closes());
@@ -109,7 +109,7 @@ mod underline_token {
 
     #[test]
     fn spacing_pre() {
-        let input = " __";
+        let input = " __a";
 
         let token = input.lex_iter().nth(1).unwrap();
         let start = Position::new(1, 2);
@@ -129,11 +129,11 @@ mod underline_token {
 
     #[test]
     fn spacing_post() {
-        let input = "__ ";
+        let input = "a__ ";
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 2);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 3);
 
         assert!(!token.opens());
         assert!(token.closes());
@@ -173,11 +173,11 @@ mod underline_subscript {
 
     #[test]
     fn no_spacing() {
-        let input = "___";
+        let input = "a___a";
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 3);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 4);
 
         assert!(token.opens());
         assert!(token.closes());
@@ -193,7 +193,7 @@ mod underline_subscript {
 
     #[test]
     fn spacing_pre() {
-        let input = " ___";
+        let input = " ___a";
 
         let token = input.lex_iter().nth(1).unwrap();
         let start = Position::new(1, 2);
@@ -213,11 +213,11 @@ mod underline_subscript {
 
     #[test]
     fn spacing_post() {
-        let input = "___ ";
+        let input = "a___ ";
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 3);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 4);
 
         assert!(!token.opens());
         assert!(token.closes());
@@ -257,11 +257,11 @@ mod plain {
 
     #[test]
     fn no_spacing() {
-        let input = "____";
+        let input = "a____a";
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 4);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 5);
 
         assert!(!token.opens());
         assert!(!token.closes());
@@ -277,7 +277,7 @@ mod plain {
 
     #[test]
     fn spacing_pre() {
-        let input = " ____";
+        let input = " ____a";
 
         let token = input.lex_iter().nth(1).unwrap();
         let start = Position::new(1, 2);
@@ -297,11 +297,11 @@ mod plain {
 
     #[test]
     fn spacing_post() {
-        let input = "____ ";
+        let input = "a____ ";
 
-        let token = input.lex_iter().next().unwrap();
-        let start = Position::new(1, 1);
-        let end = Position::new(1, 4);
+        let token = input.lex_iter().nth(1).unwrap();
+        let start = Position::new(1, 2);
+        let end = Position::new(1, 5);
 
         assert!(!token.opens());
         assert!(!token.closes());
