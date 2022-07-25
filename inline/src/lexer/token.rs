@@ -556,7 +556,7 @@ impl From<&Inline> for TokenKind {
             Inline::Verbatim(_) => Self::Verbatim,
             Inline::Quote(_) => Self::Quote,
             Inline::Math(_) => Self::Math,
-            Inline::Parens(_) => Self::OpenParens,
+            Inline::Parentheses(_) => Self::OpenParens,
             Inline::TextGroup(_) => Self::OpenBracket,
             Inline::Attributes(_) => Self::OpenBrace,
             Inline::Newline(_) => Self::Newline,

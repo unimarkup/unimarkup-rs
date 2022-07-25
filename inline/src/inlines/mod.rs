@@ -45,7 +45,7 @@ pub enum Inline {
     Math(NestedContent),
 
     /// Content inside a pair of parenthesis `()`.
-    Parens(PlainContent),
+    Parentheses(PlainContent),
 
     /// Content of a TextGroup `[]`.
     TextGroup(NestedContent),
@@ -96,7 +96,7 @@ impl Inline {
             TokenKind::Highlight => Self::Highlight(content.into()),
             TokenKind::Quote => Self::Quote(content.into()),
             TokenKind::Math => Self::Math(content.into()),
-            TokenKind::OpenParens => Self::Parens(content.into()),
+            TokenKind::OpenParens => Self::Parentheses(content.into()),
             TokenKind::OpenBracket => Self::TextGroup(content.into()),
             TokenKind::OpenBrace => Self::Attributes(content.into()),
             TokenKind::Substitution => Self::Substitution(content.into()),
@@ -147,7 +147,7 @@ impl Inline {
             Inline::Verbatim(_) => matches!(other, Self::Verbatim(_)),
             Inline::Quote(_) => matches!(other, Self::Quote(_)),
             Inline::Math(_) => matches!(other, Self::Math(_)),
-            Inline::Parens(_) => matches!(other, Self::Parens(_)),
+            Inline::Parentheses(_) => matches!(other, Self::Parentheses(_)),
             Inline::TextGroup(_) => matches!(other, Self::TextGroup(_)),
             Inline::Attributes(_) => matches!(other, Self::Attributes(_)),
             Inline::Substitution(_) => matches!(other, Self::Substitution(_)),
@@ -173,7 +173,7 @@ impl Inline {
     pub fn into_inner(self) -> InlineContent<PlainContent, NestedContent> {
         match self {
             Inline::Verbatim(plain_content)
-            | Inline::Parens(plain_content)
+            | Inline::Parentheses(plain_content)
             | Inline::Newline(plain_content)
             | Inline::Whitespace(plain_content)
             | Inline::EndOfLine(plain_content)
@@ -231,7 +231,7 @@ impl Inline {
     pub fn content_len(&self) -> usize {
         match self {
             Inline::Verbatim(plain_content)
-            | Inline::Parens(plain_content)
+            | Inline::Parentheses(plain_content)
             | Inline::Newline(plain_content)
             | Inline::Whitespace(plain_content)
             | Inline::EndOfLine(plain_content)
@@ -266,7 +266,7 @@ impl Inline {
     pub fn as_ref(&self) -> InlineContent<&PlainContent, &NestedContent> {
         match self {
             Inline::Verbatim(content)
-            | Inline::Parens(content)
+            | Inline::Parentheses(content)
             | Inline::Newline(content)
             | Inline::Whitespace(content)
             | Inline::EndOfLine(content)
