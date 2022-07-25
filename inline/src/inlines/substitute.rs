@@ -120,52 +120,15 @@ impl Substitutor<'_> {
 /// If there’s no defined substitution for given input in Unimarkup specification, a Substitute with
 /// original input as its content is generated.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Substitute {
+pub(crate) struct Substitute {
     content: String,
     original_len: usize,
 }
 
-impl<T> From<T> for Substitute
-where
-    T: Into<String>,
-{
-    fn from(input: T) -> Self {
-        let mut content = input.into();
-        let original_len = content.len();
-
-        Self::substitute(&mut content);
-
-        Self {
-            content,
-            original_len,
-        }
-    }
-}
-
 impl Substitute {
-    /// Substitutes all occurrences of [`EMOJIS`] and [`ALIASES`] with their Unicode values in place.
-    ///
-    /// [`EMOJIS`]: self::EMOJIS
-    /// [`ALIASES`]: self::ALIASES
-    pub fn substitute(content: &mut String) {
-        for (key, value) in EMOJIS
-            .into_iter()
-            .chain(ALIASES.into_iter())
-            .chain(ARROWS.into_iter())
-        {
-            *content = content.replace(key, value);
-        }
-    }
-
     /// Returns the content of this Substitute as &str.
     pub fn as_str(&self) -> &str {
         &self.content
-    }
-
-    /// Returns length of the content of this Substitute.
-    #[allow(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
-        self.content.len()
     }
 
     /// Returns the length of the content of this Substitute before substitutions have taken place.

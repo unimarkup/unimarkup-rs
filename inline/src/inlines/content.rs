@@ -3,7 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::{Inline, Span, Substitute, Token, TokenKind};
+use crate::{Inline, Span, Token, TokenKind};
 
 /// Content of an [`Inline`].
 ///
@@ -89,11 +89,7 @@ impl PlainContent {
     /// Creates a new `PlainContent` with the given text and [`Span`].
     ///
     /// [`Span`]: crate::Span
-    pub fn new(mut content: String, span: Span) -> Self {
-        // TODO: check if config flag is set to substitute emojis etc.
-        // NOTE: checking config implies that substitution should take place somewhere else...
-        Substitute::substitute(&mut content);
-
+    pub fn new(content: String, span: Span) -> Self {
         Self { content, span }
     }
 
