@@ -166,8 +166,8 @@ impl InlineContent<PlainContent, NestedContent> {
     ///
     /// [`InlineContent`]: self::InlineContent
     pub fn prepend(&mut self, other: InlineContent<PlainContent, NestedContent>) {
-        let start = other.span().end();
-        let end = self.span().start();
+        let start = other.span().start();
+        let end = self.span().end();
 
         match self {
             InlineContent::Plain(plain_content) => match other {
