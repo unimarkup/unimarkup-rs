@@ -524,7 +524,7 @@ impl TokenKind {
         if self.content_matters() {
             Content::Store
         } else {
-            Content::Auto
+            Content::Discard
         }
     }
 
@@ -579,8 +579,8 @@ impl From<(Symbol<'_>, usize)> for TokenKind {
                 Symbol::Tick => Self::Verbatim,
                 Symbol::Overline => Self::Overline,
                 Symbol::Dollar => Self::Math,
-                Symbol::OpenParens => Self::OpenParens,
-                Symbol::CloseParens => Self::CloseParens,
+                Symbol::OpenParenthesis => Self::OpenParens,
+                Symbol::CloseParenthesis => Self::CloseParens,
                 Symbol::OpenBracket => Self::OpenBracket,
                 Symbol::CloseBracket => Self::CloseBracket,
                 Symbol::OpenBrace => Self::OpenBrace,

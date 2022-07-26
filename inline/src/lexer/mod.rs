@@ -62,7 +62,7 @@ pub struct Lexer<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Symbol<'a> {
     /// The backslash (`\`) is used for escaping other symbols.
-    Esc,
+    Backslash,
     /// The start (`*`) literal is used for bold and/or italic formatting.
     Star,
     /// The underline (`_`) literal is used for undeline and/or subscript formatting.
@@ -83,9 +83,9 @@ pub(crate) enum Symbol<'a> {
     Dollar,
     /// The open parentheses (`(`) literal is used for additional data to text group elements (e.g.
     /// image insert).
-    OpenParens,
+    OpenParenthesis,
     /// The close parentheses (`)`) literal is used to close the additional data to text group.
-    CloseParens,
+    CloseParenthesis,
     /// The open bracket (`[`) literal is used for text group elements.
     OpenBracket,
     /// The close bracket (`]`) literal is used for text group elements.
@@ -108,7 +108,7 @@ pub(crate) enum Symbol<'a> {
 impl<'a> From<&'a str> for Symbol<'a> {
     fn from(input: &'a str) -> Self {
         match input {
-            "\\" => Symbol::Esc,
+            "\\" => Symbol::Backslash,
             "*" => Symbol::Star,
             "_" => Symbol::Underline,
             "^" => Symbol::Caret,
@@ -118,8 +118,8 @@ impl<'a> From<&'a str> for Symbol<'a> {
             "~" => Symbol::Tilde,
             "\"" => Symbol::Quote,
             "$" => Symbol::Dollar,
-            "(" => Symbol::OpenParens,
-            ")" => Symbol::CloseParens,
+            "(" => Symbol::OpenParenthesis,
+            ")" => Symbol::CloseParenthesis,
             "[" => Symbol::OpenBracket,
             "]" => Symbol::CloseBracket,
             "{" => Symbol::OpenBrace,
@@ -155,12 +155,14 @@ impl Symbol<'_> {
         match self {
             Symbol::Star | Symbol::Underline => LexLength::Limited(3),
 
-            Symbol::Esc | Symbol::Caret | Symbol::Overline | Symbol::Tick | Symbol::Dollar => {
-                LexLength::Limited(1)
-            }
+            Symbol::Backslash
+            | Symbol::Caret
+            | Symbol::Overline
+            | Symbol::Tick
+            | Symbol::Dollar => LexLength::Limited(1),
 
-            Symbol::OpenParens
-            | Symbol::CloseParens
+            Symbol::OpenParenthesis
+            | Symbol::CloseParenthesis
             | Symbol::OpenBracket
             | Symbol::CloseBracket
             | Symbol::OpenBrace
@@ -174,7 +176,7 @@ impl Symbol<'_> {
 
     pub(crate) fn as_str(&self) -> &str {
         match self {
-            Symbol::Esc => "\\",
+            Symbol::Backslash => "\\",
             Symbol::Star => "*",
             Symbol::Underline => "_",
             Symbol::Caret => "^",
@@ -184,8 +186,8 @@ impl Symbol<'_> {
             Symbol::Tilde => "~",
             Symbol::Quote => "\"",
             Symbol::Dollar => "$",
-            Symbol::OpenParens => "(",
-            Symbol::CloseParens => ")",
+            Symbol::OpenParenthesis => "(",
+            Symbol::CloseParenthesis => ")",
             Symbol::OpenBracket => "[",
             Symbol::CloseBracket => "]",
             Symbol::OpenBrace => "{",
@@ -215,8 +217,8 @@ impl Symbol<'_> {
                 | Symbol::Tilde
                 | Symbol::Quote
                 | Symbol::Dollar
-                | Symbol::OpenParens
-                | Symbol::CloseParens
+                | Symbol::OpenParenthesis
+                | Symbol::CloseParenthesis
                 | Symbol::OpenBracket
                 | Symbol::CloseBracket
                 | Symbol::OpenBrace
@@ -230,7 +232,7 @@ impl Symbol<'_> {
 
     /// Checks whether the grapheme is "\".
     fn is_esc(&self) -> bool {
-        matches!(self, Symbol::Esc)
+        matches!(self, Symbol::Backslash)
     }
 
     /// Checks whether the grapheme is any of the whitespace characters.
@@ -403,9 +405,9 @@ impl TokenIterator<'_> {
             |_| TokenKind::Plain,
         );
 
-        let pos = self.index + symbol_len;
+        let curr_index = self.index + symbol_len;
         let content = subst.map_or_else(
-            || self.curr[self.index..pos].concat(),
+            || self.curr[self.index..curr_index].concat(),
             |subst| subst.as_str().to_string(),
         );
 
@@ -415,7 +417,7 @@ impl TokenIterator<'_> {
             .optional_content(content, kind.content_option())
             .build();
 
-        self.index = pos;
+        self.index = curr_index;
 
         Some(token)
     }

@@ -307,7 +307,7 @@ impl Inline {
     /// [`Inline`]: self::Inline
     /// [`VecDeque`]: std::collections::VecDeque
     pub(crate) fn merge(self, next_inline: Inline) -> (Inline, VecDeque<Inline>) {
-        let kind = TokenKind::from(&self);
+        let own_kind = TokenKind::from(&self);
         let is_multiple = next_inline.is_multiple();
 
         let mut current_content = self.into_inner();
@@ -322,9 +322,9 @@ impl Inline {
             InlineContent::Nested(nested_inlines) => {
                 let mut content = nested_inlines.content;
 
-                while let Some(inline) = content.get(0) {
+                while let Some(inline) = content.front() {
                     let token_kind = TokenKind::from(inline);
-                    let should_append = !is_multiple || token_kind == kind;
+                    let should_append = !is_multiple || token_kind == own_kind;
 
                     if should_append {
                         current_content.append_inline(content.pop_front().unwrap());
@@ -337,7 +337,7 @@ impl Inline {
             }
         };
 
-        let result_inline = Self::new(current_content, kind);
+        let result_inline = Self::new(current_content, own_kind);
         (result_inline, rest_of_inlines)
     }
 }
