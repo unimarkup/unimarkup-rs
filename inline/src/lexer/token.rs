@@ -564,7 +564,7 @@ impl From<&Inline> for TokenKind {
             Inline::EndOfLine(_) => Self::EndOfLine,
             Inline::Plain(_) => Self::Plain,
             Inline::Multiple(_) => Self::Plain,
-            Inline::Substitution(_) => todo!(),
+            Inline::Substitution(_) => Self::Substitution,
         }
     }
 }
