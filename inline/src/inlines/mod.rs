@@ -38,7 +38,7 @@ pub enum Inline {
     /// Verbatim (monospaced) content.
     Verbatim(PlainContent),
 
-    /// Content as a quotation.
+    /// Quoted content.
     Quote(NestedContent),
 
     /// LaTeX-like math content.
@@ -75,7 +75,12 @@ pub enum Inline {
 }
 
 impl Inline {
-    /// creates a new [`Inline`] with the given content and corresponding to the given [`TokenKind`].
+    /// Create new [`Inline`] from given content depending on the given kind.
+    ///
+    /// # Arguments
+    ///
+    /// * `content` - the [`InlineContet`] put inside the created [`Inline`]
+    /// * `kind` - the [`TokenKind`] used to define the kind of [`Inline`] that should be created
     ///
     /// [`Inline`]: self::Inline
     /// [`TokenKind`]: crate::TokenKind
@@ -116,10 +121,16 @@ impl Inline {
         }
     }
 
-    /// creates a new [`Inline`] with the given content updated with the provided [`Span`] and
-    /// corresponding to the given [`TokenKind`].
+    /// Create new [`Inline`] from given content depending on the given kind.
+    ///
+    /// # Arguments
+    ///
+    /// * `content` - the [`InlineContent`] put inside the created [`Inline`]
+    /// * `kind` - the [`TokenKind`] used to define the kind of [`Inline`] that should be created
+    /// * `span` - given [`Span`] is added to the given content
     ///
     /// [`Inline`]: self::Inline
+    /// [`InlineContent`]: self::content::InlineContent
     /// [`TokenKind`]: crate::TokenKind
     /// [`Span`]: crate::TokenKind
     pub fn with_span(

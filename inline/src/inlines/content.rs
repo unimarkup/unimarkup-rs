@@ -208,10 +208,7 @@ impl InlineContent<PlainContent, NestedContent> {
 
         match self {
             InlineContent::Plain(ref mut plain_content) => {
-                // From inline definitions, this should not be possible. Every variant has already
-                // specified inline content type as it's inner value. Therefore, if some inline has
-                // plain as content, then it can't have nested content. append the inline as text
-                // to the current inline is the solution.
+                // Plain does not allow content nesting. Therefore, content appended as plain text.
                 plain_content.content.push_str(&inline.as_string());
             }
             InlineContent::Nested(ref mut nested_inlines) => {
@@ -257,7 +254,7 @@ impl InlineContent<PlainContent, NestedContent> {
         self.set_span(span);
     }
 
-    /// Creates a [`InlineContent::Plain`] from any given [`Token`], discarding it's [`TokenKind`].
+    /// Creates a [`InlineContent::Plain`] from any given [`Token`], discarding its [`TokenKind`].
     ///
     /// [`InlineContent::Plain`]: self::InlineContent::Plain
     /// [`Token`]: crate::Token

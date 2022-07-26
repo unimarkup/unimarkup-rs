@@ -238,7 +238,7 @@ impl Symbol<'_> {
         matches!(self, Self::Whitespace(_))
     }
 
-    /// Checks whether the grapheme is Unix or Windows style newline.
+    /// Checks whether the grapheme is a valid newline symbol.
     fn is_newline(&self) -> bool {
         matches!(self, Self::Newline)
     }
@@ -289,8 +289,15 @@ impl<'a> IntoIterator for &'a Lexer<'a> {
 /// [`Token`]: self::token::Token
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Content {
+    /// Annotates that content should be stored into [`Token`].
+    ///
+    /// [`Token`]: crate::Token
     Store,
-    Auto,
+
+    /// Annotates that content should **NOT** be stored into [`Token`].
+    ///
+    /// [`Token`]: crate::Token
+    Discard,
 }
 
 /// Helper enum for annotation of allowed length for some given [`Symbol`]
@@ -330,9 +337,10 @@ impl TokenIterator<'_> {
         self.index >= self.curr.len()
     }
 
-    /// Consumes the next line in buffer and sets the cursor to the first grapheme on it.
+    /// Returns the `EndOfLine` [`Token`] for the current line if next line exists, `None`
+    /// otherwise.
     ///
-    /// Returns `Some` end of line token if next line exists, `None` otherwise.
+    /// [`Token`]: crate::Token
     fn next_line(&mut self) -> Option<Token> {
         // remove last line from cache
         let start = self.pos;
@@ -374,12 +382,9 @@ impl TokenIterator<'_> {
     /// [`Token`]: self::token::Token
     /// [`Symbol`]: self::Symbol
     fn lex_keyword(&mut self) -> Option<Token> {
-        // NOT YET IMPLEMENTED :
-        // - ":" -> Custom Emoji, e.g. ::heart::
-        // ... and more
-
         // NOTE: General invariant of lexing:
-        // If some literal occurs the maximal symbol length + 1 times, then it's lexed as plain.
+        // If some contiguous symbol occurrence exceeds the maximal symbol length, the contiguous
+        // sequence is lexed as plain (e.g. ****).
 
         let symbol = self.get_symbol(self.index)?;
         let subst = self.try_lex_substitution(&symbol);
@@ -433,7 +438,7 @@ impl TokenIterator<'_> {
     /// as [`TokenKind::Plain`].
     ///
     /// Disabling the invariant is necessary for some [`Token`]s where we want to stop further
-    /// scanning soon as one valid [`Token`] is lexed. That is the case for [`Symbol::OpenBracket`].
+    /// scanning as soon as one valid [`Token`] is lexed. That is the case for [`Symbol::OpenBracket`].
     /// Consecutive `[` literals are seen as distinct starts of a text group inline format.
     ///
     /// [`Symbol`]: self::Symbol
