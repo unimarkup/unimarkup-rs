@@ -721,8 +721,12 @@ impl AddAssign for Spacing {
 impl SubAssign for Spacing {
     fn sub_assign(&mut self, rhs: Self) {
         match self {
-            Spacing::Both => *self = Spacing::None,
-            Spacing::None => {}
+            Spacing::Both => match rhs {
+                Spacing::Pre => *self = Spacing::Post,
+                Spacing::Post => *self = Spacing::Pre,
+                Spacing::Both => *self = Spacing::None,
+                Spacing::None => {}
+            },
             Spacing::Pre => match rhs {
                 Spacing::Pre | Spacing::Both => *self = Spacing::None,
                 _ => {}
@@ -731,6 +735,7 @@ impl SubAssign for Spacing {
                 Spacing::Post | Spacing::Both => *self = Spacing::None,
                 _ => {}
             },
+            Spacing::None => {}
         };
     }
 }
