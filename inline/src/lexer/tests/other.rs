@@ -144,7 +144,7 @@ mod escape {
 
         #[test]
         fn newline() {
-            let input = "Escaped\\\n newline";
+            let input = "Escaped\\\nnewline";
 
             let token = input.lex_iter().nth(1).unwrap();
             let start = Position::new(1, 8);
@@ -213,6 +213,25 @@ mod escape {
                     Spacing::Both,
                     (start, end),
                     "This is * text with escaped star."
+            };
+        }
+
+        #[test]
+        fn start_begin_of_line() {
+            let input = "\\*This text escapes a start at the beginning of line.";
+
+            let token = input.lex_iter().next().unwrap();
+            let start = Position::new(1, 1);
+            let end = Position::new(1, 53);
+
+            dbg!(&token);
+
+            assert_token! {
+                token with
+                    TokenKind::Plain,
+                    Spacing::Both,
+                    (start, end),
+                    "*This text escapes a start at the beginning of line."
             };
         }
     }
