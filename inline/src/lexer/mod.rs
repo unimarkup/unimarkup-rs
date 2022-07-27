@@ -507,7 +507,12 @@ impl TokenIterator<'_> {
                 _ => self.index.saturating_sub(offset),
             }
         } else {
-            self.index.saturating_add(offset as usize)
+            match self.index.saturating_add(offset as usize) {
+                // NOTE: end of line symbol IS whitespace
+                pos if pos == self.curr.len() => return true,
+                pos if pos > self.curr.len() => return false,
+                pos => pos,
+            }
         };
 
         self.get_symbol(pos).map_or(true, |ch| ch.is_whitespace())
