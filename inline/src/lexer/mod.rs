@@ -640,10 +640,11 @@ impl<'a> Iterator for TokenIterator<'a> {
         // 2. next grapheme is '\' -> handle escape sequence
         // 3. next grapheme is not a keyword -> it is plain text
 
-        if let Some(symbol) = self.get_symbol(self.index) {
-            if symbol.is_keyword() || symbol.is_start_of_subst(&self.substitutor) {
-                return self.lex_keyword();
-            } else if symbol.is_esc() {
+        match self.get_symbol(self.index) {
+            Some(symbol) if symbol.is_keyword() || symbol.is_start_of_subst(&self.substitutor) => {
+                self.lex_keyword()
+            }
+            Some(symbol) if symbol.is_esc() => {
                 // Three cases:
                 // 1. next character has significance in escape sequence -> some token
                 // 2. next character has no significance -> lex as plain text
@@ -653,29 +654,27 @@ impl<'a> Iterator for TokenIterator<'a> {
                 match self.get_symbol(self.index + 1) {
                     Some(grapheme) if grapheme.is_significant_esc() => {
                         self.index += 1;
-                        return self.lex_escape_seq();
+                        self.lex_escape_seq()
                     }
-                    Some(_) => return self.lex_plain(),
+                    Some(_) => self.lex_plain(),
                     None => {
                         // is end of line -> newline token!
+                        self.index += 1;
                         let start_pos = self.pos;
                         let end_pos = start_pos + (0, 1);
 
-                        let token = TokenBuilder::new(TokenKind::Newline)
-                            .span(Span::from((start_pos, end_pos)))
-                            .space(Spacing::None)
-                            .with_content(String::from("\n"))
-                            .build();
+                        let token = Token::new(
+                            TokenKind::Newline,
+                            Span::from((start_pos, end_pos)),
+                            self.spacing_around(1),
+                        );
 
-                        return Some(token);
+                        Some(token)
                     }
                 }
-            } else {
-                return self.lex_plain();
             }
+            _ => self.lex_plain(),
         }
-
-        None
     }
 }
 
