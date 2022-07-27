@@ -536,10 +536,8 @@ impl TokenIterator<'_> {
                     // character can be consumed if not significant in escape sequence
                     Some(symbol) if symbol.is_significant_esc() => break,
                     Some(symbol) => {
-                        // consume and skip the symbol in next iteration
                         content.push_str(symbol.as_str());
                         self.index += 2;
-                        continue;
                     }
                     None => break,
                 }
