@@ -1095,4 +1095,84 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn verbatim_with_escaped_accent() {
+        let input = "`verbatim\\`escaped`";
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 1);
+        let end = start + (0, 19 - 1); // 19 because one backslash used for backslash escape in Rust
+
+        assert!(matches!(inline, Inline::Verbatim(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert!(matches!(inline.as_ref(), InlineContent::Plain(_)));
+
+        let inner = inline.into_inner().into_plain();
+
+        assert_eq!(
+            inner,
+            PlainContent {
+                content: String::from("verbatim`escaped"),
+                span: Span::from((start, end))
+            }
+        );
+    }
+
+    #[test]
+    fn plain_asterisk_no_bold() {
+        let input = "******no bold**";
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 1);
+        let end = start + (0, input.chars().count() - 1);
+
+        println!("{:?}", parser.next().unwrap());
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert!(matches!(inline.as_ref(), InlineContent::Plain(_)));
+
+        let inner = inline.into_inner().into_plain();
+
+        assert_eq!(
+            inner,
+            PlainContent {
+                content: String::from("******no bold**"),
+                span: Span::from((start, end))
+            }
+        );
+    }
+
+    #[test]
+    fn two_open_italic_closing_at_end() {
+        let input = "*open *2nd closing*";
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+        let start = Position::new(1, 1);
+        let end = start + (0, input.chars().count() - 1);
+
+        assert!(matches!(inline, Inline::Italic(_)));
+        assert_eq!(inline.span(), Span::from((start, end)));
+        assert!(matches!(inline.as_ref(), InlineContent::Nested(_)));
+
+        let mut inner = inline.into_inner().into_nested();
+        let mut inner = inner.content.drain(..);
+
+        let inline = inner.next().unwrap();
+        let start = start + (0, 1);
+        let end = start + (0, input.chars().count() - (2 + 1));
+
+        assert!(matches!(inline, Inline::Plain(_)));
+        assert_eq!(
+            inline.as_ref(),
+            InlineContent::Plain(&PlainContent {
+                content: String::from("open *2nd closing"),
+                span: Span::from((start, end))
+            })
+        );
+    }
 }
