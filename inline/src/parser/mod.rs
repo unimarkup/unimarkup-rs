@@ -33,7 +33,11 @@ impl ParserStack {
         self.data.pop()
     }
 
-    /// Removes and returns the last item on stack
+    /// Removes and returns the last item on stack. If the last item on stack is an ambiguous
+    /// [`Token`], the [`Token`] passed as parameter is partially removed from it and the resulting
+    /// [`Token`] is returned.
+    ///
+    /// [`Token`]: crate::Token
     pub fn pop(&mut self, token: &Token) -> Option<Token> {
         if self.data.is_empty() {
             None
@@ -190,7 +194,7 @@ impl Parser<'_> {
         self.stack_mut().push(token)
     }
 
-    /// Pops the token last added to the currently active stack.
+    /// Pops the token last pushed to the currently active stack.
     fn pop_last(&mut self) -> Option<Token> {
         match self.stack_mut().pop_last() {
             Some(token) => {
