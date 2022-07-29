@@ -247,12 +247,12 @@ impl Token {
     pub fn opens(&self) -> bool {
         match self.kind() {
             TokenKind::Substitution => true,
-            some_kind if some_kind.is_open_parentheses() => true,
+            some_kind if some_kind.is_open_bracket() => true,
             _ => {
                 let not_followed_by_whitespace =
                     matches!(self.spacing, Spacing::Pre | Spacing::None);
 
-                !self.kind.is_close_parentheses()
+                !self.kind.is_close_bracket()
                     && self.is_nesting_token()
                     && not_followed_by_whitespace
             }
@@ -265,12 +265,12 @@ impl Token {
     pub fn closes(&self) -> bool {
         match self.kind() {
             TokenKind::Substitution => true,
-            some_kind if some_kind.is_close_parentheses() => true,
+            some_kind if some_kind.is_close_bracket() => true,
             _ => {
                 let not_preceded_by_whitespace =
                     matches!(self.spacing, Spacing::Post | Spacing::None);
 
-                !self.kind().is_open_parentheses()
+                !self.kind().is_open_bracket()
                     && self.is_nesting_token()
                     && not_preceded_by_whitespace
             }
@@ -529,12 +529,12 @@ impl TokenKind {
     }
 
     /// Checks if this is some kind of open parenthesis (`(`, `[` or `{`).
-    pub(crate) fn is_open_parentheses(&self) -> bool {
+    pub(crate) fn is_open_bracket(&self) -> bool {
         matches!(self, Self::OpenParens | Self::OpenBracket | Self::OpenBrace)
     }
 
     /// Checks if this is some kind of close parenthesis (`)`, `]` or `]`).
-    pub(crate) fn is_close_parentheses(&self) -> bool {
+    pub(crate) fn is_close_bracket(&self) -> bool {
         matches!(
             self,
             Self::CloseParens | Self::CloseBracket | Self::CloseBrace

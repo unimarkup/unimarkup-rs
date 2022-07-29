@@ -99,7 +99,7 @@ impl Parser<'_> {
                 || inner_token.matches_pair(token)
         });
 
-        !token.kind().is_open_parentheses() && res
+        !token.kind().is_open_bracket() && res
     }
 
     /// Checks whether there is a [`Token`] stored in token cache that is a closing one and is
@@ -176,7 +176,7 @@ impl Parser<'_> {
     fn pop_last(&mut self) -> Option<Token> {
         match self.stack_mut().pop_last() {
             Some(token) => {
-                self.scope_cleared = token.kind().is_open_parentheses() && self.stack().is_empty();
+                self.scope_cleared = token.kind().is_open_bracket() && self.stack().is_empty();
                 self.exit_scope();
 
                 Some(token)
@@ -197,7 +197,7 @@ impl Parser<'_> {
     fn pop(&mut self, token: &Token) -> Option<Token> {
         match self.stack_mut().pop(token) {
             Some(token) => {
-                self.scope_cleared = token.kind().is_open_parentheses() && self.stack().is_empty();
+                self.scope_cleared = token.kind().is_open_bracket() && self.stack().is_empty();
 
                 self.exit_scope();
 
@@ -249,7 +249,6 @@ impl Parser<'_> {
         while !self.is_token_latest(&next_token) {
             match self.pop_last() {
                 Some(token) => {
-                    // prepend the token to content as plain text
                     content.prepend(InlineContent::from_token_as_plain(token));
                 }
                 None => break,
@@ -259,7 +258,7 @@ impl Parser<'_> {
         let last_token = self.pop(&next_token);
 
         match last_token {
-            Some(token) if token.kind().is_open_parentheses() => {
+            Some(token) if token.kind().is_open_bracket() => {
                 let start = token.span().start();
                 let end = next_token.span().end();
 
