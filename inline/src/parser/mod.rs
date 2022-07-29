@@ -68,11 +68,29 @@ impl ParserStack {
 /// [`Inline`]: crate::Inline
 #[derive(Debug, Clone)]
 pub struct Parser<'i> {
+    /// Iterator over [`Token`]s found in Unimarkup input.
+    ///
+    /// [`Token`]: crate::Token
     iter: TokenIterator<'i>,
+
+    /// Stack used for parsing.
     stack: ParserStack,
+
+    /// Storage of [`Token`] already yielded from [`TokenIterator`] but not consumed in current
+    /// iteration of parsing.
+    ///
+    /// [`Token`]: crate::Token
+    /// [`TokenIterator`]: crate::TokenIterator
+    /// [`Inline`]: crate::Inline
     token_cache: Option<Token>,
+
+    /// Storage of stacks used for scopes.
     stack_cache: Vec<ParserStack>,
+
+    /// Flag to know if the current scope is fully cleared.
     scope_cleared: bool,
+
+    /// Storage of parsed [`Inline`]s that should be returned before parsing next [`Inline`].
     inline_cache: VecDeque<Inline>,
 }
 
