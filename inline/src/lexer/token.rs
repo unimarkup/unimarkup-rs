@@ -780,10 +780,20 @@ impl Span {
 
     /// Returns the difference between end and start [`Position`] of this [`Span`].
     ///
+    /// # Panics
+    ///
+    /// * if [`Span`] occupies multiple lines in original document. Length cannot be approximated
+    ///   in such case, since it is unknown how long each of the lines was.
+    ///
     /// [`Position`]: self::Position
     /// [`Span`]: self::Span
-    pub fn len(&self) -> Position {
-        self.end - self.start
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        if self.start.line != self.end.line {
+            panic!("Length cannot be approximated for Spans over multiple lines.");
+        }
+
+        self.end.column - self.start.column
     }
 
     fn overlaps(&self, other: Span) -> bool {
@@ -809,13 +819,13 @@ impl Span {
             other
         } else if other.end < self.start {
             let start = self.start;
-            let end = start + other.len();
+            let end = start + (0, other.len());
 
             Span::from((start, end))
         } else {
             // !self.overlaps implies that in this case other.start > self.end
             let end = self.end;
-            let start = end - other.len();
+            let start = end - (0, other.len());
 
             Span::from((start, end))
         };
