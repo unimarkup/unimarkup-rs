@@ -112,7 +112,7 @@ impl Parser<'_> {
             .map_or(false, |token| token.closes() && self.is_token_open(token))
     }
 
-    /// Checks whether the given [`Token`] is the last one encountered.
+    /// Checks whether the given [`Token`] matches with the last encountered [`Token`].
     ///
     /// [`Token`]: crate::Token
     fn is_token_latest(&self, token: &Token) -> bool {
@@ -146,6 +146,7 @@ impl Parser<'_> {
     }
 
     /// Removes the currently active stack and restores the stack of the outer scope.
+    /// Scope is only exited if it's completely cleared.
     fn exit_scope(&mut self) {
         if !self.scope_cleared {
             return;
@@ -157,7 +158,12 @@ impl Parser<'_> {
         }
     }
 
-    /// Pushes a token to the currently active stack.
+    /// Pushes a token to the currently active stack, or enters a new scope if [`Token`] with
+    /// [`TokenKind::OpenBracket`] is encountered, since that starts an [`Inline::TextGroup`].
+    ///
+    /// [`Token`]: crate::Token
+    /// [`TokenKind::OpenBracket`]: crate::TokenKind::OpenBracket
+    /// [`Inline::TextGroup`]: crate::Inline::TextGroup
     fn push_to_stack(&mut self, token: Token) -> usize {
         if matches!(token.kind(), TokenKind::OpenBracket) {
             self.enter_scope();
@@ -218,6 +224,7 @@ impl Parser<'_> {
     ///
     /// [`Inline`]: crate::Inline
     fn inline_closed(&self, kind: TokenKind, span: Span) -> bool {
+        // TODO: check if ANY of the tokens in stack match this inline
         if let Some(token) = self.last_token() {
             !(token.kind() == kind && token.span().start() == span.start())
         } else {
@@ -237,7 +244,8 @@ impl Parser<'_> {
         next_token: Token,
         mut content: InlineContent<PlainContent, NestedContent>,
     ) -> Inline {
-        // It is closing one, but it was not open last -> Return contents as inline
+        // next_token is a closing one, but it was not open last
+        // -> Return parsed content as plain text backwards up to the corresponding opening token
         while !self.is_token_latest(&next_token) {
             match self.pop_last() {
                 Some(token) => {
@@ -506,7 +514,6 @@ mod tests {
         // no remaining inlines
         assert_eq!(parser.count(), 0);
         assert!(matches!(inline, Inline::Bold(_)));
-        // assert_eq!(inline.kind, InlineKind::Bold);
         assert_eq!(
             inline.as_ref(),
             InlineContent::Nested(&NestedContent {
