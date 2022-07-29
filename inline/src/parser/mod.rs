@@ -120,8 +120,8 @@ impl Parser<'_> {
         !token.kind().is_open_bracket() && res
     }
 
-    /// Checks whether there is a [`Token`] stored in token cache that is a closing one and is
-    /// already open.
+    /// Checks if the cached [`Token`] is a closing [`Token`] and if it's opening pair is already
+    /// encountered and stored in parser stack.
     ///
     /// [`Token`]: crate::Token
     fn cached_token_open(&self) -> bool {
