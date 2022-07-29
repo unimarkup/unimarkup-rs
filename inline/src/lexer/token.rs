@@ -321,7 +321,12 @@ impl Token {
     ///
     /// # Panics
     ///
-    /// if this token is not ambiguous, or if the partial token cannot be removed.
+    /// Panics if any of the following invariants are not upheld:
+    ///
+    /// * This [`Token`] is ambiguous
+    /// * The `other_token` is part of this [`Token`] (i.e. Bold (**) is part of ItalicBold (***))
+    ///
+    /// [`Token`]: self::Token
     pub fn remove_partial(&mut self, other_token: &Token) -> Self {
         let panic_message = "Can't remove partial token, tokens are not overlapping.";
 
@@ -349,8 +354,13 @@ impl Token {
             .build()
     }
 
-    /// Splits ambiguous token into two non-ambiguous tokens. If this token is NOT ambiguous, then
-    /// two copies of self are returned.
+    /// Splits ambiguous token into two non-ambiguous [`Token`]s.
+    ///
+    /// # Panics
+    ///
+    /// Panics if this [`Token`] is not ambiguous.
+    ///
+    /// [`Token`]: self::Token
     pub fn split_ambiguous(self) -> (Self, Self) {
         if !self.is_ambiguous() {
             panic!("Cannot meaningfully split a Token that is not ambiguous.");
