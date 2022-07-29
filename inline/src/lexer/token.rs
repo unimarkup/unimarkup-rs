@@ -212,7 +212,7 @@ impl Token {
         self.span
     }
 
-    /// Updates the [`Span`] that this [`Token`].
+    /// Updates the [`Span`] that this [`Token`] occupies in original input.
     ///
     /// [`Token`]: self::Token
     /// [`Span`]: self::Span
@@ -278,6 +278,7 @@ impl Token {
     }
 
     /// Checks whether this token is the same, or partially contains some other token.
+    /// i.e. `***` contains both Bold (`**`) and Italic `**` tokens.
     pub fn is_or_contains(&self, other: &Self) -> bool {
         if self.kind() == other.kind() {
             true
@@ -319,6 +320,7 @@ impl Token {
     /// Removes partially the other_token from this token.
     ///
     /// # Panics
+    ///
     /// if this token is not ambiguous, or if the partial token cannot be removed.
     pub fn remove_partial(&mut self, other_token: &Token) -> Self {
         let panic_message = "Can't remove partial token, tokens are not overlapping.";
@@ -505,9 +507,7 @@ impl TokenKind {
         self.as_str().len()
     }
 
-    /// Returns the pair of delimiters for this kind as [`&str`].
-    ///
-    /// [`&str`]: &str
+    /// Returns the pair of delimiters for this kind.
     pub fn delimiters(&self) -> TokenDelimiters {
         TokenDelimiters::from(self)
     }
@@ -800,6 +800,7 @@ impl Span {
     /// In both cases, the lenght of the `other` span will not be changed.
     ///
     /// # Returns
+    ///
     /// Tuple containing the resulting span and the removed span.
     ///
     /// [`Span`]: self::Span
