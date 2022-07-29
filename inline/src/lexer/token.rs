@@ -353,7 +353,7 @@ impl Token {
     /// two copies of self are returned.
     pub fn split_ambiguous(self) -> (Self, Self) {
         if !self.is_ambiguous() {
-            (self.clone(), self)
+            panic!("Cannot meaningfully split a Token that is not ambiguous.");
         } else {
             let (first_kind, second_kind) = match self.kind() {
                 TokenKind::ItalicBold => (TokenKind::Italic, TokenKind::Bold),
