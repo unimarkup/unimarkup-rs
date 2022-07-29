@@ -182,7 +182,7 @@ impl Token {
         let content = if let Some(text) = self.content {
             text
         } else {
-            String::default()
+            String::from(self.as_str())
         };
 
         (content, self.span)

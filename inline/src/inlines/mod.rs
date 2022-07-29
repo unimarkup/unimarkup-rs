@@ -79,11 +79,12 @@ impl Inline {
     ///
     /// # Arguments
     ///
-    /// * `content` - the [`InlineContet`] put inside the created [`Inline`]
+    /// * `content` - the [`InlineContent`] put inside the created [`Inline`]
     /// * `kind` - the [`TokenKind`] used to define the kind of [`Inline`] that should be created
     ///
     /// [`Inline`]: self::Inline
     /// [`TokenKind`]: crate::TokenKind
+    /// [`InlineContent`]: self::content::InlineContent
     pub fn new(content: InlineContent<PlainContent, NestedContent>, kind: TokenKind) -> Self {
         let consume_as_plain = |content| match content {
             InlineContent::Plain(plain_content) => Self::Plain(plain_content),
@@ -118,6 +119,35 @@ impl Inline {
             | TokenKind::CloseParens
             | TokenKind::CloseBracket
             | TokenKind::CloseBrace => consume_as_plain(content),
+        }
+    }
+
+    /// Create new [`Inline::Plain`], [`Inline::Multiple`] [`Inline::EndOfLine`] from given content
+    /// depending on the given kind.
+    ///
+    /// # Arguments
+    ///
+    /// * `content` - the [`InlineContent`] put inside the created [`Inline`]
+    /// * `kind` - the [`TokenKind`] used to choose one of the three options
+    ///
+    /// [`Inline`]: self::Inline
+    /// [`Inline::Plain`]: self::Inline::Plain
+    /// [`Inline::Multiple`]: self::Inline::Multiple
+    /// [`Inline::EndOfLine`]: self::Inline::EndOfLine
+    /// [`TokenKind`]: crate::TokenKind
+    /// [`InlineContent`]: self::content::InlineContent
+    pub fn as_plain_or_eol(
+        content: InlineContent<PlainContent, NestedContent>,
+        kind: TokenKind,
+    ) -> Self {
+        let consume_as_plain = |content| match content {
+            InlineContent::Plain(plain_content) => Self::Plain(plain_content),
+            InlineContent::Nested(nested_content) => Self::Multiple(nested_content),
+        };
+
+        match kind {
+            TokenKind::EndOfLine => Self::EndOfLine(content.into()),
+            _ => consume_as_plain(content),
         }
     }
 

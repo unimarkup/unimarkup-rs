@@ -449,7 +449,7 @@ impl Parser<'_> {
             let (content, span) = next_token.into_inner();
             let inline_content = InlineContent::Plain(PlainContent::new(content, span));
 
-            Inline::new(inline_content, kind)
+            Inline::as_plain_or_eol(inline_content, kind)
         };
 
         Some(inline)
@@ -1016,7 +1016,7 @@ mod tests {
         assert_eq!(
             inline.as_ref(),
             InlineContent::Plain(&PlainContent {
-                content: String::from(""),
+                content: String::from("\n"),
                 span: Span::from((start, end))
             })
         );
@@ -1044,7 +1044,7 @@ mod tests {
         assert_eq!(
             inline.as_ref(),
             InlineContent::Plain(&PlainContent {
-                content: String::from(""),
+                content: String::from("\n"),
                 span: Span::from((start, end))
             })
         );
@@ -1156,8 +1156,6 @@ mod tests {
         let inline = parser.next().unwrap();
         let start = Position::new(1, 1);
         let end = start + (0, input.chars().count() - 1);
-
-        println!("{:?}", parser.next().unwrap());
 
         assert!(matches!(inline, Inline::Plain(_)));
         assert_eq!(inline.span(), Span::from((start, end)));
