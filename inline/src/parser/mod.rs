@@ -115,13 +115,13 @@ impl Parser<'_> {
     ///
     /// [`Token`]: crate::Token
     fn is_token_open(&self, token: &Token) -> bool {
-        let res = self.stack.iter().any(|inner_token| {
+        let matches_with_open_token = self.stack.iter().any(|inner_token| {
             inner_token.is_or_contains(token)
                 || token.is_or_contains(inner_token)
                 || inner_token.matches_pair(token)
         });
 
-        !token.kind().is_open_bracket() && res
+        !token.kind().is_open_bracket() && matches_with_open_token
     }
 
     /// Checks if the cached [`Token`] is a closing [`Token`] and if it's opening pair is already
