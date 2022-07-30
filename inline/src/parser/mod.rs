@@ -245,7 +245,7 @@ impl Parser<'_> {
     /// Checks whether the [`Inline`] that's currently being parsed is correctly closed.
     ///
     /// [`Inline`]: crate::Inline
-    fn inline_closed(&self, kind: TokenKind, span: Span) -> bool {
+    fn is_inline_closed(&self, kind: TokenKind, span: Span) -> bool {
         // TODO: check if ANY of the tokens in stack match this inline
         if let Some(token) = self.last_token() {
             !(token.kind() == kind && token.span().start() == span.start())
@@ -406,7 +406,7 @@ impl Parser<'_> {
 
         let span = Span::from((start, end));
 
-        if !self.inline_closed(kind, span) {
+        if !self.is_inline_closed(kind, span) {
             if let Some(last_token) = self.pop() {
                 content.prepend(InlineContent::from(last_token));
                 kind = TokenKind::Plain;
