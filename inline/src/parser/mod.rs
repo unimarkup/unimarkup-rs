@@ -242,16 +242,23 @@ impl Parser<'_> {
         }
     }
 
+    /// Returns **all** [`Token`]s pushed to **any** stack (scope) by the `Parser`.
+    ///
+    /// [`Token`]: crate::Token
+    fn all_tokens(&self) -> impl DoubleEndedIterator<Item = &Token> {
+        self.stack_cache
+            .iter()
+            .flat_map(|stack| stack.iter())
+            .chain(self.stack.iter())
+    }
+
     /// Checks whether the [`Inline`] that's currently being parsed is correctly closed.
     ///
     /// [`Inline`]: crate::Inline
     fn is_inline_closed(&self, kind: TokenKind, span: Span) -> bool {
-        // TODO: check if ANY of the tokens in stack match this inline
-        if let Some(token) = self.last_token() {
-            !(token.kind() == kind && token.span().start() == span.start())
-        } else {
-            true
-        }
+        self.all_tokens()
+            .rev()
+            .any(|token| !(token.kind() == kind && token.span().start() == span.start()))
     }
 
     /// Constructs an [`Inline::Plain`] from [`Inline`] that was parsed up to the `next_token`.
