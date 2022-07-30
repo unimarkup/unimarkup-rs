@@ -29,7 +29,7 @@ impl ParserStack {
     }
 
     /// Removes the last element pushed to the stack, if any.
-    pub fn pop_last(&mut self) -> Option<Token> {
+    pub fn pop(&mut self) -> Option<Token> {
         self.data.pop()
     }
 
@@ -38,7 +38,7 @@ impl ParserStack {
     /// [`Token`] is returned.
     ///
     /// [`Token`]: crate::Token
-    pub fn pop(&mut self, token: &Token) -> Option<Token> {
+    pub fn pop_or_remove_partial(&mut self, token: &Token) -> Option<Token> {
         if self.data.is_empty() {
             None
         } else {
@@ -195,8 +195,8 @@ impl Parser<'_> {
     }
 
     /// Pops the token last pushed to the currently active stack.
-    fn pop_last(&mut self) -> Option<Token> {
-        match self.stack_mut().pop_last() {
+    fn pop(&mut self) -> Option<Token> {
+        match self.stack_mut().pop() {
             Some(token) => {
                 self.scope_cleared = token.kind().is_open_bracket() && self.stack().is_empty();
                 self.exit_scope();
@@ -216,8 +216,8 @@ impl Parser<'_> {
     /// passed token gets removed, and the rest of the token stays on the stack.
     /// This means that even if there is only one token on the stack and `pop()` is called,
     /// there might still be one token left on the stack.
-    fn pop(&mut self, token: &Token) -> Option<Token> {
-        match self.stack_mut().pop(token) {
+    fn pop_or_remove_partial(&mut self, token: &Token) -> Option<Token> {
+        match self.stack_mut().pop_or_remove_partial(token) {
             Some(token) => {
                 self.scope_cleared = token.kind().is_open_bracket() && self.stack().is_empty();
 
@@ -269,7 +269,7 @@ impl Parser<'_> {
         // next_token is a closing one, but it was not open last
         // -> Return parsed content as plain text backwards up to the corresponding opening token
         while !self.is_token_latest(&next_token) {
-            match self.pop_last() {
+            match self.pop() {
                 Some(token) => {
                     content.prepend(InlineContent::from_token_as_plain(token));
                 }
@@ -277,7 +277,7 @@ impl Parser<'_> {
             }
         }
 
-        let last_token = self.pop(&next_token);
+        let last_token = self.pop_or_remove_partial(&next_token);
 
         match last_token {
             Some(token) if token.kind().is_open_bracket() => {
@@ -344,7 +344,7 @@ impl Parser<'_> {
                 // ambiguous token must be split into non-ambiguous tokens
                 let (closing_token, next_token) = if !last_token.is_ambiguous() {
                     let closing_token = next_token.remove_partial(last_token);
-                    self.pop_last();
+                    self.pop();
                     (closing_token, next_token)
                 } else {
                     next_token.split_ambiguous()
@@ -377,7 +377,7 @@ impl Parser<'_> {
 
                     end = closing_token.span().end();
 
-                    if let Some(token) = self.pop(&closing_token) {
+                    if let Some(token) = self.pop_or_remove_partial(&closing_token) {
                         start = token.span().start();
                         kind = token.kind();
                     }
@@ -407,7 +407,7 @@ impl Parser<'_> {
         let span = Span::from((start, end));
 
         if !self.inline_closed(kind, span) {
-            if let Some(last_token) = self.pop_last() {
+            if let Some(last_token) = self.pop() {
                 content.prepend(InlineContent::from(last_token));
                 kind = TokenKind::Plain;
             }
