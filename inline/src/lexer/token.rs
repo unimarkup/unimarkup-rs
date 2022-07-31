@@ -687,6 +687,20 @@ impl TokenDelimiters {
             self.close.as_ref().map(TokenKind::as_str),
         )
     }
+
+    /// Returns the opening [`TokenKind`]
+    ///
+    /// [`TokenKind`]: self::TokenKind
+    pub fn open(&self) -> TokenKind {
+        self.open
+    }
+
+    /// Returns the opening [`TokenKind`] if available.
+    ///
+    /// [`TokenKind`]: self::TokenKind
+    pub fn close(&self) -> Option<TokenKind> {
+        self.close
+    }
 }
 
 /// Enum representing the spacing surrounding a particular token in Unimarkup document.
