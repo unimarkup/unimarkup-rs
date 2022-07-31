@@ -3,8 +3,9 @@ use std::collections::{HashMap, VecDeque};
 use pest::iterators::{Pair, Pairs};
 use pest::Span;
 use strum_macros::*;
+use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 
-use crate::backend::{self, error::BackendError, ParseFromIr, Render};
+use crate::backend::{error::BackendError, ParseFromIr, Render};
 use crate::elements::types::{self, UnimarkupBlocks, UnimarkupType};
 use crate::frontend::error::custom_pest_error;
 use crate::frontend::{
@@ -107,7 +108,7 @@ pub struct HeadingBlock {
     pub level: HeadingLevel,
 
     /// The content of the heading line.
-    pub content: String,
+    pub content: Vec<Inline>,
 
     /// Attributes of the heading.
     pub attributes: String,
@@ -165,7 +166,7 @@ impl HeadingBlock {
         Ok(HeadingBlock {
             id,
             level,
-            content: heading_content.as_str().trim().into(),
+            content: heading_content.as_str().parse_unimarkup_inlines().collect(),
             attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
             line_nr,
         })
@@ -212,7 +213,11 @@ impl AsIrLines<ContentIrLine> for HeadingBlock {
             &self.id,
             self.line_nr,
             um_type,
-            &self.content,
+            &self
+                .content
+                .iter()
+                .map(|inline| inline.as_string())
+                .collect::<String>(),
             "",
             &self.attributes,
             "",
@@ -259,10 +264,12 @@ impl ParseFromIr for HeadingBlock {
             }
 
             let content = if !ir_line.text.is_empty() {
-                ir_line.text
+                &*ir_line.text
             } else {
-                ir_line.fallback_text
-            };
+                &*ir_line.fallback_text
+            }
+            .parse_unimarkup_inlines()
+            .collect();
 
             let attributes = if !ir_line.attributes.is_empty() {
                 ir_line.attributes
@@ -303,25 +310,17 @@ impl Render for HeadingBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        let try_inline = backend::parse_inline(&self.content);
+        let inlines: String = {
+            let mut inline_html = String::new();
 
-        if try_inline.is_err() {
-            return Err(ElementError::General(
-                (GeneralErrLogId::FailedInlineParsing as LogId)
-                    .set_log(
-                        &format!(
-                            "Failed parsing inline formats for heading block with id: '{}'",
-                            &self.id
-                        ),
-                        file!(),
-                        line!(),
-                    )
-                    .add_info(&format!("Cause: {:?}", try_inline.err())),
-            )
-            .into());
-        }
+            for inline in &self.content {
+                inline_html.push_str(&inline.render_html()?);
+            }
 
-        html.push_str(&try_inline.unwrap().render_html()?);
+            inline_html
+        };
+
+        html.push_str(&inlines);
 
         html.push_str("</h");
         html.push_str(&tag_level);
