@@ -65,7 +65,7 @@ pub(crate) enum Symbol<'a> {
     Backslash,
     /// The start (`*`) literal is used for bold and/or italic formatting.
     Star,
-    /// The underline (`_`) literal is used for undeline and/or subscript formatting.
+    /// The underline (`_`) literal is used for underline and/or subscript formatting.
     Underline,
     /// The caret (`^`) literal is used for superscript formatting.
     Caret,

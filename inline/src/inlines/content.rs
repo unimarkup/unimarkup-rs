@@ -107,7 +107,7 @@ impl PlainContent {
         self.content.clone()
     }
 
-    /// Returns the lenght of the content.
+    /// Returns the length of the content.
     pub fn content_len(&self) -> usize {
         self.content.len()
     }
@@ -199,7 +199,7 @@ impl InlineContent<PlainContent, NestedContent> {
         self.set_span(Span::from((start, end)));
     }
 
-    /// Apends an [`Inline`] to this content.
+    /// Appends an [`Inline`] to this content.
     ///
     /// [`Inline`]: self::Inline
     pub fn append_inline(&mut self, inline: Inline) {
@@ -282,7 +282,7 @@ impl InlineContent<PlainContent, NestedContent> {
         }
     }
 
-    /// Returns the lenght of content.
+    /// Returns the length of content.
     pub fn content_len(&self) -> usize {
         match self {
             InlineContent::Plain(plain_content) => plain_content.content_len(),

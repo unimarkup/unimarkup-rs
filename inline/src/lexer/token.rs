@@ -439,7 +439,7 @@ pub enum TokenKind {
     /// Verbatim delimiter token (`` ` ``).
     Verbatim,
 
-    /// Qotation delimiter token (`""`).
+    /// Quotation delimiter token (`""`).
     Quote,
 
     /// Math delimiter token (`$`).

@@ -332,7 +332,7 @@ impl Parser<'_> {
     /// There are three cases:
     /// 1. Opening [`Token`] is not ambiguous, but `next_token` is. In this case, the opening
     ///    [`Token`] will be removed from `next_token`, removed token will be returned and the
-    ///    remaining pairt of `next_token` will be stored into the token cache.
+    ///    remaining part of `next_token` will be stored into the token cache.
     /// 2. Both opening and `next_token` are ambiguous. They will be split into their non-ambiguous
     ///    parts and one part will be returned, and other stored into the token cache.
     /// 3. `next_token` is not ambiguous, so the opening [`Token`] is not relevant. The
