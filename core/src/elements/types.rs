@@ -294,7 +294,7 @@ pub enum UnimarkupType {
 ///
 /// ## Usage
 ///
-/// ```rust
+/// ```ignore
 /// impl_from!(Heading from HeadingBlock);
 ///
 /// // expands to
