@@ -205,6 +205,8 @@ impl AsIrLines<ContentIrLine> for ParagraphBlock {
 mod tests {
     use std::collections::VecDeque;
 
+    use unimarkup_inline::{Inline, ParseUnimarkupInlines};
+
     use crate::{
         backend::{ParseFromIr, Render},
         elements::types::UnimarkupType,
@@ -216,7 +218,9 @@ mod tests {
     #[test]
     fn test__render_html__paragraph() {
         let id = String::from("paragraph-id");
-        let content = String::from("This is the content of the paragraph");
+        let content: Vec<Inline> = "This is the content of the paragraph"
+            .parse_unimarkup_inlines()
+            .collect();
 
         let block = ParagraphBlock {
             id: id.clone(),
@@ -225,7 +229,7 @@ mod tests {
             line_nr: 0,
         };
 
-        let expected_html = format!("<p id='{}'>{}</p>", id, content);
+        let expected_html = format!("<p id='{}'>{}</p>", id, content[0].as_string());
 
         assert_eq!(expected_html, block.render_html().unwrap());
     }
@@ -233,13 +237,15 @@ mod tests {
     #[test]
     fn test__parse_from_ir__paragraph() {
         let test_id = String::from("test-par-id");
-        let content = String::from("This is an example paragraph\nwhich spans multiple lines");
+        let content: Vec<Inline> = "This is an example paragraph\nwhich spans multiple lines"
+            .parse_unimarkup_inlines()
+            .collect();
 
         let mut lines: VecDeque<_> = vec![ContentIrLine {
             id: test_id.clone(),
             line_nr: 0,
             um_type: UnimarkupType::Paragraph.to_string(),
-            text: content.clone(),
+            text: content.iter().map(|inline| inline.as_string()).collect(),
             attributes: String::from("{}"),
             ..Default::default()
         }]
@@ -256,7 +262,9 @@ mod tests {
     #[test]
     fn test__render_html__paragraph_with_inline() {
         let id = String::from("paragraph-id");
-        let content = String::from("This is `the` *content* **of _the_ paragraph**");
+        let content = "This is `the` *content* **of _the_ paragraph**"
+            .parse_unimarkup_inlines()
+            .collect();
 
         let block = ParagraphBlock {
             id: id.clone(),
@@ -266,7 +274,7 @@ mod tests {
         };
 
         let expected_html = format!(
-            "<p id='{}'>This is <pre>the</pre> <i>content</i> <b>of <sub>the</sub> paragraph</b></p>",
+            "<p id='{}'>This is <pre><code>the</code></pre> <em>content</em> <strong>of <sub>the</sub> paragraph</strong></p>",
             id
         );
 
@@ -284,7 +292,7 @@ mod tests {
         let ir_line_bad_type = ContentIrLine {
             id: String::from("some-id"),
             line_nr: 2,
-            um_type: format!("{}-more-info", UnimarkupType::Paragraph.to_string()),
+            um_type: format!("{}-more-info", UnimarkupType::Paragraph),
             text: String::from("This is the text of this paragraph"),
             ..Default::default()
         };
