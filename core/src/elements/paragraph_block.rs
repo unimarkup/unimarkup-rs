@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    backend::{self, error::BackendError, ParseFromIr, Render},
+    backend::{error::BackendError, ParseFromIr, Render},
     elements::types::{self, UnimarkupBlocks, UnimarkupType},
     frontend::{
         error::{custom_pest_error, FrontendError},
@@ -16,6 +16,7 @@ use crate::{
 
 use pest::iterators::Pairs;
 use pest::Span;
+use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 
 use super::{error::ElementError, log_id::GeneralErrLogId};
 
@@ -26,7 +27,7 @@ pub struct ParagraphBlock {
     pub id: String,
 
     /// The content of the paragraph.
-    pub content: String,
+    pub content: Vec<Inline>,
 
     /// Attributes of the paragraph.
     pub attributes: String,
@@ -52,7 +53,8 @@ impl UmParse for ParagraphBlock {
             .next()
             .expect("Invalid paragraph: content expected")
             .as_str()
-            .to_string();
+            .parse_unimarkup_inlines()
+            .collect();
 
         let attributes = if let Some(attributes) = paragraph_rules.next() {
             let attr: HashMap<&str, &str> =
@@ -120,10 +122,12 @@ impl ParseFromIr for ParagraphBlock {
             }
 
             let content = if !ir_line.text.is_empty() {
-                ir_line.text
+                &*ir_line.text
             } else {
-                ir_line.fallback_text
-            };
+                &*ir_line.fallback_text
+            }
+            .parse_unimarkup_inlines()
+            .collect();
 
             let attributes = if !ir_line.attributes.is_empty() {
                 ir_line.attributes
@@ -159,25 +163,16 @@ impl Render for ParagraphBlock {
         html.push_str(&self.id);
         html.push_str("'>");
 
-        let try_inline = backend::parse_inline(&self.content);
+        let inlines = {
+            let mut inline_html = String::new();
+            for inline in &self.content {
+                inline_html.push_str(&inline.render_html()?);
+            }
 
-        if try_inline.is_err() {
-            return Err(ElementError::General(
-                (GeneralErrLogId::FailedInlineParsing as LogId)
-                    .set_log(
-                        &format!(
-                            "Failed parsing inline formats for paragraph block with id: '{}'",
-                            &self.id
-                        ),
-                        file!(),
-                        line!(),
-                    )
-                    .add_info(&format!("Cause: {:?}", try_inline.err())),
-            )
-            .into());
-        }
+            inline_html
+        };
 
-        html.push_str(&try_inline.unwrap().render_html()?);
+        html.push_str(&inlines);
 
         html.push_str("</p>");
 
@@ -191,7 +186,11 @@ impl AsIrLines<ContentIrLine> for ParagraphBlock {
             &self.id,
             self.line_nr,
             UnimarkupType::Paragraph.to_string(),
-            &self.content,
+            &self
+                .content
+                .iter()
+                .map(|inline| inline.as_string())
+                .collect::<String>(),
             "",
             &self.attributes,
             "",
