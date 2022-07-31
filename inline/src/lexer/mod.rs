@@ -1,4 +1,4 @@
-use std::str::Lines;
+use std::{iter::Peekable, str::Lines};
 
 use unicode_segmentation::*;
 
@@ -259,7 +259,7 @@ impl<'a> Lexer<'a> {
     /// [`Lexer`]: self::Lexer
     pub fn iter(&self) -> TokenIterator<'a> {
         let skip_lines_upto_index = self.pos.line.saturating_sub(1);
-        let mut lines = self.input.lines();
+        let mut lines = self.input.lines().peekable();
 
         let curr = lines
             .nth(skip_lines_upto_index)
@@ -326,7 +326,7 @@ impl From<usize> for LexLength {
 /// [`Token`]: self::token::Token
 #[derive(Debug, Clone)]
 pub struct TokenIterator<'a> {
-    lines: Lines<'a>,
+    lines: Peekable<Lines<'a>>,
     curr: Vec<&'a str>,
     index: usize,
     pos: Position, // in input text
@@ -659,17 +659,22 @@ impl<'a> Iterator for TokenIterator<'a> {
                     Some(_) => self.lex_plain(),
                     None => {
                         // is end of line -> newline token!
-                        self.index += 1;
-                        let start_pos = self.pos;
-                        let end_pos = start_pos + (0, 1);
 
-                        let token = Token::new(
-                            TokenKind::Newline,
-                            Span::from((start_pos, end_pos)),
-                            self.spacing_around(1),
-                        );
+                        if self.lines.peek().is_some() {
+                            self.index += 1;
+                            let start_pos = self.pos;
+                            let end_pos = start_pos + (0, 1);
 
-                        Some(token)
+                            let token = Token::new(
+                                TokenKind::Newline,
+                                Span::from((start_pos, end_pos)),
+                                self.spacing_around(1),
+                            );
+
+                            Some(token)
+                        } else {
+                            None
+                        }
                     }
                 }
             }
