@@ -69,6 +69,11 @@ impl NestedContent {
     pub fn count(&self) -> usize {
         self.content.len()
     }
+
+    /// Returns an iterator over the inlines this content contains.
+    pub fn iter(&self) -> impl Iterator<Item = &Inline> {
+        self.content.iter()
+    }
 }
 
 impl Index<usize> for NestedContent {
