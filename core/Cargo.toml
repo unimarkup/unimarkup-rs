@@ -28,3 +28,5 @@ clap = { version = "^3.1.0", features = ["derive", "cargo", "env"] }
 sha3 = "0.10"
 hex = "0.4"
 unimarkup_inline = { path = "../inline/"}
+syntect = "4.6"
+lazy_static = "1.4.0"

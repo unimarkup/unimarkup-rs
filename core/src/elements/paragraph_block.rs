@@ -274,9 +274,9 @@ mod tests {
         };
 
         let expected_html = format!(
-            "<p id='{}'>This is <pre><code>the</code></pre> <em>content</em> <strong>of <sub>the</sub> paragraph</strong></p>",
-            id
-        );
+                    "<p id='{}'>This is <pre><code>the</code></pre> <em>content</em> <strong>of <sub>the</sub> paragraph</strong></p>",
+                    id
+                );
 
         assert_eq!(expected_html, block.render_html().unwrap());
     }

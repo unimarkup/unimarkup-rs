@@ -3,32 +3,56 @@ use std::{
     process::{Command, Stdio},
 };
 
+const TEST_FILE: &str = "attrs.um";
+
 #[test]
 fn test__main_log_trace__attributes_file() {
-    let path = PathBuf::from("tests/test_files/attrs.um");
-    let path = path.canonicalize().unwrap();
+    let path = get_path();
 
     let cli_proc = Command::new("cargo")
-        .current_dir("./..")
+        .current_dir(get_proc_path())
         .stderr(Stdio::piped())
         .args(["run", "--", "--formats=html", &path.to_string_lossy()])
         .spawn()
-        .expect("Failed to spawn cargo run")
+        .expect("Failed to spawn 'cargo run'");
+
+    let output = cli_proc
         .wait_with_output()
-        .expect("Failed to execute cargo run");
+        .expect("Failed to execute 'cargo run'");
+    let logs = String::from_utf8_lossy(&output.stderr);
 
-    let logs = String::from_utf8_lossy(&cli_proc.stderr);
-
-    let out_path = path.with_extension("html");
-
-    assert!(logs.contains(&format!(
-        "INFO : 536936448: Writing to file: \"{}\"",
-        out_path.to_string_lossy()
-    )));
+    assert!(logs.contains("INFO : 536936448: Writing to file: \""));
+    assert!(logs.contains(&format!("{}\"", TEST_FILE.replace(".um", ".html"))));
     assert!(logs.contains("TRACE: 536936448: Occured in file"));
-    assert!(logs.contains(&format!(
-        "INFO : 536936449: Finished compiling: \"{}\"",
-        path.to_string_lossy()
-    )));
+    assert!(logs.contains("INFO : 536936449: Finished compiling: \""));
+    assert!(logs.contains(&format!("{}\"", TEST_FILE)));
     assert!(logs.contains("TRACE: 536936449: Occured in file"));
+}
+
+// Note: Functions below needed to get the test running in 'run' and 'debug' mode
+
+fn get_path() -> PathBuf {
+    let filePath = PathBuf::from(file!());
+    let fileRoot = filePath.parent().unwrap();
+    let path = fileRoot.join("../test_files/".to_owned() + TEST_FILE);
+    match path.canonicalize() {
+        Ok(path) => path,
+        Err(_) => {
+            let path = PathBuf::from("tests/test_files/".to_owned() + TEST_FILE);
+            path.canonicalize().unwrap()
+        }
+    }
+}
+
+fn get_proc_path() -> PathBuf {
+    let filePath = PathBuf::from(file!());
+    let fileRoot = filePath.parent().unwrap();
+    let repoPath = fileRoot.join("../../../.");
+    if fileRoot.canonicalize().is_ok() {
+        if let Ok(path) = repoPath.canonicalize() {
+            return path;
+        }
+    }
+
+    PathBuf::from("./..")
 }

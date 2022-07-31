@@ -6,7 +6,7 @@ enum LogSubSubGrp {
     General = 0,
     Atomic = 1,
     Enclosed = 2,
-    MetaData = 3,
+    Inline = 3,
 }
 
 /// General error log-ids for the element section
@@ -72,15 +72,15 @@ pub enum EnclosedErrLogId {
     ),
 }
 
-/// MetaData error log-ids for the element section
+/// Inline warning log-ids for the elements section
 #[derive(Debug)]
-pub enum MetaDataErrLogId {
-    /// Log-id denoting a fail while reading a file
-    FailedReadingFile = get_log_id(
+pub enum InlineWarnLogId {
+    /// Log-id denoting that inline parsing failed and content is treated as plain as fallback
+    InlineParsingFailed = get_log_id(
         CORE_GRP,
         LogSubGrp::Element as u8,
-        LogSubSubGrp::MetaData as u8,
-        LogKind::Error,
-        0,
+        LogSubSubGrp::Inline as u8,
+        LogKind::Warn,
+        1,
     ),
 }

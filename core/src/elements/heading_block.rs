@@ -56,7 +56,7 @@ impl Default for HeadingLevel {
     }
 }
 
-impl From<HeadingLevel> for usize {
+impl From<HeadingLevel> for u8 {
     fn from(level: HeadingLevel) -> Self {
         match level {
             HeadingLevel::Level1 => 1,
@@ -152,20 +152,22 @@ impl HeadingBlock {
             None => None,
         };
 
-        let level = heading_start.as_str().trim().into();
+        let level = heading_start.as_str().trim();
         let (line_nr, _) = heading_start.as_span().start_pos().line_col();
 
-        // unwrap() is ok becuase heading grammar guarantees that heading has non-empty content
+        let generated_id = match parser::generate_id(heading_content.as_str()) {
+            Some(id) => id.to_lowercase(),
+            None => format!("heading-{}-line-{}", level, line_nr),
+        };
+
         let id = match attributes {
             Some(ref attrs) if attrs.get("id").is_some() => attrs.get("id").unwrap().to_string(),
-            _ => parser::generate_id(heading_content.as_str())
-                .unwrap()
-                .to_lowercase(),
+            _ => generated_id,
         };
 
         Ok(HeadingBlock {
             id,
-            level,
+            level: level.into(),
             content: heading_content.as_str().parse_unimarkup_inlines().collect(),
             attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
             line_nr,
@@ -302,7 +304,7 @@ impl Render for HeadingBlock {
     fn render_html(&self) -> Result<String, BackendError> {
         let mut html = String::default();
 
-        let tag_level = usize::from(self.level).to_string();
+        let tag_level = u8::from(self.level).to_string();
 
         html.push_str("<h");
         html.push_str(&tag_level);
