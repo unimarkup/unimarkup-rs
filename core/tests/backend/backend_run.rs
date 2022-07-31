@@ -5,6 +5,7 @@ use unimarkup_core::{
     elements::{HeadingBlock, HeadingLevel},
     middleend::{self, AsIrLines, ContentIrLine},
 };
+use unimarkup_inline::ParseUnimarkupInlines;
 
 use super::super::middleend::ir_test_setup;
 
@@ -15,7 +16,7 @@ fn test__backend_run__heading_block() {
     let block = HeadingBlock {
         id: "some-id".into(),
         level: HeadingLevel::Level1,
-        content: "This is a heading".into(),
+        content: "This is a heading".parse_unimarkup_inlines().collect(),
         attributes: "{}".into(),
         line_nr: 0,
     };
