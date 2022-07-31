@@ -335,6 +335,8 @@ impl Render for HeadingBlock {
 mod tests {
     use std::collections::VecDeque;
 
+    use unimarkup_inline::ParseUnimarkupInlines;
+
     use crate::{
         backend::{ParseFromIr, Render},
         elements::{heading_block::HeadingLevel, types},
@@ -349,7 +351,7 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = String::from("This is a heading");
+            let heading_content = "This is a heading".parse_unimarkup_inlines().collect();
             let id = format!("heading-id-{}", level);
 
             let heading = HeadingBlock {
@@ -373,7 +375,9 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = String::from("`This` *is _a_* **heading**");
+            let heading_content = "`This` *is _a_* **heading**"
+                .parse_unimarkup_inlines()
+                .collect();
             let id = format!("heading-id-{}", level);
 
             let heading = HeadingBlock {
@@ -387,7 +391,7 @@ mod tests {
             let html = heading.render_html().unwrap();
 
             let expected = format!(
-                "<h{} id='{}'><pre>This</pre> <i>is <sub>a</sub></i> <b>heading</b></h{}>",
+                "<h{} id='{}'><pre><code>This</code></pre> <em>is <sub>a</sub></em> <strong>heading</strong></h{}>",
                 level, id, level
             );
             assert_eq!(html, expected);
@@ -441,7 +445,13 @@ mod tests {
 
             assert_eq!(id, String::from("some_id"));
             assert_eq!(level, HeadingLevel::from(iterations));
-            assert_eq!(content, String::from("This is a heading"));
+            assert_eq!(
+                content
+                    .iter()
+                    .map(|inline| inline.as_string())
+                    .collect::<String>(),
+                String::from("This is a heading")
+            );
             assert_eq!(attr, String::from("{}"));
         }
     }
