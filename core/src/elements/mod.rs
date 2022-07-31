@@ -6,6 +6,7 @@ mod paragraph_block;
 mod verbatim_block;
 
 pub mod error;
+pub mod inlines;
 pub mod log_id;
 pub mod types;
 
