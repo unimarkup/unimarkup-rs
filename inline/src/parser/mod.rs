@@ -255,10 +255,10 @@ impl Parser<'_> {
     /// Checks whether the [`Inline`] that's currently being parsed is correctly closed.
     ///
     /// [`Inline`]: crate::Inline
-    fn is_inline_closed(&self, kind: TokenKind, span: Span) -> bool {
+    fn is_inline_closed(&self, span: Span) -> bool {
         self.all_tokens()
             .rev()
-            .any(|token| !(token.kind() == kind && token.span().start() == span.start()))
+            .all(|token| token.span().start() != span.start())
     }
 
     /// Constructs an [`Inline::Plain`] from [`Inline`] that was parsed up to the `next_token`.
@@ -270,41 +270,32 @@ impl Parser<'_> {
     /// [`Inline::Plain`]: crate::Inline::Plain
     fn nested_inline_as_plain(
         &mut self,
-        next_token: Token,
+        start_token: Token,
         mut content: InlineContent<PlainContent, NestedContent>,
     ) -> Inline {
+        let mut start = content.span().start();
+        let end = content.span().end();
+
         // next_token is a closing one, but it was not open last
         // -> Return parsed content as plain text backwards up to the corresponding opening token
-        while !self.is_token_latest(&next_token) {
+        while !self.is_token_latest(&start_token) {
             match self.pop() {
                 Some(token) => {
+                    start = token.span().start();
                     content.prepend(InlineContent::from_token_as_plain(token));
                 }
                 None => break,
             }
         }
 
-        let last_token = self.pop_or_remove_partial(&next_token);
-
-        match last_token {
-            Some(token) if token.kind().is_open_bracket() => {
-                let start = token.span().start();
-                let end = next_token.span().end();
-
-                Inline::with_span(content, token.kind(), Span::from((start, end)))
-            }
-            _ => {
-                if let Some(last_token) = last_token {
-                    self.push_to_stack(last_token);
-                }
-
-                let start = content.span().start();
-                let end = next_token.span().start() - (0, 1);
-
-                self.token_cache = Some(next_token);
-                Inline::with_span(content, TokenKind::Plain, Span::from((start, end)))
-            }
+        if let Some(start_token) = self.pop_or_remove_partial(&start_token) {
+            start = start_token.span().start();
+            content.prepend(InlineContent::from_token_as_plain(start_token));
         }
+
+        content.try_flatten();
+
+        Inline::with_span(content, TokenKind::Plain, Span::from((start, end)))
     }
 
     /// Consumes the [`Token`] as [`Inline::Plain`] and appends it to the current
@@ -375,6 +366,8 @@ impl Parser<'_> {
         let mut end = start;
         let mut content: InlineContent<_, _> = NestedContent::default().into();
 
+        let start_token = token.clone();
+
         self.push_to_stack(token);
 
         while let Some(next_token) = self.next_token() {
@@ -390,8 +383,6 @@ impl Parser<'_> {
                     }
 
                     if self.cached_token_open() {
-                        content.try_flatten();
-
                         let inner_inline = Inline::with_span(content, kind, (start, end).into());
 
                         content = NestedContent::from(inner_inline).into();
@@ -399,11 +390,11 @@ impl Parser<'_> {
                         break;
                     }
                 } else {
-                    return self.nested_inline_as_plain(next_token, content);
+                    self.token_cache = Some(next_token);
+                    return self.nested_inline_as_plain(start_token, content);
                 }
             } else if next_token.opens() && !self.is_token_open(&next_token) {
                 let nested = self.parse_nested_inline(next_token);
-                end = nested.span().end();
 
                 content.append_inline(nested);
             } else {
@@ -411,16 +402,21 @@ impl Parser<'_> {
             }
         }
 
-        let span = Span::from((start, end));
+        if !self.is_inline_closed(start_token.span()) {
+            if start_token.span().start() != start {
+                let inner_inline = Inline::with_span(content, kind, (start, end).into());
+                content = NestedContent::from(inner_inline).into();
+            }
 
-        if !self.is_inline_closed(kind, span) {
             if let Some(last_token) = self.pop() {
                 content.prepend(InlineContent::from(last_token));
                 kind = TokenKind::Plain;
             }
         }
 
+        let span = Span::from((start, end));
         content.try_flatten();
+
         Inline::with_span(content, kind, span)
     }
 
@@ -434,12 +430,10 @@ impl Parser<'_> {
 
         let next_token = self.next_token()?;
 
-        let inline = if next_token.opens() {
+        let mut inline = if next_token.opens() {
             let parsed_inline = self.parse_nested_inline(next_token);
 
             if !self.stack().is_empty() {
-                // cache parsed inline for next iteration
-
                 // return remaining tokens as plain inline
                 if let Some(content) = self.stack_mut().drain_as_plain() {
                     self.inline_cache.push_front(parsed_inline);
@@ -459,7 +453,17 @@ impl Parser<'_> {
             Inline::as_plain_or_eol(inline_content, kind)
         };
 
-        Some(inline)
+        if let Inline::Multiple(ref mut nested_content) = inline {
+            let next_inline = nested_content.content.pop_front()?;
+
+            while let Some(inline) = nested_content.content.pop_back() {
+                self.inline_cache.push_front(inline);
+            }
+
+            Some(next_inline)
+        } else {
+            Some(inline)
+        }
     }
 }
 
