@@ -85,11 +85,38 @@ impl Inline {
     /// [`Inline`]: self::Inline
     /// [`TokenKind`]: crate::TokenKind
     /// [`InlineContent`]: self::content::InlineContent
-    pub fn new(content: InlineContent<PlainContent, NestedContent>, kind: TokenKind) -> Self {
+    pub fn new(mut content: InlineContent<PlainContent, NestedContent>, kind: TokenKind) -> Self {
         let consume_as_plain = |content| match content {
             InlineContent::Plain(plain_content) => Self::Plain(plain_content),
             InlineContent::Nested(nested_content) => Self::Multiple(nested_content),
         };
+
+        let is_plain = matches!(
+            kind,
+            TokenKind::Verbatim
+                | TokenKind::Newline
+                | TokenKind::EndOfLine
+                | TokenKind::Whitespace
+                | TokenKind::Plain
+                | TokenKind::UnderlineSubscript
+                | TokenKind::ItalicBold
+                | TokenKind::CloseParens
+                | TokenKind::CloseBracket
+                | TokenKind::CloseBrace
+        );
+
+        if !is_plain {
+            let span = content.span();
+            // try to flatten content more
+            if let InlineContent::Nested(ref mut nested) = content {
+                if nested.content.len() == 1 {
+                    if let Inline::Multiple(ref mut nested) = nested.content[0] {
+                        content = InlineContent::Nested(std::mem::take(nested));
+                        content.set_span(span);
+                    }
+                }
+            }
+        }
 
         match kind {
             TokenKind::Bold => Self::Bold(content.into()),
