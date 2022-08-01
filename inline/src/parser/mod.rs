@@ -1212,4 +1212,14 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn bold_around_text_group() {
+        let input = "**This bold [group**] and close** bold..";
+        let mut parser = input.parse_unimarkup_inlines();
+
+        let inline = parser.next().unwrap();
+
+        dbg!(&inline);
+    }
 }
