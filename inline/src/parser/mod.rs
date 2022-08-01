@@ -483,7 +483,7 @@ impl Iterator for Parser<'_> {
                     break;
                 }
             } else {
-                self.inline_cache.push_back(next_inline);
+                self.inline_cache.push_front(next_inline);
                 break;
             }
         }
