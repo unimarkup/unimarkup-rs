@@ -74,6 +74,14 @@ impl NestedContent {
     pub fn iter(&self) -> impl Iterator<Item = &Inline> {
         self.content.iter()
     }
+
+    /// Returns the [`Span`] that this [`NestedContent`] occupies.
+    ///
+    /// [`NestedContent`]: self::NestedContent
+    /// [`Span`]: crate::Span
+    pub fn span(&self) -> Span {
+        self.span
+    }
 }
 
 impl Index<usize> for NestedContent {
@@ -115,6 +123,14 @@ impl PlainContent {
     /// Returns the length of the content.
     pub fn content_len(&self) -> usize {
         self.content.len()
+    }
+
+    /// Returns the [`Span`] that this [`PlainContent`] occupies.
+    ///
+    /// [`PlainContent`]: self::PlainContent
+    /// [`Span`]: crate::Span
+    pub fn span(&self) -> Span {
+        self.span
     }
 }
 
