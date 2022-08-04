@@ -91,29 +91,16 @@ impl Inline {
             InlineContent::Nested(nested_content) => Self::Multiple(nested_content),
         };
 
-        let is_plain = matches!(
-            kind,
-            TokenKind::Verbatim
-                | TokenKind::Newline
-                | TokenKind::EndOfLine
-                | TokenKind::Whitespace
-                | TokenKind::Plain
-                | TokenKind::UnderlineSubscript
-                | TokenKind::ItalicBold
-                | TokenKind::CloseParens
-                | TokenKind::CloseBracket
-                | TokenKind::CloseBrace
-        );
-
-        if !is_plain {
-            let span = content.span();
+        let span = content.span();
+        if let InlineContent::Nested(ref mut nested) = content {
             // try to flatten content more
-            if let InlineContent::Nested(ref mut nested) = content {
-                if nested.content.len() == 1 {
-                    if let Inline::Multiple(ref mut nested) = nested.content[0] {
-                        content = InlineContent::Nested(std::mem::take(nested));
-                        content.set_span(span);
-                    }
+            if nested.content.len() == 1 {
+                let inline = &mut nested.content[0];
+
+                if matches!(inline.as_ref(), InlineContent::Nested(_)) {
+                    content = nested.content.pop_back().unwrap().into_inner();
+                    dbg!(&content);
+                    content.set_span(span);
                 }
             }
         }
