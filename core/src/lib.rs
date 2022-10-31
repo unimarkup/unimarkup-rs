@@ -3,6 +3,7 @@
 
 pub mod backend;
 pub mod config;
+pub mod document;
 pub mod elements;
 pub mod error;
 pub mod frontend;

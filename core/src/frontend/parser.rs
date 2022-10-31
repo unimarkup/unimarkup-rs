@@ -177,7 +177,7 @@ pub fn generate_id(input: &str) -> Option<String> {
 
         for (i, word) in input.split_whitespace().enumerate() {
             if i != 0 {
-                id.push(types::DELIMITER);
+                id.push(types::ELEMENT_TYPE_DELIMITER);
             }
 
             id.push_str(word);

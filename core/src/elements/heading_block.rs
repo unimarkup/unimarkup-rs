@@ -6,7 +6,7 @@ use strum_macros::*;
 use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 
 use crate::backend::{error::BackendError, ParseFromIr, Render};
-use crate::elements::types::{self, UnimarkupBlocks, UnimarkupType};
+use crate::elements::types::{self, UnimarkupBlocks, ElementType};
 use crate::frontend::error::custom_pest_error;
 use crate::frontend::{
     error::FrontendError,
@@ -206,9 +206,9 @@ impl AsIrLines<ContentIrLine> for HeadingBlock {
     fn as_ir_lines(&self) -> Vec<ContentIrLine> {
         let level = self.level.to_string();
 
-        let mut um_type = UnimarkupType::Heading.to_string();
+        let mut um_type = ElementType::Heading.to_string();
 
-        um_type.push(types::DELIMITER);
+        um_type.push(types::ELEMENT_TYPE_DELIMITER);
         um_type.push_str(&level);
 
         let line = ContentIrLine::new(
@@ -240,7 +240,7 @@ impl ParseFromIr for HeadingBlock {
         let mut level = HeadingLevel::Invalid;
 
         if let Some(ir_line) = content_lines.pop_front() {
-            let heading_pattern = format!("heading{delim}level{delim}", delim = types::DELIMITER);
+            let heading_pattern = format!("heading{delim}level{delim}", delim = types::ELEMENT_TYPE_DELIMITER);
 
             if ir_line.um_type.contains(&heading_pattern) {
                 let mut split = ir_line.um_type.split(&heading_pattern);
@@ -413,7 +413,7 @@ mod tests {
                 42 + heading_level,
                 format!(
                     "heading{delim}level{delim}{level}",
-                    delim = types::DELIMITER,
+                    delim = types::ELEMENT_TYPE_DELIMITER,
                     level = heading_level
                 ),
                 "This is a heading",
@@ -465,7 +465,7 @@ mod tests {
         let bad_ir_line = ContentIrLine::new(
             "some_id",
             42,
-            format!("heading{delim}level{delim}0", delim = types::DELIMITER),
+            format!("heading{delim}level{delim}0", delim = types::ELEMENT_TYPE_DELIMITER),
             "This is a heading",
             "",
             "{}",
@@ -483,7 +483,7 @@ mod tests {
         let bad_ir_line = ContentIrLine::new(
             "some_id",
             42,
-            format!("heading{delim}level{delim}7", delim = types::DELIMITER),
+            format!("heading{delim}level{delim}7", delim = types::ELEMENT_TYPE_DELIMITER),
             "This is a heading",
             "",
             "{}",
@@ -503,7 +503,7 @@ mod tests {
             42,
             format!(
                 "some{delim}other{delim}type{delim}level{delim}2",
-                delim = types::DELIMITER
+                delim = types::ELEMENT_TYPE_DELIMITER
             ),
             "This is a heading",
             "",

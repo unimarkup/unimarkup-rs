@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::backend::{error::BackendError, ParseFromIr, Render};
 use crate::elements::log_id::EnclosedErrLogId;
-use crate::elements::types::{UnimarkupBlocks, UnimarkupType};
+use crate::elements::types::{UnimarkupBlocks, ElementType};
 use crate::frontend::error::{custom_pest_error, FrontendError};
 use crate::frontend::parser::{Rule, UmParse};
 use crate::highlight::{self, DEFAULT_THEME, PLAIN_SYNTAX};
@@ -115,7 +115,7 @@ impl AsIrLines<ContentIrLine> for VerbatimBlock {
         let line = ContentIrLine::new(
             &self.id,
             self.line_nr,
-            UnimarkupType::VerbatimBlock.to_string(),
+            ElementType::VerbatimBlock.to_string(),
             &self.content,
             "",
             &self.attributes,
@@ -132,7 +132,7 @@ impl ParseFromIr for VerbatimBlock {
         Self: Sized,
     {
         if let Some(ir_line) = content_lines.pop_front() {
-            let expected_type = UnimarkupType::VerbatimBlock.to_string();
+            let expected_type = ElementType::VerbatimBlock.to_string();
 
             if ir_line.um_type != expected_type {
                 return Err(ElementError::Enclosed(
@@ -220,7 +220,7 @@ mod tests {
 
     use super::*;
     use crate::backend::{ParseFromIr, Render};
-    use crate::elements::types::UnimarkupType;
+    use crate::elements::types::ElementType;
     use crate::frontend::parser::{Rule, UmParse, UnimarkupParser};
     use crate::middleend::*;
 
@@ -290,7 +290,7 @@ mod tests {
         let mut lines: VecDeque<_> = vec![ContentIrLine {
             id: test_id.clone(),
             line_nr: 0,
-            um_type: UnimarkupType::VerbatimBlock.to_string(),
+            um_type: ElementType::VerbatimBlock.to_string(),
             text: content.clone(),
             attributes: String::from("{}"),
             ..Default::default()
@@ -317,7 +317,7 @@ mod tests {
         let ir_line_bad_type = ContentIrLine {
             id: String::from("some-id"),
             line_nr: 2,
-            um_type: format!("{}-more-info", UnimarkupType::VerbatimBlock),
+            um_type: format!("{}-more-info", ElementType::VerbatimBlock),
             text: String::from("This is the text of this verbatim"),
             ..Default::default()
         };
@@ -349,7 +349,7 @@ mod tests {
 
         assert_eq!(line.id, block.id);
         assert_eq!(line.line_nr, block.line_nr);
-        assert_eq!(line.um_type, UnimarkupType::VerbatimBlock.to_string());
+        assert_eq!(line.um_type, ElementType::VerbatimBlock.to_string());
         assert_eq!(line.text, block.content);
         assert!(line.fallback_text.is_empty());
         assert_eq!(line.attributes, block.attributes);
@@ -370,7 +370,7 @@ mod tests {
         let expected_line = ContentIrLine::new(
             "verbatim-1",
             1,
-            UnimarkupType::VerbatimBlock.to_string(),
+            ElementType::VerbatimBlock.to_string(),
             expected_text,
             "",
             "",
@@ -394,7 +394,7 @@ mod tests {
         let expected_line = ContentIrLine::new(
             "verbatim-1",
             1,
-            UnimarkupType::VerbatimBlock.to_string(),
+            ElementType::VerbatimBlock.to_string(),
             expected_text,
             "",
             "{ \"language\": \"rust\" }",
@@ -423,7 +423,7 @@ mod tests {
         let expected_line = ContentIrLine::new(
             "custom-id",
             1,
-            UnimarkupType::VerbatimBlock.to_string(),
+            ElementType::VerbatimBlock.to_string(),
             expected_text,
             "",
             serde_json::to_string(&expected_attrs).unwrap(),

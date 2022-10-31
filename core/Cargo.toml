@@ -10,6 +10,8 @@ version = "0.26"
 features = ["bundled"]
 
 [dependencies]
+logid.workspace = true
+unimarkup_render = { path = "../render/" }
 unicode-segmentation = "1.8.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_rusqlite = "0.28.0"

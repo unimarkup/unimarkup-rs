@@ -1,6 +1,6 @@
 //! Defines the [`Html`] struct that is returned by the [`Render`](crate::render::Render) trait when rendering Unimarkup to HTML.
 
-use logid::log_id::LogId;
+use logid::capturing::MappedLogId;
 
 use crate::render::RenderBlock;
 
@@ -16,9 +16,9 @@ pub struct Html {
 ///
 /// - `blocks` - array of type [`RenderBlock`]
 ///
-/// Returns a [`LogId`], if any of the given blocks return a [`LogId`]
+/// Returns a [`MappedLogId`], if any of the given blocks return a [`MappedLogId`]
 /// when rendering themself.
-pub fn render_html(blocks: &[RenderBlock]) -> Result<Html, LogId> {
+pub fn render_html(blocks: &[RenderBlock]) -> Result<Html, MappedLogId> {
   let mut html = Html::default();
 
   for block in blocks {

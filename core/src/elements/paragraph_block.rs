@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     backend::{error::BackendError, ParseFromIr, Render},
-    elements::types::{self, UnimarkupBlocks, UnimarkupType},
+    elements::types::{self, UnimarkupBlocks, ElementType},
     frontend::{
         error::{custom_pest_error, FrontendError},
         parser::{self, Rule, UmParse},
@@ -83,7 +83,7 @@ impl UmParse for ParagraphBlock {
             _ => parser::generate_id(&format!(
                 "paragraph{delim}{}",
                 line_nr,
-                delim = types::DELIMITER
+                delim = types::ELEMENT_TYPE_DELIMITER
             ))
             .unwrap(),
         };
@@ -105,7 +105,7 @@ impl ParseFromIr for ParagraphBlock {
         Self: Sized,
     {
         if let Some(ir_line) = content_lines.pop_front() {
-            let expected_type = UnimarkupType::Paragraph.to_string();
+            let expected_type = ElementType::Paragraph.to_string();
 
             if ir_line.um_type != expected_type {
                 return Err(ElementError::Atomic(
@@ -185,7 +185,7 @@ impl AsIrLines<ContentIrLine> for ParagraphBlock {
         let line = ContentIrLine::new(
             &self.id,
             self.line_nr,
-            UnimarkupType::Paragraph.to_string(),
+            ElementType::Paragraph.to_string(),
             &self
                 .content
                 .iter()
@@ -209,7 +209,7 @@ mod tests {
 
     use crate::{
         backend::{ParseFromIr, Render},
-        elements::types::UnimarkupType,
+        elements::types::ElementType,
         middleend::ContentIrLine,
     };
 
@@ -244,7 +244,7 @@ mod tests {
         let mut lines: VecDeque<_> = vec![ContentIrLine {
             id: test_id.clone(),
             line_nr: 0,
-            um_type: UnimarkupType::Paragraph.to_string(),
+            um_type: ElementType::Paragraph.to_string(),
             text: content.iter().map(|inline| inline.as_string()).collect(),
             attributes: String::from("{}"),
             ..Default::default()
@@ -292,7 +292,7 @@ mod tests {
         let ir_line_bad_type = ContentIrLine {
             id: String::from("some-id"),
             line_nr: 2,
-            um_type: format!("{}-more-info", UnimarkupType::Paragraph),
+            um_type: format!("{}-more-info", ElementType::Paragraph),
             text: String::from("This is the text of this paragraph"),
             ..Default::default()
         };

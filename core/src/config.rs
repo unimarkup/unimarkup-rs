@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
 use crate::{
-    elements::types::UnimarkupType,
+    elements::types::ElementType,
     error::ConfigError,
     log_id::{ConfigErrLogId, LogId, SetLog},
 };
@@ -117,7 +117,7 @@ pub struct Config {
     )]
     #[serde(alias = "enable-elements")]
     #[serde(default)]
-    pub enable_elements: Option<Vec<UnimarkupType>>,
+    pub enable_elements: Option<Vec<ElementType>>,
 
     /// Explicitly set Unimarkup block elements that can NOT be used inside the given Unimarkup document.
     /// If this option is set, all Unimarkup elements that are not given are enabled.
@@ -130,7 +130,7 @@ pub struct Config {
     )]
     #[serde(alias = "disable-elements")]
     #[serde(default)]
-    pub disable_elements: Option<Vec<UnimarkupType>>,
+    pub disable_elements: Option<Vec<ElementType>>,
 
     /// Set citation style sheet that is used to process referenced literature
     #[clap(

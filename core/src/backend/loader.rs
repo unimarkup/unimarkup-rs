@@ -4,7 +4,7 @@ use rusqlite::Connection;
 
 use crate::{
     backend::BackendError,
-    elements::{types, types::UnimarkupType, HeadingBlock, ParagraphBlock, VerbatimBlock},
+    elements::{types, types::ElementType, HeadingBlock, ParagraphBlock, VerbatimBlock},
     log_id::{LogId, SetLog},
     middleend::{self, ContentIrLine},
     unimarkup_block::UnimarkupBlockKind,
@@ -46,13 +46,13 @@ pub fn get_blocks_from_ir(
 
         let block = match um_type {
             // UnimarkupType::List => todo!(),
-            UnimarkupType::Heading => {
+            ElementType::Heading => {
                 UnimarkupBlockKind::Heading(HeadingBlock::parse_from_ir(&mut content_lines)?)
             }
-            UnimarkupType::Paragraph => {
+            ElementType::Paragraph => {
                 UnimarkupBlockKind::Paragraph(ParagraphBlock::parse_from_ir(&mut content_lines)?)
             }
-            UnimarkupType::VerbatimBlock => {
+            ElementType::VerbatimBlock => {
                 UnimarkupBlockKind::Verbatim(VerbatimBlock::parse_from_ir(&mut content_lines)?)
             }
             _ => {
@@ -78,15 +78,15 @@ pub fn get_blocks_from_ir(
 /// - `"paragraph-start"`
 /// - `"heading-level-1"`
 /// - `"heading-level-1-start"` etc.
-pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, BackendError> {
+pub fn parse_um_type(type_as_str: &str) -> Result<ElementType, BackendError> {
     let type_string = type_as_str
-        .split(types::DELIMITER)
+        .split(types::ELEMENT_TYPE_DELIMITER)
         .map(|part| if part != "start" { part } else { "" })
         .enumerate()
         .fold(String::new(), |mut acc, (i, new)| {
             if !new.is_empty() {
                 if i > 0 {
-                    acc.push(types::DELIMITER);
+                    acc.push(types::ELEMENT_TYPE_DELIMITER);
                 }
 
                 acc.push_str(new);
@@ -95,7 +95,7 @@ pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, BackendError> {
             acc
         });
 
-    let level_delim = format!("{}level", types::DELIMITER);
+    let level_delim = format!("{}level", types::ELEMENT_TYPE_DELIMITER);
 
     let type_string = if type_string.contains(&level_delim) {
         if let Some(val) = type_string.split(&level_delim).next() {
@@ -113,7 +113,7 @@ pub fn parse_um_type(type_as_str: &str) -> Result<UnimarkupType, BackendError> {
         type_string
     };
 
-    UnimarkupType::from_str(&type_string).map_err(|err| {
+    ElementType::from_str(&type_string).map_err(|err| {
         BackendError::Loader(
             (LoaderErrLogId::InvalidElementType as LogId)
                 .set_log(
@@ -136,11 +136,11 @@ mod tests {
         // paragraph test
         let um_type = super::parse_um_type("paragraph-start").unwrap();
 
-        assert!(um_type == UnimarkupType::Paragraph);
+        assert!(um_type == ElementType::Paragraph);
 
         // heading test
         let um_type = super::parse_um_type("heading-level-1").unwrap();
 
-        assert!(um_type == UnimarkupType::Heading);
+        assert!(um_type == ElementType::Heading);
     }
 }

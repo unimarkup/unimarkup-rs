@@ -39,7 +39,7 @@ pub fn heading1_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "head1",
         1,
-        format!("heading{delim}level{delim}1", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}1", delim = types::ELEMENT_TYPE_DELIMITER),
         "head1",
         "",
         "{}",
@@ -49,7 +49,7 @@ pub fn heading1_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "subhead-1",
         2,
-        format!("heading{delim}level{delim}2", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}2", delim = types::ELEMENT_TYPE_DELIMITER),
         "subhead 1",
         "",
         "{}",
@@ -58,7 +58,7 @@ pub fn heading1_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "subhead-1",
         3,
-        format!("heading{delim}level{delim}3", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}3", delim = types::ELEMENT_TYPE_DELIMITER),
         "subhead 1",
         "",
         "{}",
@@ -73,7 +73,7 @@ pub fn heading_line_number_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "head1",
         1,
-        format!("heading{delim}level{delim}1", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}1", delim = types::ELEMENT_TYPE_DELIMITER),
         "head1",
         "",
         "{}",
@@ -83,7 +83,7 @@ pub fn heading_line_number_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "subhead-11",
         2,
-        format!("heading{delim}level{delim}2", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}2", delim = types::ELEMENT_TYPE_DELIMITER),
         "subhead 11",
         "",
         "{}",
@@ -92,7 +92,7 @@ pub fn heading_line_number_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "head2",
         4,
-        format!("heading{delim}level{delim}1", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}1", delim = types::ELEMENT_TYPE_DELIMITER),
         "head2",
         "",
         "{}",
@@ -102,7 +102,7 @@ pub fn heading_line_number_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "subhead-21",
         5,
-        format!("heading{delim}level{delim}2", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}2", delim = types::ELEMENT_TYPE_DELIMITER),
         "subhead 21",
         "",
         "{}",
@@ -112,7 +112,7 @@ pub fn heading_line_number_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "head3",
         8,
-        format!("heading{delim}level{delim}1", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}1", delim = types::ELEMENT_TYPE_DELIMITER),
         "head3",
         "",
         "{}",
@@ -122,7 +122,7 @@ pub fn heading_line_number_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "subhead-31",
         9,
-        format!("heading{delim}level{delim}2", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}2", delim = types::ELEMENT_TYPE_DELIMITER),
         "subhead 31",
         "",
         "{}",
@@ -132,7 +132,7 @@ pub fn heading_line_number_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "subsubhead-311",
         10,
-        format!("heading{delim}level{delim}3", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}3", delim = types::ELEMENT_TYPE_DELIMITER),
         "subsubhead 311",
         "",
         "{}",
@@ -147,7 +147,7 @@ pub fn multiline_headings_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "head1-multiline",
         1,
-        format!("heading{delim}level{delim}1", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}1", delim = types::ELEMENT_TYPE_DELIMITER),
         "head1\nmultiline",
         "",
         "{}",
@@ -157,7 +157,7 @@ pub fn multiline_headings_expected_result() -> Vec<ContentIrLine> {
     blocks_vector.push(ContentIrLine::new(
         "subhead2-multiline",
         3,
-        format!("heading{delim}level{delim}2", delim = types::DELIMITER),
+        format!("heading{delim}level{delim}2", delim = types::ELEMENT_TYPE_DELIMITER),
         "subhead2\nmultiline",
         "",
         "{}",
