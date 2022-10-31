@@ -1,7 +1,20 @@
 [workspace]
 members = [
+    "render",
     "cli",
     "core",
     "inline",
     "system_tests"
 ]
+
+[workspace.package]
+version = "0.3.0"
+edition = "2021"
+authors = ["Manuel Hatzl", "Nadir Fejzić"]
+description = "Unimarkup compiler written in Rust."
+repository = "https://github.com/Unimarkup/unimarkup-rs"
+readme = "README.md"
+license = "MIT"
+
+[workspace.dependencies]
+logid = { version = "0.4.0", features = ["diagnostics"] }
