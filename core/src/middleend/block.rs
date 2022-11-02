@@ -1,12 +1,13 @@
 use logid::capturing::MappedLogId;
 use rusqlite::Transaction;
 
-use crate::middleend::ir::{self, WriteToIr};
 use crate::middleend::ContentIrLine;
 use crate::middleend::MacroIrLine;
 use crate::middleend::MetadataIrLine;
 use crate::middleend::ResourceIrLine;
 use crate::middleend::VariableIrLine;
+
+use super::WriteToIr;
 
 /// IR compatible representation of various Unimarkup Elements such as Blocks, Variables, Macros etc.
 #[derive(Debug)]
@@ -119,11 +120,11 @@ impl Default for IrBlock {
 
 impl WriteToIr for IrBlock {
     fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MappedLogId> {
-        ir::write_ir_lines(self.get_content_lines(), ir_transaction)?;
-        ir::write_ir_lines(self.get_macro_lines(), ir_transaction)?;
-        ir::write_ir_lines(self.get_variable_lines(), ir_transaction)?;
-        ir::write_ir_lines(self.get_metadata_lines(), ir_transaction)?;
-        ir::write_ir_lines(self.get_resource_lines(), ir_transaction)?;
+        super::write_ir_lines(self.get_content_lines(), ir_transaction)?;
+        super::write_ir_lines(self.get_macro_lines(), ir_transaction)?;
+        super::write_ir_lines(self.get_variable_lines(), ir_transaction)?;
+        super::write_ir_lines(self.get_metadata_lines(), ir_transaction)?;
+        super::write_ir_lines(self.get_resource_lines(), ir_transaction)?;
 
         Ok(())
     }

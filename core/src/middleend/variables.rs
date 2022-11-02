@@ -4,9 +4,10 @@ use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
 use crate::log_id::CORE_LOG_ID_MAP;
-use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
+use crate::middleend::statements;
 
 use super::log_id::GeneralInfLogId;
+use super::{IrTableName, RetrieveFromIr, WriteToIr};
 
 /// Structure for the variable table representation of the IR
 #[derive(Debug, PartialEq, Eq, Default, Clone)]
@@ -73,7 +74,7 @@ impl WriteToIr for VariableIrLine {
         let column_pk = format!("name: {}", self.name);
         let new_values = params![self.name, self.um_type, self.value, self.fallback_value,];
 
-        if ir::entry_already_exists(self, ir_transaction) {
+        if statements::entry_already_exists(self, ir_transaction) {
             (GeneralInfLogId::EntryOverwritten as LogId).set_event_with(
                 &CORE_LOG_ID_MAP,
                 &format!("Variable '{}' is overwritten.", self.name),
@@ -83,7 +84,7 @@ impl WriteToIr for VariableIrLine {
 
             let sql_condition = "name = ?1";
             let sql_set = "um_type = ?2, value = ?3, fallback_value = ?4";
-            ir::update_ir_line_execute(
+            statements::update_ir_line_execute(
                 ir_transaction,
                 sql_table,
                 sql_set,
@@ -92,7 +93,7 @@ impl WriteToIr for VariableIrLine {
                 &column_pk,
             )
         } else {
-            ir::insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
+            statements::insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
         }
     }
 }

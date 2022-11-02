@@ -4,9 +4,10 @@ use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
 use crate::log_id::CORE_LOG_ID_MAP;
-use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
+use crate::middleend::statements;
 
 use super::log_id::GeneralDebugLogId;
+use super::{IrTableName, RetrieveFromIr, WriteToIr};
 
 /// Structure for the resource table representation of the IR
 #[derive(Debug, PartialEq, Eq, Default, Clone)]
@@ -54,7 +55,7 @@ impl WriteToIr for ResourceIrLine {
         let column_pk = format!("filename: {} with path: {}", self.filename, self.path);
         let new_values = params![self.filename, self.path];
 
-        if ir::entry_already_exists(self, ir_transaction) {
+        if statements::entry_already_exists(self, ir_transaction) {
             // All resources columns are used for private key, no update needed
             (GeneralDebugLogId::EntryAlreadyExists as LogId).set_event_with(
                 &CORE_LOG_ID_MAP,
@@ -67,7 +68,7 @@ impl WriteToIr for ResourceIrLine {
             );
             return Ok(());
         }
-        ir::insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
+        statements::insert_ir_line_execute(ir_transaction, sql_table, new_values, &column_pk)
     }
 }
 
