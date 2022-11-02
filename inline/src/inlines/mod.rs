@@ -101,7 +101,6 @@ impl Inline {
 
                 if matches!(inline.as_ref(), InlineContent::Nested(_)) {
                     content = nested.content.pop_back().unwrap().into_inner();
-                    dbg!(&content);
                     content.set_span(span);
                 }
             }

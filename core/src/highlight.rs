@@ -1,6 +1,6 @@
 //! Provides access to syntax and theme sets and syntax highlighting in general
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::{SyntaxReference, SyntaxSet};
@@ -11,12 +11,10 @@ pub const DEFAULT_THEME: &str = "Solarized (dark)";
 /// Constant to get syntax highlighting for a plain text
 pub const PLAIN_SYNTAX: &str = "plain";
 
-lazy_static! {
-    /// Static reference to the syntax set containing all supported syntaxes
-    pub static ref SYNTAX_SET: SyntaxSet = SyntaxSet::load_defaults_newlines();
-    /// Static reference to the theme set containing all supported themes
-    pub static ref THEME_SET: ThemeSet = ThemeSet::load_defaults();
-}
+/// Static reference to the syntax set containing all supported syntaxes
+pub static SYNTAX_SET: Lazy<SyntaxSet> = Lazy::new(SyntaxSet::load_defaults_newlines);
+/// Static reference to the theme set containing all supported themes
+pub static THEME_SET: Lazy<ThemeSet> = Lazy::new(ThemeSet::load_defaults);
 
 /// This function highlights given lines according to set language and theme,
 /// returning a standalone HTML string with surrounding `pre` tags.

@@ -18,4 +18,3 @@ features = ["bundled"]
 logid.workspace = true
 unimarkup_render = { path = "../render/" }
 unicode-segmentation = "1.8.0"
-log = "0.4"

@@ -77,3 +77,15 @@ pub enum GeneralWarnLogId {
         0,
     ),
 }
+
+/// General debug log-ids for the middleend section
+#[derive(Debug)]
+pub enum GeneralDebugLogId {
+    /// Log-id denoting that an entry already exists
+    EntryAlreadyExists = log_id::get_log_id(
+        LogSubGrp::Middleend as u8,
+        LogSubSubGrp::General as u8,
+        EventLevel::Debug,
+        0,
+    ),
+}

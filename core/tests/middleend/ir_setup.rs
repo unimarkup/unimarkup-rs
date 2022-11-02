@@ -13,8 +13,7 @@ fn table_exists(conn: &Connection, table: &str, columns: &str) -> bool {
     match err {
         QueryReturnedNoRows => true,
         _ => {
-            println!("ERROR: In table {}. Reason: {}", table, err);
-            false
+            panic!("ERROR: In table {}. Reason: {}", table, err);
         }
     }
 }

@@ -473,7 +473,6 @@ mod tests {
         let result = HeadingBlock::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
-        println!("{:?}", result.err().unwrap());
 
         let bad_ir_line = ContentIrLine::new(
             "some_id",
@@ -494,7 +493,6 @@ mod tests {
         let result = HeadingBlock::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
-        println!("{:?}", result.err().unwrap());
 
         let bad_ir_line = ContentIrLine::new(
             "some_id",
@@ -514,6 +512,5 @@ mod tests {
         let result = HeadingBlock::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
-        println!("{:?}", result.err().unwrap());
     }
 }

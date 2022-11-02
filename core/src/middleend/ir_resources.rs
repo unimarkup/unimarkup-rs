@@ -1,9 +1,12 @@
-use log::debug;
-use logid::capturing::MappedLogId;
+use logid::capturing::{LogIdTracing, MappedLogId};
+use logid::log_id::LogId;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
+use crate::log_id::CORE_LOG_ID_MAP;
 use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
+
+use super::log_id::GeneralDebugLogId;
 
 /// Structure for the resource table representation of the IR
 #[derive(Debug, PartialEq, Eq, Default, Clone)]
@@ -53,9 +56,14 @@ impl WriteToIr for ResourceIrLine {
 
         if ir::entry_already_exists(self, ir_transaction) {
             // All resources columns are used for private key, no update needed
-            debug!(
-                "Resource with filename: '{}' and path: '{}' already in IR.",
-                self.filename, self.path
+            (GeneralDebugLogId::EntryAlreadyExists as LogId).set_event_with(
+                &CORE_LOG_ID_MAP,
+                &format!(
+                    "Resource with filename: '{}' and path: '{}' already in IR.",
+                    self.filename, self.path
+                ),
+                file!(),
+                line!(),
             );
             return Ok(());
         }
