@@ -1,19 +1,22 @@
 use std::collections::{HashMap, VecDeque};
 
+use logid::capturing::{LogIdTracing, MappedLogId};
+use logid::log_id::LogId;
 use pest::iterators::Pairs;
 use serde::{Deserialize, Serialize};
+use unimarkup_render::html::Html;
+use unimarkup_render::render::Render;
 
-use crate::backend::{error::BackendError, ParseFromIr, Render};
+use crate::backend::ParseFromIr;
 use crate::elements::log_id::EnclosedErrLogId;
-use crate::elements::types::{UnimarkupBlocks, ElementType};
-use crate::frontend::error::{custom_pest_error, FrontendError};
-use crate::frontend::parser::{Rule, UmParse};
+use crate::elements::types::ElementType;
+use crate::frontend::parser::{custom_pest_error, Rule, UmParse};
 use crate::highlight::{self, DEFAULT_THEME, PLAIN_SYNTAX};
-use crate::log_id::{LogId, SetLog};
+use crate::log_id::CORE_LOG_ID_MAP;
 use crate::middleend::{AsIrLines, ContentIrLine};
 
-use super::error::ElementError;
 use super::log_id::GeneralErrLogId;
+use super::UnimarkupBlocks;
 
 /// Structure of a Unimarkup verbatim block element.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -33,7 +36,7 @@ pub struct VerbatimBlock {
 }
 
 impl UmParse for VerbatimBlock {
-    fn parse(pairs: &mut Pairs<Rule>, span: pest::Span) -> Result<UnimarkupBlocks, FrontendError>
+    fn parse(pairs: &mut Pairs<Rule>, span: pest::Span) -> Result<UnimarkupBlocks, MappedLogId>
     where
         Self: Sized,
     {
@@ -64,15 +67,14 @@ impl UmParse for VerbatimBlock {
                 Rule::attributes => {
                     let attributes: HashMap<&str, &str> = serde_json::from_str(rule.as_str())
                         .map_err(|_| {
-                            ElementError::Enclosed(
-                                (GeneralErrLogId::InvalidAttribute as LogId).set_log(
-                                    &custom_pest_error(
-                                        "Verbatim block attributes are not valid JSON",
-                                        rule.as_span(),
-                                    ),
-                                    file!(),
-                                    line!(),
+                            (GeneralErrLogId::InvalidAttribute as LogId).set_event_with(
+                                &CORE_LOG_ID_MAP,
+                                &custom_pest_error(
+                                    "Verbatim block attributes are not valid JSON",
+                                    rule.as_span(),
                                 ),
+                                file!(),
+                                line!(),
                             )
                         })?;
 
@@ -96,12 +98,14 @@ impl UmParse for VerbatimBlock {
 
                     let pest_err = error::Error::new_from_span(err_variant, rule.as_span());
 
-                    return Err(ElementError::Enclosed(
-                        (EnclosedErrLogId::FailedParsing as LogId)
-                            .set_log("Could not parse verbatim block.", file!(), line!())
-                            .add_info(&format!("Cause: {}", pest_err)),
-                    )
-                    .into());
+                    return Err((EnclosedErrLogId::FailedParsing as LogId)
+                        .set_event_with(
+                            &CORE_LOG_ID_MAP,
+                            "Could not parse verbatim block.",
+                            file!(),
+                            line!(),
+                        )
+                        .add_info(&format!("Cause: {}", pest_err)));
                 }
             }
         }
@@ -127,7 +131,7 @@ impl AsIrLines<ContentIrLine> for VerbatimBlock {
 }
 
 impl ParseFromIr for VerbatimBlock {
-    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, BackendError>
+    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, MappedLogId>
     where
         Self: Sized,
     {
@@ -135,8 +139,9 @@ impl ParseFromIr for VerbatimBlock {
             let expected_type = ElementType::VerbatimBlock.to_string();
 
             if ir_line.um_type != expected_type {
-                return Err(ElementError::Enclosed(
-                    (GeneralErrLogId::InvalidElementType as LogId).set_log(
+                return Err(
+                    (GeneralErrLogId::InvalidElementType as LogId).set_event_with(
+                        &CORE_LOG_ID_MAP,
                         &format!(
                             "Expected verbatim type to parse, instead got: '{}'",
                             ir_line.um_type
@@ -144,8 +149,7 @@ impl ParseFromIr for VerbatimBlock {
                         file!(),
                         line!(),
                     ),
-                )
-                .into());
+                );
             }
 
             let content = if !ir_line.text.is_empty() {
@@ -169,12 +173,14 @@ impl ParseFromIr for VerbatimBlock {
 
             Ok(block)
         } else {
-            Err(ElementError::Enclosed(
-                (GeneralErrLogId::FailedBlockCreation as LogId)
-                    .set_log("Could not construct VerbatimBlock.", file!(), line!())
-                    .add_info("Cause: No content ir line available."),
-            )
-            .into())
+            Err((GeneralErrLogId::FailedBlockCreation as LogId)
+                .set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    "Could not construct VerbatimBlock.",
+                    file!(),
+                    line!(),
+                )
+                .add_info("Cause: No content ir line available."))
         }
     }
 }
@@ -185,7 +191,7 @@ struct VerbatimAttributes {
 }
 
 impl Render for VerbatimBlock {
-    fn render_html(&self) -> Result<String, BackendError> {
+    fn render_html(&self) -> Result<Html, MappedLogId> {
         let mut res = String::with_capacity(self.content.capacity());
 
         let attributes =
@@ -207,7 +213,10 @@ impl Render for VerbatimBlock {
         ));
         res.push_str("</div>");
 
-        Ok(res)
+        Ok(Html {
+            body: res,
+            ..Default::default()
+        })
     }
 }
 
@@ -219,7 +228,7 @@ mod tests {
     use pest::Parser;
 
     use super::*;
-    use crate::backend::{ParseFromIr, Render};
+    use crate::backend::ParseFromIr;
     use crate::elements::types::ElementType;
     use crate::frontend::parser::{Rule, UmParse, UnimarkupParser};
     use crate::middleend::*;
@@ -250,7 +259,7 @@ mod tests {
             &highlight::highlight_html_lines(&content, lang, DEFAULT_THEME)
         );
 
-        assert_eq!(expected_html, block.render_html().unwrap());
+        assert_eq!(expected_html, block.render_html().unwrap().body);
     }
 
     #[test]
@@ -276,7 +285,7 @@ mod tests {
             &highlight::highlight_html_lines(&content, PLAIN_SYNTAX, DEFAULT_THEME)
         );
 
-        assert_eq!(expected_html, block.render_html().unwrap());
+        assert_eq!(expected_html, block.render_html().unwrap().body);
     }
 
     #[test]

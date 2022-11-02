@@ -1,6 +1,8 @@
 //! Defines log-ids for the element section
 
-use crate::log_id::{get_log_id, LogKind, LogSubGrp, CORE_GRP};
+use logid::log_id::{self, EventLevel};
+
+use crate::log_id::LogSubGrp;
 
 enum LogSubSubGrp {
     General = 0,
@@ -13,35 +15,31 @@ enum LogSubSubGrp {
 #[derive(Debug)]
 pub enum GeneralErrLogId {
     /// Log-id denoting an invalid attribute
-    InvalidAttribute = get_log_id(
-        CORE_GRP,
+    InvalidAttribute = log_id::get_log_id(
         LogSubGrp::Element as u8,
         LogSubSubGrp::General as u8,
-        LogKind::Error,
+        EventLevel::Error,
         0,
     ),
     /// Log-id denoting an invalid element type
-    InvalidElementType = get_log_id(
-        CORE_GRP,
+    InvalidElementType = log_id::get_log_id(
         LogSubGrp::Element as u8,
         LogSubSubGrp::General as u8,
-        LogKind::Error,
+        EventLevel::Error,
         1,
     ),
     /// Log-id denoting a failed block creation
-    FailedBlockCreation = get_log_id(
-        CORE_GRP,
+    FailedBlockCreation = log_id::get_log_id(
         LogSubGrp::Element as u8,
         LogSubSubGrp::General as u8,
-        LogKind::Error,
+        EventLevel::Error,
         2,
     ),
     /// Log-id denoting failed inline parsing
-    FailedInlineParsing = get_log_id(
-        CORE_GRP,
+    FailedInlineParsing = log_id::get_log_id(
         LogSubGrp::Element as u8,
         LogSubSubGrp::General as u8,
-        LogKind::Error,
+        EventLevel::Error,
         3,
     ),
 }
@@ -50,11 +48,10 @@ pub enum GeneralErrLogId {
 #[derive(Debug)]
 pub enum AtomicErrLogId {
     /// Log-id denoting an invalid heading level
-    InvalidHeadingLvl = get_log_id(
-        CORE_GRP,
+    InvalidHeadingLvl = log_id::get_log_id(
         LogSubGrp::Element as u8,
         LogSubSubGrp::Atomic as u8,
-        LogKind::Error,
+        EventLevel::Error,
         0,
     ),
 }
@@ -63,11 +60,10 @@ pub enum AtomicErrLogId {
 #[derive(Debug)]
 pub enum EnclosedErrLogId {
     /// Log-id denoting failed parsing
-    FailedParsing = get_log_id(
-        CORE_GRP,
+    FailedParsing = log_id::get_log_id(
         LogSubGrp::Element as u8,
         LogSubSubGrp::Enclosed as u8,
-        LogKind::Error,
+        EventLevel::Error,
         0,
     ),
 }
@@ -76,11 +72,10 @@ pub enum EnclosedErrLogId {
 #[derive(Debug)]
 pub enum InlineWarnLogId {
     /// Log-id denoting that inline parsing failed and content is treated as plain as fallback
-    InlineParsingFailed = get_log_id(
-        CORE_GRP,
+    InlineParsingFailed = log_id::get_log_id(
         LogSubGrp::Element as u8,
         LogSubSubGrp::Inline as u8,
-        LogKind::Warn,
+        EventLevel::Warn,
         1,
     ),
 }

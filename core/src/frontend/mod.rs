@@ -3,13 +3,11 @@
 //! i.e. parsing of unimarkup-rs files, generating corresponding
 //! ['UnimarkupBlocks'] and sending them to the IR.
 
+use logid::capturing::MappedLogId;
 use rusqlite::Connection;
 
 use crate::{config::Config, middleend::WriteToIr};
 
-use self::error::FrontendError;
-
-pub mod error;
 pub mod log_id;
 pub mod parser;
 pub mod preamble;
@@ -27,13 +25,13 @@ pub fn run(
     um_content: &str,
     connection: &mut Connection,
     config: &mut Config,
-) -> Result<(), FrontendError> {
+) -> Result<(), MappedLogId> {
     let unimarkup = parser::parse_unimarkup(um_content, config)?;
 
     let transaction = connection.transaction();
 
     if let Ok(transaction) = transaction {
-        unimarkup.blocks.write_to_ir(&transaction)?;
+        unimarkup.elements.write_to_ir(&transaction)?;
 
         for metadata in unimarkup.metadata {
             metadata.write_to_ir(&transaction)?;

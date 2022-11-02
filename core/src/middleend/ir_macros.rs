@@ -1,13 +1,16 @@
-use super::error::MiddleendError;
-use super::ir::{IrTableName, RetrieveFromIr};
-use super::log_id::GeneralInfLogId;
-use crate::log_id::{LogId, SetLog};
-use crate::middleend::ir::{self, WriteToIr};
+use logid::capturing::{LogIdTracing, MappedLogId};
+use logid::log_id::LogId;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
+use crate::log_id::CORE_LOG_ID_MAP;
+use crate::middleend::ir::{self, WriteToIr};
+
+use super::ir::{IrTableName, RetrieveFromIr};
+use super::log_id::GeneralInfLogId;
+
 /// Structure for the macro table representation of the IR
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub struct MacroIrLine {
     /// Name of the macro.
     pub name: String,
@@ -72,7 +75,7 @@ impl MacroIrLine {
 }
 
 impl WriteToIr for MacroIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MappedLogId> {
         let sql_table = &MacroIrLine::table_name();
         let column_pk = format!("name: {} with parameters: {}", self.name, self.parameters);
         let new_values = params![
@@ -84,7 +87,8 @@ impl WriteToIr for MacroIrLine {
         ];
 
         if ir::entry_already_exists(self, ir_transaction) {
-            (GeneralInfLogId::EntryOverwritten as LogId).set_log(
+            (GeneralInfLogId::EntryOverwritten as LogId).set_event_with(
+                &CORE_LOG_ID_MAP,
                 &format!(
                     "Macro with name: '{}' and parameters: '{}' is overwritten.",
                     self.name, self.parameters

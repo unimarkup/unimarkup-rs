@@ -55,7 +55,7 @@ pub enum ElementType {
     /// A task list.
     ///
     /// Example:
-    /// ```
+    /// ```ignore
     /// -[ ] List item 1
     /// -[a] List item 1
     /// -[/] List item 2
@@ -259,9 +259,9 @@ macro_rules! from_block_to_type {
     };
 }
 
-from_block_to_type!(HeadingBlock, Heading);
-from_block_to_type!(ParagraphBlock, Paragraph);
-from_block_to_type!(elements::VerbatimBlock, VerbatimBlock);
+from_block_to_type!(super::HeadingBlock, Heading);
+from_block_to_type!(super::ParagraphBlock, Paragraph);
+from_block_to_type!(super::VerbatimBlock, VerbatimBlock);
 
 #[allow(non_snake_case)]
 #[cfg(test)]

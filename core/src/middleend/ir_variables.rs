@@ -1,13 +1,15 @@
-use crate::log_id::{LogId, SetLog};
-use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
+use logid::capturing::{LogIdTracing, MappedLogId};
+use logid::log_id::LogId;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
-use super::error::MiddleendError;
+use crate::log_id::CORE_LOG_ID_MAP;
+use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
+
 use super::log_id::GeneralInfLogId;
 
 /// Structure for the variable table representation of the IR
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub struct VariableIrLine {
     /// Name of the variable.
     pub name: String,
@@ -66,13 +68,14 @@ impl VariableIrLine {
 }
 
 impl WriteToIr for VariableIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MappedLogId> {
         let sql_table = &VariableIrLine::table_name();
         let column_pk = format!("name: {}", self.name);
         let new_values = params![self.name, self.um_type, self.value, self.fallback_value,];
 
         if ir::entry_already_exists(self, ir_transaction) {
-            (GeneralInfLogId::EntryOverwritten as LogId).set_log(
+            (GeneralInfLogId::EntryOverwritten as LogId).set_event_with(
+                &CORE_LOG_ID_MAP,
                 &format!("Variable '{}' is overwritten.", self.name),
                 file!(),
                 line!(),

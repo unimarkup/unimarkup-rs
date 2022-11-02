@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use crate::middleend::{error::MiddleendError, AsIrLines, MetadataIrLine, WriteToIr};
+use logid::capturing::MappedLogId;
+
+use crate::middleend::{AsIrLines, MetadataIrLine, WriteToIr};
 
 /// Represents a Unimarkup metadata
 #[derive(Debug, Default, Clone)]
@@ -67,7 +69,7 @@ impl From<Metadata> for MetadataIrLine {
 }
 
 impl WriteToIr for Metadata {
-    fn write_to_ir(&self, ir_transaction: &rusqlite::Transaction) -> Result<(), MiddleendError> {
+    fn write_to_ir(&self, ir_transaction: &rusqlite::Transaction) -> Result<(), MappedLogId> {
         let ir_metadata: MetadataIrLine = self.as_ir_lines().pop().unwrap();
         ir_metadata.write_to_ir(ir_transaction)
     }

@@ -22,5 +22,4 @@ pub use ir_resources::*;
 pub use ir_setup::*;
 pub use ir_variables::*;
 
-pub mod error;
 pub mod log_id;

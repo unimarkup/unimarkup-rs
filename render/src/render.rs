@@ -1,7 +1,7 @@
 //! Contains the [`Render`] trait definition.
 
-use logid::capturing::MappedLogId;
 use crate::html::Html;
+use logid::capturing::MappedLogId;
 
 /// Abstract type for Unimarkup elements that implement the [`Render`] trait
 pub type RenderBlock = Box<dyn Render>;

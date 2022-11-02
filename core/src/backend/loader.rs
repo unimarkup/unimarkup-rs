@@ -1,18 +1,23 @@
 use std::{collections::VecDeque, str::FromStr};
 
+use logid::{
+    capturing::{LogIdTracing, MappedLogId},
+    log_id::LogId,
+};
 use rusqlite::Connection;
 
 use crate::{
-    backend::BackendError,
-    elements::{types, types::ElementType, HeadingBlock, ParagraphBlock, VerbatimBlock},
-    log_id::{LogId, SetLog},
+    elements::{
+        types, types::ElementType, HeadingBlock, ParagraphBlock, UnimarkupBlock, UnimarkupBlocks,
+        VerbatimBlock,
+    },
+    log_id::CORE_LOG_ID_MAP,
     middleend::{self, ContentIrLine},
-    unimarkup_block::UnimarkupBlockKind,
 };
 
 use super::log_id::LoaderErrLogId;
 
-/// Trait that must be implemented for a [`UnimarkupType`] to be stored in IR
+/// Trait that must be implemented for a [`ElementType`] to be stored in IR
 pub trait ParseFromIr {
     /// Parses a Unimarkup Block Element from Intermediate Representation (SQL Database)
     ///
@@ -22,43 +27,39 @@ pub trait ParseFromIr {
     /// * `line_index` - index of the [`ContentIrLine`] which is currently read
     ///
     /// Returns the Unimarkup block element on success.
-    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, BackendError>
+    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, MappedLogId>
     where
         Self: Sized;
 }
 
-/// Parses `[ContentIrLine]s` and returns all Unimarkup Block Elements that where stored in the IR.
-/// The actual blocks are stored in `Vec` as trait objects of trait [`Render`] since different [`UnimarkupType`]s
+/// Parses [`ContentIrLine`]s and returns all Unimarkup Block Elements that where stored in the IR.
+/// The actual blocks are stored in `Vec` as trait objects of trait [`Render`](unimarkup_render::render) since different [`ElementType`]s
 /// are stored in the IR.
 ///
 /// # Arguments
 ///
 /// * `connection` - [`rusqlite::Connection`] used for interaction with IR
-pub fn get_blocks_from_ir(
-    connection: &mut Connection,
-) -> Result<Vec<UnimarkupBlockKind>, BackendError> {
-    let mut blocks: Vec<UnimarkupBlockKind> = vec![];
+pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<UnimarkupBlocks, MappedLogId> {
+    let mut blocks: UnimarkupBlocks = vec![];
     let mut content_lines: VecDeque<ContentIrLine> =
         middleend::get_content_lines(connection)?.into();
 
     while let Some(line) = content_lines.get(0) {
         let um_type = parse_um_type(&line.um_type)?;
 
-        let block = match um_type {
+        let block: Box<dyn UnimarkupBlock> = match um_type {
             // UnimarkupType::List => todo!(),
-            ElementType::Heading => {
-                UnimarkupBlockKind::Heading(HeadingBlock::parse_from_ir(&mut content_lines)?)
-            }
-            ElementType::Paragraph => {
-                UnimarkupBlockKind::Paragraph(ParagraphBlock::parse_from_ir(&mut content_lines)?)
-            }
+            ElementType::Heading => Box::new(HeadingBlock::parse_from_ir(&mut content_lines)?),
+            ElementType::Paragraph => Box::new(ParagraphBlock::parse_from_ir(&mut content_lines)?),
             ElementType::VerbatimBlock => {
-                UnimarkupBlockKind::Verbatim(VerbatimBlock::parse_from_ir(&mut content_lines)?)
+                Box::new(VerbatimBlock::parse_from_ir(&mut content_lines)?)
             }
             _ => {
-                let _ = content_lines.pop_front();
+                // unsupported types in middleend
+                // TODO: log
 
-                UnimarkupBlockKind::Paragraph(ParagraphBlock::default())
+                let _ = content_lines.pop_front();
+                Box::new(ParagraphBlock::default())
             }
         };
 
@@ -68,7 +69,7 @@ pub fn get_blocks_from_ir(
     Ok(blocks)
 }
 
-/// Returns the corresponding [`UnimarkupType`] from a given String
+/// Returns the corresponding [`ElementType`] from a given String
 ///
 /// # Accepted formats
 ///
@@ -78,7 +79,7 @@ pub fn get_blocks_from_ir(
 /// - `"paragraph-start"`
 /// - `"heading-level-1"`
 /// - `"heading-level-1-start"` etc.
-pub fn parse_um_type(type_as_str: &str) -> Result<ElementType, BackendError> {
+pub fn parse_um_type(type_as_str: &str) -> Result<ElementType, MappedLogId> {
     let type_string = type_as_str
         .split(types::ELEMENT_TYPE_DELIMITER)
         .map(|part| if part != "start" { part } else { "" })
@@ -101,28 +102,28 @@ pub fn parse_um_type(type_as_str: &str) -> Result<ElementType, BackendError> {
         if let Some(val) = type_string.split(&level_delim).next() {
             val.into()
         } else {
-            return Err(BackendError::Loader(
-                (LoaderErrLogId::InvalidElementType as LogId).set_log(
+            return Err(
+                (LoaderErrLogId::InvalidElementType as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
                     &format!("Invalid type string provided: '{}'", type_string),
                     file!(),
                     line!(),
                 ),
-            ));
+            );
         }
     } else {
         type_string
     };
 
     ElementType::from_str(&type_string).map_err(|err| {
-        BackendError::Loader(
-            (LoaderErrLogId::InvalidElementType as LogId)
-                .set_log(
-                    &format!("Failed to resolve Unimarkup type '{}'.", &type_string),
-                    file!(),
-                    line!(),
-                )
-                .add_info(&format!("Cause: {}", err)),
-        )
+        (LoaderErrLogId::InvalidElementType as LogId)
+            .set_event_with(
+                &CORE_LOG_ID_MAP,
+                &format!("Failed to resolve Unimarkup type '{}'.", &type_string),
+                file!(),
+                line!(),
+            )
+            .add_cause(&format!("{}", err))
     })
 }
 

@@ -2,7 +2,6 @@
 //!
 //! i.e. hashing
 
-pub mod error;
 pub mod log_id;
 
 mod hashing;

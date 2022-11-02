@@ -1,6 +1,8 @@
 //! Defined log-ids for the frontend section
 
-use crate::log_id::{get_log_id, LogKind, LogSubGrp, CORE_GRP};
+use logid::log_id::{self, EventLevel};
+
+use crate::log_id::LogSubGrp;
 
 enum LogSubSubGrp {
     Parser = 1,
@@ -11,11 +13,10 @@ enum LogSubSubGrp {
 #[derive(Debug)]
 pub enum ParserErrLogId {
     /// Log-id denoting that no Unimarkup element was detected
-    NoUnimarkupDetected = get_log_id(
-        CORE_GRP,
+    NoUnimarkupDetected = log_id::get_log_id(
         LogSubGrp::Frontend as u8,
         LogSubSubGrp::Parser as u8,
-        LogKind::Error,
+        EventLevel::Error,
         0,
     ),
 }
@@ -24,11 +25,10 @@ pub enum ParserErrLogId {
 #[derive(Debug)]
 pub enum ParserWarnLogId {
     /// Log-id denoting an unsupported Unimarkup block
-    UnsupportedBlock = get_log_id(
-        CORE_GRP,
+    UnsupportedBlock = log_id::get_log_id(
         LogSubGrp::Frontend as u8,
         LogSubSubGrp::Parser as u8,
-        LogKind::Warn,
+        EventLevel::Warn,
         1,
     ),
 }
@@ -37,19 +37,17 @@ pub enum ParserWarnLogId {
 #[derive(Debug)]
 pub enum PreambleErrLogId {
     /// Log-id denoting an invalid JSON
-    InvalidJSON = get_log_id(
-        CORE_GRP,
+    InvalidJSON = log_id::get_log_id(
         LogSubGrp::Frontend as u8,
         LogSubSubGrp::Preamble as u8,
-        LogKind::Error,
+        EventLevel::Error,
         0,
     ),
     /// Log-id denoting an invalid YAML
-    InvalidYAML = get_log_id(
-        CORE_GRP,
+    InvalidYAML = log_id::get_log_id(
         LogSubGrp::Frontend as u8,
         LogSubSubGrp::Preamble as u8,
-        LogKind::Error,
+        EventLevel::Error,
         1,
     ),
 }

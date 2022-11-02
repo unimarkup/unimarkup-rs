@@ -1,6 +1,8 @@
 //! Defines log-ids for the middleend section
 
-use crate::log_id::{get_log_id, LogKind, LogSubGrp, CORE_GRP};
+use logid::log_id::{self, EventLevel};
+
+use crate::log_id::LogSubGrp;
 
 enum LogSubSubGrp {
     General = 0,
@@ -11,27 +13,24 @@ enum LogSubSubGrp {
 #[derive(Debug)]
 pub enum GeneralErrLogId {
     /// Log-id denoting a failed value insertion
-    FailedValueInsert = get_log_id(
-        CORE_GRP,
+    FailedValueInsert = log_id::get_log_id(
         LogSubGrp::Middleend as u8,
         LogSubSubGrp::General as u8,
-        LogKind::Error,
+        EventLevel::Error,
         0,
     ),
     /// Log-id denoting a failed value update
-    FailedValueUpdate = get_log_id(
-        CORE_GRP,
+    FailedValueUpdate = log_id::get_log_id(
         LogSubGrp::Middleend as u8,
         LogSubSubGrp::General as u8,
-        LogKind::Error,
+        EventLevel::Error,
         1,
     ),
     /// Log-id denoting a failed row query
-    FailedRowQuery = get_log_id(
-        CORE_GRP,
+    FailedRowQuery = log_id::get_log_id(
         LogSubGrp::Middleend as u8,
         LogSubSubGrp::General as u8,
-        LogKind::Error,
+        EventLevel::Error,
         2,
     ),
 }
@@ -40,19 +39,17 @@ pub enum GeneralErrLogId {
 #[derive(Debug)]
 pub enum SetupErrLogId {
     /// Log-id denoting a failed database connection
-    FailedDatabaseConnection = get_log_id(
-        CORE_GRP,
+    FailedDatabaseConnection = log_id::get_log_id(
         LogSubGrp::Middleend as u8,
         LogSubSubGrp::Setup as u8,
-        LogKind::Error,
+        EventLevel::Error,
         0,
     ),
     /// Log-id denoting a failed table creation
-    FailedTableCreation = get_log_id(
-        CORE_GRP,
+    FailedTableCreation = log_id::get_log_id(
         LogSubGrp::Middleend as u8,
         LogSubSubGrp::Setup as u8,
-        LogKind::Error,
+        EventLevel::Error,
         1,
     ),
 }
@@ -61,11 +58,10 @@ pub enum SetupErrLogId {
 #[derive(Debug)]
 pub enum GeneralInfLogId {
     /// Log-id denoting that an entry is overwritten
-    EntryOverwritten = get_log_id(
-        CORE_GRP,
+    EntryOverwritten = log_id::get_log_id(
         LogSubGrp::Middleend as u8,
         LogSubSubGrp::General as u8,
-        LogKind::Info,
+        EventLevel::Info,
         0,
     ),
 }
@@ -74,11 +70,10 @@ pub enum GeneralInfLogId {
 #[derive(Debug)]
 pub enum GeneralWarnLogId {
     /// Log-id denoting that an entry is overwritten
-    EntryOverwritten = get_log_id(
-        CORE_GRP,
+    EntryOverwritten = log_id::get_log_id(
         LogSubGrp::Middleend as u8,
         LogSubSubGrp::General as u8,
-        LogKind::Warn,
+        EventLevel::Warn,
         0,
     ),
 }

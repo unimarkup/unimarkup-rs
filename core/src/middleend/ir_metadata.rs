@@ -1,13 +1,15 @@
-use crate::log_id::{LogId, SetLog};
-use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
+use logid::capturing::{LogIdTracing, MappedLogId};
+use logid::log_id::LogId;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
-use super::error::MiddleendError;
+use crate::log_id::CORE_LOG_ID_MAP;
+use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
+
 use super::log_id::GeneralWarnLogId;
 
 /// Structure for the metadata table representation of the IR
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub struct MetadataIrLine {
     /// Generated hash code of a Unimarkup file.
     pub filehash: Vec<u8>,
@@ -74,7 +76,7 @@ impl MetadataIrLine {
 }
 
 impl WriteToIr for MetadataIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MappedLogId> {
         let sql_table = &MetadataIrLine::table_name();
         let column_pk = format!(
             "filename: {} with hash: {}",
@@ -91,7 +93,8 @@ impl WriteToIr for MetadataIrLine {
         ];
 
         if ir::entry_already_exists(self, ir_transaction) {
-            (GeneralWarnLogId::EntryOverwritten as LogId).set_log(
+            (GeneralWarnLogId::EntryOverwritten as LogId).set_event_with(
+                &CORE_LOG_ID_MAP,
                 &format!(
                     "Metadata with filename: '{}' and path: '{}' is overwritten.",
                     self.filename, self.path

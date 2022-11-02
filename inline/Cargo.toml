@@ -1,7 +1,12 @@
 [package]
 name = "unimarkup_inline"
-version = "0.3.0"
-edition = "2021"
+description = "Compiler for Unimarkup inline elements."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -10,5 +15,7 @@ version = "0.26"
 features = ["bundled"]
 
 [dependencies]
+logid.workspace = true
+unimarkup_render = { path = "../render/" }
 unicode-segmentation = "1.8.0"
 log = "0.4"

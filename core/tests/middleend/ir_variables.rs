@@ -89,7 +89,10 @@ fn test__ir_write_update__variable() {
     //--- SECOND: WRITE TO IR -------------------------------------------------------
     let updated_macro = VariableIrLine::new(
         &first_macro.name,
-        format!("heading{delim}level{delim}2", delim = types::ELEMENT_TYPE_DELIMITER),
+        format!(
+            "heading{delim}level{delim}2",
+            delim = types::ELEMENT_TYPE_DELIMITER
+        ),
         "head",
         "",
     );

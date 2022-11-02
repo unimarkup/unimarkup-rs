@@ -1,11 +1,12 @@
 use clap::StructOpt;
 use unimarkup_core::{
-    backend::{self, Render},
+    backend,
     config::Config,
     elements::{HeadingBlock, HeadingLevel},
     middleend::{self, AsIrLines, ContentIrLine},
 };
 use unimarkup_inline::ParseUnimarkupInlines;
+use unimarkup_render::render::Render;
 
 use super::super::middleend::ir_test_setup;
 
@@ -40,7 +41,7 @@ fn test__backend_run__heading_block() {
 
     let html = document.html();
 
-    let content = html.body();
+    let content = html.body;
 
-    assert_eq!(block.render_html().expect("Block is checked"), content);
+    assert_eq!(block.render_html().expect("Block is checked").body, content);
 }

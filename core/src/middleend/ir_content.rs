@@ -1,14 +1,18 @@
-use super::ir::{IrTableName, RetrieveFromIr};
-use super::{error::MiddleendError, log_id::GeneralErrLogId, AsIrLines};
-use crate::log_id::{LogId, SetLog};
-use crate::middleend::ir::{self, WriteToIr};
-use crate::middleend::log_id::GeneralWarnLogId;
+use logid::capturing::{LogIdTracing, MappedLogId};
+use logid::log_id::LogId;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 use rusqlite::{Connection, Statement, ToSql};
 use std::convert::TryInto;
 
+use crate::log_id::CORE_LOG_ID_MAP;
+use crate::middleend::ir::{self, WriteToIr};
+use crate::middleend::log_id::GeneralWarnLogId;
+
+use super::ir::{IrTableName, RetrieveFromIr};
+use super::{log_id::GeneralErrLogId, AsIrLines};
+
 /// Structure for the content table representation of the IR
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ContentIrLine {
     /// ID of the content
     pub id: String,
@@ -101,7 +105,7 @@ impl ContentIrLine {
 }
 
 impl WriteToIr for ContentIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MappedLogId> {
         let sql_table = &ContentIrLine::table_name();
         let column_pk = format!("id: {} at line: {}", self.id, self.line_nr);
         let new_values = params![
@@ -115,7 +119,8 @@ impl WriteToIr for ContentIrLine {
         ];
 
         if ir::entry_already_exists(self, ir_transaction) {
-            (GeneralWarnLogId::EntryOverwritten as LogId).set_log(
+            (GeneralWarnLogId::EntryOverwritten as LogId).set_event_with(
+                &CORE_LOG_ID_MAP,
                 &format!(
                     "Content with id: '{}' at line nr: '{}' is overwritten.",
                     self.id, self.line_nr
@@ -174,7 +179,7 @@ impl<T> WriteToIr for T
 where
     T: AsIrLines<ContentIrLine>,
 {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MappedLogId> {
         for line in self.as_ir_lines() {
             line.write_to_ir(ir_transaction)?;
         }
@@ -204,15 +209,16 @@ pub fn prepare_content_rows(ir_connection: &Connection, order: bool) -> Result<S
 /// # Arguments
 ///
 /// * `connection` - [`rusqlite::Connection`] to interact with the IR
-pub fn get_content_lines(
-    connection: &mut Connection,
-) -> Result<Vec<ContentIrLine>, MiddleendError> {
+pub fn get_content_lines(connection: &mut Connection) -> Result<Vec<ContentIrLine>, MappedLogId> {
     let convert_err = |err| {
-        MiddleendError::General(
-            (GeneralErrLogId::FailedRowQuery as LogId)
-                .set_log("Failed to query content rows from IR.", file!(), line!())
-                .add_info(&format!("Cause: {}", err)),
-        )
+        (GeneralErrLogId::FailedRowQuery as LogId)
+            .set_event_with(
+                &CORE_LOG_ID_MAP,
+                "Failed to query content rows from IR.",
+                file!(),
+                line!(),
+            )
+            .add_info(&format!("Cause: {}", err))
     };
 
     let mut rows_statement = prepare_content_rows(connection, true).map_err(convert_err)?;

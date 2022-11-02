@@ -1,20 +1,22 @@
 //! [`parser`](crate::frontend::parser) is the module which implements parsing of the Unimarkup syntax
 
+use logid::{
+    capturing::{LogIdTracing, MappedLogId},
+    log_id::LogId,
+};
 use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 
 use crate::{
     config::Config,
+    document::Document,
     elements::{
-        types,
-        types::{UnimarkupBlocks, UnimarkupFile},
-        HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
+        types, HeadingBlock, Metadata, MetadataKind, ParagraphBlock, UnimarkupBlocks, VerbatimBlock,
     },
-    log_id::{LogId, SetLog},
+    log_id::CORE_LOG_ID_MAP,
     security,
 };
 
 use super::{
-    error::FrontendError,
     log_id::{ParserErrLogId, ParserWarnLogId},
     preamble,
 };
@@ -26,7 +28,7 @@ pub trait UmParse {
     /// # Errors
     ///
     /// This function will return an error if given Pairs of Rules contain non-valid Unimarkup syntax.
-    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, FrontendError>
+    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, MappedLogId>
     where
         Self: Sized;
 }
@@ -60,20 +62,20 @@ pub use parser_derivation::*;
 /// # Errors
 ///
 /// This function will return an [`FrontendError`], if the given Unimarkup file contains invalid Unimarkup syntax.
-pub fn parse_unimarkup(
-    um_content: &str,
-    config: &mut Config,
-) -> Result<UnimarkupFile, FrontendError> {
+pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document, MappedLogId> {
     let mut rule_pairs = UnimarkupParser::parse(Rule::unimarkup, um_content).map_err(|err| {
-        FrontendError::Parser(
-            (ParserErrLogId::NoUnimarkupDetected as LogId)
-                .set_log("No Unimarkup elements detected!", file!(), line!())
-                .add_info(&format!("Content: '{}'", um_content))
-                .add_debug(&format!("Cause: {}", err)),
-        )
+        (ParserErrLogId::NoUnimarkupDetected as LogId)
+            .set_event_with(
+                &CORE_LOG_ID_MAP,
+                "No Unimarkup elements detected!",
+                file!(),
+                line!(),
+            )
+            .add_info(&format!("Content: '{}'", um_content))
+            .add_cause(&format!("{}", err))
     })?;
 
-    let mut unimarkup = UnimarkupFile::default();
+    let mut unimarkup = Document::default();
 
     if let Some(um_tokens) = rule_pairs.next() {
         for pair in um_tokens.into_inner() {
@@ -84,12 +86,12 @@ pub fn parse_unimarkup(
                 }
                 Rule::atomic_block => {
                     let mut atomic_blocks = parse_atomic_block(pair)?;
-                    unimarkup.blocks.append(&mut atomic_blocks);
+                    unimarkup.elements.append(&mut atomic_blocks);
                 }
                 Rule::enclosed_block => {
                     let mut enclosed_blocks = parse_enclosed_block(pair)?;
 
-                    unimarkup.blocks.append(&mut enclosed_blocks);
+                    unimarkup.elements.append(&mut enclosed_blocks);
                 }
                 Rule::blank_line | Rule::EOI => continue,
                 _ => unreachable!(
@@ -112,7 +114,7 @@ pub fn parse_unimarkup(
     Ok(unimarkup)
 }
 
-fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, FrontendError> {
+fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, MappedLogId> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::headings, input.as_str()) {
         return HeadingBlock::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
@@ -122,7 +124,7 @@ fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, FrontendErro
     Ok(vec![])
 }
 
-fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, FrontendError> {
+fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, MappedLogId> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::verbatim, input.as_str()) {
         return VerbatimBlock::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
@@ -131,7 +133,8 @@ fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, FrontendEr
         // warn and fallback to paragraph for now
 
         (ParserWarnLogId::UnsupportedBlock as LogId)
-            .set_log(
+            .set_event_with(
+                &CORE_LOG_ID_MAP,
                 &format!("Unsupported Unimarkup block:\n{}", input.as_str()),
                 file!(),
                 line!(),
@@ -187,6 +190,26 @@ pub fn generate_id(input: &str) -> Option<String> {
     };
 
     Some(result)
+}
+
+/// Uses a custom [`pest::error::Error`] to display parsing errors using Pest's pretty print.
+///
+/// # Arguments
+///
+/// * `msg` - Custom error message
+/// * `span` - Span in input Unimarkup document where this specific error occured
+pub fn custom_pest_error(msg: impl Into<String>, span: pest::Span) -> String {
+    use crate::frontend::parser;
+    use pest::error;
+
+    let error = error::Error::new_from_span(
+        error::ErrorVariant::<parser::Rule>::CustomError {
+            message: msg.into(),
+        },
+        span,
+    );
+
+    error.to_string()
 }
 
 #[allow(non_snake_case)]

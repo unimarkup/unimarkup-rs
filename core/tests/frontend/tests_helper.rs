@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use clap::StructOpt;
-use unimarkup_core::{config::Config, elements::types::UnimarkupFile, middleend::ContentIrLine};
+use unimarkup_core::{config::Config, document::Document, middleend::ContentIrLine};
 
 pub fn get_config(path: &str) -> Config {
     Config::parse_from(vec!["unimarkup", "--output-formats=html", path])
@@ -12,8 +12,8 @@ pub fn get_file_content(path: &Path) -> String {
 }
 
 /// [`loop_through_ir_lines`] is a public function to loop through the generated ir_lines and assert them with the expected output
-pub fn loop_through_ir_lines(um_file: &UnimarkupFile, mut blocks_vector: Vec<ContentIrLine>) {
-    for block in &um_file.blocks {
+pub fn loop_through_ir_lines(document: &Document, mut blocks_vector: Vec<ContentIrLine>) {
+    for block in &document.elements {
         for ir_line in block.as_ir_lines() {
             ir_lines_assert_eq(
                 ir_line,

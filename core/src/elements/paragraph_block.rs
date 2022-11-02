@@ -4,21 +4,23 @@ use std::{
 };
 
 use crate::{
-    backend::{error::BackendError, ParseFromIr, Render},
-    elements::types::{self, UnimarkupBlocks, ElementType},
-    frontend::{
-        error::{custom_pest_error, FrontendError},
-        parser::{self, Rule, UmParse},
-    },
-    log_id::{LogId, SetLog},
+    backend::ParseFromIr,
+    elements::types::{self, ElementType},
+    frontend::parser::{self, custom_pest_error, Rule, UmParse},
+    log_id::CORE_LOG_ID_MAP,
     middleend::{AsIrLines, ContentIrLine},
 };
 
+use logid::{
+    capturing::{LogIdTracing, MappedLogId},
+    log_id::LogId,
+};
 use pest::iterators::Pairs;
 use pest::Span;
 use unimarkup_inline::{Inline, ParseUnimarkupInlines};
+use unimarkup_render::{html::Html, render::Render};
 
-use super::{error::ElementError, log_id::GeneralErrLogId};
+use super::{inlines, log_id::GeneralErrLogId, UnimarkupBlocks};
 
 /// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default, Clone)]
@@ -38,7 +40,7 @@ pub struct ParagraphBlock {
 }
 
 impl UmParse for ParagraphBlock {
-    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, FrontendError>
+    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, MappedLogId>
     where
         Self: Sized,
     {
@@ -59,18 +61,17 @@ impl UmParse for ParagraphBlock {
         let attributes = if let Some(attributes) = paragraph_rules.next() {
             let attr: HashMap<&str, &str> =
                 serde_json::from_str(attributes.as_str()).map_err(|err| {
-                    ElementError::Atomic(
-                        (GeneralErrLogId::InvalidAttribute as LogId)
-                            .set_log(
-                                &custom_pest_error(
-                                    "Paragraph attributes are not valid JSON.",
-                                    attributes.as_span(),
-                                ),
-                                file!(),
-                                line!(),
-                            )
-                            .add_info(&format!("Cause: {}", err)),
-                    )
+                    (GeneralErrLogId::InvalidAttribute as LogId)
+                        .set_event_with(
+                            &CORE_LOG_ID_MAP,
+                            &custom_pest_error(
+                                "Paragraph attributes are not valid JSON.",
+                                attributes.as_span(),
+                            ),
+                            file!(),
+                            line!(),
+                        )
+                        .add_info(&format!("Cause: {}", err))
                 })?;
 
             Some(attr)
@@ -100,7 +101,7 @@ impl UmParse for ParagraphBlock {
 }
 
 impl ParseFromIr for ParagraphBlock {
-    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, BackendError>
+    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, MappedLogId>
     where
         Self: Sized,
     {
@@ -108,8 +109,9 @@ impl ParseFromIr for ParagraphBlock {
             let expected_type = ElementType::Paragraph.to_string();
 
             if ir_line.um_type != expected_type {
-                return Err(ElementError::Atomic(
-                    (GeneralErrLogId::InvalidElementType as LogId).set_log(
+                return Err(
+                    (GeneralErrLogId::InvalidElementType as LogId).set_event_with(
+                        &CORE_LOG_ID_MAP,
                         &format!(
                             "Expected paragraph type to parse, instead got: '{}'",
                             ir_line.um_type
@@ -117,8 +119,7 @@ impl ParseFromIr for ParagraphBlock {
                         file!(),
                         line!(),
                     ),
-                )
-                .into());
+                );
             }
 
             let content = if !ir_line.text.is_empty() {
@@ -144,37 +145,30 @@ impl ParseFromIr for ParagraphBlock {
 
             Ok(block)
         } else {
-            Err(ElementError::Atomic(
-                (GeneralErrLogId::FailedBlockCreation as LogId)
-                    .set_log("Could not construct ParagraphBlock.", file!(), line!())
-                    .add_info("Cause: No content ir line available."),
-            )
-            .into())
+            Err((GeneralErrLogId::FailedBlockCreation as LogId)
+                .set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    "Could not construct ParagraphBlock.",
+                    file!(),
+                    line!(),
+                )
+                .add_cause("No content ir line available."))
         }
     }
 }
 
 impl Render for ParagraphBlock {
-    fn render_html(&self) -> Result<String, BackendError> {
-        let mut html = String::default();
+    fn render_html(&self) -> Result<Html, MappedLogId> {
+        let mut html = Html::default();
 
-        html.push_str("<p");
-        html.push_str(" id='");
-        html.push_str(&self.id);
-        html.push_str("'>");
+        html.body.push_str("<p");
+        html.body.push_str(" id='");
+        html.body.push_str(&self.id);
+        html.body.push_str("'>");
 
-        let inlines = {
-            let mut inline_html = String::new();
-            for inline in &self.content {
-                inline_html.push_str(&inline.render_html()?);
-            }
+        inlines::push_inlines(&mut html, &self.content)?;
 
-            inline_html
-        };
-
-        html.push_str(&inlines);
-
-        html.push_str("</p>");
+        html.body.push_str("</p>");
 
         Ok(html)
     }
@@ -206,12 +200,9 @@ mod tests {
     use std::collections::VecDeque;
 
     use unimarkup_inline::{Inline, ParseUnimarkupInlines};
+    use unimarkup_render::render::Render;
 
-    use crate::{
-        backend::{ParseFromIr, Render},
-        elements::types::ElementType,
-        middleend::ContentIrLine,
-    };
+    use crate::{backend::ParseFromIr, elements::types::ElementType, middleend::ContentIrLine};
 
     use super::ParagraphBlock;
 
@@ -231,7 +222,7 @@ mod tests {
 
         let expected_html = format!("<p id='{}'>{}</p>", id, content[0].as_string());
 
-        assert_eq!(expected_html, block.render_html().unwrap());
+        assert_eq!(expected_html, block.render_html().unwrap().body);
     }
 
     #[test]
@@ -278,7 +269,7 @@ mod tests {
                     id
                 );
 
-        assert_eq!(expected_html, block.render_html().unwrap());
+        assert_eq!(expected_html, block.render_html().unwrap().body);
     }
 
     #[test]

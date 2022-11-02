@@ -1,12 +1,12 @@
-use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
 use log::debug;
+use logid::capturing::MappedLogId;
 use rusqlite::ToSql;
 use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 
-use super::error::MiddleendError;
+use crate::middleend::ir::{self, IrTableName, RetrieveFromIr, WriteToIr};
 
 /// Structure for the resource table representation of the IR
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub struct ResourceIrLine {
     /// Filename of the given resource, i.e. name of a image file.
     pub filename: String,
@@ -46,7 +46,7 @@ impl ResourceIrLine {
 }
 
 impl WriteToIr for ResourceIrLine {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
+    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MappedLogId> {
         let sql_table = &ResourceIrLine::table_name();
         let column_pk = format!("filename: {} with path: {}", self.filename, self.path);
         let new_values = params![self.filename, self.path];

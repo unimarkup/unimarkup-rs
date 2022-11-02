@@ -3,19 +3,22 @@
 use std::path::PathBuf;
 
 use clap::{crate_version, ArgEnum, Parser};
+use logid::{
+    capturing::{LogIdTracing, MappedLogId},
+    log_id::LogId,
+};
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
 use crate::{
     elements::types::ElementType,
-    error::ConfigError,
-    log_id::{ConfigErrLogId, LogId, SetLog},
+    log_id::{ConfigErrLogId, CORE_LOG_ID_MAP},
 };
 
 const UNIMARKUP_NAME: &str = "Unimarkup";
 
 /// Config contains the possible options for the Unimarkup configuration.
-#[derive(Debug, PartialEq, Clone, Parser, Default, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Parser, Default, Serialize, Deserialize)]
 #[clap(name = UNIMARKUP_NAME, version = crate_version!())]
 pub struct Config {
     /// The filename of the Unimarkup file that is used as root for rendering.
@@ -259,7 +262,7 @@ pub struct Config {
 
 /// Possible output formats for a Unimarkup file
 #[derive(
-    Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+    Debug, PartialEq, Eq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
 )]
 pub enum OutputFormat {
     /// PDF output format
@@ -283,7 +286,7 @@ pub enum OutputFormat {
 
 /// Possible modes for rendering math formulas in HTML
 #[derive(
-    Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+    Debug, PartialEq, Eq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
 )]
 pub enum HtmlMathmode {
     /// Render math as SVG
@@ -299,73 +302,67 @@ pub enum HtmlMathmode {
 
 impl Config {
     /// [`validate_config`] validates if file and paths exist and if config does not contradict itself
-    pub fn validate_config(&mut self) -> Result<(), ConfigError> {
+    pub fn validate_config(&mut self) -> Result<(), MappedLogId> {
         if let Some(ref file) = self.out_file {
             if file.exists() && !self.overwrite_out_files {
-                return Err(ConfigError::General(
-                    (ConfigErrLogId::InvalidConfig as LogId).set_log(
-                        "Option `overwrite-out-files` must be `true` if output file exists.",
-                        file!(),
-                        line!(),
-                    ),
+                return Err((ConfigErrLogId::InvalidConfig as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    "Option `overwrite-out-files` must be `true` if output file exists.",
+                    file!(),
+                    line!(),
                 ));
             }
         }
         if let Some(ref paths) = self.insert_paths {
             for path in paths {
                 if !path.exists() {
-                    return Err(ConfigError::General(
-                        (ConfigErrLogId::InvalidPath as LogId).set_log(
-                            &format!("Invalid path given for `insert-paths`: {:?}", path),
-                            file!(),
-                            line!(),
-                        ),
+                    return Err((ConfigErrLogId::InvalidPath as LogId).set_event_with(
+                        &CORE_LOG_ID_MAP,
+                        &format!("Invalid path given for `insert-paths`: {:?}", path),
+                        file!(),
+                        line!(),
                     ));
                 }
             }
         }
         if let Some(ref path) = self.dot_unimarkup {
             if !path.is_dir() {
-                return Err(ConfigError::General(
-                    (ConfigErrLogId::InvalidPath as LogId).set_log(
-                        &format!("Invalid path given for `dot-unimarkup`: {:?}", path),
-                        file!(),
-                        line!(),
-                    ),
+                return Err((ConfigErrLogId::InvalidPath as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    &format!("Invalid path given for `dot-unimarkup`: {:?}", path),
+                    file!(),
+                    line!(),
                 ));
             }
         }
         if let Some(ref file) = self.theme {
             if !file.exists() {
-                return Err(ConfigError::General(
-                    (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        &format!("Invalid file given for `theme`: {:?}", file),
-                        file!(),
-                        line!(),
-                    ),
+                return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    &format!("Invalid file given for `theme`: {:?}", file),
+                    file!(),
+                    line!(),
                 ));
             }
         }
         if let Some(ref file) = self.citation_style {
             if !file.exists() {
-                return Err(ConfigError::General(
-                    (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        &format!("Invalid file given for `citation-style`: {:?}", file),
-                        file!(),
-                        line!(),
-                    ),
+                return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    &format!("Invalid file given for `citation-style`: {:?}", file),
+                    file!(),
+                    line!(),
                 ));
             }
         }
         if let Some(ref files) = self.references {
             for file in files {
                 if !file.exists() {
-                    return Err(ConfigError::General(
-                        (ConfigErrLogId::InvalidFile as LogId).set_log(
-                            &format!("Invalid file given for `references`: {:?}", file),
-                            file!(),
-                            line!(),
-                        ),
+                    return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                        &CORE_LOG_ID_MAP,
+                        &format!("Invalid file given for `references`: {:?}", file),
+                        file!(),
+                        line!(),
                     ));
                 }
             }
@@ -373,34 +370,31 @@ impl Config {
         if let Some(ref files) = self.fonts {
             for file in files {
                 if !file.exists() {
-                    return Err(ConfigError::General(
-                        (ConfigErrLogId::InvalidFile as LogId).set_log(
-                            &format!("Invalid file given for `fonts`: {:?}", file),
-                            file!(),
-                            line!(),
-                        ),
+                    return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                        &CORE_LOG_ID_MAP,
+                        &format!("Invalid file given for `fonts`: {:?}", file),
+                        file!(),
+                        line!(),
                     ));
                 }
             }
         }
         if let Some(ref file) = self.html_template {
             if !file.exists() {
-                return Err(ConfigError::General(
-                    (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        &format!("Invalid file given for `html-template`: {:?}", file),
-                        file!(),
-                        line!(),
-                    ),
+                return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    &format!("Invalid file given for `html-template`: {:?}", file),
+                    file!(),
+                    line!(),
                 ));
             }
         }
         if !self.um_file.exists() {
-            return Err(ConfigError::General(
-                (ConfigErrLogId::InvalidFile as LogId).set_log(
-                    "Set `um-file` does not exist!",
-                    file!(),
-                    line!(),
-                ),
+            return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                &CORE_LOG_ID_MAP,
+                "Set `um-file` does not exist!",
+                file!(),
+                line!(),
             ));
         }
 

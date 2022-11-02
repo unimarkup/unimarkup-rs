@@ -1,7 +1,12 @@
 [package]
 name = "unimarkup_core"
-version = "0.3.0"
-edition = "2021"
+description = "Core of the Unimarkup compiler."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+readme.workspace = true
+license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -11,6 +16,7 @@ features = ["bundled"]
 
 [dependencies]
 logid.workspace = true
+once_cell.workspace = true
 unimarkup_render = { path = "../render/" }
 unicode-segmentation = "1.8.0"
 serde = { version = "1.0", features = ["derive"] }

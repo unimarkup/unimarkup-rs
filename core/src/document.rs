@@ -1,6 +1,12 @@
+//! Contains the Unimarkup Document structure used to store all information of a Unimarkup document in one structure.
+
 use unimarkup_render::html::Html;
 
-use crate::{middleend::{MacroIrLine, VariableIrLine, ResourceIrLine}, elements::{Metadata, UnimarkupBlocks}, config::{Config, OutputFormat}};
+use crate::{
+    config::{Config, OutputFormat},
+    elements::{Metadata, UnimarkupBlocks},
+    middleend::{MacroIrLine, ResourceIrLine, VariableIrLine},
+};
 
 /// Struct representing a Unimarkup document
 #[derive(Default, Debug)]
@@ -11,7 +17,6 @@ pub struct Document {
     pub config: Config,
 
     // Below fields not yet used!
-
     /// Field containing all macros defined in this Unimarkup document
     pub macros: Vec<MacroIrLine>,
     /// Field containing all variables defined in this Unimarkup document
@@ -23,29 +28,29 @@ pub struct Document {
 }
 
 impl Document {
-  /// Returns the HTML representation of this Unimarkup document
-  pub fn html(&self) -> Html {
-    let mut output = Html::default();
+    /// Returns the HTML representation of this Unimarkup document
+    pub fn html(&self) -> Html {
+        let mut output = Html::default();
 
-    for block in self.elements {
-        let try_render = block.render_html();
+        for block in &self.elements {
+            let try_render = block.render_html();
 
-        match try_render {
-            Ok(html) => {
-              output.body.push_str(&html.body);
-              output.head.push_str(&html.head);
-            },
-            Err(id) => {
-                id.add_info("This error caused HTML rendering to fail!");
+            match try_render {
+                Ok(html) => {
+                    output.body.push_str(&html.body);
+                    output.head.push_str(&html.head);
+                }
+                Err(id) => {
+                    id.add_info("This error caused HTML rendering to fail!");
+                }
             }
         }
+
+        output
     }
 
-    output
-  }
-
-  /// Returns the configured output formats for this Unimarkup document
-  pub fn output_formats(&self) -> Option<&Vec<OutputFormat>> {
-      self.config.out_formats.as_ref()
-  }
+    /// Returns the configured output formats for this Unimarkup document
+    pub fn output_formats(&self) -> Option<&Vec<OutputFormat>> {
+        self.config.out_formats.as_ref()
+    }
 }

@@ -1,5 +1,6 @@
-use unimarkup_core::{backend::Render, elements::ParagraphBlock};
+use unimarkup_core::elements::ParagraphBlock;
 use unimarkup_inline::ParseUnimarkupInlines;
+use unimarkup_render::render::Render;
 
 #[test]
 fn test__render_html__valid_escaped_inline() {
@@ -19,7 +20,7 @@ fn test__render_html__valid_escaped_inline() {
     assert!(result.is_ok(), "Cause: {:?}", result.unwrap_err());
     assert_eq!(
         expected_html,
-        result.unwrap(),
+        result.unwrap().body,
         "Html file does not match with expected output"
     );
 
@@ -30,7 +31,7 @@ fn test__render_html__valid_escaped_inline() {
     assert!(result.is_ok(), "Cause: {:?}", result.unwrap_err());
     assert_eq!(
         expected_html,
-        result.unwrap(),
+        result.unwrap().body,
         "Html file does not match with expected output"
     );
 
@@ -41,7 +42,7 @@ fn test__render_html__valid_escaped_inline() {
     assert!(result.is_ok(), "Cause: {:?}", result.unwrap_err());
     assert_eq!(
         expected_html,
-        result.unwrap(),
+        result.unwrap().body,
         "Html file does not match with expected output"
     );
 }

@@ -5,7 +5,6 @@ mod metadata;
 mod paragraph_block;
 mod verbatim_block;
 
-pub mod error;
 pub mod inlines;
 pub mod log_id;
 pub mod types;
@@ -15,13 +14,16 @@ pub use metadata::*;
 pub use paragraph_block::*;
 pub use verbatim_block::*;
 
-
-use std::fmt;
-use rusqlite::Transaction;
 use logid::capturing::MappedLogId;
+use rusqlite::Transaction;
+use std::fmt;
 use unimarkup_render::render::Render;
 
-use crate::{frontend::parser::UmParse, middleend::{AsIrLines, ContentIrLine, WriteToIr}, backend::ParseFromIr};
+use crate::{
+    backend::ParseFromIr,
+    frontend::parser::UmParse,
+    middleend::{AsIrLines, ContentIrLine, WriteToIr},
+};
 
 /// Used as a combined trait bound for all Unimarkup Elements.
 pub trait UnimarkupBlock:
