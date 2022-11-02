@@ -6,7 +6,6 @@ pub mod config;
 pub mod document;
 pub mod elements;
 pub mod frontend;
-pub mod highlight;
 pub mod log_id;
 pub mod middleend;
 pub mod security;

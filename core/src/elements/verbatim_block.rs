@@ -6,12 +6,12 @@ use pest::iterators::Pairs;
 use serde::{Deserialize, Serialize};
 use unimarkup_render::html::Html;
 use unimarkup_render::render::Render;
+use unimarkup_render::highlight::{self, DEFAULT_THEME, PLAIN_SYNTAX};
 
 use crate::backend::ParseFromIr;
 use crate::elements::log_id::EnclosedErrLogId;
 use crate::elements::types::ElementType;
 use crate::frontend::parser::{custom_pest_error, Rule, UmParse};
-use crate::highlight::{self, DEFAULT_THEME, PLAIN_SYNTAX};
 use crate::log_id::CORE_LOG_ID_MAP;
 use crate::middleend::{AsIrLines, ContentIrLine};
 

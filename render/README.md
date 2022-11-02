@@ -31,3 +31,7 @@ pub trait Render {
   fn render_new_format(&self) => Result<NewFormat, LogId>;
 }
 ```
+
+## Syntax Highlighting
+
+The crate also provides syntax highlighting functionality in the `highlight` module using the [syntect](https://crates.io/crates/syntect) crate.

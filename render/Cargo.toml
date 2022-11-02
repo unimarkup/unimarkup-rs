@@ -12,3 +12,5 @@ license.workspace = true
 
 [dependencies]
 logid.workspace = true
+once_cell.workspace = true
+syntect = "4.6"
