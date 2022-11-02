@@ -9,11 +9,11 @@ use once_cell::sync::Lazy;
 /// Map to store [`LogId`]s set in the [`cli`] crate.
 pub(crate) static CLI_LOG_ID_MAP: Lazy<LogIdMap> = Lazy::new(LogIdMap::new);
 
-enum LogSubGrp {
+enum LogIdMainGrp {
     General = 0,
 }
 
-enum LogSubSubGrp {
+enum LogIdSubGrp {
     General = 0,
 }
 
@@ -23,29 +23,29 @@ enum LogSubSubGrp {
 pub enum GeneralErrLogId {
     /// Log-id denoting a fail while reading a file
     FailedReadingFile = log_id::get_log_id(
-        LogSubGrp::General as u8,
-        LogSubSubGrp::General as u8,
+        LogIdMainGrp::General as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Error,
         0,
     ),
     /// Log-id denoting a fail while writing to a file
     FailedWritingFile = log_id::get_log_id(
-        LogSubGrp::General as u8,
-        LogSubSubGrp::General as u8,
+        LogIdMainGrp::General as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Error,
         1,
     ),
     /// Log-id denoting a fail while parsing a file
     FailedParsingArgs = log_id::get_log_id(
-        LogSubGrp::General as u8,
-        LogSubSubGrp::General as u8,
+        LogIdMainGrp::General as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Error,
         2,
     ),
     /// Log-id denoting that compilation failed
     FailedCompiling = log_id::get_log_id(
-        LogSubGrp::General as u8,
-        LogSubSubGrp::General as u8,
+        LogIdMainGrp::General as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Error,
         3,
     ),
@@ -53,15 +53,17 @@ pub enum GeneralErrLogId {
 
 #[derive(Debug)]
 pub enum GeneralInfLogId {
+    /// Log-id denoting that unimarkup-rs is writing to the output file
     WritingToFile = log_id::get_log_id(
-        LogSubGrp::General as u8,
-        LogSubSubGrp::General as u8,
+        LogIdMainGrp::General as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Info,
         0,
     ),
+    /// Log-id denoting that compilation finished
     FinishedCompiling = log_id::get_log_id(
-        LogSubGrp::General as u8,
-        LogSubSubGrp::General as u8,
+        LogIdMainGrp::General as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Info,
         1,
     ),

@@ -10,7 +10,7 @@ use once_cell::sync::Lazy;
 pub(crate) static CORE_LOG_ID_MAP: Lazy<LogIdMap> = Lazy::new(LogIdMap::new);
 
 /// Log-id sub group for the core crate
-pub enum LogSubGrp {
+pub enum LogIdMainGrp {
     /// General log-id sub group
     General = 0,
     /// Frontend log-id sub group
@@ -27,7 +27,7 @@ pub enum LogSubGrp {
     Security = 6,
 }
 
-enum SubSubGrp {
+enum LogIdSubGrp {
     General = 0,
 }
 
@@ -35,22 +35,22 @@ enum SubSubGrp {
 pub enum ConfigErrLogId {
     /// Log-id denoting an invalid file in the config
     InvalidFile = log_id::get_log_id(
-        LogSubGrp::Config as u8,
-        SubSubGrp::General as u8,
+        LogIdMainGrp::Config as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Error,
         0,
     ),
     /// Log-id denoting an invalid path in the config
     InvalidPath = log_id::get_log_id(
-        LogSubGrp::Config as u8,
-        SubSubGrp::General as u8,
+        LogIdMainGrp::Config as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Error,
         1,
     ),
     /// Log-id denoting an invalid config
     InvalidConfig = log_id::get_log_id(
-        LogSubGrp::Config as u8,
-        SubSubGrp::General as u8,
+        LogIdMainGrp::Config as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Error,
         2,
     ),

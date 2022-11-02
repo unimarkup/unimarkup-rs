@@ -2,9 +2,9 @@
 
 use logid::log_id::{self, EventLevel};
 
-use crate::log_id::LogSubGrp;
+use crate::log_id::LogIdMainGrp;
 
-enum LogSubSubGrp {
+enum LogIdSubGrp {
     Hashing = 1,
 }
 
@@ -13,8 +13,8 @@ enum LogSubSubGrp {
 pub enum HashingErrLogId {
     /// Log-id denoting that a file could not be read for hashing
     FailedReadingFile = log_id::get_log_id(
-        LogSubGrp::Security as u8,
-        LogSubSubGrp::Hashing as u8,
+        LogIdMainGrp::Security as u8,
+        LogIdSubGrp::Hashing as u8,
         EventLevel::Error,
         0,
     ),

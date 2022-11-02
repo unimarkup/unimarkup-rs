@@ -2,9 +2,9 @@
 
 use logid::log_id::{self, EventLevel};
 
-use crate::log_id::LogSubGrp;
+use crate::log_id::LogIdMainGrp;
 
-enum LogSubSubGrp {
+pub(crate) enum LogIdSubGrp {
     General = 0,
     Atomic = 1,
     Enclosed = 2,
@@ -17,55 +17,31 @@ enum LogSubSubGrp {
 pub enum GeneralErrLogId {
     /// Log-id denoting an invalid attribute
     InvalidAttribute = log_id::get_log_id(
-        LogSubGrp::Element as u8,
-        LogSubSubGrp::General as u8,
+        LogIdMainGrp::Element as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Error,
         0,
     ),
     /// Log-id denoting an invalid element type
     InvalidElementType = log_id::get_log_id(
-        LogSubGrp::Element as u8,
-        LogSubSubGrp::General as u8,
+        LogIdMainGrp::Element as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Error,
         1,
     ),
     /// Log-id denoting a failed block creation
     FailedBlockCreation = log_id::get_log_id(
-        LogSubGrp::Element as u8,
-        LogSubSubGrp::General as u8,
+        LogIdMainGrp::Element as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Error,
         2,
     ),
     /// Log-id denoting failed inline parsing
     FailedInlineParsing = log_id::get_log_id(
-        LogSubGrp::Element as u8,
-        LogSubSubGrp::General as u8,
+        LogIdMainGrp::Element as u8,
+        LogIdSubGrp::General as u8,
         EventLevel::Error,
         3,
-    ),
-}
-
-/// Atomic error log-ids for the element section
-#[derive(Debug)]
-pub enum AtomicErrLogId {
-    /// Log-id denoting an invalid heading level
-    InvalidHeadingLvl = log_id::get_log_id(
-        LogSubGrp::Element as u8,
-        LogSubSubGrp::Atomic as u8,
-        EventLevel::Error,
-        0,
-    ),
-}
-
-/// Enclosed error log-ids for the element section
-#[derive(Debug)]
-pub enum EnclosedErrLogId {
-    /// Log-id denoting failed parsing
-    FailedParsing = log_id::get_log_id(
-        LogSubGrp::Element as u8,
-        LogSubSubGrp::Enclosed as u8,
-        EventLevel::Error,
-        0,
     ),
 }
 
@@ -74,8 +50,8 @@ pub enum EnclosedErrLogId {
 pub enum InlineWarnLogId {
     /// Log-id denoting that inline parsing failed and content is treated as plain as fallback
     InlineParsingFailed = log_id::get_log_id(
-        LogSubGrp::Element as u8,
-        LogSubSubGrp::Inline as u8,
+        LogIdMainGrp::Element as u8,
+        LogIdSubGrp::Inline as u8,
         EventLevel::Warn,
         1,
     ),
@@ -86,15 +62,15 @@ pub enum InlineWarnLogId {
 pub enum PreambleErrLogId {
     /// Log-id denoting an invalid JSON
     InvalidJSON = log_id::get_log_id(
-        LogSubGrp::Element as u8,
-        LogSubSubGrp::Preamble as u8,
+        LogIdMainGrp::Element as u8,
+        LogIdSubGrp::Preamble as u8,
         EventLevel::Error,
         0,
     ),
     /// Log-id denoting an invalid YAML
     InvalidYAML = log_id::get_log_id(
-        LogSubGrp::Element as u8,
-        LogSubSubGrp::Preamble as u8,
+        LogIdMainGrp::Element as u8,
+        LogIdSubGrp::Preamble as u8,
         EventLevel::Error,
         1,
     ),

@@ -2,9 +2,9 @@
 
 use logid::log_id::{self, EventLevel};
 
-use crate::log_id::LogSubGrp;
+use crate::log_id::LogIdMainGrp;
 
-enum LogSubSubGrp {
+enum LogIdSubGrp {
     Parser = 1,
 }
 
@@ -13,8 +13,8 @@ enum LogSubSubGrp {
 pub enum ParserErrLogId {
     /// Log-id denoting that no Unimarkup element was detected
     NoUnimarkupDetected = log_id::get_log_id(
-        LogSubGrp::Frontend as u8,
-        LogSubSubGrp::Parser as u8,
+        LogIdMainGrp::Frontend as u8,
+        LogIdSubGrp::Parser as u8,
         EventLevel::Error,
         0,
     ),
@@ -25,8 +25,8 @@ pub enum ParserErrLogId {
 pub enum ParserWarnLogId {
     /// Log-id denoting an unsupported Unimarkup block
     UnsupportedBlock = log_id::get_log_id(
-        LogSubGrp::Frontend as u8,
-        LogSubSubGrp::Parser as u8,
+        LogIdMainGrp::Frontend as u8,
+        LogIdSubGrp::Parser as u8,
         EventLevel::Warn,
         1,
     ),

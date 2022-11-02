@@ -9,7 +9,7 @@ use unimarkup_render::html::Html;
 use unimarkup_render::render::Render;
 
 use crate::backend::ParseFromIr;
-use crate::elements::log_id::EnclosedErrLogId;
+use crate::elements::enclosed::log_id::EnclosedErrLogId;
 use crate::elements::log_id::GeneralErrLogId;
 use crate::elements::types::ElementType;
 use crate::elements::UnimarkupBlocks;

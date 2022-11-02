@@ -10,8 +10,8 @@ use unimarkup_render::html::Html;
 use unimarkup_render::render::Render;
 
 use crate::backend::ParseFromIr;
-use crate::elements::log_id::{AtomicErrLogId, GeneralErrLogId};
 use crate::elements::types::{self, ElementType};
+use crate::elements::{atomic::log_id::AtomicErrLogId, log_id::GeneralErrLogId};
 use crate::elements::{inlines, UnimarkupBlocks};
 use crate::frontend::parser::custom_pest_error;
 use crate::frontend::parser::{self, Rule, UmParse};
