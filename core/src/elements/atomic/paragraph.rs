@@ -3,14 +3,6 @@ use std::{
     fmt::Debug,
 };
 
-use crate::{
-    backend::ParseFromIr,
-    elements::types::{self, ElementType},
-    frontend::parser::{self, custom_pest_error, Rule, UmParse},
-    log_id::CORE_LOG_ID_MAP,
-    middleend::{AsIrLines, ContentIrLine},
-};
-
 use logid::{
     capturing::{LogIdTracing, MappedLogId},
     log_id::LogId,
@@ -20,11 +12,18 @@ use pest::Span;
 use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 use unimarkup_render::{html::Html, render::Render};
 
-use super::{inlines, log_id::GeneralErrLogId, UnimarkupBlocks};
+use crate::elements::{inlines, log_id::GeneralErrLogId, UnimarkupBlocks};
+use crate::{
+    backend::ParseFromIr,
+    elements::types::{self, ElementType},
+    frontend::parser::{self, custom_pest_error, Rule, UmParse},
+    log_id::CORE_LOG_ID_MAP,
+    middleend::{AsIrLines, ContentIrLine},
+};
 
 /// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default, Clone)]
-pub struct ParagraphBlock {
+pub struct Paragraph {
     /// Unique identifier for a paragraph.
     pub id: String,
 
@@ -39,7 +38,7 @@ pub struct ParagraphBlock {
     pub line_nr: usize,
 }
 
-impl UmParse for ParagraphBlock {
+impl UmParse for Paragraph {
     fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, MappedLogId>
     where
         Self: Sized,
@@ -89,7 +88,7 @@ impl UmParse for ParagraphBlock {
             .unwrap(),
         };
 
-        let paragraph_block = ParagraphBlock {
+        let paragraph_block = Paragraph {
             id,
             content,
             attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
@@ -100,7 +99,7 @@ impl UmParse for ParagraphBlock {
     }
 }
 
-impl ParseFromIr for ParagraphBlock {
+impl ParseFromIr for Paragraph {
     fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, MappedLogId>
     where
         Self: Sized,
@@ -136,7 +135,7 @@ impl ParseFromIr for ParagraphBlock {
                 ir_line.fallback_attributes
             };
 
-            let block = ParagraphBlock {
+            let block = Paragraph {
                 id: ir_line.id,
                 content,
                 attributes,
@@ -148,7 +147,7 @@ impl ParseFromIr for ParagraphBlock {
             Err((GeneralErrLogId::FailedBlockCreation as LogId)
                 .set_event_with(
                     &CORE_LOG_ID_MAP,
-                    "Could not construct ParagraphBlock.",
+                    "Could not construct Paragraph.",
                     file!(),
                     line!(),
                 )
@@ -157,7 +156,7 @@ impl ParseFromIr for ParagraphBlock {
     }
 }
 
-impl Render for ParagraphBlock {
+impl Render for Paragraph {
     fn render_html(&self) -> Result<Html, MappedLogId> {
         let mut html = Html::default();
 
@@ -174,7 +173,7 @@ impl Render for ParagraphBlock {
     }
 }
 
-impl AsIrLines<ContentIrLine> for ParagraphBlock {
+impl AsIrLines<ContentIrLine> for Paragraph {
     fn as_ir_lines(&self) -> Vec<ContentIrLine> {
         let line = ContentIrLine::new(
             &self.id,
@@ -204,7 +203,7 @@ mod tests {
 
     use crate::{backend::ParseFromIr, elements::types::ElementType, middleend::ContentIrLine};
 
-    use super::ParagraphBlock;
+    use super::Paragraph;
 
     #[test]
     fn test__render_html__paragraph() {
@@ -213,7 +212,7 @@ mod tests {
             .parse_unimarkup_inlines()
             .collect();
 
-        let block = ParagraphBlock {
+        let block = Paragraph {
             id: id.clone(),
             content: content.clone(),
             attributes: "{}".into(),
@@ -242,7 +241,7 @@ mod tests {
         }]
         .into();
 
-        let paragraph = ParagraphBlock::parse_from_ir(&mut lines).unwrap();
+        let paragraph = Paragraph::parse_from_ir(&mut lines).unwrap();
 
         assert_eq!(paragraph.id, test_id);
         assert_eq!(paragraph.line_nr, 0);
@@ -257,7 +256,7 @@ mod tests {
             .parse_unimarkup_inlines()
             .collect();
 
-        let block = ParagraphBlock {
+        let block = Paragraph {
             id: id.clone(),
             content,
             attributes: "{}".into(),
@@ -276,7 +275,7 @@ mod tests {
     fn test__parse_from_ir__invalid_paragraph() {
         let mut lines = vec![].into();
 
-        let block_res = ParagraphBlock::parse_from_ir(&mut lines);
+        let block_res = Paragraph::parse_from_ir(&mut lines);
 
         assert!(block_res.is_err());
 
@@ -290,7 +289,7 @@ mod tests {
 
         lines.push_front(ir_line_bad_type);
 
-        let block_res = ParagraphBlock::parse_from_ir(&mut lines);
+        let block_res = Paragraph::parse_from_ir(&mut lines);
 
         assert!(block_res.is_err());
     }

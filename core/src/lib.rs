@@ -7,6 +7,7 @@ pub mod document;
 pub mod elements;
 pub mod frontend;
 pub mod log_id;
+pub mod metadata;
 pub mod middleend;
 pub mod security;
 pub mod unimarkup;

@@ -181,7 +181,7 @@ fn test__config_parse__flags_option_set() {
 #[test]
 fn test__config_parse__enable_elements_option_set() {
     let um_filename = "file.um";
-    let elements = vec![ElementType::VerbatimBlock, ElementType::DefinitionList];
+    let elements = vec![ElementType::Verbatim, ElementType::DefinitionList];
 
     let options = format!("--enable-elements={},{}", elements[0], elements[1]);
     let args = get_args(&options, um_filename);
@@ -202,7 +202,7 @@ fn test__config_parse__enable_elements_option_set() {
 #[test]
 fn test__config_parse__disable_elements_option_set() {
     let um_filename = "file.um";
-    let elements = vec![ElementType::VerbatimBlock, ElementType::DefinitionList];
+    let elements = vec![ElementType::Verbatim, ElementType::DefinitionList];
 
     let options = format!("--disable-elements={},{}", elements[0], elements[1]);
     let args = get_args(&options, um_filename);

@@ -1,11 +1,12 @@
 use std::path::Path;
 
-use super::super::middleend::ir_test_setup;
+use super::super::middleend::test_setup;
 use clap::StructOpt;
 use unimarkup_core::{
     config::Config,
-    elements::{Metadata, MetadataKind},
-    frontend, middleend,
+    frontend,
+    metadata::{Metadata, MetadataKind},
+    middleend,
     middleend::MetadataIrLine,
     security,
 };
@@ -14,7 +15,7 @@ use unimarkup_core::{
 fn test__ir_root__metadata_in_ir() {
     let testfile = "tests/test_files/small_testfile.um";
 
-    let mut connection = ir_test_setup::setup_test_ir();
+    let mut connection = test_setup::setup_test_ir();
     let mut cfg: Config = Config::parse_from(vec!["unimarkup", "--output-formats=html", testfile]);
 
     let input = std::fs::read_to_string(&cfg.um_file).unwrap();

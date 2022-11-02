@@ -4,7 +4,7 @@ use unimarkup_core::middleend::{
     entry_already_exists, get_single_ir_line, RetrieveFromIr, WriteToIr,
 };
 
-use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
+use crate::middleend::test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
 fn test__ir_single_write_retrieve__variable() {

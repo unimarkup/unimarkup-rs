@@ -1,3 +1,5 @@
+//! Defines the Metadata structure of a Unimarkup document.
+
 use std::path::PathBuf;
 
 use logid::capturing::MappedLogId;

@@ -10,7 +10,6 @@ use crate::{config::Config, middleend::WriteToIr};
 
 pub mod log_id;
 pub mod parser;
-pub mod preamble;
 
 /// `frontend::run` is the entry function of the [`frontend`] module.
 /// It parses a Unimarkup file and sends the data to the IR.

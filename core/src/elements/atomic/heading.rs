@@ -10,14 +10,13 @@ use unimarkup_render::html::Html;
 use unimarkup_render::render::Render;
 
 use crate::backend::ParseFromIr;
+use crate::elements::log_id::{AtomicErrLogId, GeneralErrLogId};
 use crate::elements::types::{self, ElementType};
+use crate::elements::{inlines, UnimarkupBlocks};
 use crate::frontend::parser::custom_pest_error;
 use crate::frontend::parser::{self, Rule, UmParse};
 use crate::log_id::CORE_LOG_ID_MAP;
 use crate::middleend::{AsIrLines, ContentIrLine};
-
-use super::log_id::{AtomicErrLogId, GeneralErrLogId};
-use super::{inlines, UnimarkupBlocks};
 
 /// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
@@ -101,7 +100,7 @@ impl From<usize> for HeadingLevel {
 
 /// Structure of a Unimarkup heading element.
 #[derive(Debug, Default, Clone)]
-pub struct HeadingBlock {
+pub struct Heading {
     /// Unique identifier for a heading.
     pub id: String,
 
@@ -119,7 +118,7 @@ pub struct HeadingBlock {
     pub line_nr: usize,
 }
 
-impl HeadingBlock {
+impl Heading {
     /// Parses a single instance of a heading element.
     fn parse_single(pair: &Pair<Rule>) -> Result<Self, MappedLogId> {
         let mut heading_data = pair.clone().into_inner();
@@ -165,7 +164,7 @@ impl HeadingBlock {
             _ => generated_id,
         };
 
-        Ok(HeadingBlock {
+        Ok(Heading {
             id,
             level: level.into(),
             content: heading_content.as_str().parse_unimarkup_inlines().collect(),
@@ -175,7 +174,7 @@ impl HeadingBlock {
     }
 }
 
-impl UmParse for HeadingBlock {
+impl UmParse for Heading {
     fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, MappedLogId>
     where
         Self: Sized,
@@ -202,7 +201,7 @@ impl UmParse for HeadingBlock {
     }
 }
 
-impl AsIrLines<ContentIrLine> for HeadingBlock {
+impl AsIrLines<ContentIrLine> for Heading {
     fn as_ir_lines(&self) -> Vec<ContentIrLine> {
         let level = self.level.to_string();
 
@@ -229,13 +228,13 @@ impl AsIrLines<ContentIrLine> for HeadingBlock {
     }
 }
 
-impl AsRef<Self> for HeadingBlock {
+impl AsRef<Self> for Heading {
     fn as_ref(&self) -> &Self {
         self
     }
 }
 
-impl ParseFromIr for HeadingBlock {
+impl ParseFromIr for Heading {
     fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, MappedLogId> {
         let mut level = HeadingLevel::Invalid;
 
@@ -281,7 +280,7 @@ impl ParseFromIr for HeadingBlock {
                 ir_line.fallback_attributes
             };
 
-            let block = HeadingBlock {
+            let block = Heading {
                 id: ir_line.id,
                 level,
                 content,
@@ -294,14 +293,14 @@ impl ParseFromIr for HeadingBlock {
 
         Err((AtomicErrLogId::InvalidHeadingLvl as LogId).set_event_with(
             &CORE_LOG_ID_MAP,
-            "ContentIrLines are empty, could not construct HeadingBlock!",
+            "ContentIrLines are empty, could not construct Heading!",
             file!(),
             line!(),
         ))
     }
 }
 
-impl Render for HeadingBlock {
+impl Render for Heading {
     fn render_html(&self) -> Result<Html, MappedLogId> {
         let mut html = Html::default();
 
@@ -333,11 +332,11 @@ mod tests {
 
     use crate::{
         backend::ParseFromIr,
-        elements::{heading_block::HeadingLevel, types},
+        elements::{atomic::HeadingLevel, types},
         middleend::ContentIrLine,
     };
 
-    use super::HeadingBlock;
+    use super::Heading;
 
     #[test]
     fn test__render_html__heading() {
@@ -348,7 +347,7 @@ mod tests {
             let heading_content = "This is a heading".parse_unimarkup_inlines().collect();
             let id = format!("heading-id-{}", level);
 
-            let heading = HeadingBlock {
+            let heading = Heading {
                 id: String::from(&id),
                 level: HeadingLevel::from(level),
                 content: heading_content,
@@ -374,7 +373,7 @@ mod tests {
                 .collect();
             let id = format!("heading-id-{}", level);
 
-            let heading = HeadingBlock {
+            let heading = Heading {
                 id: String::from(&id),
                 level: HeadingLevel::from(level),
                 content: heading_content,
@@ -428,7 +427,7 @@ mod tests {
                 break;
             }
 
-            let block = HeadingBlock::parse_from_ir(&mut ir_lines).unwrap();
+            let block = Heading::parse_from_ir(&mut ir_lines).unwrap();
 
             let (id, level, content, attr);
 
@@ -470,7 +469,7 @@ mod tests {
         ir_lines.push_back(bad_ir_line);
 
         // should panic because error is expected!
-        let result = HeadingBlock::parse_from_ir(&mut ir_lines);
+        let result = Heading::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
 
@@ -490,7 +489,7 @@ mod tests {
         ir_lines.push_back(bad_ir_line);
 
         // should panic because error is expected
-        let result = HeadingBlock::parse_from_ir(&mut ir_lines);
+        let result = Heading::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
 
@@ -509,7 +508,7 @@ mod tests {
 
         ir_lines.push_back(bad_ir_line);
 
-        let result = HeadingBlock::parse_from_ir(&mut ir_lines);
+        let result = Heading::parse_from_ir(&mut ir_lines);
 
         assert!(result.is_err());
     }

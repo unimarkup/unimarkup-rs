@@ -2,19 +2,19 @@ use clap::StructOpt;
 use unimarkup_core::{
     backend,
     config::Config,
-    elements::{HeadingBlock, HeadingLevel},
+    elements::atomic::{Heading, HeadingLevel},
     middleend::{self, AsIrLines, ContentIrLine},
 };
 use unimarkup_inline::ParseUnimarkupInlines;
 use unimarkup_render::render::Render;
 
-use super::super::middleend::ir_test_setup;
+use super::super::middleend::test_setup;
 
 #[test]
 fn test__backend_run__heading_block() {
-    let mut connection = ir_test_setup::setup_test_ir();
+    let mut connection = test_setup::setup_test_ir();
 
-    let block = HeadingBlock {
+    let block = Heading {
         id: "some-id".into(),
         level: HeadingLevel::Level1,
         content: "This is a heading".parse_unimarkup_inlines().collect(),
@@ -25,7 +25,7 @@ fn test__backend_run__heading_block() {
     let lines: Vec<ContentIrLine> = block.as_ir_lines();
 
     {
-        let transaction = ir_test_setup::get_test_transaction(&mut connection);
+        let transaction = test_setup::get_test_transaction(&mut connection);
         middleend::write_ir_lines(&lines, &transaction).unwrap();
 
         transaction.commit().unwrap();

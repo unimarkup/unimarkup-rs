@@ -4,23 +4,22 @@ use logid::capturing::{LogIdTracing, MappedLogId};
 use logid::log_id::LogId;
 use pest::iterators::Pairs;
 use serde::{Deserialize, Serialize};
+use unimarkup_render::highlight::{self, DEFAULT_THEME, PLAIN_SYNTAX};
 use unimarkup_render::html::Html;
 use unimarkup_render::render::Render;
-use unimarkup_render::highlight::{self, DEFAULT_THEME, PLAIN_SYNTAX};
 
 use crate::backend::ParseFromIr;
 use crate::elements::log_id::EnclosedErrLogId;
+use crate::elements::log_id::GeneralErrLogId;
 use crate::elements::types::ElementType;
+use crate::elements::UnimarkupBlocks;
 use crate::frontend::parser::{custom_pest_error, Rule, UmParse};
 use crate::log_id::CORE_LOG_ID_MAP;
 use crate::middleend::{AsIrLines, ContentIrLine};
 
-use super::log_id::GeneralErrLogId;
-use super::UnimarkupBlocks;
-
 /// Structure of a Unimarkup verbatim block element.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct VerbatimBlock {
+pub struct Verbatim {
     /// Unique identifier for a verbatim block.
     pub id: String,
 
@@ -35,7 +34,7 @@ pub struct VerbatimBlock {
     pub line_nr: usize,
 }
 
-impl UmParse for VerbatimBlock {
+impl UmParse for Verbatim {
     fn parse(pairs: &mut Pairs<Rule>, span: pest::Span) -> Result<UnimarkupBlocks, MappedLogId>
     where
         Self: Sized,
@@ -46,7 +45,7 @@ impl UmParse for VerbatimBlock {
 
         let (line_nr, _column_nr) = span.start_pos().line_col();
 
-        let mut block = VerbatimBlock {
+        let mut block = Verbatim {
             id: format!("verbatim-{}", line_nr),
             content: String::new(),
             attributes: String::new(),
@@ -114,12 +113,12 @@ impl UmParse for VerbatimBlock {
     }
 }
 
-impl AsIrLines<ContentIrLine> for VerbatimBlock {
+impl AsIrLines<ContentIrLine> for Verbatim {
     fn as_ir_lines(&self) -> Vec<ContentIrLine> {
         let line = ContentIrLine::new(
             &self.id,
             self.line_nr,
-            ElementType::VerbatimBlock.to_string(),
+            ElementType::Verbatim.to_string(),
             &self.content,
             "",
             &self.attributes,
@@ -130,13 +129,13 @@ impl AsIrLines<ContentIrLine> for VerbatimBlock {
     }
 }
 
-impl ParseFromIr for VerbatimBlock {
+impl ParseFromIr for Verbatim {
     fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, MappedLogId>
     where
         Self: Sized,
     {
         if let Some(ir_line) = content_lines.pop_front() {
-            let expected_type = ElementType::VerbatimBlock.to_string();
+            let expected_type = ElementType::Verbatim.to_string();
 
             if ir_line.um_type != expected_type {
                 return Err(
@@ -164,7 +163,7 @@ impl ParseFromIr for VerbatimBlock {
                 ir_line.fallback_attributes
             };
 
-            let block = VerbatimBlock {
+            let block = Verbatim {
                 id: ir_line.id,
                 content,
                 attributes,
@@ -176,7 +175,7 @@ impl ParseFromIr for VerbatimBlock {
             Err((GeneralErrLogId::FailedBlockCreation as LogId)
                 .set_event_with(
                     &CORE_LOG_ID_MAP,
-                    "Could not construct VerbatimBlock.",
+                    "Could not construct Verbatim.",
                     file!(),
                     line!(),
                 )
@@ -190,7 +189,7 @@ struct VerbatimAttributes {
     language: Option<String>,
 }
 
-impl Render for VerbatimBlock {
+impl Render for Verbatim {
     fn render_html(&self) -> Result<Html, MappedLogId> {
         let mut res = String::with_capacity(self.content.capacity());
 
@@ -245,7 +244,7 @@ mod tests {
 
         let attributes = format!("{{ \"language\": \"{}\" }}", lang);
 
-        let block = VerbatimBlock {
+        let block = Verbatim {
             id: id.clone(),
             content: content.clone(),
             attributes,
@@ -272,7 +271,7 @@ mod tests {
 
         let attributes = String::from("{}");
 
-        let block = VerbatimBlock {
+        let block = Verbatim {
             id: id.clone(),
             content: content.clone(),
             attributes,
@@ -299,14 +298,14 @@ mod tests {
         let mut lines: VecDeque<_> = vec![ContentIrLine {
             id: test_id.clone(),
             line_nr: 0,
-            um_type: ElementType::VerbatimBlock.to_string(),
+            um_type: ElementType::Verbatim.to_string(),
             text: content.clone(),
             attributes: String::from("{}"),
             ..Default::default()
         }]
         .into();
 
-        let verbatim = VerbatimBlock::parse_from_ir(&mut lines).unwrap();
+        let verbatim = Verbatim::parse_from_ir(&mut lines).unwrap();
 
         assert_eq!(verbatim.id, test_id);
         assert_eq!(verbatim.line_nr, 0);
@@ -319,21 +318,21 @@ mod tests {
     fn test__parse_from_ir__invalid_verbatim() {
         let mut lines = vec![].into();
 
-        let block_res = VerbatimBlock::parse_from_ir(&mut lines);
+        let block_res = Verbatim::parse_from_ir(&mut lines);
 
         assert!(block_res.is_err());
 
         let ir_line_bad_type = ContentIrLine {
             id: String::from("some-id"),
             line_nr: 2,
-            um_type: format!("{}-more-info", ElementType::VerbatimBlock),
+            um_type: format!("{}-more-info", ElementType::Verbatim),
             text: String::from("This is the text of this verbatim"),
             ..Default::default()
         };
 
         lines.push_front(ir_line_bad_type);
 
-        VerbatimBlock::parse_from_ir(&mut lines).unwrap();
+        Verbatim::parse_from_ir(&mut lines).unwrap();
     }
 
     #[test]
@@ -343,7 +342,7 @@ mod tests {
         let attributes = String::from("{}");
         let line_nr = 0;
 
-        let block = VerbatimBlock {
+        let block = Verbatim {
             id,
             content,
             attributes,
@@ -358,7 +357,7 @@ mod tests {
 
         assert_eq!(line.id, block.id);
         assert_eq!(line.line_nr, block.line_nr);
-        assert_eq!(line.um_type, ElementType::VerbatimBlock.to_string());
+        assert_eq!(line.um_type, ElementType::Verbatim.to_string());
         assert_eq!(line.text, block.content);
         assert!(line.fallback_text.is_empty());
         assert_eq!(line.attributes, block.attributes);
@@ -379,7 +378,7 @@ mod tests {
         let expected_line = ContentIrLine::new(
             "verbatim-1",
             1,
-            ElementType::VerbatimBlock.to_string(),
+            ElementType::Verbatim.to_string(),
             expected_text,
             "",
             "",
@@ -403,7 +402,7 @@ mod tests {
         let expected_line = ContentIrLine::new(
             "verbatim-1",
             1,
-            ElementType::VerbatimBlock.to_string(),
+            ElementType::Verbatim.to_string(),
             expected_text,
             "",
             "{ \"language\": \"rust\" }",
@@ -432,7 +431,7 @@ mod tests {
         let expected_line = ContentIrLine::new(
             "custom-id",
             1,
-            ElementType::VerbatimBlock.to_string(),
+            ElementType::Verbatim.to_string(),
             expected_text,
             "",
             serde_json::to_string(&expected_attrs).unwrap(),
@@ -478,7 +477,7 @@ mod tests {
 
         let mut input_pairs = verbatim_res.unwrap();
 
-        let block_res = VerbatimBlock::parse(&mut input_pairs, enclosed.as_span());
+        let block_res = Verbatim::parse(&mut input_pairs, enclosed.as_span());
 
         assert!(block_res.is_ok(), "Cause: {:?}", block_res.unwrap_err());
 
@@ -486,7 +485,7 @@ mod tests {
         assert_eq!(
             list.len(),
             1,
-            "Number of UnimarkupBlocks in VerbatimBlock not equal 1"
+            "Number of UnimarkupBlocks in Verbatim not equal 1"
         );
 
         let mut ir_lines = list.get(0).unwrap().as_ir_lines();

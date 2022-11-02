@@ -10,16 +10,16 @@ use crate::{
     config::Config,
     document::Document,
     elements::{
-        types, HeadingBlock, Metadata, MetadataKind, ParagraphBlock, UnimarkupBlocks, VerbatimBlock,
+        atomic::{Heading, Paragraph},
+        enclosed::Verbatim,
+        preamble, types, UnimarkupBlocks,
     },
     log_id::CORE_LOG_ID_MAP,
+    metadata::{Metadata, MetadataKind},
     security,
 };
 
-use super::{
-    log_id::{ParserErrLogId, ParserWarnLogId},
-    preamble,
-};
+use super::log_id::{ParserErrLogId, ParserWarnLogId};
 
 /// Used to parse one specific Unimarkup block
 pub trait UmParse {
@@ -116,9 +116,9 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document
 
 fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, MappedLogId> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::headings, input.as_str()) {
-        return HeadingBlock::parse(pairs, input.as_span());
+        return Heading::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
-        return ParagraphBlock::parse(pairs, input.as_span());
+        return Paragraph::parse(pairs, input.as_span());
     }
 
     Ok(vec![])
@@ -126,7 +126,7 @@ fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, MappedLogId>
 
 fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, MappedLogId> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::verbatim, input.as_str()) {
-        return VerbatimBlock::parse(pairs, input.as_span());
+        return Verbatim::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
         // TODO: Add implementation for the rest of enclosed blocks, return error if none of them match
         //
@@ -141,7 +141,7 @@ fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, MappedLogI
             )
             .add_info("Block is parsed as a Unimarkup paragraph block.");
 
-        return ParagraphBlock::parse(pairs, input.as_span());
+        return Paragraph::parse(pairs, input.as_span());
     }
 
     Ok(vec![])

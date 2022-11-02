@@ -4,10 +4,8 @@ use clap::StructOpt;
 use pest::Parser;
 use unimarkup_core::{
     config::{Config, OutputFormat},
-    frontend::{
-        parser::{Rule, UnimarkupParser},
-        preamble::parse_preamble,
-    },
+    elements::preamble::parse_preamble,
+    frontend::parser::{Rule, UnimarkupParser},
 };
 
 #[test]

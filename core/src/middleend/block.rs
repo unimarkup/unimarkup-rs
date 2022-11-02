@@ -12,7 +12,7 @@ use super::WriteToIr;
 /// IR compatible representation of various Unimarkup Elements such as Blocks, Variables, Macros etc.
 #[derive(Debug)]
 pub struct IrBlock {
-    /// IR compatible representation of a UnimarkupBlock (i.e. HeadingBlock)
+    /// IR compatible representation of a UnimarkupBlock (i.e. Heading)
     content_lines: Vec<ContentIrLine>,
     /// IR compatible representation of a Unimarkup variable
     variable_lines: Vec<VariableIrLine>,

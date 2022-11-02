@@ -1,6 +1,10 @@
 //! [`preamble`](crate::frontend::preamble) is the module which implements parsing of the preamble and merge the config of the preamble with the CLI arguments.
 
-use crate::{config::Config, frontend::parser::Rule, log_id::CORE_LOG_ID_MAP};
+use crate::{
+    config::Config,
+    frontend::parser::{custom_pest_error, Rule},
+    log_id::CORE_LOG_ID_MAP,
+};
 
 use logid::{
     capturing::{LogIdTracing, MappedLogId},
@@ -8,7 +12,7 @@ use logid::{
 };
 use pest::iterators::Pair;
 
-use super::{log_id::PreambleErrLogId, parser::custom_pest_error};
+use super::log_id::PreambleErrLogId;
 
 ///[parse_preamble] parses the preamble and tries to serialize the content given either as JSON or YAML into the [Config] struct.
 ///After serialization, the CLI and preamble config structs are merged with CLI taking precedence.

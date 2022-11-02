@@ -1,4 +1,4 @@
-use unimarkup_core::elements::ParagraphBlock;
+use unimarkup_core::elements::atomic::Paragraph;
 use unimarkup_inline::ParseUnimarkupInlines;
 use unimarkup_render::render::Render;
 
@@ -7,7 +7,7 @@ fn test__render_html__valid_escaped_inline() {
     let id = String::from("paragraph-id");
     let content = "\\*23\\*3".parse_unimarkup_inlines().collect();
 
-    let mut block = ParagraphBlock {
+    let mut block = Paragraph {
         id: id.clone(),
         content,
         attributes: "{}".into(),

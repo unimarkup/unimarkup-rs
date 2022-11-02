@@ -9,6 +9,7 @@ enum LogSubSubGrp {
     Atomic = 1,
     Enclosed = 2,
     Inline = 3,
+    Preamble = 4,
 }
 
 /// General error log-ids for the element section
@@ -76,6 +77,25 @@ pub enum InlineWarnLogId {
         LogSubGrp::Element as u8,
         LogSubSubGrp::Inline as u8,
         EventLevel::Warn,
+        1,
+    ),
+}
+
+/// Preamble error log-ids for the frontend section
+#[derive(Debug)]
+pub enum PreambleErrLogId {
+    /// Log-id denoting an invalid JSON
+    InvalidJSON = log_id::get_log_id(
+        LogSubGrp::Element as u8,
+        LogSubSubGrp::Preamble as u8,
+        EventLevel::Error,
+        0,
+    ),
+    /// Log-id denoting an invalid YAML
+    InvalidYAML = log_id::get_log_id(
+        LogSubGrp::Element as u8,
+        LogSubSubGrp::Preamble as u8,
+        EventLevel::Error,
         1,
     ),
 }

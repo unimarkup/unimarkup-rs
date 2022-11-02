@@ -6,7 +6,6 @@ use crate::log_id::LogSubGrp;
 
 enum LogSubSubGrp {
     Parser = 1,
-    Preamble = 2,
 }
 
 /// Parser error log-ids for the frontend section
@@ -29,25 +28,6 @@ pub enum ParserWarnLogId {
         LogSubGrp::Frontend as u8,
         LogSubSubGrp::Parser as u8,
         EventLevel::Warn,
-        1,
-    ),
-}
-
-/// Preamble error log-ids for the frontend section
-#[derive(Debug)]
-pub enum PreambleErrLogId {
-    /// Log-id denoting an invalid JSON
-    InvalidJSON = log_id::get_log_id(
-        LogSubGrp::Frontend as u8,
-        LogSubSubGrp::Preamble as u8,
-        EventLevel::Error,
-        0,
-    ),
-    /// Log-id denoting an invalid YAML
-    InvalidYAML = log_id::get_log_id(
-        LogSubGrp::Frontend as u8,
-        LogSubSubGrp::Preamble as u8,
-        EventLevel::Error,
         1,
     ),
 }

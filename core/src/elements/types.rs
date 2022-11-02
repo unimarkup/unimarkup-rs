@@ -86,7 +86,7 @@ pub enum ElementType {
     /// }
     /// ```
     /// ````
-    VerbatimBlock,
+    Verbatim,
 
     /// A render block enclosed with 3 or more `'` symbols.
     ///
@@ -127,7 +127,7 @@ pub enum ElementType {
     /// ```markdown
     /// ~~~[The whole style guide for Unimarkup](StyleGuide.md)
     /// ```
-    VerbatimBlockInsert,
+    VerbatimInsert,
 
     /// A render block which inserts another file as render block.
     RenderBlockInsert,
@@ -237,12 +237,12 @@ pub enum ElementType {
 /// ## Usage
 ///
 /// ```ignore
-/// from_block_to_type!(HeadingBlock, Heading);
+/// from_block_to_type!(Heading, Heading);
 ///
 /// // expands to
 ///
-/// impl From<&HeadingBlock> for ElementType {
-///     fn from(_: &HeadingBlock) -> Self {
+/// impl From<&Heading> for ElementType {
+///     fn from(_: &Heading) -> Self {
 ///         Self::Heading
 ///     }
 /// }
@@ -259,9 +259,9 @@ macro_rules! from_block_to_type {
     };
 }
 
-from_block_to_type!(super::HeadingBlock, Heading);
-from_block_to_type!(super::ParagraphBlock, Paragraph);
-from_block_to_type!(super::VerbatimBlock, VerbatimBlock);
+from_block_to_type!(super::atomic::Heading, Heading);
+from_block_to_type!(super::atomic::Paragraph, Paragraph);
+from_block_to_type!(super::enclosed::Verbatim, Verbatim);
 
 #[allow(non_snake_case)]
 #[cfg(test)]
@@ -270,7 +270,7 @@ mod tests {
 
     #[test]
     fn test__convert_types__heading() {
-        let heading = crate::elements::HeadingBlock::default();
+        let heading = crate::elements::atomic::Heading::default();
 
         let um_type = ElementType::from(&heading);
 

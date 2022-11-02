@@ -362,7 +362,7 @@ impl Config {
             self.html_embed_svg = other.html_embed_svg;
         }
     }
-    
+
     /// [`validate_config`] validates if file and paths exist and if config does not contradict itself
     pub fn validate_config(&mut self) -> Result<(), MappedLogId> {
         if let Some(ref file) = self.out_file {

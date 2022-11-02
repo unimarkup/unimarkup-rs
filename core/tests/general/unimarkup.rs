@@ -1,5 +1,3 @@
-#![allow(non_snake_case)]
-
 use clap::Parser;
 use unimarkup_core::config::Config;
 

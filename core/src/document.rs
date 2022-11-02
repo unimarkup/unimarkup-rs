@@ -4,7 +4,8 @@ use unimarkup_render::html::Html;
 
 use crate::{
     config::{Config, OutputFormat},
-    elements::{Metadata, UnimarkupBlocks},
+    elements::UnimarkupBlocks,
+    metadata::Metadata,
     middleend::{MacroIrLine, ResourceIrLine, VariableIrLine},
 };
 

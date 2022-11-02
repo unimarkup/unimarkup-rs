@@ -8,8 +8,11 @@ use rusqlite::Connection;
 
 use crate::{
     elements::{
-        types, types::ElementType, HeadingBlock, ParagraphBlock, UnimarkupBlock, UnimarkupBlocks,
-        VerbatimBlock,
+        atomic::{Heading, Paragraph},
+        enclosed::Verbatim,
+        types,
+        types::ElementType,
+        UnimarkupBlock, UnimarkupBlocks,
     },
     log_id::CORE_LOG_ID_MAP,
     middleend::{self, ContentIrLine},
@@ -49,17 +52,15 @@ pub fn get_blocks_from_ir(connection: &mut Connection) -> Result<UnimarkupBlocks
 
         let block: Box<dyn UnimarkupBlock> = match um_type {
             // UnimarkupType::List => todo!(),
-            ElementType::Heading => Box::new(HeadingBlock::parse_from_ir(&mut content_lines)?),
-            ElementType::Paragraph => Box::new(ParagraphBlock::parse_from_ir(&mut content_lines)?),
-            ElementType::VerbatimBlock => {
-                Box::new(VerbatimBlock::parse_from_ir(&mut content_lines)?)
-            }
+            ElementType::Heading => Box::new(Heading::parse_from_ir(&mut content_lines)?),
+            ElementType::Paragraph => Box::new(Paragraph::parse_from_ir(&mut content_lines)?),
+            ElementType::Verbatim => Box::new(Verbatim::parse_from_ir(&mut content_lines)?),
             _ => {
                 // unsupported types in middleend
                 // TODO: log
 
                 let _ = content_lines.pop_front();
-                Box::new(ParagraphBlock::default())
+                Box::new(Paragraph::default())
             }
         };
 

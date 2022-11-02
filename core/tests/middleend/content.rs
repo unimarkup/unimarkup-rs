@@ -3,7 +3,7 @@ use unimarkup_core::middleend::{
 };
 use unimarkup_core::middleend::{prepare_content_rows, ContentIrLine};
 
-use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
+use crate::middleend::test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
 fn test__ir_single_write_retrieve__content() {

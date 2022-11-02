@@ -1,18 +1,19 @@
-use unimarkup_core::middleend::ResourceIrLine;
+use unimarkup_core::middleend::MetadataIrLine;
 use unimarkup_core::middleend::{
     entry_already_exists, get_single_ir_line, RetrieveFromIr, WriteToIr,
 };
 
-use crate::middleend::ir_test_setup::{get_test_transaction, setup_test_ir};
+use crate::middleend::test_setup::{get_test_transaction, setup_test_ir};
 
 #[test]
-fn test__ir_single_write_retrieve__resource() {
-    let first_resources = ResourceIrLine::new("test.png", ".");
+fn test__ir_single_write_retrieve__metadata() {
+    let first_metadata =
+        MetadataIrLine::new(b"ccdec233ff78".to_vec(), "test.um", ".", "{}", "", true);
     let mut conn = setup_test_ir();
 
     //--- WRITE TO IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
-    let write_res = first_resources.write_to_ir(&transaction);
+    let write_res = first_metadata.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
     assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
@@ -20,32 +21,33 @@ fn test__ir_single_write_retrieve__resource() {
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
-    let retrieved_resources_res =
-        get_single_ir_line::<ResourceIrLine>(&transaction, first_resources.get_pk_values());
+    let retrieved_metadata_res =
+        get_single_ir_line::<MetadataIrLine>(&transaction, first_metadata.get_pk_values());
     let commit_res = transaction.commit();
 
     assert!(
-        retrieved_resources_res.is_ok(),
+        retrieved_metadata_res.is_ok(),
         "Cause: {:?}",
-        retrieved_resources_res.unwrap_err()
+        retrieved_metadata_res.unwrap_err()
     );
     assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- COMPARE ------------------------------------------------------------
-    let retrieved_first_resources = retrieved_resources_res.unwrap();
-    assert_eq!(first_resources, retrieved_first_resources);
+    let retrieved_first_metadata = retrieved_metadata_res.unwrap();
+    assert_eq!(first_metadata, retrieved_first_metadata);
 }
 
 #[test]
-fn test__ir_entry_exists__resource() {
+fn test__ir_entry_exists__metadata() {
     let mut conn = setup_test_ir();
-    let first_resource = ResourceIrLine::new("test.um", ".");
+    let first_metadata =
+        MetadataIrLine::new(b"ccdec233ff78".to_vec(), "test.um", ".", "{}", "", true);
 
     //--- ENTRY NOT IN IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
 
     assert!(
-        !entry_already_exists(&first_resource, &transaction),
+        !entry_already_exists(&first_metadata, &transaction),
         "FAIL: Entry can not be in IR"
     );
 
@@ -54,7 +56,7 @@ fn test__ir_entry_exists__resource() {
 
     //--- WRITE TO IR --------------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
-    let write_res = first_resource.write_to_ir(&transaction);
+    let write_res = first_metadata.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
     assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
@@ -64,7 +66,7 @@ fn test__ir_entry_exists__resource() {
     let transaction = get_test_transaction(&mut conn);
 
     assert!(
-        entry_already_exists(&first_resource, &transaction),
+        entry_already_exists(&first_metadata, &transaction),
         "FAIL: Entry not in IR"
     );
 
@@ -73,22 +75,30 @@ fn test__ir_entry_exists__resource() {
 }
 
 #[test]
-fn test__ir_write_update__resource() {
+fn test__ir_write_update__metadata() {
     let mut conn = setup_test_ir();
 
     //--- FIRST: WRITE TO IR --------------------------------------------------------
-    let first_resource = ResourceIrLine::new("test.um", ".");
+    let first_metadata =
+        MetadataIrLine::new(b"ccdec233ff78".to_vec(), "test.um", ".", "{}", "", true);
     let transaction = get_test_transaction(&mut conn);
-    let write_res = first_resource.write_to_ir(&transaction);
+    let write_res = first_metadata.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
     assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
     assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- SECOND: WRITE TO IR -------------------------------------------------------
-    let updated_resource = ResourceIrLine::new(&first_resource.filename, &first_resource.path); // resources only has pk columns
+    let updated_metadata = MetadataIrLine::new(
+        first_metadata.filehash.clone(),
+        "test2.um",
+        ".",
+        "",
+        "",
+        false,
+    );
     let transaction = get_test_transaction(&mut conn);
-    let write_res = updated_resource.write_to_ir(&transaction);
+    let write_res = updated_metadata.write_to_ir(&transaction);
     let commit_res = transaction.commit();
 
     assert!(write_res.is_ok(), "Cause: {:?}", write_res.unwrap_err());
@@ -96,18 +106,18 @@ fn test__ir_write_update__resource() {
 
     //--- RETRIEVE FROM IR ---------------------------------------------------
     let transaction = get_test_transaction(&mut conn);
-    let retrieved_resource_res =
-        get_single_ir_line::<ResourceIrLine>(&transaction, first_resource.get_pk_values());
+    let retrieved_metadata_res =
+        get_single_ir_line::<MetadataIrLine>(&transaction, first_metadata.get_pk_values());
     let commit_res = transaction.commit();
 
     assert!(
-        retrieved_resource_res.is_ok(),
+        retrieved_metadata_res.is_ok(),
         "Cause: {:?}",
-        retrieved_resource_res.unwrap_err()
+        retrieved_metadata_res.unwrap_err()
     );
     assert!(commit_res.is_ok(), "Cause: {:?}", commit_res.unwrap_err());
 
     //--- COMPARE ------------------------------------------------------------
-    let retrieved_updated_resource = retrieved_resource_res.unwrap();
-    assert_eq!(updated_resource, retrieved_updated_resource);
+    let retrieved_updated_metadata = retrieved_metadata_res.unwrap();
+    assert_eq!(updated_metadata, retrieved_updated_metadata);
 }
