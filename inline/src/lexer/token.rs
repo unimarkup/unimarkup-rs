@@ -1,9 +1,8 @@
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-use crate::{Inline, Symbol};
-
 use super::Content;
+use crate::{Inline, Symbol};
 
 /// Marker type for [`TokenBuilder`] to annotate that some part of [`TokenBuilder`] is invalid.
 ///
@@ -403,6 +402,16 @@ impl Token {
     }
 }
 
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(content) = &self.content {
+            f.write_str(content)
+        } else {
+            f.write_str(self.as_str())
+        }
+    }
+}
+
 /// The kind of the token found in Unimarkup document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TokenKind {
@@ -565,6 +574,10 @@ impl TokenKind {
             Self::UnderlineSubscript => Some((Self::Underline, Self::Subscript)),
             _ => None,
         }
+    }
+
+    pub(crate) fn is_parenthesis(&self) -> bool {
+        self.is_open_bracket() || self.is_close_bracket()
     }
 }
 
@@ -803,8 +816,8 @@ impl Sub for Spacing {
 /// [`Token`]: self::Token
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Span {
-    start: Position,
-    end: Position,
+    pub(crate) start: Position,
+    pub(crate) end: Position,
 }
 
 impl Span {

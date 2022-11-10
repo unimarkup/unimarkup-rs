@@ -9,45 +9,35 @@ pub use token::*;
 
 use crate::{Substitute, Substitutor};
 
+use self::resolver::{TokenResolver, UnresolvedToken};
+
 /// Used to create a Unimarkup [`Lexer`] over some data structure, most typically over some kind of
 /// string, i.e. [`&str`].
 ///
 /// [`Lexer`]: self::Lexer
 /// [`&str`]: &str
 pub trait Tokenize {
-    /// Creates the `Lexer` from this type.
-    fn lex(&self) -> Lexer;
+    /// Returns tokens found in self.
+    fn tokens(&self) -> Tokens;
 
-    /// Creates the `Lexer` from this type starting at the given offset.
-    fn lex_with_offs(&self, pos: Position) -> Lexer {
-        Lexer { pos, ..self.lex() }
-    }
-
-    /// Creates an [`TokenIterator`] from this type.
-    ///
-    /// [`TokenIterator`]: self::TokenIterator
-    fn lex_iter(&self) -> TokenIterator;
-
-    /// Creates an [`TokenIterator`] from this type starting at the given offset.
-    ///
-    /// [`TokenIterator`]: self::TokenIterator
-    fn lex_iter_with_offs(&self, pos: Position) -> TokenIterator {
-        let lexer = self.lex_with_offs(pos);
-
-        lexer.iter()
-    }
+    /// Returns tokens found in self starting from the given position.
+    fn tokens_with_offs(&self, pos: Position) -> Tokens;
 }
 
 impl<'a> Tokenize for &'a str {
-    fn lex(&self) -> Lexer {
-        Lexer {
+    fn tokens(&self) -> Tokens {
+        let lexer = Lexer {
             input: self,
             pos: Position { line: 1, column: 1 },
-        }
+        };
+
+        Tokens::new(lexer.resolved())
     }
 
-    fn lex_iter(&self) -> TokenIterator {
-        self.lex().iter()
+    fn tokens_with_offs(&self, pos: Position) -> Tokens {
+        let lexer = Lexer { input: self, pos };
+
+        Tokens::new(lexer.resolved())
     }
 }
 
@@ -258,7 +248,7 @@ impl<'a> Lexer<'a> {
     ///
     /// [`TokenIterator`]: self::TokenIterator
     /// [`Lexer`]: self::Lexer
-    pub fn iter(&self) -> TokenIterator<'a> {
+    fn iter(&self) -> TokenIterator<'a> {
         let skip_lines_upto_index = self.pos.line.saturating_sub(1);
         let mut lines = self.input.lines().peekable();
 
@@ -273,6 +263,10 @@ impl<'a> Lexer<'a> {
             pos: self.pos,
             substitutor: Substitutor::new(),
         }
+    }
+
+    fn resolved(self) -> TokenResolver<'a> {
+        TokenResolver::new(self.iter())
     }
 }
 
@@ -680,6 +674,47 @@ impl<'a> Iterator for TokenIterator<'a> {
                 }
             }
             _ => self.lex_plain(),
+        }
+    }
+}
+
+/// TODO: write docs
+#[derive(Debug, Clone)]
+pub struct Tokens<'a> {
+    resolver: TokenResolver<'a>,
+    cache: Option<UnresolvedToken>,
+}
+
+impl<'a> Tokens<'a> {
+    pub(crate) fn new(resolver: TokenResolver<'a>) -> Self {
+        Self {
+            resolver,
+            cache: None,
+        }
+    }
+}
+
+impl Iterator for Tokens<'_> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.resolver.tokens.is_empty() {
+            self.resolver.resolve();
+        }
+
+        let mut unr_token = if let Some(unr_token) = self.cache.take() {
+            unr_token
+        } else {
+            self.resolver.tokens.pop_front()?
+        };
+
+        if let Some(first_part) = unr_token.pop() {
+            // save remaining part
+            self.cache = Some(unr_token);
+
+            Some(Token::from(first_part))
+        } else {
+            Some(Token::from(unr_token))
         }
     }
 }

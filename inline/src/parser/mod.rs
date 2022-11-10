@@ -1,8 +1,8 @@
 use std::{collections::VecDeque, ops::Deref};
 
 use crate::{
-    Inline, InlineContent, NestedContent, PlainContent, Position, Span, Token, TokenIterator,
-    TokenKind, Tokenize,
+    Inline, InlineContent, NestedContent, PlainContent, Position, Span, Token, TokenKind, Tokenize,
+    Tokens,
 };
 
 /// Internal data structure used for parsing of Unimarkup [`Inline`]s.
@@ -75,7 +75,7 @@ pub struct Parser<'i> {
     /// Iterator over [`Token`]s found in Unimarkup input.
     ///
     /// [`Token`]: crate::Token
-    iter: TokenIterator<'i>,
+    iter: Tokens<'i>,
 
     /// Stack used for parsing.
     stack: ParserStack,
@@ -517,7 +517,7 @@ where
 {
     fn parse_unimarkup_inlines(&self) -> Parser<'_> {
         Parser {
-            iter: self.lex_iter(),
+            iter: self.tokens(),
             stack: ParserStack::default(),
             token_cache: None,
             stack_cache: Vec::default(),

@@ -15,17 +15,47 @@ macro_rules! assert_token {
     }
 }
 
-mod brace;
-mod bracket;
-mod caret;
-mod dollar;
-mod other;
-mod overline;
-mod parenthesis;
-mod pipe;
-mod quote;
-mod star;
-mod substitute;
-mod tick;
-mod tilde;
-mod underline;
+// mod brace;
+// mod bracket;
+// mod caret;
+// mod dollar;
+// mod other;
+// mod overline;
+// mod parenthesis;
+// mod pipe;
+// mod quote;
+// mod star;
+// mod substitute;
+// mod tick;
+// mod tilde;
+// mod underline;
+//
+#[test]
+fn tokenization() {
+    let input = "**This bold [group**] and close** bold..";
+
+    let tokens = input.tokens();
+
+    println!("Lexing: \n{}", input);
+
+    for _token in tokens {
+        print!("{_token}");
+        continue;
+    }
+    println!();
+}
+
+#[test]
+fn tokenization_2() {
+    let input = "**double **nested** bold**";
+
+    let tokens = input.tokens();
+
+    println!("Lexing: \n{}", input);
+
+    for _token in tokens {
+        print!("{_token}");
+        continue;
+    }
+    println!();
+}
