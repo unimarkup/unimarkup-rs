@@ -120,12 +120,12 @@ impl TokenBuilder<Valid, Valid, Valid> {
 }
 
 /// Token lexed from Unimarkup text.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Token {
-    kind: TokenKind,
-    span: Span,
-    spacing: Spacing,
-    content: Option<String>,
+    pub(crate) kind: TokenKind,
+    pub(crate) span: Span,
+    pub(crate) spacing: Spacing,
+    pub(crate) content: Option<String>,
 }
 
 impl Token {
@@ -404,7 +404,7 @@ impl Token {
 }
 
 /// The kind of the token found in Unimarkup document.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TokenKind {
     /// Bold delimiter token (`**`).
     Bold,
@@ -549,6 +549,22 @@ impl TokenKind {
             self,
             Self::CloseParens | Self::CloseBracket | Self::CloseBrace
         )
+    }
+
+    pub(crate) fn get_ambiguous_variant(&self) -> Option<Self> {
+        match self {
+            TokenKind::Bold | TokenKind::Italic => Some(Self::ItalicBold),
+            TokenKind::Underline | TokenKind::Subscript => Some(Self::UnderlineSubscript),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn get_ambiguous_parts(&self) -> Option<(Self, Self)> {
+        match self {
+            Self::ItalicBold => Some((Self::Italic, Self::Bold)),
+            Self::UnderlineSubscript => Some((Self::Underline, Self::Subscript)),
+            _ => None,
+        }
     }
 }
 
@@ -704,7 +720,7 @@ impl TokenDelimiters {
 }
 
 /// Enum representing the spacing surrounding a particular token in Unimarkup document.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Spacing {
     /// Whitespace before the token.
     Pre,
@@ -785,7 +801,7 @@ impl Sub for Spacing {
 /// Span used to store information about the space some [`Token`] occupies in Unimarkup document.
 ///
 /// [`Token`]: self::Token
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Span {
     start: Position,
     end: Position,

@@ -2,6 +2,7 @@ use std::{iter::Peekable, str::Lines};
 
 use unicode_segmentation::*;
 
+mod resolver;
 mod token;
 
 pub use token::*;
