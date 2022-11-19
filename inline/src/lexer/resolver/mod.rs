@@ -44,7 +44,7 @@ impl UnresolvedToken {
     }
 
     pub(crate) fn pop(&mut self) -> Option<UnresolvedToken> {
-        // sets the next token in order to `second_part` so it can be `take`n
+        // moves the next token to `second_part` so it can be `take`n
         self.order();
 
         self.second_part.take().map(|mut token| {
@@ -56,10 +56,6 @@ impl UnresolvedToken {
 
             *token
         })
-    }
-
-    pub(crate) fn pop_second_part(&mut self) -> Option<UnresolvedToken> {
-        self.second_part.take().map(|boxed| *boxed)
     }
 
     pub(crate) fn swap_parts(&mut self) {
@@ -95,7 +91,7 @@ impl From<UnresolvedToken> for Token {
 
         token.spacing = Spacing::from(unr_token.resolved);
         if !token.kind.is_parenthesis() && token.is_nesting_token() && !unr_token.resolved {
-            token.content = Some(token.as_str().into());
+            token.content = Some(token.as_str().to_string());
             token.kind = TokenKind::Plain;
         }
 
@@ -103,22 +99,13 @@ impl From<UnresolvedToken> for Token {
     }
 }
 
-#[derive(Debug, Clone)]
-struct ScopedIndices {
-    scope: usize,
-    indices: Vec<usize>,
-}
-
-impl ScopedIndices {
-    fn push(&mut self, index: usize) {
-        self.indices.push(index);
-    }
-}
+type Scope = usize;
+type Indices = Vec<usize>;
 
 #[derive(Debug, Clone)]
 #[repr(transparent)]
 struct TokenMap {
-    map: BTreeMap<TokenKind, ScopedIndices>,
+    map: BTreeMap<(TokenKind, Scope), Indices>,
 }
 
 impl TokenMap {
@@ -136,16 +123,30 @@ impl TokenMap {
         }
     }
 
-    fn entry(&mut self, kind: TokenKind) -> Entry<TokenKind, ScopedIndices> {
-        self.map.entry(Self::general_key(kind))
+    fn update_or_insert(&mut self, kind: TokenKind, index: usize, scope: Scope) {
+        self.entry(kind, scope)
+            .and_modify(|indices| indices.push(index))
+            .or_insert_with(|| vec![index]);
     }
 
-    fn get(&self, kind: TokenKind) -> Option<&ScopedIndices> {
-        self.map.get(&Self::general_key(kind))
+    fn insert(&mut self, kind: TokenKind, scope: Scope, indices: Indices) {
+        let key = (Self::general_key(kind), scope);
+        self.map.insert(key, indices);
     }
 
-    fn get_mut(&mut self, kind: TokenKind) -> Option<&mut ScopedIndices> {
-        self.map.get_mut(&Self::general_key(kind))
+    fn entry(&mut self, kind: TokenKind, scope: Scope) -> Entry<(TokenKind, Scope), Indices> {
+        let key = (Self::general_key(kind), scope);
+        self.map.entry(key)
+    }
+
+    fn get(&self, kind: TokenKind, scope: Scope) -> Option<&Indices> {
+        let key = (Self::general_key(kind), scope);
+        self.map.get(&key)
+    }
+
+    fn get_mut(&mut self, kind: TokenKind, scope: Scope) -> Option<&mut Indices> {
+        let key = (Self::general_key(kind), scope);
+        self.map.get_mut(&key)
     }
 }
 
@@ -214,13 +215,7 @@ impl<'a> TokenResolver<'a> {
             if !self.tokens[index].resolved {
                 let kind = self.tokens[index].token.kind;
                 // save positions of every unresolved token
-                token_map
-                    .entry(kind)
-                    .and_modify(|indices| indices.push(index))
-                    .or_insert_with(|| ScopedIndices {
-                        scope: self.curr_scope,
-                        indices: vec![index],
-                    });
+                token_map.update_or_insert(kind, index, self.curr_scope);
             }
         }
     }
@@ -246,7 +241,7 @@ impl<'a> TokenResolver<'a> {
     fn resolve_simple_token(&mut self, token_map: &mut TokenMap, index: usize) -> Option<usize> {
         let token_kind = self.tokens[index].token.kind;
 
-        let indices = token_map.get_mut(token_kind)?;
+        let indices = token_map.get_mut(token_kind, self.curr_scope)?;
         let (unr_token, i, token_index) = self.find_first_matching(indices, index)?;
 
         if unr_token.token.is_ambiguous() {
@@ -282,14 +277,14 @@ impl<'a> TokenResolver<'a> {
             }
 
             // remove unresolved token
-            indices.indices.remove(i);
+            indices.remove(i);
             Some(token_index)
         }
     }
 
     fn resolve_compound_token(&mut self, token_map: &mut TokenMap, index: usize) -> Option<usize> {
         let token_kind = self.tokens[index].token.kind;
-        let indices = token_map.get_mut(token_kind)?;
+        let indices = token_map.get_mut(token_kind, self.curr_scope)?;
         let (unr_token, i, token_index) = self.find_first_matching(indices, index)?;
 
         if unr_token.token.is_ambiguous() {
@@ -313,18 +308,17 @@ impl<'a> TokenResolver<'a> {
             }
 
             // make sure the parts are symmetric
-            // if self.tokens[index].token.kind == unr_kind {
-            if token_kind != unr_kind {
+            if self.tokens[index].token.kind == unr_kind {
                 dbg!(&self.tokens[index].token.kind);
                 self.tokens[index].swap_parts();
             }
 
-            indices.indices.remove(i);
+            indices.remove(i);
             return Some(token_index);
         } else {
             // there is unresolved one that IS NOT ambiguous (simple, ambiguous)
             let kind = unr_token.token.kind;
-            if let Some(token_index) = self.resolve_partial_kind(indices, index, kind) {
+            if let Some(token_index) = self.resolve_partial(indices, index, kind) {
                 // try to resolve the remaining part
                 self.resolve_token(token_map, index);
                 return Some(token_index);
@@ -334,9 +328,9 @@ impl<'a> TokenResolver<'a> {
         None
     }
 
-    fn resolve_partial_kind(
+    fn resolve_partial(
         &mut self,
-        indices: &mut ScopedIndices,
+        indices: &mut Indices,
         index: usize,
         kind: TokenKind,
     ) -> Option<usize> {
@@ -352,7 +346,7 @@ impl<'a> TokenResolver<'a> {
             }
 
             curr_token.resolved = Resolved::Close;
-            indices.indices.remove(i);
+            indices.remove(i);
 
             // move unresolved part, for it to be resolved
             curr_token.swap_parts();
@@ -365,15 +359,9 @@ impl<'a> TokenResolver<'a> {
 
     fn find_first_matching(
         &mut self,
-        indices: &ScopedIndices,
+        indices: &Indices,
         curr_idx: usize,
     ) -> Option<(&mut UnresolvedToken, usize, usize)> {
-        let indices = if indices.scope == self.curr_scope {
-            &indices.indices
-        } else {
-            return None;
-        };
-
         // find first unresolved token
         for (i, idx) in indices.iter().enumerate() {
             let curr_token = &self.tokens[curr_idx];

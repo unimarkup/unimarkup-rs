@@ -275,3 +275,15 @@ fn tokenization_bold_around_tg() {
     }
     println!();
 }
+
+#[test]
+fn tokenization_scope_problem() {
+    let input = "**bold [**in tg**] close**";
+
+    println!("Lexing: \n{}", input);
+    for _token in input.tokens() {
+        print!("{_token}");
+        continue;
+    }
+    println!();
+}
