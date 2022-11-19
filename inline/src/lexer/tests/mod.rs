@@ -263,3 +263,15 @@ fn tokenization_repeated() {
     }
     println!();
 }
+
+#[test]
+fn tokenization_bold_around_tg() {
+    let input = "**This bold [group**] and close** bold..";
+
+    println!("Lexing: \n{}", input);
+    for _token in input.tokens() {
+        print!("{_token}");
+        continue;
+    }
+    println!();
+}

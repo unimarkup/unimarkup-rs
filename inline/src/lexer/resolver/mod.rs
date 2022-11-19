@@ -46,7 +46,6 @@ impl UnresolvedToken {
         self.second_part.take().map(|mut token| {
             // if second_part span appears to be before first_part, swap their spans
             if self.token.span.start.column < token.token.span.start.column {
-                dbg!(&self.token, &token);
                 // swap their spans
                 let (first, second) = self.token.span.swapped(&token.token.span);
                 self.token.span = first;
@@ -94,7 +93,7 @@ impl From<UnresolvedToken> for Token {
 
         token.spacing = Spacing::from(unr_token.resolved);
         if !token.kind.is_parenthesis() && token.is_nesting_token() && !unr_token.resolved {
-            token.content = Some(token.as_str().to_string());
+            token.content = Some(token.as_str().into());
             token.kind = TokenKind::Plain;
         }
 
@@ -200,7 +199,7 @@ impl<'a> TokenResolver<'a> {
                 continue;
             } else if self.tokens[index].token.kind.is_close_bracket() {
                 // scope < 0 is user input error
-                let _ = self.curr_scope.saturating_sub(1);
+                self.curr_scope = self.curr_scope.saturating_sub(1);
                 continue;
             }
 
