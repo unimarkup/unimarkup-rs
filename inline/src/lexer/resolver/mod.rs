@@ -1,8 +1,7 @@
 #![allow(dead_code)]
-#![warn(clippy::pedantic)]
 
 use std::{
-    collections::{btree_map::Entry, BTreeMap, BTreeSet, VecDeque},
+    collections::{btree_map::Entry, BTreeMap, VecDeque},
     ops::{Not, Range},
     vec,
 };
@@ -33,20 +32,23 @@ pub(crate) struct UnresolvedToken {
 }
 
 impl UnresolvedToken {
-    pub(crate) fn pop(&mut self) -> Option<UnresolvedToken> {
+    fn order(&mut self) {
         if let Some(ref sec_part) = self.second_part {
-            if let (Resolved::Open | Resolved::Neither, Resolved::Close)
-            | (Resolved::Open, Resolved::Neither) = (self.resolved, sec_part.resolved)
-            {
-                self.swap_parts();
+            match (self.resolved, sec_part.resolved) {
+                (Resolved::Open, Resolved::Close)
+                | (Resolved::Neither, Resolved::Close)
+                | (Resolved::Open, Resolved::Neither) => {}
+                _ => self.swap_parts(),
             }
         }
-        self.swap_parts();
+    }
+
+    pub(crate) fn pop(&mut self) -> Option<UnresolvedToken> {
+        // sets the next token in order to `second_part` so it can be `take`n
+        self.order();
 
         self.second_part.take().map(|mut token| {
-            // if second_part span appears to be before first_part, swap their spans
             if self.token.span.start.column < token.token.span.start.column {
-                // swap their spans
                 let (first, second) = self.token.span.swapped(&token.token.span);
                 self.token.span = first;
                 token.token.span = second;
@@ -105,11 +107,10 @@ impl From<UnresolvedToken> for Token {
 struct ScopedIndices {
     scope: usize,
     indices: Vec<usize>,
-    kinds: BTreeSet<TokenKind>,
 }
 
 impl ScopedIndices {
-    fn push(&mut self, index: usize, _kind: TokenKind) {
+    fn push(&mut self, index: usize) {
         self.indices.push(index);
     }
 }
@@ -199,6 +200,7 @@ impl<'a> TokenResolver<'a> {
                 continue;
             } else if self.tokens[index].token.kind.is_close_bracket() {
                 // scope < 0 is user input error
+                // TODO: report this as a warning or an error
                 self.curr_scope = self.curr_scope.saturating_sub(1);
                 continue;
             }
@@ -214,11 +216,10 @@ impl<'a> TokenResolver<'a> {
                 // save positions of every unresolved token
                 token_map
                     .entry(kind)
-                    .and_modify(|indices| indices.push(index, kind))
+                    .and_modify(|indices| indices.push(index))
                     .or_insert_with(|| ScopedIndices {
                         scope: self.curr_scope,
                         indices: vec![index],
-                        kinds: [kind].into(),
                     });
             }
         }
@@ -226,117 +227,107 @@ impl<'a> TokenResolver<'a> {
 
     fn resolve_token(&mut self, token_map: &mut TokenMap, index: usize) -> Option<usize> {
         // multiple cases for current - unresolved token relationship:
-        // 1. current NOT ambiguous, there is unresolved one that IS NOT ambiguous: (simple, simple)
-        // 2. current NOT ambiguous, there is unresolved one that IS ambiguous (ambiguous, simple)
-        // 3. current IS ambiguous, there is unresolved one that IS ambiguous (ambiguous, ambiguous)
-        // 4. current IS ambiguous, there is unresolved one that IS NOT ambiguous (simple, ambiguous)
+        // 1. current IS ambiguous, there is unresolved one that IS ambiguous (ambiguous, ambiguous)
+        // 2. current IS ambiguous, there is unresolved one that IS NOT ambiguous (simple, ambiguous)
+        // 3. current NOT ambiguous, there is unresolved one that IS NOT ambiguous: (simple, simple)
+        // 4. current NOT ambiguous, there is unresolved one that IS ambiguous (ambiguous, simple)
 
-        if !self.tokens[index].token.is_ambiguous() && self.tokens[index].token.closes() {
-            let token_kind = self.tokens[index].token.kind;
-            if let Some(indices) = token_map.get_mut(token_kind) {
-                // (1. and 2.) current NOT ambiguous
-                if let Some((unr_token, i, token_index)) = self.find_first_matching(indices, index)
-                {
-                    if unr_token.token.is_ambiguous() {
-                        // opening token IS ambiguous (ambiguous, simple)
-                        // first is ambiguous, so we have to split it
-                        unr_token.split_ambiguous();
-
-                        // easier manipulation on first part of ambiguous unresolved token
-                        if unr_token.token.kind != token_kind {
-                            unr_token.swap_parts();
-                        }
-
-                        unr_token.resolved = Resolved::Open;
-
-                        unr_token.swap_parts();
-
-                        self.tokens[index].resolved = Resolved::Close;
-                        return Some(token_index);
-                    }
-
-                    // opening token IS NOT ambiguous, (simple, simple) case
-                    // resolve them both
-                    unr_token.resolved = Resolved::Open;
-
-                    // if let Some(second_pard) = &unr_token.second_part {
-                    //     if let (Resolved::Open | Resolved::Neither, Resolved::Close)
-                    //     | (Resolved::Open, Resolved::Neither) =
-                    //         (unr_token.resolved, second_pard.resolved)
-                    //     {
-                    //         unr_token.swap_parts();
-                    //     }
-                    // }
-
-                    // if let Some(UnresolvedToken {
-                    //     resolved: Resolved::Open | Resolved::Close,
-                    //     ..
-                    // }) = unr_token.second_part.as_deref()
-                    // {
-                    //     // unr_token was ambiguous, second_part was resolved sooner
-                    //     unr_token.swap_parts();
-                    // }
-
-                    self.tokens[index].resolved = Resolved::Close;
-
-                    if let Some(UnresolvedToken {
-                        resolved: Resolved::Close,
-                        ..
-                    }) = self.tokens[index].second_part.as_deref()
-                    {
-                        // second part was resolved sooner, so it should be first part
-                        self.tokens[index].swap_parts();
-                    }
-
-                    // remove unresolved token
-                    indices.indices.remove(i);
-                    return Some(token_index);
-                }
+        if self.tokens[index].token.closes() {
+            if self.tokens[index].token.is_ambiguous() {
+                return self.resolve_compound_token(token_map, index);
+            } else {
+                return self.resolve_simple_token(token_map, index);
             }
-        } else if self.tokens[index].token.closes() {
-            // (3. and 4.) current IS ambiguous
-            let token_kind = self.tokens[index].token.kind;
-            if let Some(indices) = token_map.get_mut(token_kind) {
-                if let Some((unr_token, i, token_index)) = self.find_first_matching(indices, index)
-                {
-                    if unr_token.token.is_ambiguous() {
-                        // there is unresolved one that IS ambiguous (ambiguous, ambiguous)
-                        // split them both
-                        unr_token.split_ambiguous();
+        }
 
-                        // resolve them both
-                        unr_token.resolved = Resolved::Open;
-                        let unr_kind = unr_token.token.kind;
+        None
+    }
 
-                        if let Some(second) = unr_token.second_part.as_mut() {
-                            second.resolved = Resolved::Open;
-                        }
+    fn resolve_simple_token(&mut self, token_map: &mut TokenMap, index: usize) -> Option<usize> {
+        let token_kind = self.tokens[index].token.kind;
 
-                        self.tokens[index].split_ambiguous();
-                        self.tokens[index].resolved = Resolved::Close;
+        let indices = token_map.get_mut(token_kind)?;
+        let (unr_token, i, token_index) = self.find_first_matching(indices, index)?;
 
-                        if let Some(second) = self.tokens[index].second_part.as_mut() {
-                            second.resolved = Resolved::Close;
-                        }
+        if unr_token.token.is_ambiguous() {
+            // opening token IS ambiguous (ambiguous, simple)
+            // first is ambiguous, so we have to split it
+            unr_token.split_ambiguous();
 
-                        // make sure the parts are symmetric
-                        if token_kind != unr_kind {
-                            self.tokens[index].swap_parts();
-                        }
+            // easier manipulation on first part of ambiguous unresolved token
+            if unr_token.token.kind != token_kind {
+                unr_token.swap_parts();
+            }
 
-                        indices.indices.remove(i);
-                        return Some(token_index);
-                    }
+            unr_token.resolved = Resolved::Open;
 
-                    // there is unresolved one that IS NOT ambiguous (simple, ambiguous)
-                    let kind = unr_token.token.kind;
-                    if let Some(token_index) = self.resolve_partial_kind(indices, index, kind) {
-                        // try to resolve the remaining part
-                        // Should fall into case (1. and 2.)
-                        self.resolve_token(token_map, index);
-                        return Some(token_index);
-                    }
-                }
+            unr_token.swap_parts();
+
+            self.tokens[index].resolved = Resolved::Close;
+            Some(token_index)
+        } else {
+            // opening token IS NOT ambiguous, (simple, simple) case
+            // resolve them both
+            unr_token.resolved = Resolved::Open;
+
+            self.tokens[index].resolved = Resolved::Close;
+
+            if let Some(UnresolvedToken {
+                resolved: Resolved::Close,
+                ..
+            }) = self.tokens[index].second_part.as_deref()
+            {
+                // second part was resolved sooner, so it should be first part
+                self.tokens[index].swap_parts();
+            }
+
+            // remove unresolved token
+            indices.indices.remove(i);
+            Some(token_index)
+        }
+    }
+
+    fn resolve_compound_token(&mut self, token_map: &mut TokenMap, index: usize) -> Option<usize> {
+        let token_kind = self.tokens[index].token.kind;
+        let indices = token_map.get_mut(token_kind)?;
+        let (unr_token, i, token_index) = self.find_first_matching(indices, index)?;
+
+        if unr_token.token.is_ambiguous() {
+            // there is unresolved one that IS ambiguous (ambiguous, ambiguous)
+            // split them both
+            unr_token.split_ambiguous();
+
+            // resolve them both
+            unr_token.resolved = Resolved::Open;
+            let unr_kind = unr_token.token.kind;
+
+            if let Some(second) = unr_token.second_part.as_mut() {
+                second.resolved = Resolved::Open;
+            }
+
+            self.tokens[index].split_ambiguous();
+            self.tokens[index].resolved = Resolved::Close;
+
+            if let Some(second) = self.tokens[index].second_part.as_mut() {
+                second.resolved = Resolved::Close;
+            }
+
+            // make sure the parts are symmetric
+            // if self.tokens[index].token.kind == unr_kind {
+            if token_kind != unr_kind {
+                dbg!(&self.tokens[index].token.kind);
+                self.tokens[index].swap_parts();
+            }
+
+            indices.indices.remove(i);
+            return Some(token_index);
+        } else {
+            // there is unresolved one that IS NOT ambiguous (simple, ambiguous)
+            let kind = unr_token.token.kind;
+            if let Some(token_index) = self.resolve_partial_kind(indices, index, kind) {
+                // try to resolve the remaining part
+                self.resolve_token(token_map, index);
+                return Some(token_index);
             }
         }
 
@@ -359,8 +350,8 @@ impl<'a> TokenResolver<'a> {
             if curr_token.token.kind != kind {
                 curr_token.swap_parts();
             }
-            curr_token.resolved = Resolved::Close;
 
+            curr_token.resolved = Resolved::Close;
             indices.indices.remove(i);
 
             // move unresolved part, for it to be resolved
