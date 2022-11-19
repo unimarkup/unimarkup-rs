@@ -681,14 +681,14 @@ impl<'a> Iterator for TokenIterator<'a> {
 /// TODO: write docs
 #[derive(Debug, Clone)]
 pub struct Tokens<'a> {
-    resolver: TokenResolver<'a>,
+    iter: resolver::IntoIter<'a>,
     cache: Option<UnresolvedToken>,
 }
 
 impl<'a> Tokens<'a> {
     pub(crate) fn new(resolver: TokenResolver<'a>) -> Self {
         Self {
-            resolver,
+            iter: resolver.into_iter(),
             cache: None,
         }
     }
@@ -698,23 +698,19 @@ impl Iterator for Tokens<'_> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.resolver.tokens.is_empty() {
-            self.resolver.resolve();
-        }
-
         let mut unr_token = if let Some(unr_token) = self.cache.take() {
             unr_token
         } else {
-            self.resolver.tokens.pop_front()?
+            self.iter.next()?
         };
 
-        if let Some(first_part) = unr_token.pop() {
-            // save remaining part
-            self.cache = Some(unr_token);
-
-            Some(Token::from(first_part))
-        } else {
-            Some(Token::from(unr_token))
+        match unr_token.pop() {
+            Some(first_part) => {
+                // save remaining part
+                self.cache = Some(unr_token);
+                Some(Token::from(first_part))
+            }
+            _ => Some(Token::from(unr_token)),
         }
     }
 }

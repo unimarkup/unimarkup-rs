@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use crate::{Span, TokenDelimiters, TokenKind};
 
 mod content;
@@ -85,25 +83,11 @@ impl Inline {
     /// [`Inline`]: self::Inline
     /// [`TokenKind`]: crate::TokenKind
     /// [`InlineContent`]: self::content::InlineContent
-    pub fn new(mut content: InlineContent<PlainContent, NestedContent>, kind: TokenKind) -> Self {
+    pub fn new(content: InlineContent<PlainContent, NestedContent>, kind: TokenKind) -> Self {
         let consume_as_plain = |content| match content {
             InlineContent::Plain(plain_content) => Self::Plain(plain_content),
             InlineContent::Nested(nested_content) => Self::Multiple(nested_content),
         };
-
-        let span = content.span();
-        if let InlineContent::Nested(ref mut nested) = content {
-            // try to flatten content more
-            if nested.content.len() == 1 {
-                let inline = &mut nested.content[0];
-
-                if matches!(inline.as_ref(), InlineContent::Nested(_)) {
-                    content = nested.content.pop_back().unwrap().into_inner();
-                    dbg!(&content);
-                    content.set_span(span);
-                }
-            }
-        }
 
         match kind {
             TokenKind::Bold => Self::Bold(content.into()),
@@ -212,13 +196,6 @@ impl Inline {
             Inline::Plain(_) => matches!(other, Self::Plain(_) | Self::Multiple(_)),
             Inline::Multiple(_) => matches!(other, Self::Multiple(_) | Self::Plain(_)),
         }
-    }
-
-    /// Checks whether this [`Inline`] is a `Plain` text constructed from multiple other [`Inline`]s.
-    ///
-    /// [`Inline`]: self::Inline
-    fn is_multiple(&self) -> bool {
-        matches!(self, Inline::Multiple(_))
     }
 
     /// Consumes this [`Inline`] and returns the inner [`InlineContent`] of it.
@@ -342,47 +319,6 @@ impl Inline {
             | Inline::Attributes(content)
             | Inline::Substitution(content) => InlineContent::Nested(content),
         }
-    }
-
-    /// Merges this [`Inline`] with another into one combined [`Inline`]. Since the other [`Inline`] might
-    /// contain multiple inlines inside, some of which aren't compatible with this one, the remaining [`Inline`]s
-    /// are returned in a [`VecDeque`].
-    ///
-    /// [`Inline`]: self::Inline
-    /// [`VecDeque`]: std::collections::VecDeque
-    pub(crate) fn merge(self, next_inline: Inline) -> (Inline, VecDeque<Inline>) {
-        let own_kind = TokenKind::from(&self);
-        let is_multiple = next_inline.is_multiple();
-
-        let mut current_content = self.into_inner();
-        let next_content = next_inline.into_inner();
-
-        let rest_of_inlines = match next_content {
-            InlineContent::Plain(plain_content) => {
-                // merge plains trivially
-                current_content.append(plain_content.into());
-                VecDeque::default()
-            }
-            InlineContent::Nested(nested_inlines) => {
-                let mut content = nested_inlines.content;
-
-                while let Some(inline) = content.front() {
-                    let token_kind = TokenKind::from(inline);
-                    let should_append = !is_multiple || token_kind == own_kind;
-
-                    if should_append {
-                        current_content.append_inline(content.pop_front().unwrap());
-                    } else {
-                        break;
-                    }
-                }
-
-                content
-            }
-        };
-
-        let result_inline = Self::new(current_content, own_kind);
-        (result_inline, rest_of_inlines)
     }
 }
 

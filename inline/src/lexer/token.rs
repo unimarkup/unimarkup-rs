@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
+use super::resolver::Resolved;
 use super::Content;
 use crate::{Inline, Symbol};
 
@@ -119,7 +120,7 @@ impl TokenBuilder<Valid, Valid, Valid> {
 }
 
 /// Token lexed from Unimarkup text.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Token {
     pub(crate) kind: TokenKind,
     pub(crate) span: Span,
@@ -245,7 +246,6 @@ impl Token {
     /// [`Token`]: self::Token
     pub fn opens(&self) -> bool {
         match self.kind() {
-            TokenKind::Substitution => true,
             some_kind if some_kind.is_open_bracket() => true,
             _ => {
                 let not_followed_by_whitespace =
@@ -263,7 +263,6 @@ impl Token {
     /// [`Token`]: self::Token
     pub fn closes(&self) -> bool {
         match self.kind() {
-            TokenKind::Substitution => true,
             some_kind if some_kind.is_close_bracket() => true,
             _ => {
                 let not_preceded_by_whitespace =
@@ -292,6 +291,19 @@ impl Token {
                 _ => false,
             }
         }
+    }
+
+    /// Checks whether the two [`Token`]s overlap. Two [`Token`]s overlap if any of the following
+    /// is true:
+    ///
+    /// * have same [`TokenKind`]
+    /// * `this` Token contains the other one (i.e. `ItalicBold` contains `Italic`)
+    /// * `other` Token contains this Token (i.e. `Bold` is contained in `ItalicBold`)
+    ///
+    /// [`Token`]: self::Token
+    /// [`TokenKind`]: self::Token
+    pub fn overlaps(&self, other: &Self) -> bool {
+        self.is_or_contains(other) || other.is_or_contains(self)
     }
 
     /// Checks whether this token is a matching pair of the other token.
@@ -404,16 +416,12 @@ impl Token {
 
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(content) = &self.content {
-            f.write_str(content)
-        } else {
-            f.write_str(self.as_str())
-        }
+        f.write_str(self.as_str())
     }
 }
 
 /// The kind of the token found in Unimarkup document.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenKind {
     /// Bold delimiter token (`**`).
     Bold,
@@ -564,14 +572,6 @@ impl TokenKind {
         match self {
             TokenKind::Bold | TokenKind::Italic => Some(Self::ItalicBold),
             TokenKind::Underline | TokenKind::Subscript => Some(Self::UnderlineSubscript),
-            _ => None,
-        }
-    }
-
-    pub(crate) fn get_ambiguous_parts(&self) -> Option<(Self, Self)> {
-        match self {
-            Self::ItalicBold => Some((Self::Italic, Self::Bold)),
-            Self::UnderlineSubscript => Some((Self::Underline, Self::Subscript)),
             _ => None,
         }
     }
@@ -733,7 +733,7 @@ impl TokenDelimiters {
 }
 
 /// Enum representing the spacing surrounding a particular token in Unimarkup document.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Spacing {
     /// Whitespace before the token.
     Pre,
@@ -746,6 +746,16 @@ pub enum Spacing {
 
     /// Whitespace neither before nor after the token.
     None,
+}
+
+impl From<Resolved> for Spacing {
+    fn from(resolved: Resolved) -> Self {
+        match resolved {
+            Resolved::Open => Spacing::Pre,
+            Resolved::Close => Spacing::Post,
+            Resolved::Neither => Spacing::Both,
+        }
+    }
 }
 
 impl Default for Spacing {
@@ -814,7 +824,7 @@ impl Sub for Spacing {
 /// Span used to store information about the space some [`Token`] occupies in Unimarkup document.
 ///
 /// [`Token`]: self::Token
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Span {
     pub(crate) start: Position,
     pub(crate) end: Position,
@@ -900,6 +910,23 @@ impl Span {
 
         (resulting_span, removed_span)
     }
+
+    pub(crate) fn swapped(&self, other: &Self) -> (Self, Self) {
+        let (mut first, mut second) = if self.start.column < other.start.column {
+            (*self, *other)
+        } else {
+            (*other, *self)
+        };
+
+        let first_len = first.len();
+        let second_len = second.len();
+
+        first.end.column = first.start.column + second_len;
+        second.start.column = first.end.column + 1;
+        second.end.column = second.start.column + first_len;
+
+        (second, first)
+    }
 }
 
 impl From<(Position, Position)> for Span {
@@ -909,7 +936,7 @@ impl From<(Position, Position)> for Span {
 }
 
 /// Representation of a position in Unimarkup input.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Position {
     /// Represents the line in Unimarkup input.
     pub line: usize,

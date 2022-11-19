@@ -1,23 +1,56 @@
 #![allow(dead_code)]
 #![warn(clippy::pedantic)]
 
-use std::collections::{BTreeMap, VecDeque};
+use std::{
+    collections::{btree_map::Entry, BTreeMap, BTreeSet, VecDeque},
+    ops::{Not, Range},
+    vec,
+};
 
 use crate::{Spacing, Span, Token, TokenIterator, TokenKind};
+
+// Token can either be opening one, closing one, or neither
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(crate) enum Resolved {
+    Open,
+    Close,
+    Neither,
+}
+
+impl Not for Resolved {
+    type Output = bool;
+
+    fn not(self) -> Self::Output {
+        matches!(self, Self::Neither)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct UnresolvedToken {
     token: Token,
-    resolved: bool,
+    resolved: Resolved,
     second_part: Option<Box<UnresolvedToken>>,
 }
 
 impl UnresolvedToken {
     pub(crate) fn pop(&mut self) -> Option<UnresolvedToken> {
+        if let Some(ref sec_part) = self.second_part {
+            if let (Resolved::Open | Resolved::Neither, Resolved::Close)
+            | (Resolved::Open, Resolved::Neither) = (self.resolved, sec_part.resolved)
+            {
+                self.swap_parts();
+            }
+        }
+        self.swap_parts();
+
         self.second_part.take().map(|mut token| {
+            // if second_part span appears to be before first_part, swap their spans
             if self.token.span.start.column < token.token.span.start.column {
-                std::mem::swap(&mut self.token, &mut token.token);
-                std::mem::swap(&mut self.resolved, &mut token.resolved);
+                dbg!(&self.token, &token);
+                // swap their spans
+                let (first, second) = self.token.span.swapped(&token.token.span);
+                self.token.span = first;
+                token.token.span = second;
             }
 
             *token
@@ -49,7 +82,7 @@ impl UnresolvedToken {
         self.token = first;
         self.second_part = Some(Box::new(UnresolvedToken {
             token: second,
-            resolved: false,
+            resolved: Resolved::Neither,
             second_part: None,
         }));
     }
@@ -59,8 +92,9 @@ impl From<UnresolvedToken> for Token {
     fn from(unr_token: UnresolvedToken) -> Self {
         let mut token = unr_token.token;
 
+        token.spacing = Spacing::from(unr_token.resolved);
         if !token.kind.is_parenthesis() && token.is_nesting_token() && !unr_token.resolved {
-            token.content = Some(format!("|AsPlain({})|", token.as_str()));
+            token.content = Some(token.as_str().to_string());
             token.kind = TokenKind::Plain;
         }
 
@@ -72,13 +106,54 @@ impl From<UnresolvedToken> for Token {
 struct ScopedIndices {
     scope: usize,
     indices: Vec<usize>,
+    kinds: BTreeSet<TokenKind>,
+}
+
+impl ScopedIndices {
+    fn push(&mut self, index: usize, _kind: TokenKind) {
+        self.indices.push(index);
+    }
+}
+
+#[derive(Debug, Clone)]
+#[repr(transparent)]
+struct TokenMap {
+    map: BTreeMap<TokenKind, ScopedIndices>,
+}
+
+impl TokenMap {
+    fn new() -> Self {
+        Self {
+            map: BTreeMap::new(),
+        }
+    }
+
+    fn general_key(kind: TokenKind) -> TokenKind {
+        if let Some(amb_variant) = kind.get_ambiguous_variant() {
+            amb_variant
+        } else {
+            kind
+        }
+    }
+
+    fn entry(&mut self, kind: TokenKind) -> Entry<TokenKind, ScopedIndices> {
+        self.map.entry(Self::general_key(kind))
+    }
+
+    fn get(&self, kind: TokenKind) -> Option<&ScopedIndices> {
+        self.map.get(&Self::general_key(kind))
+    }
+
+    fn get_mut(&mut self, kind: TokenKind) -> Option<&mut ScopedIndices> {
+        self.map.get_mut(&Self::general_key(kind))
+    }
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct TokenResolver<'a> {
     iter: TokenIterator<'a>,
     curr_scope: usize,
-    token_map: BTreeMap<TokenKind, ScopedIndices>,
+    interrupted: Vec<Range<usize>>,
     pub(crate) tokens: VecDeque<UnresolvedToken>,
 }
 
@@ -87,7 +162,7 @@ impl<'a> TokenResolver<'a> {
         Self {
             iter,
             curr_scope: 0,
-            token_map: BTreeMap::default(),
+            interrupted: Vec::default(),
             tokens: VecDeque::default(),
         }
     }
@@ -98,7 +173,7 @@ impl<'a> TokenResolver<'a> {
 
             let unresolved_token = UnresolvedToken {
                 token,
-                resolved: false,
+                resolved: Resolved::Neither,
                 second_part: None,
             };
 
@@ -116,7 +191,7 @@ impl<'a> TokenResolver<'a> {
         }
 
         // map found tokens to their index in tokens vector
-        let mut token_map: BTreeMap<TokenKind, ScopedIndices> = BTreeMap::new();
+        let mut token_map: TokenMap = TokenMap::new();
 
         for index in 0..self.tokens.len() {
             // on open/close bracket simply increment/decrement scope
@@ -124,52 +199,47 @@ impl<'a> TokenResolver<'a> {
                 self.curr_scope += 1;
                 continue;
             } else if self.tokens[index].token.kind.is_close_bracket() {
-                self.curr_scope -= 1; // panics on underflow, but that is a bug!
+                // scope < 0 is user input error
+                let _ = self.curr_scope.saturating_sub(1);
                 continue;
             }
 
             // try to resolve token
-            self.resolve_token(&mut token_map, index);
+            if let Some(begin_index) = self.resolve_token(&mut token_map, index) {
+                // open tokens from begin_index to index are interrupted
+                self.interrupted.push((begin_index + 1)..index);
+            }
 
             if !self.tokens[index].resolved {
+                let kind = self.tokens[index].token.kind;
                 // save positions of every unresolved token
                 token_map
-                    .entry(self.tokens[index].token.kind)
-                    .and_modify(|indices| indices.indices.push(index))
+                    .entry(kind)
+                    .and_modify(|indices| indices.push(index, kind))
                     .or_insert_with(|| ScopedIndices {
                         scope: self.curr_scope,
                         indices: vec![index],
+                        kinds: [kind].into(),
                     });
             }
         }
     }
 
-    fn resolve_token(&mut self, token_map: &mut BTreeMap<TokenKind, ScopedIndices>, index: usize) {
+    fn resolve_token(&mut self, token_map: &mut TokenMap, index: usize) -> Option<usize> {
         // multiple cases for current - unresolved token relationship:
         // 1. current NOT ambiguous, there is unresolved one that IS NOT ambiguous: (simple, simple)
         // 2. current NOT ambiguous, there is unresolved one that IS ambiguous (ambiguous, simple)
         // 3. current IS ambiguous, there is unresolved one that IS ambiguous (ambiguous, ambiguous)
         // 4. current IS ambiguous, there is unresolved one that IS NOT ambiguous (simple, ambiguous)
 
-        // (1. and 2.) current NOT ambiguous
         if !self.tokens[index].token.is_ambiguous() && self.tokens[index].token.closes() {
-            // there is unresolved one that IS NOT ambiguous: (simple, simple)
-            if let Some(indices) = token_map.get_mut(&self.tokens[index].token.kind) {
-                if let Some((unr_token, i)) = self.find_first_unresolved(indices) {
-                    // resolve them both
-                    unr_token.resolved = true;
-                    self.tokens[index].resolved = true;
-
-                    // remove unresolved token
-                    indices.indices.remove(i);
-                }
-            } else if let Some(ambiguous_variant) =
-                self.tokens[index].token.kind.get_ambiguous_variant()
-            {
-                if let Some(indices) = token_map.get_mut(&ambiguous_variant) {
-                    let token_kind = self.tokens[index].token.kind;
-                    if let Some((unr_token, i)) = self.find_first_unresolved(indices) {
-                        // first token COULD be ambiguous
+            let token_kind = self.tokens[index].token.kind;
+            if let Some(indices) = token_map.get_mut(token_kind) {
+                // (1. and 2.) current NOT ambiguous
+                if let Some((unr_token, i, token_index)) = self.find_first_matching(indices, index)
+                {
+                    if unr_token.token.is_ambiguous() {
+                        // opening token IS ambiguous (ambiguous, simple)
                         // first is ambiguous, so we have to split it
                         unr_token.split_ambiguous();
 
@@ -178,67 +248,100 @@ impl<'a> TokenResolver<'a> {
                             unr_token.swap_parts();
                         }
 
-                        // resolve
-                        unr_token.resolved = true;
+                        unr_token.resolved = Resolved::Open;
 
-                        if unr_token.token.kind == token_kind {
-                            unr_token.swap_parts();
-                        }
+                        unr_token.swap_parts();
 
-                        if unr_token.resolved {
-                            indices.indices.remove(i);
-                        }
-
-                        self.tokens[index].resolved = true;
+                        self.tokens[index].resolved = Resolved::Close;
+                        return Some(token_index);
                     }
-                }
-            }
-        }
-        // (3. and 4.) current IS ambiguous
-        else if self.tokens[index].token.closes() {
-            // there is unresolved one that IS ambiguous (ambiguous, ambiguous)
-            if let Some(indices) = token_map.get_mut(&self.tokens[index].token.kind) {
-                if let Some((unr_token, i)) = self.find_first_unresolved(indices) {
-                    // split them both
-                    unr_token.split_ambiguous();
 
+                    // opening token IS NOT ambiguous, (simple, simple) case
                     // resolve them both
-                    unr_token.resolved = true;
-                    if let Some(second) = unr_token.second_part.as_mut() {
-                        second.resolved = true;
+                    unr_token.resolved = Resolved::Open;
+
+                    // if let Some(second_pard) = &unr_token.second_part {
+                    //     if let (Resolved::Open | Resolved::Neither, Resolved::Close)
+                    //     | (Resolved::Open, Resolved::Neither) =
+                    //         (unr_token.resolved, second_pard.resolved)
+                    //     {
+                    //         unr_token.swap_parts();
+                    //     }
+                    // }
+
+                    // if let Some(UnresolvedToken {
+                    //     resolved: Resolved::Open | Resolved::Close,
+                    //     ..
+                    // }) = unr_token.second_part.as_deref()
+                    // {
+                    //     // unr_token was ambiguous, second_part was resolved sooner
+                    //     unr_token.swap_parts();
+                    // }
+
+                    self.tokens[index].resolved = Resolved::Close;
+
+                    if let Some(UnresolvedToken {
+                        resolved: Resolved::Close,
+                        ..
+                    }) = self.tokens[index].second_part.as_deref()
+                    {
+                        // second part was resolved sooner, so it should be first part
+                        self.tokens[index].swap_parts();
                     }
 
-                    self.tokens[index].split_ambiguous();
-                    self.tokens[index].resolved = true;
-                    if let Some(second) = self.tokens[index].second_part.as_mut() {
-                        second.resolved = true;
-                    }
-
+                    // remove unresolved token
                     indices.indices.remove(i);
+                    return Some(token_index);
                 }
-            } else if let Some((first_kind, second_kind)) =
-                self.tokens[index].token.kind.get_ambiguous_parts()
-            {
-                // there is unresolved one that IS NOT ambiguous (simple, ambiguous)
-                let mut resolved = false;
-                if let Some(indices) = token_map.get_mut(&first_kind) {
-                    if self.resolve_partial_kind(indices, index, first_kind) {
-                        resolved = true;
-                        // try to resolve the remaining part
-                        // Should fall into case (1. and 2.)
-                        self.resolve_token(token_map, index);
-                    }
-                }
+            }
+        } else if self.tokens[index].token.closes() {
+            // (3. and 4.) current IS ambiguous
+            let token_kind = self.tokens[index].token.kind;
+            if let Some(indices) = token_map.get_mut(token_kind) {
+                if let Some((unr_token, i, token_index)) = self.find_first_matching(indices, index)
+                {
+                    if unr_token.token.is_ambiguous() {
+                        // there is unresolved one that IS ambiguous (ambiguous, ambiguous)
+                        // split them both
+                        unr_token.split_ambiguous();
 
-                if let (Some(indices), false) = (token_map.get_mut(&second_kind), resolved) {
-                    if self.resolve_partial_kind(indices, index, second_kind) {
+                        // resolve them both
+                        unr_token.resolved = Resolved::Open;
+                        let unr_kind = unr_token.token.kind;
+
+                        if let Some(second) = unr_token.second_part.as_mut() {
+                            second.resolved = Resolved::Open;
+                        }
+
+                        self.tokens[index].split_ambiguous();
+                        self.tokens[index].resolved = Resolved::Close;
+
+                        if let Some(second) = self.tokens[index].second_part.as_mut() {
+                            second.resolved = Resolved::Close;
+                        }
+
+                        // make sure the parts are symmetric
+                        if token_kind != unr_kind {
+                            self.tokens[index].swap_parts();
+                        }
+
+                        indices.indices.remove(i);
+                        return Some(token_index);
+                    }
+
+                    // there is unresolved one that IS NOT ambiguous (simple, ambiguous)
+                    let kind = unr_token.token.kind;
+                    if let Some(token_index) = self.resolve_partial_kind(indices, index, kind) {
                         // try to resolve the remaining part
                         // Should fall into case (1. and 2.)
                         self.resolve_token(token_map, index);
+                        return Some(token_index);
                     }
                 }
             }
         }
+
+        None
     }
 
     fn resolve_partial_kind(
@@ -246,9 +349,9 @@ impl<'a> TokenResolver<'a> {
         indices: &mut ScopedIndices,
         index: usize,
         kind: TokenKind,
-    ) -> bool {
-        if let Some((unr_token, i)) = self.find_first_unresolved(indices) {
-            unr_token.resolved = true;
+    ) -> Option<usize> {
+        if let Some((unr_token, i, token_index)) = self.find_first_matching(indices, index) {
+            unr_token.resolved = Resolved::Open;
 
             let curr_token = &mut self.tokens[index];
 
@@ -257,23 +360,24 @@ impl<'a> TokenResolver<'a> {
             if curr_token.token.kind != kind {
                 curr_token.swap_parts();
             }
-            curr_token.resolved = true;
+            curr_token.resolved = Resolved::Close;
 
             indices.indices.remove(i);
 
             // move unresolved part, for it to be resolved
             curr_token.swap_parts();
 
-            true
+            Some(token_index)
         } else {
-            false
+            None
         }
     }
 
-    fn find_first_unresolved(
+    fn find_first_matching(
         &mut self,
         indices: &ScopedIndices,
-    ) -> Option<(&mut UnresolvedToken, usize)> {
+        curr_idx: usize,
+    ) -> Option<(&mut UnresolvedToken, usize, usize)> {
         let indices = if indices.scope == self.curr_scope {
             &indices.indices
         } else {
@@ -282,11 +386,57 @@ impl<'a> TokenResolver<'a> {
 
         // find first unresolved token
         for (i, idx) in indices.iter().enumerate() {
-            if !self.tokens[*idx].resolved && self.tokens[*idx].token.opens() {
-                return Some((&mut self.tokens[*idx], i));
+            let curr_token = &self.tokens[curr_idx];
+            let token = &self.tokens[*idx];
+
+            if !token.resolved && token.token.overlaps(&curr_token.token) && token.token.opens() {
+                if self.interrupted.iter().any(|range| range.contains(idx)) {
+                    return None;
+                }
+
+                return Some((&mut self.tokens[*idx], i, *idx));
             }
         }
 
         None
+    }
+
+    pub(crate) fn into_iter(self) -> IntoIter<'a> {
+        IntoIter {
+            resolver: self,
+            iter: Vec::new().into_iter(),
+            index: 0,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct IntoIter<'a> {
+    resolver: TokenResolver<'a>,
+    iter: vec::IntoIter<UnresolvedToken>,
+    index: usize,
+}
+
+impl IntoIter<'_> {
+    fn next_token(&mut self) -> Option<UnresolvedToken> {
+        if let Some(token) = self.iter.next() {
+            return Some(token);
+        }
+
+        self.resolver.resolve();
+        self.iter = Vec::from(std::mem::take(&mut self.resolver.tokens)).into_iter();
+        self.index = 0;
+        self.iter.next()
+    }
+}
+
+impl Iterator for IntoIter<'_> {
+    type Item = UnresolvedToken;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let next_token = self.next_token()?;
+
+        self.index += 1;
+        Some(next_token)
     }
 }
