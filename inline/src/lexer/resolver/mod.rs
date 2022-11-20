@@ -75,7 +75,7 @@ impl<'a> TokenResolver<'a> {
 
             self.tokens.push(RawToken {
                 token,
-                resolved: Resolved::Neither,
+                state: Resolved::Neither,
                 tail: None,
             });
 
@@ -111,7 +111,7 @@ impl<'a> TokenResolver<'a> {
                 self.interrupted.push((begin_index + 1)..index);
             }
 
-            if !self.tokens[index].resolved {
+            if !self.tokens[index].state {
                 let kind = self.tokens[index].token.kind;
                 // save positions of every unresolved token
                 token_map.update_or_insert(kind, index, self.curr_scope);
@@ -145,37 +145,30 @@ impl<'a> TokenResolver<'a> {
 
         if unr_token.token.is_ambiguous() {
             // opening token IS ambiguous (ambiguous, simple)
-            // first is ambiguous, so we have to split it
-            unr_token.split_ambiguous();
 
-            // easier manipulation on first part of ambiguous unresolved token
+            unr_token.split_ambiguous();
             if unr_token.token.kind != token_kind {
+                unr_token.set_tail_state(Resolved::Open);
+            } else {
+                unr_token.set_head_state(Resolved::Open);
                 unr_token.swap_parts();
             }
 
-            unr_token.resolved = Resolved::Open;
-
-            unr_token.swap_parts();
-
-            self.tokens[index].resolved = Resolved::Close;
+            self.tokens[index].set_head_state(Resolved::Close);
             Some(token_index)
         } else {
             // opening token IS NOT ambiguous, (simple, simple) case
-            // resolve them both
-            unr_token.resolved = Resolved::Open;
-
-            self.tokens[index].resolved = Resolved::Close;
+            unr_token.set_head_state(Resolved::Open);
+            self.tokens[index].set_head_state(Resolved::Close);
 
             if let Some(RawToken {
-                resolved: Resolved::Close,
+                state: Resolved::Close,
                 ..
             }) = self.tokens[index].tail.as_deref()
             {
-                // tail was resolved sooner, so it should be first part
                 self.tokens[index].swap_parts();
             }
 
-            // remove unresolved token
             indices.remove(i);
             Some(token_index)
         }
@@ -188,27 +181,16 @@ impl<'a> TokenResolver<'a> {
 
         if unr_token.token.is_ambiguous() {
             // there is unresolved one that IS ambiguous (ambiguous, ambiguous)
-            // split them both
             unr_token.split_ambiguous();
 
-            // resolve them both
-            unr_token.resolved = Resolved::Open;
             let unr_kind = unr_token.token.kind;
-
-            if let Some(tail) = unr_token.tail.as_mut() {
-                tail.resolved = Resolved::Open;
-            }
+            unr_token.set_state(Resolved::Open);
 
             self.tokens[index].split_ambiguous();
-            self.tokens[index].resolved = Resolved::Close;
-
-            if let Some(tail) = self.tokens[index].tail.as_mut() {
-                tail.resolved = Resolved::Close;
-            }
+            self.tokens[index].set_state(Resolved::Close);
 
             // make sure the parts are symmetric
             if self.tokens[index].token.kind == unr_kind {
-                dbg!(&self.tokens[index].token.kind);
                 self.tokens[index].swap_parts();
             }
 
@@ -234,21 +216,20 @@ impl<'a> TokenResolver<'a> {
         kind: TokenKind,
     ) -> Option<usize> {
         if let Some((unr_token, i, token_index)) = self.find_first_matching(indices, index) {
-            unr_token.resolved = Resolved::Open;
+            unr_token.set_head_state(Resolved::Open);
 
             let curr_token = &mut self.tokens[index];
 
             curr_token.split_ambiguous();
 
             if curr_token.token.kind != kind {
+                curr_token.set_tail_state(Resolved::Close);
+            } else {
+                curr_token.set_head_state(Resolved::Close);
                 curr_token.swap_parts();
             }
 
-            curr_token.resolved = Resolved::Close;
             indices.remove(i);
-
-            // move unresolved part, for it to be resolved
-            curr_token.swap_parts();
 
             Some(token_index)
         } else {
@@ -266,7 +247,7 @@ impl<'a> TokenResolver<'a> {
             let curr_token = &self.tokens[curr_idx];
             let token = &self.tokens[*idx];
 
-            if !token.resolved && token.token.overlaps(&curr_token.token) && token.token.opens() {
+            if !token.state && token.token.overlaps(&curr_token.token) && token.token.opens() {
                 if self.interrupted.iter().any(|range| range.contains(idx)) {
                     return None;
                 }
@@ -282,7 +263,6 @@ impl<'a> TokenResolver<'a> {
         IntoIter {
             resolver: self,
             iter: Vec::new().into_iter(),
-            index: 0,
         }
     }
 }
@@ -291,7 +271,6 @@ impl<'a> TokenResolver<'a> {
 pub(crate) struct IntoIter<'a> {
     resolver: TokenResolver<'a>,
     iter: vec::IntoIter<RawToken>,
-    index: usize,
 }
 
 impl IntoIter<'_> {
@@ -302,7 +281,6 @@ impl IntoIter<'_> {
 
         self.resolver.resolve();
         self.iter = std::mem::take(&mut self.resolver.tokens).into_iter();
-        self.index = 0;
         self.iter.next()
     }
 }
@@ -313,7 +291,6 @@ impl Iterator for IntoIter<'_> {
     fn next(&mut self) -> Option<Self::Item> {
         let next_token = self.next_token()?;
 
-        self.index += 1;
         Some(next_token)
     }
 }

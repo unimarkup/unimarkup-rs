@@ -21,14 +21,14 @@ impl Not for Resolved {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct RawToken {
     pub(crate) token: Token,
-    pub(crate) resolved: Resolved,
+    pub(crate) state: Resolved,
     pub(crate) tail: Option<Box<RawToken>>,
 }
 
 impl RawToken {
     fn order(&mut self) {
         if let Some(ref sec_part) = self.tail {
-            match (self.resolved, sec_part.resolved) {
+            match (self.state, sec_part.state) {
                 (Resolved::Open, Resolved::Close)
                 | (Resolved::Neither, Resolved::Close)
                 | (Resolved::Open, Resolved::Neither) => {}
@@ -55,7 +55,7 @@ impl RawToken {
     pub(crate) fn swap_parts(&mut self) {
         if let Some(tail) = self.tail.as_mut() {
             std::mem::swap(&mut self.token, &mut tail.token);
-            std::mem::swap(&mut self.resolved, &mut tail.resolved);
+            std::mem::swap(&mut self.state, &mut tail.state);
         }
     }
 
@@ -73,9 +73,24 @@ impl RawToken {
         self.token = first;
         self.tail = Some(Box::new(RawToken {
             token: second,
-            resolved: Resolved::Neither,
+            state: Resolved::Neither,
             tail: None,
         }));
+    }
+
+    pub(crate) fn set_head_state(&mut self, state: Resolved) {
+        self.state = state;
+    }
+
+    pub(crate) fn set_tail_state(&mut self, state: Resolved) {
+        if let Some(tail) = self.tail.as_mut() {
+            tail.state = state;
+        }
+    }
+
+    pub(crate) fn set_state(&mut self, state: Resolved) {
+        self.set_head_state(state);
+        self.set_tail_state(state);
     }
 }
 
@@ -83,8 +98,8 @@ impl From<RawToken> for Token {
     fn from(unr_token: RawToken) -> Self {
         let mut token = unr_token.token;
 
-        token.spacing = Spacing::from(unr_token.resolved);
-        if !token.kind.is_parenthesis() && token.is_nesting_token() && !unr_token.resolved {
+        token.spacing = Spacing::from(unr_token.state);
+        if !token.kind.is_parenthesis() && token.is_nesting_token() && !unr_token.state {
             token.content = Some(token.as_str().to_string());
             token.kind = TokenKind::Plain;
         }
