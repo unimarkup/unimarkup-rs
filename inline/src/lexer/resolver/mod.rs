@@ -1,103 +1,14 @@
-#![allow(dead_code)]
-
 use std::{
-    collections::{btree_map::Entry, BTreeMap, VecDeque},
-    ops::{Not, Range},
+    collections::{btree_map::Entry, BTreeMap},
+    ops::Range,
     vec,
 };
 
-use crate::{Spacing, Span, Token, TokenIterator, TokenKind};
+use crate::{TokenIterator, TokenKind};
 
-// Token can either be opening one, closing one, or neither
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(crate) enum Resolved {
-    Open,
-    Close,
-    Neither,
-}
+mod raw_token;
 
-impl Not for Resolved {
-    type Output = bool;
-
-    fn not(self) -> Self::Output {
-        matches!(self, Self::Neither)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct UnresolvedToken {
-    token: Token,
-    resolved: Resolved,
-    second_part: Option<Box<UnresolvedToken>>,
-}
-
-impl UnresolvedToken {
-    fn order(&mut self) {
-        if let Some(ref sec_part) = self.second_part {
-            match (self.resolved, sec_part.resolved) {
-                (Resolved::Open, Resolved::Close)
-                | (Resolved::Neither, Resolved::Close)
-                | (Resolved::Open, Resolved::Neither) => {}
-                _ => self.swap_parts(),
-            }
-        }
-    }
-
-    pub(crate) fn pop(&mut self) -> Option<UnresolvedToken> {
-        // moves the next token to `second_part` so it can be `take`n
-        self.order();
-
-        self.second_part.take().map(|mut token| {
-            if self.token.span.start.column < token.token.span.start.column {
-                let (first, second) = self.token.span.swapped(&token.token.span);
-                self.token.span = first;
-                token.token.span = second;
-            }
-
-            *token
-        })
-    }
-
-    pub(crate) fn swap_parts(&mut self) {
-        if let Some(second_token) = self.second_part.as_mut() {
-            std::mem::swap(&mut self.token, &mut second_token.token);
-            std::mem::swap(&mut self.resolved, &mut second_token.resolved);
-        }
-    }
-
-    fn split_ambiguous(&mut self) {
-        let mut token = Token {
-            kind: TokenKind::Plain,
-            span: Span::default(),
-            spacing: Spacing::default(),
-            content: None,
-        };
-
-        std::mem::swap(&mut self.token, &mut token);
-
-        let (first, second) = token.split_ambiguous();
-        self.token = first;
-        self.second_part = Some(Box::new(UnresolvedToken {
-            token: second,
-            resolved: Resolved::Neither,
-            second_part: None,
-        }));
-    }
-}
-
-impl From<UnresolvedToken> for Token {
-    fn from(unr_token: UnresolvedToken) -> Self {
-        let mut token = unr_token.token;
-
-        token.spacing = Spacing::from(unr_token.resolved);
-        if !token.kind.is_parenthesis() && token.is_nesting_token() && !unr_token.resolved {
-            token.content = Some(token.as_str().to_string());
-            token.kind = TokenKind::Plain;
-        }
-
-        token
-    }
-}
+pub(crate) use raw_token::*;
 
 type Scope = usize;
 type Indices = Vec<usize>;
@@ -129,19 +40,9 @@ impl TokenMap {
             .or_insert_with(|| vec![index]);
     }
 
-    fn insert(&mut self, kind: TokenKind, scope: Scope, indices: Indices) {
-        let key = (Self::general_key(kind), scope);
-        self.map.insert(key, indices);
-    }
-
     fn entry(&mut self, kind: TokenKind, scope: Scope) -> Entry<(TokenKind, Scope), Indices> {
         let key = (Self::general_key(kind), scope);
         self.map.entry(key)
-    }
-
-    fn get(&self, kind: TokenKind, scope: Scope) -> Option<&Indices> {
-        let key = (Self::general_key(kind), scope);
-        self.map.get(&key)
     }
 
     fn get_mut(&mut self, kind: TokenKind, scope: Scope) -> Option<&mut Indices> {
@@ -155,7 +56,7 @@ pub(crate) struct TokenResolver<'a> {
     iter: TokenIterator<'a>,
     curr_scope: usize,
     interrupted: Vec<Range<usize>>,
-    pub(crate) tokens: VecDeque<UnresolvedToken>,
+    pub(crate) tokens: Vec<RawToken>,
 }
 
 impl<'a> TokenResolver<'a> {
@@ -164,23 +65,21 @@ impl<'a> TokenResolver<'a> {
             iter,
             curr_scope: 0,
             interrupted: Vec::default(),
-            tokens: VecDeque::default(),
+            tokens: Vec::default(),
         }
     }
 
     fn consume_line(&mut self) {
         for token in self.iter.by_ref() {
-            let should_stop = matches!(token.kind(), TokenKind::Newline | TokenKind::EndOfLine);
+            let should_break = matches!(token.kind, TokenKind::EndOfLine | TokenKind::Newline);
 
-            let unresolved_token = UnresolvedToken {
+            self.tokens.push(RawToken {
                 token,
                 resolved: Resolved::Neither,
-                second_part: None,
-            };
+                tail: None,
+            });
 
-            self.tokens.push_back(unresolved_token);
-
-            if should_stop {
+            if should_break {
                 break;
             }
         }
@@ -267,12 +166,12 @@ impl<'a> TokenResolver<'a> {
 
             self.tokens[index].resolved = Resolved::Close;
 
-            if let Some(UnresolvedToken {
+            if let Some(RawToken {
                 resolved: Resolved::Close,
                 ..
-            }) = self.tokens[index].second_part.as_deref()
+            }) = self.tokens[index].tail.as_deref()
             {
-                // second part was resolved sooner, so it should be first part
+                // tail was resolved sooner, so it should be first part
                 self.tokens[index].swap_parts();
             }
 
@@ -296,15 +195,15 @@ impl<'a> TokenResolver<'a> {
             unr_token.resolved = Resolved::Open;
             let unr_kind = unr_token.token.kind;
 
-            if let Some(second) = unr_token.second_part.as_mut() {
-                second.resolved = Resolved::Open;
+            if let Some(tail) = unr_token.tail.as_mut() {
+                tail.resolved = Resolved::Open;
             }
 
             self.tokens[index].split_ambiguous();
             self.tokens[index].resolved = Resolved::Close;
 
-            if let Some(second) = self.tokens[index].second_part.as_mut() {
-                second.resolved = Resolved::Close;
+            if let Some(tail) = self.tokens[index].tail.as_mut() {
+                tail.resolved = Resolved::Close;
             }
 
             // make sure the parts are symmetric
@@ -361,7 +260,7 @@ impl<'a> TokenResolver<'a> {
         &mut self,
         indices: &Indices,
         curr_idx: usize,
-    ) -> Option<(&mut UnresolvedToken, usize, usize)> {
+    ) -> Option<(&mut RawToken, usize, usize)> {
         // find first unresolved token
         for (i, idx) in indices.iter().enumerate() {
             let curr_token = &self.tokens[curr_idx];
@@ -391,25 +290,25 @@ impl<'a> TokenResolver<'a> {
 #[derive(Debug, Clone)]
 pub(crate) struct IntoIter<'a> {
     resolver: TokenResolver<'a>,
-    iter: vec::IntoIter<UnresolvedToken>,
+    iter: vec::IntoIter<RawToken>,
     index: usize,
 }
 
 impl IntoIter<'_> {
-    fn next_token(&mut self) -> Option<UnresolvedToken> {
+    fn next_token(&mut self) -> Option<RawToken> {
         if let Some(token) = self.iter.next() {
             return Some(token);
         }
 
         self.resolver.resolve();
-        self.iter = Vec::from(std::mem::take(&mut self.resolver.tokens)).into_iter();
+        self.iter = std::mem::take(&mut self.resolver.tokens).into_iter();
         self.index = 0;
         self.iter.next()
     }
 }
 
 impl Iterator for IntoIter<'_> {
-    type Item = UnresolvedToken;
+    type Item = RawToken;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next_token = self.next_token()?;

@@ -9,7 +9,7 @@ pub use token::*;
 
 use crate::{Substitute, Substitutor};
 
-use self::resolver::{TokenResolver, UnresolvedToken};
+use self::resolver::{RawToken, TokenResolver};
 
 /// Used to create a Unimarkup [`Lexer`] over some data structure, most typically over some kind of
 /// string, i.e. [`&str`].
@@ -682,7 +682,7 @@ impl<'a> Iterator for TokenIterator<'a> {
 #[derive(Debug, Clone)]
 pub struct Tokens<'a> {
     iter: resolver::IntoIter<'a>,
-    cache: Option<UnresolvedToken>,
+    cache: Option<RawToken>,
 }
 
 impl<'a> Tokens<'a> {
