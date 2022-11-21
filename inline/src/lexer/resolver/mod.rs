@@ -15,6 +15,7 @@ type Indices = Vec<usize>;
 
 #[derive(Debug, Clone)]
 #[repr(transparent)]
+/// Internal data structure for storing [`Indices`] of [`TokenKind`]s in specific [`Scope`].
 struct TokenMap {
     map: BTreeMap<(TokenKind, Scope), Indices>,
 }
@@ -51,6 +52,18 @@ impl TokenMap {
     }
 }
 
+/// Resolver of [`RawToken`]s, finds pairs of open/close tokens and marks them as such. If no pairs
+/// are found, tokens are marked as plain.
+///
+/// Invariants of [`TokenResolver`]
+///
+/// ## During resolving:
+/// - [`TokenKind`] of every token that's not resolved is stored into the token map (with current scope).
+/// - Compound tokens (i.e. ***) are split, and each part is resolved separately
+/// - Compound tokens with resolved parts is sorted based on their state, so that closing token
+/// comes before opening token. If both parts have same state, then the second resolved part is
+/// stored into token's tail.
+/// - Every time a token pair is matched, all non-resolved tokens between them are marked as plain
 #[derive(Debug, Clone)]
 pub(crate) struct TokenResolver<'a> {
     iter: TokenIterator<'a>,
