@@ -265,7 +265,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn resolved(self) -> TokenResolver<'a> {
+    fn resolved(self) -> TokenResolver {
         TokenResolver::new(self.iter())
     }
 }
@@ -680,13 +680,13 @@ impl<'a> Iterator for TokenIterator<'a> {
 
 /// TODO: write docs
 #[derive(Debug, Clone)]
-pub struct Tokens<'a> {
-    iter: resolver::IntoIter<'a>,
+pub struct Tokens {
+    iter: resolver::IntoIter,
     cache: Option<RawToken>,
 }
 
-impl<'a> Tokens<'a> {
-    pub(crate) fn new(resolver: TokenResolver<'a>) -> Self {
+impl Tokens {
+    pub(crate) fn new(resolver: TokenResolver) -> Self {
         Self {
             iter: resolver.into_iter(),
             cache: None,
@@ -694,7 +694,7 @@ impl<'a> Tokens<'a> {
     }
 }
 
-impl Iterator for Tokens<'_> {
+impl Iterator for Tokens {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {

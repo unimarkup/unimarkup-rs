@@ -26,11 +26,11 @@ impl Deref for ParserStack {
 /// [`Iterator`]: Iterator
 /// [`Inline`]: crate::Inline
 #[derive(Debug, Clone)]
-pub struct Parser<'i> {
+pub struct Parser {
     /// Iterator over [`Token`]s found in Unimarkup input.
     ///
     /// [`Token`]: crate::Token
-    iter: Tokens<'i>,
+    iter: Tokens,
 
     /// Storage of [`Token`] already yielded from [`TokenIterator`] but not consumed in current
     /// iteration of parsing.
@@ -44,7 +44,7 @@ pub struct Parser<'i> {
     inline_cache: VecDeque<Inline>,
 }
 
-impl Parser<'_> {
+impl Parser {
     /// Returns the next [`Token`] either from [`Lexer`] directly or from internal token cache.
     ///
     /// [`Token`]: crate::Token
@@ -87,7 +87,7 @@ impl Parser<'_> {
                 let nested = self.parse_inline(next_token).unwrap();
                 content.append_inline(nested);
             } else {
-                if next_token.kind != TokenKind::Plain {
+                if kind == TokenKind::Plain && next_token.kind != TokenKind::Plain {
                     self.token_cache = Some(next_token);
                     break;
                 }
@@ -103,7 +103,7 @@ impl Parser<'_> {
     }
 }
 
-impl Iterator for Parser<'_> {
+impl Iterator for Parser {
     type Item = Inline;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -134,16 +134,16 @@ impl Iterator for Parser<'_> {
 ///
 /// [`Parser`]: self::Parser
 /// [`Tokenize`]: crate::Tokenize
-pub trait ParseUnimarkupInlines<'p> {
+pub trait ParseUnimarkupInlines {
     /// Returns a parser over this type.
-    fn parse_unimarkup_inlines(&'p self) -> Parser<'p>;
+    fn parse_unimarkup_inlines(&self) -> Parser;
 }
 
-impl<T> ParseUnimarkupInlines<'_> for T
+impl<T> ParseUnimarkupInlines for T
 where
     T: Tokenize,
 {
-    fn parse_unimarkup_inlines(&self) -> Parser<'_> {
+    fn parse_unimarkup_inlines(&self) -> Parser {
         Parser {
             iter: self.tokens(),
             token_cache: None,

@@ -65,44 +65,25 @@ impl TokenMap {
 /// stored into token's tail.
 /// - Every time a token pair is matched, all non-resolved tokens between them are marked as plain
 #[derive(Debug, Clone)]
-pub(crate) struct TokenResolver<'a> {
-    iter: TokenIterator<'a>,
+pub(crate) struct TokenResolver {
     curr_scope: usize,
     interrupted: Vec<Range<usize>>,
     pub(crate) tokens: Vec<RawToken>,
 }
 
-impl<'a> TokenResolver<'a> {
-    pub(crate) fn new(iter: TokenIterator<'a>) -> Self {
-        Self {
-            iter,
+impl TokenResolver {
+    pub(crate) fn new(iter: TokenIterator<'_>) -> Self {
+        let mut new = Self {
             curr_scope: 0,
             interrupted: Vec::default(),
-            tokens: Vec::default(),
-        }
+            tokens: iter.map(RawToken::new).collect(),
+        };
+
+        new.resolve();
+        new
     }
 
-    fn consume_line(&mut self) {
-        for token in self.iter.by_ref() {
-            let should_break = matches!(token.kind, TokenKind::EndOfLine | TokenKind::Newline);
-
-            self.tokens.push(RawToken {
-                token,
-                state: Resolved::Neither,
-                tail: None,
-            });
-
-            if should_break {
-                break;
-            }
-        }
-    }
-
-    pub(crate) fn resolve(&mut self) {
-        if self.tokens.is_empty() {
-            self.consume_line();
-        }
-
+    fn resolve(&mut self) {
         // map found tokens to their index in tokens vector
         let mut token_map: TokenMap = TokenMap::new();
 
@@ -272,38 +253,22 @@ impl<'a> TokenResolver<'a> {
         None
     }
 
-    pub(crate) fn into_iter(self) -> IntoIter<'a> {
+    pub(crate) fn into_iter(self) -> IntoIter {
         IntoIter {
-            resolver: self,
-            iter: Vec::new().into_iter(),
+            iter: self.tokens.into_iter(),
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct IntoIter<'a> {
-    resolver: TokenResolver<'a>,
+pub(crate) struct IntoIter {
     iter: vec::IntoIter<RawToken>,
 }
 
-impl IntoIter<'_> {
-    fn next_token(&mut self) -> Option<RawToken> {
-        if let Some(token) = self.iter.next() {
-            return Some(token);
-        }
-
-        self.resolver.resolve();
-        self.iter = std::mem::take(&mut self.resolver.tokens).into_iter();
-        self.iter.next()
-    }
-}
-
-impl Iterator for IntoIter<'_> {
+impl Iterator for IntoIter {
     type Item = RawToken;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next_token = self.next_token()?;
-
-        Some(next_token)
+        self.iter.next()
     }
 }

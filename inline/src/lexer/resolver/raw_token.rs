@@ -26,6 +26,14 @@ pub(crate) struct RawToken {
 }
 
 impl RawToken {
+    pub(crate) fn new(token: Token) -> Self {
+        Self {
+            token,
+            state: Resolved::Neither,
+            tail: None,
+        }
+    }
+
     fn order(&mut self) {
         if let Some(ref sec_part) = self.tail {
             match (self.state, sec_part.state) {
