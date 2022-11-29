@@ -1,123 +1,8 @@
-use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 use super::resolver::Resolved;
-use super::Content;
+use super::ContentOption;
 use crate::{Inline, Symbol};
-
-/// Marker type for [`TokenBuilder`] to annotate that some part of [`TokenBuilder`] is invalid.
-///
-/// [`TokenBuilder`]: self::TokenBuilder
-pub(crate) struct Invalid;
-
-/// Marker type for [`TokenBuilder`] to annotate that some part of [`TokenBuilder`] is valid.
-///
-/// [`TokenBuilder`]: self::TokenBuilder
-pub(crate) struct Valid;
-
-/// Builder for [`Token`].
-///
-/// [`Token`]: self::Token
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct TokenBuilder<K = Invalid, S = Invalid, W = Invalid> {
-    kind: TokenKind,
-    span: Span,
-    spacing: Spacing,
-    content: Option<String>,
-    _validation: (PhantomData<K>, PhantomData<S>, PhantomData<W>),
-}
-
-impl TokenBuilder<Invalid, Invalid, Invalid> {
-    /// Creates a new [`TokenBuilder`] with provided [`TokenKind`].
-    ///
-    /// [`TokenBuilder`]: self::TokenBuilder
-    /// [`TokenKind`]: self::TokenKind
-    pub fn new(kind: TokenKind) -> TokenBuilder<Valid, Invalid, Invalid> {
-        let v1: PhantomData<Valid> = PhantomData;
-        let v2: PhantomData<Invalid> = PhantomData;
-        let v3: PhantomData<Invalid> = PhantomData;
-
-        TokenBuilder {
-            kind,
-            span: Span::default(),
-            spacing: Spacing::None,
-            content: None,
-            _validation: (v1, v2, v3),
-        }
-    }
-}
-
-impl<K, S, W> TokenBuilder<K, S, W> {
-    /// Adds content to be appended to the [`Token`] that's being built.
-    ///
-    /// [`Token`]: self::Token
-    pub fn with_content(mut self, content: String) -> TokenBuilder<K, S, W> {
-        self.content = Some(content);
-        self
-    }
-
-    /// Adds content to be appended to the [`Token`] that's being built with condition that
-    /// [`Content`] option enables storing of content.
-    ///
-    /// [`Token`]: self::Token
-    /// [`Content`]: crate::Content
-    pub fn optional_content(
-        self,
-        content: String,
-        content_option: Content,
-    ) -> TokenBuilder<K, S, W> {
-        match content_option {
-            Content::Store => self.with_content(content),
-            _ => self,
-        }
-    }
-
-    /// Adds the [`Span`] that the [`Token`] occupies in original document.
-    ///
-    /// [`Token`]: self::Token
-    /// [`Span`]: self::Span
-    pub fn span(self, span: Span) -> TokenBuilder<K, Valid, W> {
-        let span_valid: PhantomData<Valid> = PhantomData;
-
-        TokenBuilder {
-            kind: self.kind,
-            span,
-            spacing: self.spacing,
-            content: self.content,
-            _validation: (self._validation.0, span_valid, self._validation.2),
-        }
-    }
-
-    /// Adds the [`Spacing`] surrounding the [`Token`].
-    ///
-    /// [`Token`]: self::Token
-    /// [`Spacing`]: self::Spacing
-    pub fn space(self, spacing: Spacing) -> TokenBuilder<K, S, Valid> {
-        let spacing_valid: PhantomData<Valid> = PhantomData;
-
-        TokenBuilder {
-            kind: self.kind,
-            span: self.span,
-            spacing,
-            content: self.content,
-            _validation: (self._validation.0, self._validation.1, spacing_valid),
-        }
-    }
-}
-
-impl TokenBuilder<Valid, Valid, Valid> {
-    /// Builds the [`Token`].
-    ///
-    /// [`Token`]: self::Token
-    pub fn build(self) -> Token {
-        Token {
-            kind: self.kind,
-            span: self.span,
-            spacing: self.spacing,
-            content: self.content,
-        }
-    }
-}
 
 /// Token lexed from Unimarkup text.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -161,6 +46,31 @@ impl Token {
             span,
             spacing,
             content: Some(content.into()),
+        }
+    }
+
+    /// Creates a new [`Token`] like [`Token::new`] with content this [`Token`]
+    /// contains, based on whether the content option is to store or discard the content.
+    ///
+    /// [`Token`]: self::Token
+    /// [`Token::new`]: self::Token::new
+    pub(crate) fn with_conditional_content(
+        kind: TokenKind,
+        span: Span,
+        spacing: Spacing,
+        content: impl Into<String>,
+        content_option: ContentOption,
+    ) -> Self {
+        let content = match content_option {
+            ContentOption::Store => Some(content.into()),
+            ContentOption::Discard => None,
+        };
+
+        Self {
+            kind,
+            span,
+            spacing,
+            content,
         }
     }
 
@@ -359,10 +269,12 @@ impl Token {
 
         self.span = resulting_span;
 
-        TokenBuilder::new(other_token.kind())
-            .span(removed_span)
-            .space(other_token.spacing())
-            .build()
+        Token {
+            kind: other_token.kind,
+            span: removed_span,
+            spacing: other_token.spacing,
+            content: None,
+        }
     }
 
     /// Splits ambiguous token into two non-ambiguous [`Token`]s.
@@ -547,11 +459,11 @@ impl TokenKind {
     /// Returns the [`Content`] for this kind.
     ///
     /// [`Content`]: crate::Content
-    pub(crate) fn content_option(&self) -> Content {
+    pub(crate) fn content_option(&self) -> ContentOption {
         if self.content_matters() {
-            Content::Store
+            ContentOption::Store
         } else {
-            Content::Discard
+            ContentOption::Discard
         }
     }
 
@@ -704,7 +616,7 @@ impl From<&TokenKind> for TokenDelimiters {
 
 impl From<&Token> for TokenDelimiters {
     fn from(token: &Token) -> Self {
-        Self::from(&token.kind())
+        Self::from(&token.kind)
     }
 }
 

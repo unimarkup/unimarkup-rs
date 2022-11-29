@@ -285,7 +285,7 @@ impl<'a> IntoIterator for &'a Lexer<'a> {
 /// [`Symbol`]: self::Symbol
 /// [`Token`]: self::token::Token
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum Content {
+pub(crate) enum ContentOption {
     /// Annotates that content should be stored into [`Token`].
     ///
     /// [`Token`]: crate::Token
@@ -406,11 +406,13 @@ impl TokenIterator<'_> {
             |subst| subst.as_str().to_string(),
         );
 
-        let token = TokenBuilder::new(kind)
-            .span(Span::from((start_pos, end_pos)))
-            .space(spacing)
-            .optional_content(content, kind.content_option())
-            .build();
+        let token = Token::with_conditional_content(
+            kind,
+            Span::from((start_pos, end_pos)),
+            spacing,
+            content,
+            kind.content_option(),
+        );
 
         self.index = curr_index;
 
@@ -557,11 +559,12 @@ impl TokenIterator<'_> {
         let temp_idx = self.index;
         self.index = self.pos.column.saturating_sub(1);
 
-        let token = TokenBuilder::new(TokenKind::Plain)
-            .with_content(content)
-            .span(Span::from((start_pos, end_pos)))
-            .space(self.spacing_around(len))
-            .build();
+        let token = Token {
+            kind: TokenKind::Plain,
+            span: Span::from((start_pos, end_pos)),
+            spacing: self.spacing_around(len),
+            content: Some(content),
+        };
 
         self.index = temp_idx;
 
@@ -587,11 +590,12 @@ impl TokenIterator<'_> {
             TokenKind::Newline
         };
 
-        let token = TokenBuilder::new(token_kind)
-            .with_content(String::from(symbol))
-            .span(Span::from((start_pos, end_pos)))
-            .space(Spacing::None)
-            .build();
+        let token = Token {
+            kind: token_kind,
+            span: Span::from((start_pos, end_pos)),
+            spacing: Spacing::None,
+            content: Some(symbol.into()),
+        };
 
         self.index += 1;
         Some(token)

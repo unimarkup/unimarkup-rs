@@ -57,7 +57,7 @@ impl Parser {
         }
     }
 
-    fn parse_inline(&mut self, token: Token) -> Option<Inline> {
+    fn parse_inline(&mut self, token: Token) -> Inline {
         // opening/closing of tokens is resolved at lexing stage
         // at this point we can simply parse
         let kind = token.kind;
@@ -67,7 +67,7 @@ impl Parser {
         if kind != TokenKind::Plain && !token.opens() {
             let (content, span) = token.into_inner();
             let content = InlineContent::Plain(PlainContent::new(content, span));
-            return Some(Inline::as_plain_or_eol(content, kind));
+            return Inline::as_plain_or_eol(content, kind);
         }
 
         let mut content: InlineContent<_, _> = NestedContent::default().into();
@@ -84,7 +84,7 @@ impl Parser {
             } else if next_token.opens() {
                 // lexer resolved tokens, if token opens, it is guaranteed that closing exists too.
                 // If not, it's bug in implementation
-                let nested = self.parse_inline(next_token).unwrap();
+                let nested = self.parse_inline(next_token);
                 content.append_inline(nested);
             } else {
                 if kind == TokenKind::Plain && next_token.kind != TokenKind::Plain {
@@ -99,7 +99,7 @@ impl Parser {
 
         let span = Span::from((start, end));
         content.try_flatten();
-        Some(Inline::with_span(content, kind, span))
+        Inline::with_span(content, kind, span)
     }
 }
 
@@ -111,7 +111,7 @@ impl Iterator for Parser {
             Some(inline) => inline,
             _ => {
                 let token = self.next_token()?;
-                self.parse_inline(token)?
+                self.parse_inline(token)
             }
         };
 
