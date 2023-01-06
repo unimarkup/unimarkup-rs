@@ -15,7 +15,7 @@ use crate::{
 const UNIMARKUP_NAME: &str = "Unimarkup";
 
 /// Config contains the possible options for the Unimarkup configuration.
-#[derive(Debug, PartialEq, Clone, Parser, Default, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Parser, Default, Serialize, Deserialize)]
 #[clap(name = UNIMARKUP_NAME, version = crate_version!())]
 pub struct Config {
     /// The filename of the Unimarkup file that is used as root for rendering.
@@ -259,7 +259,7 @@ pub struct Config {
 
 /// Possible output formats for a Unimarkup file
 #[derive(
-    Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+    Debug, PartialEq, Eq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
 )]
 pub enum OutputFormat {
     /// PDF output format
@@ -283,7 +283,7 @@ pub enum OutputFormat {
 
 /// Possible modes for rendering math formulas in HTML
 #[derive(
-    Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+    Debug, PartialEq, Eq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
 )]
 pub enum HtmlMathmode {
     /// Render math as SVG

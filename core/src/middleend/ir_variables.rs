@@ -7,7 +7,7 @@ use super::error::MiddleendError;
 use super::log_id::GeneralInfLogId;
 
 /// Structure for the variable table representation of the IR
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub struct VariableIrLine {
     /// Name of the variable.
     pub name: String,

@@ -7,7 +7,7 @@ use super::error::MiddleendError;
 use super::log_id::GeneralWarnLogId;
 
 /// Structure for the metadata table representation of the IR
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub struct MetadataIrLine {
     /// Generated hash code of a Unimarkup file.
     pub filehash: Vec<u8>,

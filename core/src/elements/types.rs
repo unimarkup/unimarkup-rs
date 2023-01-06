@@ -71,7 +71,7 @@ pub struct UnimarkupFile {
 /// explanation of available unimarkup elements consult the
 /// official [frontend reference of unimarkup](https://github.com/Unimarkup/Specification/blob/main/Frontend_Reference.markdown).
 #[derive(
-    Debug, PartialEq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+    Debug, PartialEq, Eq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
 )]
 #[strum(ascii_case_insensitive, serialize_all = "kebab-case")]
 pub enum UnimarkupType {
