@@ -18,12 +18,7 @@ use pest::iterators::Pairs;
 use pest::Span;
 use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 
-use unimarkup_inline::{flat_inline, parse_with_offset, FlattenInlineKind, Inline, Position};
-
-use super::{
-    error::ElementError,
-    log_id::{GeneralErrLogId, InlineWarnLogId},
-};
+use super::{error::ElementError, log_id::GeneralErrLogId};
 
 /// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default, Clone)]
@@ -95,7 +90,7 @@ impl UmParse for ParagraphBlock {
 
         let paragraph_block = ParagraphBlock {
             id,
-            content: flat_inline(&content),
+            content,
             attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
             line_nr,
         };
@@ -140,26 +135,9 @@ impl ParseFromIr for ParagraphBlock {
                 ir_line.fallback_attributes
             };
 
-            let try_inline = parse_with_offset(
-                &content,
-                Position {
-                    line: ir_line.line_nr,
-                    ..Default::default()
-                },
-            );
-            let parsed_inline;
-            match try_inline {
-                Ok(inline) => parsed_inline = inline,
-                Err(_) => {
-                    parsed_inline = flat_inline(&content);
-                    (InlineWarnLogId::InlineParsingFailed as LogId)
-                        .set_log(&format!("Inline parsing failed for paragraph-id {} => content taken as plain as fallback", ir_line.id), file!(), line!());
-                }
-            }
-
             let block = ParagraphBlock {
                 id: ir_line.id,
-                content: parsed_inline,
+                content,
                 attributes,
                 line_nr: ir_line.line_nr,
             };
@@ -225,7 +203,7 @@ impl AsIrLines<ContentIrLine> for ParagraphBlock {
 #[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
-    use unimarkup_inline::parse;
+    use std::collections::VecDeque;
 
     use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 
@@ -246,7 +224,7 @@ mod tests {
 
         let block = ParagraphBlock {
             id: id.clone(),
-            content: flat_inline(&content),
+            content: content.clone(),
             attributes: "{}".into(),
             line_nr: 0,
         };
@@ -277,7 +255,7 @@ mod tests {
 
         assert_eq!(paragraph.id, test_id);
         assert_eq!(paragraph.line_nr, 0);
-        assert_eq!(paragraph.content, parse(&content).unwrap());
+        assert_eq!(paragraph.content, content);
         assert_eq!(paragraph.attributes, String::from("{}"));
     }
 
@@ -290,13 +268,13 @@ mod tests {
 
         let block = ParagraphBlock {
             id: id.clone(),
-            content: parse(&content).unwrap(),
+            content,
             attributes: "{}".into(),
             line_nr: 0,
         };
 
         let expected_html = format!(
-                    "<p id='{}'>This is <pre><code>the</code></pre> <em>content</em> <strong>of <sub>the</sub> paragraph</strong></p>",
+                    "<p id='{}'>This is <code>the</code> <em>content</em> <strong>of <sub>the</sub> paragraph</strong></p>",
                     id
                 );
 

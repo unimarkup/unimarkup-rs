@@ -16,7 +16,7 @@ use crate::log_id::{LogId, SetLog};
 use crate::middleend::{AsIrLines, ContentIrLine};
 
 use super::error::ElementError;
-use super::log_id::{AtomicErrLogId, GeneralErrLogId, InlineWarnLogId};
+use super::log_id::{AtomicErrLogId, GeneralErrLogId};
 
 /// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
@@ -279,27 +279,10 @@ impl ParseFromIr for HeadingBlock {
                 ir_line.fallback_attributes
             };
 
-            let try_inline = parse_with_offset(
-                &content,
-                Position {
-                    line: ir_line.line_nr,
-                    column: get_column_offset_from_level(level),
-                },
-            );
-            let parsed_inline;
-            match try_inline {
-                Ok(inline) => parsed_inline = inline,
-                Err(_) => {
-                    parsed_inline = flat_inline(&content);
-                    (InlineWarnLogId::InlineParsingFailed as LogId)
-                        .set_log(&format!("Inline parsing failed for heading-id {} => content taken as plain as fallback", ir_line.id), file!(), line!());
-                }
-            }
-
             let block = HeadingBlock {
                 id: ir_line.id,
                 level,
-                content: parsed_inline,
+                content,
                 attributes,
                 line_nr: ir_line.line_nr,
             };
@@ -425,7 +408,7 @@ mod tests {
             let html = heading.render_html().unwrap();
 
             let expected = format!(
-                "<h{} id='{}'><pre><code>This</code></pre> <em>is <sub>a</sub></em> <strong>heading</strong></h{}>",
+                "<h{} id='{}'><code>This</code> <em>is <sub>a</sub></em> <strong>heading</strong></h{}>",
                 level, id, level
             );
             assert_eq!(html, expected);
