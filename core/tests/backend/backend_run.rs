@@ -2,7 +2,7 @@ use clap::StructOpt;
 use unimarkup_core::{
     backend::{self, Render},
     config::Config,
-    elements::{HeadingBlock, HeadingLevel},
+    elements::{get_column_offset_from_level, HeadingBlock, HeadingLevel},
     middleend::{self, AsIrLines, ContentIrLine},
 };
 use unimarkup_inline::ParseUnimarkupInlines;

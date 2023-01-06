@@ -16,7 +16,7 @@ use crate::log_id::{LogId, SetLog};
 use crate::middleend::{AsIrLines, ContentIrLine};
 
 use super::error::ElementError;
-use super::log_id::{AtomicErrLogId, GeneralErrLogId};
+use super::log_id::{AtomicErrLogId, GeneralErrLogId, InlineWarnLogId};
 
 /// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
@@ -279,10 +279,27 @@ impl ParseFromIr for HeadingBlock {
                 ir_line.fallback_attributes
             };
 
+            let try_inline = parse_with_offset(
+                &content,
+                Position {
+                    line: ir_line.line_nr,
+                    column: get_column_offset_from_level(level),
+                },
+            );
+            let parsed_inline;
+            match try_inline {
+                Ok(inline) => parsed_inline = inline,
+                Err(_) => {
+                    parsed_inline = flat_inline(&content);
+                    (InlineWarnLogId::InlineParsingFailed as LogId)
+                        .set_log(&format!("Inline parsing failed for heading-id {} => content taken as plain as fallback", ir_line.id), file!(), line!());
+                }
+            }
+
             let block = HeadingBlock {
                 id: ir_line.id,
                 level,
-                content,
+                content: parsed_inline,
                 attributes,
                 line_nr: ir_line.line_nr,
             };
@@ -297,6 +314,21 @@ impl ParseFromIr for HeadingBlock {
                 line!(),
             ),
         ))
+    }
+}
+
+/// This function returns the column offset of the heading content.
+/// According to the specification, a heading level is given by the number of `#` followed by one space.
+/// With this, the content starts at column `level + 1`.
+pub fn get_column_offset_from_level(level: HeadingLevel) -> usize {
+    match level {
+        HeadingLevel::Level1 => 2,
+        HeadingLevel::Level2 => 3,
+        HeadingLevel::Level3 => 4,
+        HeadingLevel::Level4 => 5,
+        HeadingLevel::Level5 => 6,
+        HeadingLevel::Level6 => 7,
+        HeadingLevel::Invalid => 0,
     }
 }
 

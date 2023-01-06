@@ -10,6 +10,7 @@ version = "0.26"
 features = ["bundled"]
 
 [dependencies]
+unimarkup_inline = { path = "../inline/" }
 unicode-segmentation = "1.8.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_rusqlite = "0.28.0"
@@ -27,6 +28,5 @@ shlex = "1.1.0"
 clap = { version = "^3.1.0", features = ["derive", "cargo", "env"] }
 sha3 = "0.10"
 hex = "0.4"
-unimarkup_inline = { path = "../inline/"}
 syntect = "4.6"
 lazy_static = "1.4.0"
