@@ -10,5 +10,5 @@ version = "0.26"
 features = ["bundled"]
 
 [dependencies]
+unicode-segmentation = "1.8.0"
 log = "0.4"
-unicode-segmentation = "1.9.0"

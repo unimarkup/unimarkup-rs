@@ -6,7 +6,7 @@ use rusqlite::{params, Error, Error::InvalidParameterCount, Row, Transaction};
 use super::error::MiddleendError;
 
 /// Structure for the resource table representation of the IR
-#[derive(Debug, PartialEq, Default, Clone)]
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub struct ResourceIrLine {
     /// Filename of the given resource, i.e. name of a image file.
     pub filename: String,

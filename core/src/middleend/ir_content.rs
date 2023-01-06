@@ -8,7 +8,7 @@ use rusqlite::{Connection, Statement, ToSql};
 use std::convert::TryInto;
 
 /// Structure for the content table representation of the IR
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ContentIrLine {
     /// ID of the content
     pub id: String,
