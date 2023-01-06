@@ -272,13 +272,13 @@ fn parse_text_group_interrupt_bold() {
 }
 
 #[test]
-fn parse_open_italic_closed_bold() {
+fn parse_open_italic_closed_bold_hehe() {
     let input = "***This is input**";
     let mut parser = input.parse_unimarkup_inlines();
 
-    for inline in parser.clone() {
-        println!("{inline:#?}");
-    }
+    // for inline in parser.clone() {
+    // println!("{inline:#?}");
+    // }
 
     let inline = parser.next().unwrap();
     let start = Position::new(1, 1);
@@ -482,6 +482,10 @@ fn parse_multi_line() {
 
     let mut parser = input.parse_unimarkup_inlines();
 
+    for inline in parser.clone() {
+        dbg!(inline);
+    }
+
     let inline = parser.next().unwrap();
     let start = Position::new(1, 1);
     let end = Position::new(1, 7);
@@ -558,6 +562,10 @@ fn parse_subst_alias() {
     let input = "This is text::with_alias::substitution inside.";
 
     let mut parser = input.parse_unimarkup_inlines();
+
+    for inline in parser.clone() {
+        dbg!(inline);
+    }
 
     let inline = parser.next().unwrap();
     let start = Position::new(1, 1);
@@ -755,5 +763,38 @@ fn ambiguous_close_italic_then_bold() {
     let end = Position::new(1, 13);
 
     assert!(matches!(inline, Inline::Italic(_)));
+    assert_eq!(inline.span(), Span::from((start, end)));
+}
+
+#[test]
+fn italicbold() {
+    let input = "***bold italic***";
+    let mut parser = input.parse_unimarkup_inlines();
+
+    // for inline in parser.clone() {
+    //     dbg!(inline);
+    // }
+
+    let inline = parser.next().unwrap();
+    let start = Position::new(1, 1);
+    let end = Position::new(1, 17);
+
+    let first_token_len = match inline {
+        Inline::Bold(_) => 2,
+        Inline::Italic(_) => 1,
+        _ => 0,
+    };
+
+    assert!(matches!(inline, Inline::Bold(_) | Inline::Italic(_)));
+    assert_eq!(inline.span(), Span::from((start, end)));
+
+    let mut inner = inline.into_inner().into_nested();
+    let mut inner = inner.content.drain(..);
+
+    let inline = inner.next().unwrap();
+    let start = Position::new(1, 1 + first_token_len);
+    let end = end - (0, first_token_len);
+
+    assert!(matches!(inline, Inline::Bold(_) | Inline::Italic(_)));
     assert_eq!(inline.span(), Span::from((start, end)));
 }
