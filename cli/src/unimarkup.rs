@@ -60,7 +60,7 @@ pub fn compile(config: Config) -> Result<(), CliError> {
                 line!(),
             );
 
-            std::fs::write(&out_path_html, &html.body()).map_err(|err| {
+            std::fs::write(&out_path_html, html.body()).map_err(|err| {
                 CliError::General(
                     (GeneralErrLogId::FailedWritingFile as LogId)
                         .set_log(
