@@ -1,50 +1,19 @@
 //! Structs and enums representing the unimarkup type system.
 
-use std::fmt;
-
 use clap::ArgEnum;
-use rusqlite::Transaction;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-use crate::{
-    backend::{ParseFromIr, Render},
-    elements,
-    frontend::parser::UmParse,
-    middleend::{
-        error::MiddleendError, AsIrLines, ContentIrLine, MacroIrLine, ResourceIrLine,
-        VariableIrLine, WriteToIr,
-    },
-};
+use crate::elements;
+use crate::unimarkup_block::UnimarkupBlock;
 
 use super::{HeadingBlock, Metadata, ParagraphBlock};
 
 /// Delimiter used in string representation of [`UnimarkupType`].
 pub const DELIMITER: char = '-';
 
-/// Used as a combined trait bound for all Unimarkup Elements.
-pub trait UnimarkupBlock:
-    Render + AsIrLines<ContentIrLine> + UmParse + ParseFromIr + fmt::Debug + WriteToIr
-{
-}
-
-impl<T> UnimarkupBlock for T where
-    T: Render + AsIrLines<ContentIrLine> + Clone + UmParse + ParseFromIr + fmt::Debug + WriteToIr
-{
-}
-
 /// Type alias for a vector of elements that implement the [`UnimarkupBlock`] trait.
-pub type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;
-
-impl WriteToIr for UnimarkupBlocks {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
-        for element in self {
-            element.write_to_ir(ir_transaction)?;
-        }
-
-        Ok(())
-    }
-}
+pub type UnimarkupBlocks = Vec<UnimarkupBlock>;
 
 /// Struct representing one Unimarkup file
 #[derive(Default, Debug)]
@@ -53,16 +22,16 @@ pub struct UnimarkupFile {
     pub blocks: UnimarkupBlocks,
 
     /// Field containing all macros defined in this Unimarkup file
-    pub macros: Vec<MacroIrLine>,
+    pub macros: Vec<String>,
 
     /// Field containing all variables defined in this Unimarkup file
-    pub variables: Vec<VariableIrLine>,
+    pub variables: Vec<String>,
 
     /// Field containing metadata for this Unimarkup file
     pub metadata: Vec<Metadata>,
 
     /// Field containing all external resources used in this Unimarkup file
-    pub resources: Vec<ResourceIrLine>,
+    pub resources: Vec<String>,
 }
 
 /// Type variants available in a Unimarkup document for Unimarkup content elements.

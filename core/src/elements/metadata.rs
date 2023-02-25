@@ -1,7 +1,5 @@
 use std::path::PathBuf;
 
-use crate::middleend::{error::MiddleendError, AsIrLines, MetadataIrLine, WriteToIr};
-
 /// Represents a Unimarkup metadata
 #[derive(Debug, Default, Clone)]
 pub struct Metadata {
@@ -33,42 +31,5 @@ pub enum MetadataKind {
 impl Default for MetadataKind {
     fn default() -> Self {
         Self::Insert
-    }
-}
-
-impl AsIrLines<MetadataIrLine> for Metadata {
-    fn as_ir_lines(&self) -> Vec<MetadataIrLine> {
-        let filepath = self.file.to_string_lossy().into_owned();
-        let err_filename_conversion =
-            format!("Given file `{}` is not a valid metadata file!", &filepath);
-
-        let metadata = MetadataIrLine {
-            filehash: self.contenthash.clone(),
-            filename: self
-                .file
-                .file_name()
-                .expect(&err_filename_conversion)
-                .to_string_lossy()
-                .into_owned(),
-            path: self.file.to_string_lossy().into_owned(),
-            preamble: self.preamble.clone(),
-            fallback_preamble: String::new(),
-            root: true,
-        };
-
-        vec![metadata]
-    }
-}
-
-impl From<Metadata> for MetadataIrLine {
-    fn from(metadata: Metadata) -> Self {
-        metadata.as_ir_lines().pop().unwrap()
-    }
-}
-
-impl WriteToIr for Metadata {
-    fn write_to_ir(&self, ir_transaction: &rusqlite::Transaction) -> Result<(), MiddleendError> {
-        let ir_metadata: MetadataIrLine = self.as_ir_lines().pop().unwrap();
-        ir_metadata.write_to_ir(ir_transaction)
     }
 }

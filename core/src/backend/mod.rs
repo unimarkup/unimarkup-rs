@@ -4,13 +4,12 @@
 //!
 //! [`UnimarkupBlocks`]: crate::frontend::UnimarkupBlocks
 
-use crate::{config::Config, unimarkup::UnimarkupDocument, unimarkup_block::UnimarkupBlockKind};
-use rusqlite::Connection;
+use crate::config::Config;
+use crate::elements::types::{UnimarkupBlocks, UnimarkupFile};
+use crate::unimarkup::UnimarkupDocument;
 
-mod loader;
 mod renderer;
 
-pub use loader::ParseFromIr;
 pub use renderer::*;
 
 use self::error::BackendError;
@@ -28,8 +27,11 @@ pub mod log_id;
 /// - error occurs when writing to the output file
 ///
 /// [`UnimarkupBlocks`]: crate::frontend::UnimarkupBlocks
-pub fn run(connection: &mut Connection, config: Config) -> Result<UnimarkupDocument, BackendError> {
-    let blocks: Vec<UnimarkupBlockKind> = loader::get_blocks_from_ir(connection)?;
+pub fn run(
+    unimarkup_file: UnimarkupFile,
+    config: Config,
+) -> Result<UnimarkupDocument, BackendError> {
+    let blocks: UnimarkupBlocks = unimarkup_file.blocks;
 
     Ok(UnimarkupDocument {
         elements: blocks,

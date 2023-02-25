@@ -12,18 +12,6 @@ mod frontend {
 
 // allows using `__` for better separation in functionnames
 #[allow(non_snake_case)]
-mod middleend {
-    mod ir_content;
-    mod ir_macros;
-    mod ir_metadata;
-    mod ir_resources;
-    mod ir_setup;
-    pub mod ir_test_setup;
-    mod ir_variables;
-}
-
-// allows using `__` for better separation in functionnames
-#[allow(non_snake_case)]
 mod elements {
     mod metadata;
 }

@@ -8,7 +8,6 @@ pub mod error;
 pub mod frontend;
 pub mod highlight;
 pub mod log_id;
-pub mod middleend;
 pub mod security;
 pub mod unimarkup;
 pub mod unimarkup_block;

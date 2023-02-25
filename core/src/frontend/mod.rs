@@ -3,9 +3,8 @@
 //! i.e. parsing of unimarkup-rs files, generating corresponding
 //! ['UnimarkupBlocks'] and sending them to the IR.
 
-use rusqlite::Connection;
-
-use crate::{config::Config, middleend::WriteToIr};
+use crate::config::Config;
+use crate::elements::types::UnimarkupFile;
 
 use self::error::FrontendError;
 
@@ -23,24 +22,8 @@ pub mod preamble;
 /// or if communication with IR fails.
 ///
 /// [`frontend`]: crate::frontend
-pub fn run(
-    um_content: &str,
-    connection: &mut Connection,
-    config: &mut Config,
-) -> Result<(), FrontendError> {
+pub fn run(um_content: &str, config: &mut Config) -> Result<UnimarkupFile, FrontendError> {
     let unimarkup = parser::parse_unimarkup(um_content, config)?;
 
-    let transaction = connection.transaction();
-
-    if let Ok(transaction) = transaction {
-        unimarkup.blocks.write_to_ir(&transaction)?;
-
-        for metadata in unimarkup.metadata {
-            metadata.write_to_ir(&transaction)?;
-        }
-
-        let _ = transaction.commit();
-    }
-
-    Ok(())
+    Ok(unimarkup)
 }

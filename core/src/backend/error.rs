@@ -1,9 +1,6 @@
 //! Defines errors for the backend section
 
-use crate::{
-    elements::error::ElementError, error::CoreError, log_id::LogId,
-    middleend::error::MiddleendError,
-};
+use crate::{elements::error::ElementError, error::CoreError, log_id::LogId};
 
 /// Error enum for the backend section
 #[derive(Debug)]
@@ -47,13 +44,6 @@ impl From<BackendError> for CoreError {
             BackendError::Inline(log_id) => CoreError::Backend(log_id),
             BackendError::Wrapped(log_id) => CoreError::Backend(log_id),
         }
-    }
-}
-
-impl From<MiddleendError> for BackendError {
-    fn from(err: MiddleendError) -> Self {
-        let log_id: LogId = err.into();
-        log_id.into()
     }
 }
 

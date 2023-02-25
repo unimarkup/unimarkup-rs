@@ -4,18 +4,17 @@ use crate::backend;
 use crate::backend::Render;
 use crate::config::Config;
 use crate::config::OutputFormat;
+use crate::elements::types::UnimarkupBlocks;
 use crate::error::CoreError;
 use crate::frontend;
 use crate::log_id::LogId;
 use crate::log_id::SetLog;
-use crate::middleend;
-use crate::unimarkup_block::UnimarkupBlockKind;
 
 /// Struct representing a Unimarkup document that can be rendered to supported output formats.
 #[derive(Debug, Clone)]
 pub struct UnimarkupDocument {
     /// Elements of a Unimarkup document
-    pub elements: Vec<UnimarkupBlockKind>,
+    pub elements: UnimarkupBlocks,
     /// Configuration used to create this Unimarkup document
     pub config: Config,
 }
@@ -37,7 +36,7 @@ impl UnimarkupDocument {
 
 /// HTML representation of the Unimarkup document
 pub struct Html<'a> {
-    elements: &'a Vec<UnimarkupBlockKind>,
+    elements: &'a UnimarkupBlocks,
     _metadata: String,
 }
 
@@ -87,9 +86,6 @@ pub fn compile(um_content: &str, mut config: Config) -> Result<UnimarkupDocument
         });
     }
 
-    let mut connection = middleend::setup_ir_connection()?;
-    middleend::setup_ir(&connection)?;
-
-    frontend::run(um_content, &mut connection, &mut config)?;
-    backend::run(&mut connection, config).map_err(|err| err.into())
+    let unimarkup_file = frontend::run(um_content, &mut config)?;
+    backend::run(unimarkup_file, config).map_err(|err| err.into())
 }

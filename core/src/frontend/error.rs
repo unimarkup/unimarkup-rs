@@ -4,7 +4,6 @@ use crate::{
     elements::error::ElementError,
     error::{ConfigError, CoreError},
     log_id::LogId,
-    middleend::error::MiddleendError,
 };
 
 /// Error enum for the frontend section
@@ -45,12 +44,6 @@ impl From<FrontendError> for CoreError {
             FrontendError::Preamble(log_id) => CoreError::Frontend(log_id),
             FrontendError::Wrapped(log_id) => CoreError::Frontend(log_id),
         }
-    }
-}
-
-impl From<MiddleendError> for FrontendError {
-    fn from(err: MiddleendError) -> Self {
-        LogId::from(err).into()
     }
 }
 

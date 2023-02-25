@@ -5,8 +5,8 @@ use pest::{iterators::Pair, iterators::Pairs, Parser, Span};
 use crate::{
     config::Config,
     elements::{
-        types,
-        types::{UnimarkupBlocks, UnimarkupFile},
+        types::UnimarkupFile,
+        types::{self, UnimarkupBlocks},
         HeadingBlock, Metadata, MetadataKind, ParagraphBlock, VerbatimBlock,
     },
     log_id::{LogId, SetLog},
@@ -127,9 +127,8 @@ fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, FrontendEr
         return VerbatimBlock::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
         // TODO: Add implementation for the rest of enclosed blocks, return error if none of them match
-        //
-        // warn and fallback to paragraph for now
 
+        // warn and fallback to paragraph for now
         (ParserWarnLogId::UnsupportedBlock as LogId)
             .set_log(
                 &format!("Unsupported Unimarkup block:\n{}", input.as_str()),
