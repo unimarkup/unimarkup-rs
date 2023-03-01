@@ -1,9 +1,12 @@
-//! Defines the generic Unimarkup Block that is the base for all block elements. 
+//! Defines the generic Unimarkup Block that is the base for all block elements.
 
 use logid::capturing::MappedLogId;
-use unimarkup_render::{render::Render, html::Html};
+use unimarkup_render::{html::Html, render::Render};
 
-use super::{enclosed::Verbatim, atomic::{Heading, Paragraph}};
+use super::{
+    atomic::{Heading, Paragraph},
+    enclosed::Verbatim,
+};
 
 /// Generic enum for all Unimarkup block elements.
 #[non_exhaustive]
@@ -49,11 +52,11 @@ impl_from!(Verbatim from Verbatim);
 impl_from!(Paragraph from Paragraph);
 
 impl Render for Block {
-  fn render_html(&self) -> Result<Html, MappedLogId> {
-      match self {
-          Block::Heading(heading) => heading.render_html(),
-          Block::Paragraph(paragraph) => paragraph.render_html(),
-          Block::Verbatim(verbatim) => verbatim.render_html(),
-      }
-  }
+    fn render_html(&self) -> Result<Html, MappedLogId> {
+        match self {
+            Block::Heading(heading) => heading.render_html(),
+            Block::Paragraph(paragraph) => paragraph.render_html(),
+            Block::Verbatim(verbatim) => verbatim.render_html(),
+        }
+    }
 }

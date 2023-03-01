@@ -75,7 +75,10 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document
             .add_cause(&format!("{}", err))
     })?;
 
-    let mut unimarkup = Document{ config: config.clone(), ..Default::default() };
+    let mut unimarkup = Document {
+        config: config.clone(),
+        ..Default::default()
+    };
 
     if let Some(um_tokens) = rule_pairs.next() {
         for pair in um_tokens.into_inner() {

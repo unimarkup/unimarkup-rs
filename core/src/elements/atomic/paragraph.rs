@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::Debug,
-};
+use std::{collections::HashMap, fmt::Debug};
 
 use logid::{
     capturing::{LogIdTracing, MappedLogId},
@@ -117,9 +114,9 @@ impl Render for Paragraph {
 #[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
+    use super::Paragraph;
     use unimarkup_inline::{Inline, ParseUnimarkupInlines};
     use unimarkup_render::render::Render;
-    use super::Paragraph;
 
     #[test]
     fn test__render_html__paragraph() {

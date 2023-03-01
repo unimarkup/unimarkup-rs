@@ -297,6 +297,6 @@ mod tests {
             "Number of Unimarkup blocks in Verbatim not equal 1"
         );
 
-        assert_eq!(list, expected_block, "Parsed input not equal to expected");        
+        assert_eq!(list, expected_block, "Parsed input not equal to expected");
     }
 }

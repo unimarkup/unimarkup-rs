@@ -229,9 +229,9 @@ impl Render for Heading {
 #[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
+    use crate::elements::atomic::{Heading, HeadingLevel};
     use unimarkup_inline::ParseUnimarkupInlines;
     use unimarkup_render::render::Render;
-    use crate::elements::atomic::{HeadingLevel, Heading};
 
     #[test]
     fn test__render_html__heading() {
