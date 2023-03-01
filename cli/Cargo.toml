@@ -10,10 +10,6 @@ license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies.rusqlite]
-version = "0.26"
-features = ["bundled"]
-
 [dependencies]
 logid.workspace = true
 once_cell.workspace = true
