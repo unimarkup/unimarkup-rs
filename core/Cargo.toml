@@ -10,10 +10,6 @@ license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies.rusqlite]
-version = "0.26"
-features = ["bundled"]
-
 [dependencies]
 logid.workspace = true
 once_cell.workspace = true
@@ -22,7 +18,6 @@ unimarkup_render = { path = "../render/" }
 unimarkup_inline = { path = "../inline/"}
 unicode-segmentation = "1.8.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_rusqlite = "0.28.0"
 serde_bytes = "0.11.5"
 serde_json = "1.0"
 serde_yaml = "0.8.23"
