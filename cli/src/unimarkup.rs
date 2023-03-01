@@ -58,7 +58,7 @@ pub fn compile(config: Config) -> Result<(), MappedLogId> {
                 line!(),
             );
 
-            std::fs::write(&out_path_html, &html.body).map_err(|err| {
+            std::fs::write(&out_path_html, html.body).map_err(|err| {
                 (GeneralErrLogId::FailedWritingFile as LogId)
                     .set_event_with(
                         &CLI_LOG_ID_MAP,
