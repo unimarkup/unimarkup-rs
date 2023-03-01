@@ -8,18 +8,6 @@ mod frontend {
 
 // allows using `__` for better separation in functionnames
 #[allow(non_snake_case)]
-mod middleend {
-    mod content;
-    mod macros;
-    mod metadata;
-    mod resources;
-    mod setup;
-    pub mod test_setup;
-    mod variables;
-}
-
-// allows using `__` for better separation in functionnames
-#[allow(non_snake_case)]
 mod elements {
     mod heading;
     mod inline;
@@ -33,10 +21,4 @@ mod elements {
 mod general {
     mod metadata;
     mod unimarkup;
-}
-
-// allows using `__` for better separation in functionnames
-#[allow(non_snake_case)]
-mod backend {
-    mod backend_run;
 }

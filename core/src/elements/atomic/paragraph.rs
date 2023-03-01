@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::HashMap,
     fmt::Debug,
 };
 
@@ -12,17 +12,15 @@ use pest::Span;
 use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 use unimarkup_render::{html::Html, render::Render};
 
-use crate::elements::{inlines, log_id::GeneralErrLogId, UnimarkupBlocks};
+use crate::elements::{inlines, log_id::GeneralErrLogId, Blocks};
 use crate::{
-    backend::ParseFromIr,
-    elements::types::{self, ElementType},
+    elements::types,
     frontend::parser::{self, custom_pest_error, Rule, UmParse},
     log_id::CORE_LOG_ID_MAP,
-    middleend::{AsIrLines, ContentIrLine},
 };
 
 /// Structure of a Unimarkup paragraph element.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Paragraph {
     /// Unique identifier for a paragraph.
     pub id: String,
@@ -39,7 +37,7 @@ pub struct Paragraph {
 }
 
 impl UmParse for Paragraph {
-    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, MappedLogId>
+    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<Blocks, MappedLogId>
     where
         Self: Sized,
     {
@@ -95,64 +93,7 @@ impl UmParse for Paragraph {
             line_nr,
         };
 
-        Ok(vec![Box::new(paragraph_block)])
-    }
-}
-
-impl ParseFromIr for Paragraph {
-    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, MappedLogId>
-    where
-        Self: Sized,
-    {
-        if let Some(ir_line) = content_lines.pop_front() {
-            let expected_type = ElementType::Paragraph.to_string();
-
-            if ir_line.um_type != expected_type {
-                return Err(
-                    (GeneralErrLogId::InvalidElementType as LogId).set_event_with(
-                        &CORE_LOG_ID_MAP,
-                        &format!(
-                            "Expected paragraph type to parse, instead got: '{}'",
-                            ir_line.um_type
-                        ),
-                        file!(),
-                        line!(),
-                    ),
-                );
-            }
-
-            let content = if !ir_line.text.is_empty() {
-                &*ir_line.text
-            } else {
-                &*ir_line.fallback_text
-            }
-            .parse_unimarkup_inlines()
-            .collect();
-
-            let attributes = if !ir_line.attributes.is_empty() {
-                ir_line.attributes
-            } else {
-                ir_line.fallback_attributes
-            };
-
-            let block = Paragraph {
-                id: ir_line.id,
-                content,
-                attributes,
-                line_nr: ir_line.line_nr,
-            };
-
-            Ok(block)
-        } else {
-            Err((GeneralErrLogId::FailedBlockCreation as LogId)
-                .set_event_with(
-                    &CORE_LOG_ID_MAP,
-                    "Could not construct Paragraph.",
-                    file!(),
-                    line!(),
-                )
-                .add_cause("No content ir line available."))
-        }
+        Ok(vec![paragraph_block.into()])
     }
 }
 
@@ -173,36 +114,11 @@ impl Render for Paragraph {
     }
 }
 
-impl AsIrLines<ContentIrLine> for Paragraph {
-    fn as_ir_lines(&self) -> Vec<ContentIrLine> {
-        let line = ContentIrLine::new(
-            &self.id,
-            self.line_nr,
-            ElementType::Paragraph.to_string(),
-            &self
-                .content
-                .iter()
-                .map(|inline| inline.as_string())
-                .collect::<String>(),
-            "",
-            &self.attributes,
-            "",
-        );
-
-        vec![line]
-    }
-}
-
 #[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
-    use std::collections::VecDeque;
-
     use unimarkup_inline::{Inline, ParseUnimarkupInlines};
     use unimarkup_render::render::Render;
-
-    use crate::{backend::ParseFromIr, elements::types::ElementType, middleend::ContentIrLine};
-
     use super::Paragraph;
 
     #[test]
@@ -225,31 +141,6 @@ mod tests {
     }
 
     #[test]
-    fn test__parse_from_ir__paragraph() {
-        let test_id = String::from("test-par-id");
-        let content: Vec<Inline> = "This is an example paragraph\nwhich spans multiple lines"
-            .parse_unimarkup_inlines()
-            .collect();
-
-        let mut lines: VecDeque<_> = vec![ContentIrLine {
-            id: test_id.clone(),
-            line_nr: 0,
-            um_type: ElementType::Paragraph.to_string(),
-            text: content.iter().map(|inline| inline.as_string()).collect(),
-            attributes: String::from("{}"),
-            ..Default::default()
-        }]
-        .into();
-
-        let paragraph = Paragraph::parse_from_ir(&mut lines).unwrap();
-
-        assert_eq!(paragraph.id, test_id);
-        assert_eq!(paragraph.line_nr, 0);
-        assert_eq!(paragraph.content, content);
-        assert_eq!(paragraph.attributes, String::from("{}"));
-    }
-
-    #[test]
     fn test__render_html__paragraph_with_inline() {
         let id = String::from("paragraph-id");
         let content = "This is `the` *content* **of _the_ paragraph**"
@@ -269,28 +160,5 @@ mod tests {
                 );
 
         assert_eq!(expected_html, block.render_html().unwrap().body);
-    }
-
-    #[test]
-    fn test__parse_from_ir__invalid_paragraph() {
-        let mut lines = vec![].into();
-
-        let block_res = Paragraph::parse_from_ir(&mut lines);
-
-        assert!(block_res.is_err());
-
-        let ir_line_bad_type = ContentIrLine {
-            id: String::from("some-id"),
-            line_nr: 2,
-            um_type: format!("{}-more-info", ElementType::Paragraph),
-            text: String::from("This is the text of this paragraph"),
-            ..Default::default()
-        };
-
-        lines.push_front(ir_line_bad_type);
-
-        let block_res = Paragraph::parse_from_ir(&mut lines);
-
-        assert!(block_res.is_err());
     }
 }

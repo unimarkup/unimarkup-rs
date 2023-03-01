@@ -12,7 +12,7 @@ use crate::{
     elements::{
         atomic::{Heading, Paragraph},
         enclosed::Verbatim,
-        preamble, types, UnimarkupBlocks,
+        preamble, types, Blocks,
     },
     log_id::CORE_LOG_ID_MAP,
     metadata::{Metadata, MetadataKind},
@@ -23,12 +23,12 @@ use super::log_id::{ParserErrLogId, ParserWarnLogId};
 
 /// Used to parse one specific Unimarkup block
 pub trait UmParse {
-    /// Parses [`UnimarkupBlocks`] from given data returned from the pest parser.
+    /// Parses [`Blocks`] from given data returned from the pest parser.
     ///
     /// # Errors
     ///
     /// This function will return an error if given Pairs of Rules contain non-valid Unimarkup syntax.
-    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, MappedLogId>
+    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<Blocks, MappedLogId>
     where
         Self: Sized;
 }
@@ -57,7 +57,7 @@ pub use parser_derivation::*;
 
 /// Parses the given Unimarkup content.
 ///
-/// Returns [`UnimarkupBlocks`] on success.
+/// Returns [`Blocks`] on success.
 ///
 /// # Errors
 ///
@@ -75,7 +75,7 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document
             .add_cause(&format!("{}", err))
     })?;
 
-    let mut unimarkup = Document::default();
+    let mut unimarkup = Document{ config: config.clone(), ..Default::default() };
 
     if let Some(um_tokens) = rule_pairs.next() {
         for pair in um_tokens.into_inner() {
@@ -86,12 +86,12 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document
                 }
                 Rule::atomic_block => {
                     let mut atomic_blocks = parse_atomic_block(pair)?;
-                    unimarkup.elements.append(&mut atomic_blocks);
+                    unimarkup.blocks.append(&mut atomic_blocks);
                 }
                 Rule::enclosed_block => {
                     let mut enclosed_blocks = parse_enclosed_block(pair)?;
 
-                    unimarkup.elements.append(&mut enclosed_blocks);
+                    unimarkup.blocks.append(&mut enclosed_blocks);
                 }
                 Rule::blank_line | Rule::EOI => continue,
                 _ => unreachable!(
@@ -114,7 +114,7 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document
     Ok(unimarkup)
 }
 
-fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, MappedLogId> {
+fn parse_atomic_block(input: Pair<Rule>) -> Result<Blocks, MappedLogId> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::headings, input.as_str()) {
         return Heading::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {
@@ -124,7 +124,7 @@ fn parse_atomic_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, MappedLogId>
     Ok(vec![])
 }
 
-fn parse_enclosed_block(input: Pair<Rule>) -> Result<UnimarkupBlocks, MappedLogId> {
+fn parse_enclosed_block(input: Pair<Rule>) -> Result<Blocks, MappedLogId> {
     if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::verbatim, input.as_str()) {
         return Verbatim::parse(pairs, input.as_span());
     } else if let Ok(ref mut pairs) = UnimarkupParser::parse(Rule::paragraph, input.as_str()) {

@@ -11,5 +11,5 @@ fn test__compile__empty_content() {
 
     let rendered_result = unimarkup_core::unimarkup::compile("", cfg);
 
-    assert!(rendered_result.unwrap().elements.is_empty());
+    assert!(rendered_result.unwrap().blocks.is_empty());
 }

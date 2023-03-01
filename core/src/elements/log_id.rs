@@ -57,6 +57,18 @@ pub enum InlineWarnLogId {
     ),
 }
 
+/// Inline error log-ids for the elements section
+#[derive(Debug)]
+pub enum InlineErrLogId {
+    /// Log-id denoting that no inline elements were detected
+    NoInlineDetected = log_id::get_log_id(
+        LogIdMainGrp::Element as u8,
+        LogIdSubGrp::Inline as u8,
+        EventLevel::Error,
+        1,
+    ),
+}
+
 /// Preamble error log-ids for the frontend section
 #[derive(Debug)]
 pub enum PreambleErrLogId {

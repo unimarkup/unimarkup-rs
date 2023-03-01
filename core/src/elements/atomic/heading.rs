@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
 use logid::capturing::{LogIdTracing, MappedLogId};
 use logid::log_id::LogId;
@@ -9,14 +9,11 @@ use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 use unimarkup_render::html::Html;
 use unimarkup_render::render::Render;
 
-use crate::backend::ParseFromIr;
-use crate::elements::types::{self, ElementType};
-use crate::elements::{atomic::log_id::AtomicErrLogId, log_id::GeneralErrLogId};
-use crate::elements::{inlines, UnimarkupBlocks};
+use crate::elements::log_id::GeneralErrLogId;
+use crate::elements::{inlines, Blocks};
 use crate::frontend::parser::custom_pest_error;
 use crate::frontend::parser::{self, Rule, UmParse};
 use crate::log_id::CORE_LOG_ID_MAP;
-use crate::middleend::{AsIrLines, ContentIrLine};
 
 /// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
@@ -99,7 +96,7 @@ impl From<usize> for HeadingLevel {
 }
 
 /// Structure of a Unimarkup heading element.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Heading {
     /// Unique identifier for a heading.
     pub id: String,
@@ -175,7 +172,7 @@ impl Heading {
 }
 
 impl UmParse for Heading {
-    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<UnimarkupBlocks, MappedLogId>
+    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<Blocks, MappedLogId>
     where
         Self: Sized,
     {
@@ -184,7 +181,7 @@ impl UmParse for Heading {
             .expect("At least one pair available")
             .into_inner();
 
-        let mut headings: UnimarkupBlocks = Vec::new();
+        let mut headings: Blocks = Vec::new();
 
         let (line_nr, _column_nr) = span.start_pos().line_col();
 
@@ -194,109 +191,16 @@ impl UmParse for Heading {
             // which leads to off by 1 error
             // hence minus 1
             heading.line_nr += line_nr - 1;
-            headings.push(Box::new(heading));
+            headings.push(heading.into());
         }
 
         Ok(headings)
     }
 }
 
-impl AsIrLines<ContentIrLine> for Heading {
-    fn as_ir_lines(&self) -> Vec<ContentIrLine> {
-        let level = self.level.to_string();
-
-        let mut um_type = ElementType::Heading.to_string();
-
-        um_type.push(types::ELEMENT_TYPE_DELIMITER);
-        um_type.push_str(&level);
-
-        let line = ContentIrLine::new(
-            &self.id,
-            self.line_nr,
-            um_type,
-            &self
-                .content
-                .iter()
-                .map(|inline| inline.as_string())
-                .collect::<String>(),
-            "",
-            &self.attributes,
-            "",
-        );
-
-        vec![line]
-    }
-}
-
 impl AsRef<Self> for Heading {
     fn as_ref(&self) -> &Self {
         self
-    }
-}
-
-impl ParseFromIr for Heading {
-    fn parse_from_ir(content_lines: &mut VecDeque<ContentIrLine>) -> Result<Self, MappedLogId> {
-        let mut level = HeadingLevel::Invalid;
-
-        if let Some(ir_line) = content_lines.pop_front() {
-            let heading_pattern = format!(
-                "heading{delim}level{delim}",
-                delim = types::ELEMENT_TYPE_DELIMITER
-            );
-
-            if ir_line.um_type.contains(&heading_pattern) {
-                let mut split = ir_line.um_type.split(&heading_pattern);
-
-                // first element should be empty
-                if let Some("") = split.next() {
-                    let level_num = split.next();
-
-                    if let (Some(num_as_str), None) = (level_num, split.next()) {
-                        level = HeadingLevel::from(num_as_str);
-                    }
-                }
-            }
-
-            if level == HeadingLevel::Invalid {
-                return Err((AtomicErrLogId::InvalidHeadingLvl as LogId).set_event_with(
-                    &CORE_LOG_ID_MAP,
-                    &format!("Provided heading level is invalid: {}", ir_line.um_type),
-                    file!(),
-                    line!(),
-                ));
-            }
-
-            let content = if !ir_line.text.is_empty() {
-                &*ir_line.text
-            } else {
-                &*ir_line.fallback_text
-            }
-            .parse_unimarkup_inlines()
-            .collect();
-
-            let attributes = if !ir_line.attributes.is_empty() {
-                ir_line.attributes
-            } else {
-                ir_line.fallback_attributes
-            };
-
-            let block = Heading {
-                id: ir_line.id,
-                level,
-                content,
-                attributes,
-                line_nr: ir_line.line_nr,
-            };
-
-            return Ok(block);
-        }
-
-        Err((AtomicErrLogId::InvalidHeadingLvl as LogId).set_event_with(
-            &CORE_LOG_ID_MAP,
-            "ContentIrLines are empty, could not construct Heading!",
-            file!(),
-            line!(),
-        ))
     }
 }
 
@@ -325,18 +229,9 @@ impl Render for Heading {
 #[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
-    use std::collections::VecDeque;
-
     use unimarkup_inline::ParseUnimarkupInlines;
     use unimarkup_render::render::Render;
-
-    use crate::{
-        backend::ParseFromIr,
-        elements::{atomic::HeadingLevel, types},
-        middleend::ContentIrLine,
-    };
-
-    use super::Heading;
+    use crate::elements::atomic::{HeadingLevel, Heading};
 
     #[test]
     fn test__render_html__heading() {
@@ -389,127 +284,5 @@ mod tests {
             );
             assert_eq!(html.body, expected);
         }
-    }
-
-    #[test]
-    fn test__parse_from_ir__valid_heading() {
-        let lowest_level = HeadingLevel::Level1 as usize;
-        let highest_level = HeadingLevel::Level6 as usize;
-
-        let mut ir_lines: VecDeque<ContentIrLine> = vec![].into();
-
-        for heading_level in lowest_level..=highest_level {
-            let ir_line = ContentIrLine::new(
-                "some_id",
-                42 + heading_level,
-                format!(
-                    "heading{delim}level{delim}{level}",
-                    delim = types::ELEMENT_TYPE_DELIMITER,
-                    level = heading_level
-                ),
-                "This is a heading",
-                "",
-                "{}",
-                "{}",
-            );
-
-            ir_lines.push_back(ir_line);
-        }
-
-        // parse multiple heading blocks
-
-        let mut iterations = 0;
-
-        while ir_lines.get(0).is_some() {
-            // in case something goes wrong
-            iterations += 1;
-            if iterations > HeadingLevel::Level6 as usize {
-                break;
-            }
-
-            let block = Heading::parse_from_ir(&mut ir_lines).unwrap();
-
-            let (id, level, content, attr);
-
-            id = block.id;
-            level = block.level;
-            content = block.content;
-            attr = block.attributes;
-
-            assert_eq!(id, String::from("some_id"));
-            assert_eq!(level, HeadingLevel::from(iterations));
-            assert_eq!(
-                content
-                    .iter()
-                    .map(|inline| inline.as_string())
-                    .collect::<String>(),
-                String::from("This is a heading")
-            );
-            assert_eq!(attr, String::from("{}"));
-        }
-    }
-
-    #[test]
-    fn test__parse_from_ir__invalid_heading() {
-        let mut ir_lines: VecDeque<ContentIrLine> = vec![].into();
-
-        let bad_ir_line = ContentIrLine::new(
-            "some_id",
-            42,
-            format!(
-                "heading{delim}level{delim}0",
-                delim = types::ELEMENT_TYPE_DELIMITER
-            ),
-            "This is a heading",
-            "",
-            "{}",
-            "{}",
-        );
-
-        ir_lines.push_back(bad_ir_line);
-
-        // should panic because error is expected!
-        let result = Heading::parse_from_ir(&mut ir_lines);
-
-        assert!(result.is_err());
-
-        let bad_ir_line = ContentIrLine::new(
-            "some_id",
-            42,
-            format!(
-                "heading{delim}level{delim}7",
-                delim = types::ELEMENT_TYPE_DELIMITER
-            ),
-            "This is a heading",
-            "",
-            "{}",
-            "{}",
-        );
-
-        ir_lines.push_back(bad_ir_line);
-
-        // should panic because error is expected
-        let result = Heading::parse_from_ir(&mut ir_lines);
-
-        assert!(result.is_err());
-
-        let bad_ir_line = ContentIrLine::new(
-            "some_id",
-            42,
-            format!(
-                "some{delim}other{delim}type{delim}level{delim}2",
-                delim = types::ELEMENT_TYPE_DELIMITER
-            ),
-            "This is a heading",
-            "",
-            "{}",
-            "{}",
-        );
-
-        ir_lines.push_back(bad_ir_line);
-
-        let result = Heading::parse_from_ir(&mut ir_lines);
-
-        assert!(result.is_err());
     }
 }
