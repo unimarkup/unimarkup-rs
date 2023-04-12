@@ -212,14 +212,7 @@ fn parse_text_group_interrupt_bold() {
     let input = "This is **text [with text** group] as part of it.";
     let mut parser = input.parse_unimarkup_inlines();
 
-    for inline in parser.clone() {
-        println!("{inline:#?}");
-    }
-
-    println!("\n\nParsing following text: {input}\n\n");
-
     let inline = parser.next().unwrap();
-    println!("{inline:#?}\n");
 
     let start = Position { line: 1, column: 1 };
     let end = start + (0, 15 - 1);
@@ -235,7 +228,6 @@ fn parse_text_group_interrupt_bold() {
     );
 
     let inline = parser.next().unwrap();
-    println!("{inline:#?}\n");
 
     let start = end + (0, 1);
     let end = start + (0, 19 - 1);
@@ -255,7 +247,6 @@ fn parse_text_group_interrupt_bold() {
     );
 
     let inline = parser.next().unwrap();
-    println!("{inline:#?}\n");
 
     let start = end + (0, 1);
     let end = start + (0, 15 - 1);
@@ -275,10 +266,6 @@ fn parse_text_group_interrupt_bold() {
 fn parse_open_italic_closed_bold_hehe() {
     let input = "***This is input**";
     let mut parser = input.parse_unimarkup_inlines();
-
-    // for inline in parser.clone() {
-    // println!("{inline:#?}");
-    // }
 
     let inline = parser.next().unwrap();
     let start = Position::new(1, 1);
@@ -316,10 +303,7 @@ fn parse_nested_text_group() {
     let input = "[This text group [has another one inside] of it.]";
     let mut parser = input.parse_unimarkup_inlines();
 
-    println!("\n\nParsing following text: {input}\n\n");
-
     let inline = parser.next().unwrap();
-    println!("{inline:#?}\n");
 
     let start = Position { line: 1, column: 1 };
     let end = start + (0, 49 - 1);

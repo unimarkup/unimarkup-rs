@@ -1,8 +1,10 @@
 //! Defined log-ids for the security section
 
-use crate::log_id::{get_log_id, LogKind, LogSubGrp, CORE_GRP};
+use logid::log_id::{self, EventLevel};
 
-enum LogSubSubGrp {
+use crate::log_id::LogIdMainGrp;
+
+enum LogIdSubGrp {
     Hashing = 1,
 }
 
@@ -10,11 +12,10 @@ enum LogSubSubGrp {
 #[derive(Debug)]
 pub enum HashingErrLogId {
     /// Log-id denoting that a file could not be read for hashing
-    FailedReadingFile = get_log_id(
-        CORE_GRP,
-        LogSubGrp::Security as u8,
-        LogSubSubGrp::Hashing as u8,
-        LogKind::Error,
+    FailedReadingFile = log_id::get_log_id(
+        LogIdMainGrp::Security as u8,
+        LogIdSubGrp::Hashing as u8,
+        EventLevel::Error,
         0,
     ),
 }

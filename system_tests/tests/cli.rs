@@ -6,7 +6,7 @@ use clap::Parser;
 use shlex::Shlex;
 use unimarkup_core::{
     config::{Config, OutputFormat},
-    elements::types::UnimarkupType,
+    elements::types::ElementType,
 };
 
 fn get_args(options: &str, um_file: &str) -> Vec<String> {
@@ -181,7 +181,7 @@ fn test__config_parse__flags_option_set() {
 #[test]
 fn test__config_parse__enable_elements_option_set() {
     let um_filename = "file.um";
-    let elements = vec![UnimarkupType::VerbatimBlock, UnimarkupType::DefinitionList];
+    let elements = vec![ElementType::Verbatim, ElementType::DefinitionList];
 
     let options = format!("--enable-elements={},{}", elements[0], elements[1]);
     let args = get_args(&options, um_filename);
@@ -202,7 +202,7 @@ fn test__config_parse__enable_elements_option_set() {
 #[test]
 fn test__config_parse__disable_elements_option_set() {
     let um_filename = "file.um";
-    let elements = vec![UnimarkupType::VerbatimBlock, UnimarkupType::DefinitionList];
+    let elements = vec![ElementType::Verbatim, ElementType::DefinitionList];
 
     let options = format!("--disable-elements={},{}", elements[0], elements[1]);
     let args = get_args(&options, um_filename);

@@ -1,6 +1,6 @@
 [package]
-name = "unimarkup_inline"
-description = "Compiler for Unimarkup inline elements."
+name = "unimarkup_render"
+description = "Crate providing traits and types used for rendering Unimarkup markup."
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -12,5 +12,5 @@ license.workspace = true
 
 [dependencies]
 logid.workspace = true
-unimarkup_render = { path = "../render/" }
-unicode-segmentation = "1.8.0"
+once_cell.workspace = true
+syntect = "4.6"

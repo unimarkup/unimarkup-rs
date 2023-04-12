@@ -1,81 +1,23 @@
 //! Structs and enums representing the unimarkup type system.
 
-use std::fmt;
-
 use clap::ArgEnum;
-use rusqlite::Transaction;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
-use crate::{
-    backend::{ParseFromIr, Render},
-    elements,
-    frontend::parser::UmParse,
-    middleend::{
-        error::MiddleendError, AsIrLines, ContentIrLine, MacroIrLine, ResourceIrLine,
-        VariableIrLine, WriteToIr,
-    },
-};
-
-use super::{HeadingBlock, Metadata, ParagraphBlock};
-
-/// Delimiter used in string representation of [`UnimarkupType`].
-pub const DELIMITER: char = '-';
-
-/// Used as a combined trait bound for all Unimarkup Elements.
-pub trait UnimarkupBlock:
-    Render + AsIrLines<ContentIrLine> + UmParse + ParseFromIr + fmt::Debug + WriteToIr
-{
-}
-
-impl<T> UnimarkupBlock for T where
-    T: Render + AsIrLines<ContentIrLine> + Clone + UmParse + ParseFromIr + fmt::Debug + WriteToIr
-{
-}
-
-/// Type alias for a vector of elements that implement the [`UnimarkupBlock`] trait.
-pub type UnimarkupBlocks = Vec<Box<dyn UnimarkupBlock>>;
-
-impl WriteToIr for UnimarkupBlocks {
-    fn write_to_ir(&self, ir_transaction: &Transaction) -> Result<(), MiddleendError> {
-        for element in self {
-            element.write_to_ir(ir_transaction)?;
-        }
-
-        Ok(())
-    }
-}
-
-/// Struct representing one Unimarkup file
-#[derive(Default, Debug)]
-pub struct UnimarkupFile {
-    /// Field containing all Unimarkup blocks for this Unimarkup file
-    pub blocks: UnimarkupBlocks,
-
-    /// Field containing all macros defined in this Unimarkup file
-    pub macros: Vec<MacroIrLine>,
-
-    /// Field containing all variables defined in this Unimarkup file
-    pub variables: Vec<VariableIrLine>,
-
-    /// Field containing metadata for this Unimarkup file
-    pub metadata: Vec<Metadata>,
-
-    /// Field containing all external resources used in this Unimarkup file
-    pub resources: Vec<ResourceIrLine>,
-}
+/// Delimiter used in string representation of [`ElementType`].
+pub const ELEMENT_TYPE_DELIMITER: char = '-';
 
 /// Type variants available in a Unimarkup document for Unimarkup content elements.
 ///
 /// Each variant is briefly explained with short example. For more detailed
-/// explanation of available unimarkup elements consult the
-/// official [frontend reference of unimarkup](https://github.com/Unimarkup/Specification/blob/main/Frontend_Reference.markdown).
+/// explanation of available Unimarkup elements consult the
+/// official [frontend reference of Unimarkup](https://github.com/Unimarkup/Specification/tree/main/Frontend).
 #[derive(
     Debug, PartialEq, Eq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
 )]
 #[strum(ascii_case_insensitive, serialize_all = "kebab-case")]
-pub enum UnimarkupType {
-    /// A block of text surrounded with at least one blank line.
+pub enum ElementType {
+    /// A block of text.
     ///
     /// Example:
     /// ```markdown
@@ -84,8 +26,7 @@ pub enum UnimarkupType {
     /// ```
     Paragraph,
 
-    /// A block of text surrounded with at least one blank line, and
-    /// it starts with 1 to 6 `#` symbols.
+    /// A line of text starting with 1 to 6 `#` symbols.
     ///
     /// Example:
     /// ```markdown
@@ -93,7 +34,7 @@ pub enum UnimarkupType {
     /// ```
     Heading,
 
-    /// An unnumbered (unordered) list. Surrounded with at least one blank line.
+    /// An unnumbered (unordered) list.
     ///
     /// Example:
     /// ```markdown
@@ -102,7 +43,7 @@ pub enum UnimarkupType {
     /// ```
     BulletList,
 
-    /// A numbered (ordered) list. Surrounded with at least one blank line.
+    /// A numbered (ordered) list.
     ///
     /// Example:
     /// ```markdown
@@ -111,17 +52,17 @@ pub enum UnimarkupType {
     /// ```
     NumberedList,
 
-    /// A task list. Surrounded with at least one blank line.
+    /// A task list.
     ///
     /// Example:
-    /// ```markdown
-    /// - [ ] List item 1
-    /// - [a] List item 1
-    /// - [/] List item 2
+    /// ```ignore
+    /// -[ ] List item 1
+    /// -[a] List item 1
+    /// -[/] List item 2
     /// ```
     TaskList,
 
-    /// An unnumbered (unordered) list. Surrounded with at least one blank line.
+    /// An unnumbered (unordered) list with a definition term (left), description (right) and optional class (directly after `...`).
     ///
     /// Example:
     /// ```markdown
@@ -130,22 +71,22 @@ pub enum UnimarkupType {
     /// ```
     DefinitionList,
 
-    /// A table element. Surrounded with at least one blank line.
+    /// A table element.
     ///
-    /// Example: check the [specification](https://github.com/Unimarkup/Specification/blob/main/Frontend_Reference.markdown#table)
+    /// Example: check the [specification](https://github.com/Unimarkup/Specification/blob/main/Frontend/AtomicBlocks.md#table)
     Table,
 
     /// A verbatim block enclosed with 3 or more '~' symbols.
     ///
     /// Example:
-    /// ```markdown
-    /// ~~~ C
+    /// ````markdown
+    /// ```C
     /// int add(int a,  int b) {
     ///     return a + b;
     /// }
-    /// ~~~
     /// ```
-    VerbatimBlock,
+    /// ````
+    Verbatim,
 
     /// A render block enclosed with 3 or more `'` symbols.
     ///
@@ -169,7 +110,7 @@ pub enum UnimarkupType {
     MathBlock,
 
     /// A figure insert block with syntax similar to markdown hyperlink,
-    /// with `!!!` as prefix. Can be followed with unimarkup caption syntax. See example.
+    /// with `!!!` as prefix. Can be followed with Unimarkup caption syntax (See example).
     ///
     /// Example:
     /// ```markdown
@@ -184,9 +125,9 @@ pub enum UnimarkupType {
     ///
     /// Example:
     /// ```markdown
-    /// ~~~[The whole style guide for Unimarkup](StyleGuide.markdown)
+    /// ~~~[The whole style guide for Unimarkup](StyleGuide.md)
     /// ```
-    VerbatimBlockInsert,
+    VerbatimInsert,
 
     /// A render block which inserts another file as render block.
     RenderBlockInsert,
@@ -239,18 +180,18 @@ pub enum UnimarkupType {
     DefinitionBlock,
 
     /// It is possible to create explicit columns layout in unimarkup.
-    /// For details and examples see explicit column block in [unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend_Reference.md#explicit-column-block).
+    /// For details and examples see explicit column block in the [Unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend/EnclosedBlocks.md#explicit-column-block).
     ExplicitColumn,
 
     /// An implicit column block automatically splits its content by a given number of columns.
-    /// For details and examples see explicit column block in [unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend_Reference.md#implicit-column-block).
+    /// For details and examples see explicit column block in the [Unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend/EnclosedBlocks.md#implicit-column-block).
     ImplicitColumn,
 
-    /// This element adds a field name at the start of a text block that is enclosed inside `:`.
+    /// This element adds a field name at the start of a text block that is enclosed inside `<>`.
     ///
     /// Example:
     /// ```markdown
-    /// [[[:<field name>:
+    /// [[[<field name>
     ///
     /// Any Unimarkup content.
     ///
@@ -259,35 +200,36 @@ pub enum UnimarkupType {
     FieldBlock,
 
     /// Every content inside an output block is forwarded as is to the rendered document.
-    /// Enclosed with three or more `<` symbols.
     ///
     /// Example:
     /// ```markdown
     /// <<<
     /// <strong>Some important text</strong>
-    /// <<<
+    /// >>>
     /// ```
     OutputBlock,
 
-    /// Media insert blocks make it possible to insert video and audio files
+    /// Media insert make it possible to insert video and audio files
     /// in addition to images using an extended figure insert syntax.
     ///
-    /// For examples and more info see Media blocks in [unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend_Reference.md#media-insert).
-    MediaBlockInsert,
+    /// For more info, go to Media insert in the [Unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend/AtomicBlocks.md#media-insert).
+    MediaInsert,
 
-    /// If form blocks are allowed, predefined form macros may be used
-    /// next to other Unimarkup content inside a form block to get user input.
-    ///
-    /// For examples and more info see Form blocks in [unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend_Reference.md#form-block).
-    FormBlock,
-
-    /// It is possible to define macros in unimarkup. For more information see Macros section
-    /// in [unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend_Reference.md#macros).
+    /// It is possible to define macros in Unimarkup. For more information see the Macros section
+    /// in the [Unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend/Macros.md).
     MacroDefinition,
 
-    /// It is possible to define variables in unimarkup. For more information see Variables section
-    /// in [unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend_Reference.md#variables).
+    /// Usage of a defined macro. For more information see the Macros section
+    /// in the [Unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend/Macros.md).
+    MacroUsage,
+
+    /// It is possible to define variables in Unimarkup. For more information see the Variables section
+    /// in the [Unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend/Variables.md).
     VariableDefinition,
+
+    /// Usage of a defined variable. For more information see the Variables section
+    /// in the [Unimarkup specification](https://github.com/Unimarkup/Specification/blob/main/Frontend/Variables.md).
+    VariableUsage,
 }
 
 /// Generate implementation of From<_> trait for UnimarkupType for a unimarkup block struct
@@ -295,20 +237,20 @@ pub enum UnimarkupType {
 /// ## Usage
 ///
 /// ```ignore
-/// impl_from!(Heading from HeadingBlock);
+/// from_block_to_type!(Heading, Heading);
 ///
 /// // expands to
 ///
-/// impl From<&HeadingBlock> for UnimarkupType {
-///     fn from(_: &HeadingBlock) -> Self {
+/// impl From<&Heading> for ElementType {
+///     fn from(_: &Heading) -> Self {
 ///         Self::Heading
 ///     }
 /// }
 /// ```
-macro_rules! impl_from {
-    ($($variant:ident from $struct:ty),*) => {
+macro_rules! from_block_to_type {
+    ($($struct:ty, $variant:ident),*) => {
         $(
-            impl From<&$struct> for UnimarkupType {
+            impl From<&$struct> for ElementType {
                 fn from(_: &$struct) -> Self {
                     Self::$variant
                 }
@@ -317,9 +259,9 @@ macro_rules! impl_from {
     };
 }
 
-impl_from!(Heading from HeadingBlock);
-impl_from!(Paragraph from ParagraphBlock);
-impl_from!(VerbatimBlock from elements::VerbatimBlock);
+from_block_to_type!(super::atomic::Heading, Heading);
+from_block_to_type!(super::atomic::Paragraph, Paragraph);
+from_block_to_type!(super::enclosed::Verbatim, Verbatim);
 
 #[allow(non_snake_case)]
 #[cfg(test)]
@@ -328,10 +270,10 @@ mod tests {
 
     #[test]
     fn test__convert_types__heading() {
-        let heading = HeadingBlock::default();
+        let heading = crate::elements::atomic::Heading::default();
 
-        let um_type = UnimarkupType::from(&heading);
+        let um_type = ElementType::from(&heading);
 
-        assert_eq!(um_type, UnimarkupType::Heading);
+        assert_eq!(um_type, ElementType::Heading);
     }
 }

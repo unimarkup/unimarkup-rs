@@ -1,9 +1,11 @@
 use crate::{Span, TokenDelimiters, TokenKind};
 
 mod content;
+mod render;
 mod substitute;
 
 pub use content::*;
+pub use render::*;
 pub use substitute::*;
 
 /// Representation of Unimarkup inline-formatted text.

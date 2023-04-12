@@ -3,13 +3,16 @@
 use std::path::PathBuf;
 
 use clap::{crate_version, ArgEnum, Parser};
+use logid::{
+    capturing::{LogIdTracing, MappedLogId},
+    log_id::LogId,
+};
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
 use crate::{
-    elements::types::UnimarkupType,
-    error::ConfigError,
-    log_id::{ConfigErrLogId, LogId, SetLog},
+    elements::types::ElementType,
+    log_id::{ConfigErrLogId, CORE_LOG_ID_MAP},
 };
 
 const UNIMARKUP_NAME: &str = "Unimarkup";
@@ -117,7 +120,7 @@ pub struct Config {
     )]
     #[serde(alias = "enable-elements")]
     #[serde(default)]
-    pub enable_elements: Option<Vec<UnimarkupType>>,
+    pub enable_elements: Option<Vec<ElementType>>,
 
     /// Explicitly set Unimarkup block elements that can NOT be used inside the given Unimarkup document.
     /// If this option is set, all Unimarkup elements that are not given are enabled.
@@ -130,7 +133,7 @@ pub struct Config {
     )]
     #[serde(alias = "disable-elements")]
     #[serde(default)]
-    pub disable_elements: Option<Vec<UnimarkupType>>,
+    pub disable_elements: Option<Vec<ElementType>>,
 
     /// Set citation style sheet that is used to process referenced literature
     #[clap(
@@ -297,75 +300,113 @@ pub enum HtmlMathmode {
     Cdn,
 }
 
+// define extension trait
+trait ReplaceIfNone<T> {
+    fn replace_none(&mut self, other: Option<T>);
+}
+
+// implement for Option<T>
+impl<T> ReplaceIfNone<T> for Option<T> {
+    fn replace_none(&mut self, other: Option<T>) {
+        if self.is_none() {
+            *self = other;
+        }
+    }
+}
+
 impl Config {
+    /// Merges the fields of two [`Config`]s.
+    /// Any field that is `None` is taken from `other` [`Config`] if available.
+    ///
+    /// In other words, the fields of [`Config`] that this method is called on, take precedence over the
+    /// fields of the `other` [`Config`].
+    pub fn merge(&mut self, other: Config) {
+        self.out_file.replace_none(other.out_file);
+        self.out_formats.replace_none(other.out_formats);
+        self.insert_paths.replace_none(other.insert_paths);
+        self.dot_unimarkup.replace_none(other.dot_unimarkup);
+        self.theme.replace_none(other.theme);
+        self.flags.replace_none(other.flags);
+        self.enable_elements.replace_none(other.enable_elements);
+        self.disable_elements.replace_none(other.disable_elements);
+        self.citation_style.replace_none(other.citation_style);
+        self.references.replace_none(other.references);
+        self.fonts.replace_none(other.fonts);
+
+        self.overwrite_out_files |= other.overwrite_out_files;
+        self.clean |= other.clean;
+        self.rebuild |= other.rebuild;
+
+        self.relative_insert_prefix
+            .replace_none(other.relative_insert_prefix);
+        self.html_template.replace_none(other.html_template);
+        self.html_mathmode.replace_none(other.html_mathmode);
+
+        self.html_embed_svg |= other.html_embed_svg;
+    }
+
     /// [`validate_config`] validates if file and paths exist and if config does not contradict itself
-    pub fn validate_config(&mut self) -> Result<(), ConfigError> {
+    pub fn validate_config(&mut self) -> Result<(), MappedLogId> {
         if let Some(ref file) = self.out_file {
             if file.exists() && !self.overwrite_out_files {
-                return Err(ConfigError::General(
-                    (ConfigErrLogId::InvalidConfig as LogId).set_log(
-                        "Option `overwrite-out-files` must be `true` if output file exists.",
-                        file!(),
-                        line!(),
-                    ),
+                return Err((ConfigErrLogId::InvalidConfig as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    "Option `overwrite-out-files` must be `true` if output file exists.",
+                    file!(),
+                    line!(),
                 ));
             }
         }
         if let Some(ref paths) = self.insert_paths {
             for path in paths {
                 if !path.exists() {
-                    return Err(ConfigError::General(
-                        (ConfigErrLogId::InvalidPath as LogId).set_log(
-                            &format!("Invalid path given for `insert-paths`: {:?}", path),
-                            file!(),
-                            line!(),
-                        ),
+                    return Err((ConfigErrLogId::InvalidPath as LogId).set_event_with(
+                        &CORE_LOG_ID_MAP,
+                        &format!("Invalid path given for `insert-paths`: {:?}", path),
+                        file!(),
+                        line!(),
                     ));
                 }
             }
         }
         if let Some(ref path) = self.dot_unimarkup {
             if !path.is_dir() {
-                return Err(ConfigError::General(
-                    (ConfigErrLogId::InvalidPath as LogId).set_log(
-                        &format!("Invalid path given for `dot-unimarkup`: {:?}", path),
-                        file!(),
-                        line!(),
-                    ),
+                return Err((ConfigErrLogId::InvalidPath as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    &format!("Invalid path given for `dot-unimarkup`: {:?}", path),
+                    file!(),
+                    line!(),
                 ));
             }
         }
         if let Some(ref file) = self.theme {
             if !file.exists() {
-                return Err(ConfigError::General(
-                    (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        &format!("Invalid file given for `theme`: {:?}", file),
-                        file!(),
-                        line!(),
-                    ),
+                return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    &format!("Invalid file given for `theme`: {:?}", file),
+                    file!(),
+                    line!(),
                 ));
             }
         }
         if let Some(ref file) = self.citation_style {
             if !file.exists() {
-                return Err(ConfigError::General(
-                    (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        &format!("Invalid file given for `citation-style`: {:?}", file),
-                        file!(),
-                        line!(),
-                    ),
+                return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    &format!("Invalid file given for `citation-style`: {:?}", file),
+                    file!(),
+                    line!(),
                 ));
             }
         }
         if let Some(ref files) = self.references {
             for file in files {
                 if !file.exists() {
-                    return Err(ConfigError::General(
-                        (ConfigErrLogId::InvalidFile as LogId).set_log(
-                            &format!("Invalid file given for `references`: {:?}", file),
-                            file!(),
-                            line!(),
-                        ),
+                    return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                        &CORE_LOG_ID_MAP,
+                        &format!("Invalid file given for `references`: {:?}", file),
+                        file!(),
+                        line!(),
                     ));
                 }
             }
@@ -373,34 +414,31 @@ impl Config {
         if let Some(ref files) = self.fonts {
             for file in files {
                 if !file.exists() {
-                    return Err(ConfigError::General(
-                        (ConfigErrLogId::InvalidFile as LogId).set_log(
-                            &format!("Invalid file given for `fonts`: {:?}", file),
-                            file!(),
-                            line!(),
-                        ),
+                    return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                        &CORE_LOG_ID_MAP,
+                        &format!("Invalid file given for `fonts`: {:?}", file),
+                        file!(),
+                        line!(),
                     ));
                 }
             }
         }
         if let Some(ref file) = self.html_template {
             if !file.exists() {
-                return Err(ConfigError::General(
-                    (ConfigErrLogId::InvalidFile as LogId).set_log(
-                        &format!("Invalid file given for `html-template`: {:?}", file),
-                        file!(),
-                        line!(),
-                    ),
+                return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    &format!("Invalid file given for `html-template`: {:?}", file),
+                    file!(),
+                    line!(),
                 ));
             }
         }
         if !self.um_file.exists() {
-            return Err(ConfigError::General(
-                (ConfigErrLogId::InvalidFile as LogId).set_log(
-                    "Set `um-file` does not exist!",
-                    file!(),
-                    line!(),
-                ),
+            return Err((ConfigErrLogId::InvalidFile as LogId).set_event_with(
+                &CORE_LOG_ID_MAP,
+                "Set `um-file` does not exist!",
+                file!(),
+                line!(),
             ));
         }
 

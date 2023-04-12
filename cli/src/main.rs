@@ -1,13 +1,10 @@
 use clap::Parser;
-use log_id::GeneralInfLogId;
-use unimarkup_core::{
-    config::Config,
-    log_id::{LogId, SetLog},
-};
+use log_id::CLI_LOG_ID_MAP;
+use logid::{capturing::LogIdTracing, log_id::LogId};
+use unimarkup_core::config::Config;
 
-use crate::log_id::GeneralErrLogId;
+use crate::log_id::{GeneralErrLogId, GeneralInfLogId};
 
-mod error;
 mod log_id;
 mod logger;
 mod unimarkup;
@@ -21,7 +18,8 @@ fn main() {
 
             match unimarkup::compile(config) {
                 Ok(_) => {
-                    (GeneralInfLogId::FinishedCompiling as LogId).set_log(
+                    (GeneralInfLogId::FinishedCompiling as LogId).set_event_with(
+                        &CLI_LOG_ID_MAP,
                         &format!("Finished compiling: {:?}", um_file),
                         file!(),
                         line!(),
@@ -29,7 +27,8 @@ fn main() {
                 }
                 Err(err) => {
                     (GeneralErrLogId::FailedCompiling as LogId)
-                        .set_log(
+                        .set_event_with(
+                            &CLI_LOG_ID_MAP,
                             &format!("Failed compiling: {:?}", um_file),
                             file!(),
                             line!(),
@@ -40,7 +39,12 @@ fn main() {
         }
         Err(error) => {
             (GeneralErrLogId::FailedParsingArgs as LogId)
-                .set_log("Failed parsing comandline arguments!", file!(), line!())
+                .set_event_with(
+                    &CLI_LOG_ID_MAP,
+                    "Failed parsing comandline arguments!",
+                    file!(),
+                    line!(),
+                )
                 .add_info(&format!(
                     "Cause: {}",
                     error.to_string().replace("error: ", "")
