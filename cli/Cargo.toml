@@ -1,5 +1,5 @@
 [package]
-name = "unimarkup_cli"
+name = "unimarkup"
 description = "CLI for the Unimarkup compiler."
 version.workspace = true
 edition.workspace = true

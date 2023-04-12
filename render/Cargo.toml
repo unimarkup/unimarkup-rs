@@ -1,6 +1,6 @@
 [package]
 name = "unimarkup_render"
-description = "Crate providing traits and types used for rendering Unimarkup elements."
+description = "Crate providing traits and types used for rendering Unimarkup markup."
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
