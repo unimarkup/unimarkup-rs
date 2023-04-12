@@ -33,9 +33,7 @@ impl Document {
         let mut output = Html::default();
 
         for block in &self.blocks {
-            let try_render = block.render_html();
-
-            match try_render {
+            match block.render_html() {
                 Ok(html) => {
                     output.body.push_str(&html.body);
                     output.head.push_str(&html.head);
