@@ -332,15 +332,16 @@ impl Config {
         self.citation_style.replace_none(other.citation_style);
         self.references.replace_none(other.references);
         self.fonts.replace_none(other.fonts);
-        
+
         self.overwrite_out_files |= other.overwrite_out_files;
         self.clean |= other.clean;
         self.rebuild |= other.rebuild;
 
-        self.relative_insert_prefix.replace_none(other.relative_insert_prefix);
+        self.relative_insert_prefix
+            .replace_none(other.relative_insert_prefix);
         self.html_template.replace_none(other.html_template);
         self.html_mathmode.replace_none(other.html_mathmode);
-        
+
         self.html_embed_svg |= other.html_embed_svg;
     }
 
