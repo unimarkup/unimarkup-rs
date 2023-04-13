@@ -28,3 +28,6 @@ pest = "2.1.3"
 pest_derive = "2.0"
 sha3 = "0.10"
 hex = "0.4"
+
+icu = { version = "1.1.0", features = ["experimental"] }
+icu_testdata = { version = "1.1.2", default-features = false, features = ["buffer", "icu_segmenter"] }

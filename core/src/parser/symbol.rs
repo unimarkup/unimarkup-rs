@@ -1,10 +1,13 @@
 use std::fmt;
 
+use icu::segmenter::{GraphemeClusterSegmenter, WordSegmenter};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SymbolKind {
     Hash,
     Plain,
     Newline,
+    Blankline,
 }
 
 impl Default for SymbolKind {
@@ -66,8 +69,8 @@ impl Symbol<'_> {
     pub fn as_str(&self) -> &str {
         match self.kind {
             SymbolKind::Hash => "#",
-            SymbolKind::Newline => "\n",
             SymbolKind::Plain => &self.input[self.offset.start..self.offset.end],
+            SymbolKind::Newline | SymbolKind::Blankline => "\n",
         }
     }
 
@@ -95,4 +98,91 @@ impl From<&str> for SymbolKind {
             _ => SymbolKind::Plain,
         }
     }
+}
+
+pub trait IntoSymbols<'s> {
+    fn into_symbols(self) -> Vec<Symbol<'s>>;
+}
+
+impl<'s> IntoSymbols<'s> for &'s str {
+    fn into_symbols(self) -> Vec<Symbol<'s>> {
+        word_split(self)
+    }
+}
+
+impl<'s> IntoSymbols<'s> for Vec<Symbol<'s>> {
+    fn into_symbols(self) -> Vec<Symbol<'s>> {
+        self
+    }
+}
+
+pub fn word_split(input: &str) -> Vec<Symbol> {
+    let segmenter =
+        WordSegmenter::try_new_unstable(&icu_testdata::unstable()).expect("Data exists");
+    let grapheme_segmenter =
+        GraphemeClusterSegmenter::try_new_unstable(&icu_testdata::unstable()).expect("Data exists");
+
+    let mut words: Vec<Symbol> = Vec::new();
+    let mut curr_pos: Position = Position::default();
+    let mut prev_offset = 0;
+
+    // skip(1) to ignore break at start of input
+    for offset in segmenter.segment_str(input).skip(1) {
+        if let Some(word) = input.get(prev_offset..offset) {
+            let kind = SymbolKind::from(word);
+            let utf8_len = word.len();
+            // only words > 1 byte may have different byte to grapheme count
+            let grapheme_len = if utf8_len == 1 {
+                1
+            } else {
+                // grapheme counting has huge performance impact (10x increase)
+                // -1 because start of input is always a grapheme breakpoint
+                grapheme_segmenter
+                    .segment_str(word)
+                    .collect::<Vec<usize>>()
+                    .len()
+                    - 1
+                // 2
+            };
+            let end_pos = if kind == SymbolKind::Newline {
+                Position {
+                    line: (curr_pos.line + 1),
+                    col_utf8: 0,
+                    col_utf16: 0,
+                    col_grapheme: 0,
+                }
+            } else {
+                Position {
+                    line: curr_pos.line,
+                    col_utf8: (curr_pos.col_utf8 + utf8_len),
+                    col_utf16: (curr_pos.col_utf16 + word.encode_utf16().count()),
+                    col_grapheme: (curr_pos.col_grapheme + grapheme_len),
+                }
+            };
+
+            let mut kind = SymbolKind::from(word);
+
+            if curr_pos.col_grapheme == 0 && kind == SymbolKind::Newline {
+                // newline at the start of line -> Blankline
+                kind = SymbolKind::Blankline;
+            }
+
+            words.push(Symbol {
+                input,
+                kind,
+                offset: Offset {
+                    start: prev_offset,
+                    end: offset,
+                },
+                start: curr_pos,
+                end: end_pos,
+            });
+
+            curr_pos = end_pos;
+        }
+        prev_offset = offset;
+    }
+
+    // last offset not needed, because break at EOI is always available
+    words
 }
