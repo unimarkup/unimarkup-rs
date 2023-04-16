@@ -116,7 +116,7 @@ impl<'s> IntoSymbols<'s> for Vec<Symbol<'s>> {
     }
 }
 
-pub fn word_split(input: &str) -> Vec<Symbol> {
+fn word_split(input: &str) -> Vec<Symbol> {
     let segmenter =
         WordSegmenter::try_new_unstable(&icu_testdata::unstable()).expect("Data exists");
     let grapheme_segmenter =
