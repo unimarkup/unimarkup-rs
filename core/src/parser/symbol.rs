@@ -87,6 +87,13 @@ impl fmt::Debug for Symbol<'_> {
 }
 
 impl Symbol<'_> {
+    pub(crate) fn is_not_keyword(&self) -> bool {
+        matches!(
+            self.kind,
+            SymbolKind::Newline | SymbolKind::Plain | SymbolKind::Blankline | SymbolKind::EOI
+        )
+    }
+
     /// Returns the original string representation of the symbol.
     pub fn as_str(&self) -> &str {
         match self.kind {

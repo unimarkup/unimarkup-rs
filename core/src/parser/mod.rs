@@ -70,7 +70,7 @@ where
 #[derive(Clone)]
 pub struct MainParser {
     parsers: Vec<ParserFn>,
-    default: ParserFn,
+    default_parser: ParserFn,
 }
 
 impl Default for MainParser {
@@ -79,7 +79,7 @@ impl Default for MainParser {
 
         let mut parser = Self {
             parsers: Vec::with_capacity(2),
-            default,
+            default_parser: default,
         };
 
         parser.register_parser(Heading::generate_parser());
@@ -102,19 +102,22 @@ impl MainParser {
         #[cfg(debug_assertions)]
         let mut input_len = input.len();
 
-        while input.first().is_some() {
-            for parser in &self.parsers {
-                if let Some((mut inner_blocks, rest_of_input)) = parser(input) {
-                    blocks.append(&mut inner_blocks);
-                    input = rest_of_input;
-                    break;
+        while let Some(sym) = input.first() {
+            if sym.is_not_keyword() {
+                let (mut res_blocks, rest_of_input) =
+                    (self.default_parser)(input).expect("Default parser could not parse content!");
+
+                blocks.append(&mut res_blocks);
+                input = rest_of_input;
+            } else {
+                for parser_fn in &self.parsers {
+                    if let Some((mut res_blocks, rest_of_input)) = parser_fn(input) {
+                        blocks.append(&mut res_blocks);
+                        input = rest_of_input;
+                        break; // start from first parser on next input
+                    }
                 }
             }
-
-            let (mut inner_blocks, rest_of_input) =
-                (self.default)(input).expect("Default parser could not parse content!");
-            blocks.append(&mut inner_blocks);
-            input = rest_of_input;
 
             #[cfg(debug_assertions)]
             {
