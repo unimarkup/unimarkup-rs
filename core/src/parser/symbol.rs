@@ -1,13 +1,22 @@
+//! Symbol and helper types and traits for structurization of Unimarkup input.
+
 use std::fmt;
 
 use icu::segmenter::{GraphemeClusterSegmenter, WordSegmenter};
 
+/// Possible kinds of Symbol found in Unimarkup document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SymbolKind {
+    /// Hash symbol (#) used for headings
     Hash,
+    /// Regular text with no semantic meaning
     Plain,
+    /// Line break
     Newline,
+    /// Empty line, can be separator between blocks
     Blankline,
+    /// End of Unimarkup document
+    EOI,
 }
 
 impl Default for SymbolKind {
@@ -16,27 +25,37 @@ impl Default for SymbolKind {
     }
 }
 
+/// Indicates position of a symbol in a Unimarkup document.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Position {
+    /// Line the symbol is found at
     pub line: usize,
+    /// Column at which the symbol is located in line, when encoded as UTF8
     pub col_utf8: usize,
+    /// Column at which the symbol is located in line, when encoded as UTF16
     pub col_utf16: usize,
+    /// Column at which the symbol is located in line, when counting graphemes
     pub col_grapheme: usize,
 }
 
 // Note: start inclusive, end exclusive
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Offset {
+pub(crate) struct Offset {
     pub start: usize,
     pub end: usize,
 }
 
+/// Symbol representation of literals found in Unimarkup document.
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Symbol<'a> {
+    /// Original input the symbol is found in.
     pub input: &'a str,
-    pub offset: Offset,
+    pub(crate) offset: Offset,
+    /// Kind of the symbol, e.g. a hash (#)
     pub kind: SymbolKind,
+    /// Start position of the symbol in input.
     pub start: Position,
+    /// End position of the symbol in input.
     pub end: Position,
 }
 
@@ -66,15 +85,25 @@ impl fmt::Debug for Symbol<'_> {
 }
 
 impl Symbol<'_> {
+    /// Returns the original string representation of the symbol.
     pub fn as_str(&self) -> &str {
         match self.kind {
             SymbolKind::Hash => "#",
             SymbolKind::Plain => &self.input[self.offset.start..self.offset.end],
             SymbolKind::Newline | SymbolKind::Blankline => "\n",
+            SymbolKind::EOI => "",
         }
     }
 
-    pub fn flatten(symbols: &[Self]) -> &str {
+    /// Flattens the input of consecutive symbols. Returns the slice of input starting from start
+    /// position of first symbol until the end of last symbol.
+    ///
+    /// Note: The input must be same in all symbols!
+    pub(crate) fn flatten(symbols: &[Self]) -> &str {
+        debug_assert!(symbols
+            .windows(2)
+            .all(|window| window[0].input == window[1].input));
+
         if symbols.is_empty() {
             return "";
         }
@@ -100,7 +129,9 @@ impl From<&str> for SymbolKind {
     }
 }
 
+/// Trait for conversion of input into Unimarkup symbols.
 pub trait IntoSymbols<'s> {
+    /// Converts input into Unimarkup symbols.
     fn into_symbols(self) -> Vec<Symbol<'s>>;
 }
 
