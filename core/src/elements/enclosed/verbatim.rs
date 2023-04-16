@@ -8,11 +8,14 @@ use unimarkup_render::highlight::{self, DEFAULT_THEME, PLAIN_SYNTAX};
 use unimarkup_render::html::Html;
 use unimarkup_render::render::Render;
 
+use crate::elements::blocks::Block;
 use crate::elements::enclosed::log_id::EnclosedErrLogId;
 use crate::elements::log_id::GeneralErrLogId;
 use crate::elements::Blocks;
 use crate::frontend::parser::{custom_pest_error, Rule, UmParse};
 use crate::log_id::CORE_LOG_ID_MAP;
+use crate::parser::symbol::{Symbol, SymbolKind};
+use crate::parser::{ElementParser, TokenizeOutput};
 
 /// Structure of a Unimarkup verbatim block element.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -30,6 +33,83 @@ pub struct Verbatim {
     /// Line number, where the verbatim block occurs in
     /// the Unimarkup document.
     pub line_nr: usize,
+}
+
+pub(crate) enum Token<'a> {
+    Delimiter { line: usize },
+    Content(&'a [Symbol<'a>]),
+}
+
+impl ElementParser for Verbatim {
+    type Token<'a> = self::Token<'a>;
+
+    fn tokenize<'i>(input: &'i [Symbol<'i>]) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
+        let start_delim = input
+            .iter()
+            .take_while(|symbol| matches!(symbol.kind, SymbolKind::Verbatim))
+            .count();
+
+        if start_delim < 3 {
+            return None;
+        };
+
+        // we know there are at least 3
+        let first_delim = input[0];
+
+        // TODO: handle language attribute
+        let content_count = input
+            .iter()
+            .skip(start_delim)
+            .take_while(|symbol| !matches!(symbol.kind, SymbolKind::Verbatim))
+            .count();
+
+        let end_delim = input
+            .iter()
+            .skip(start_delim + content_count)
+            .take_while(|sym| matches!(sym.kind, SymbolKind::Verbatim))
+            .count();
+
+        if end_delim != start_delim {
+            return None;
+        }
+
+        let start_content = start_delim;
+        let end_content = start_content + content_count;
+        let content = &input[start_content..end_content];
+        let rest = &input[end_content + end_delim..];
+
+        let last_delim = input[end_content];
+
+        let output = TokenizeOutput {
+            tokens: vec![
+                Token::Delimiter {
+                    line: first_delim.start.line,
+                },
+                Token::Content(content),
+                Token::Delimiter {
+                    line: last_delim.start.line,
+                },
+            ],
+            rest_of_input: rest,
+        };
+
+        Some(output)
+    }
+
+    fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
+        let Token::Delimiter { line } = input.get(0)? else {return None};
+        let Token::Content(symbols) = input.get(1)? else { return None };
+        let content = Symbol::flatten(symbols);
+
+        let block = Self {
+            id: String::default(),
+            content: String::from(content),
+            attributes: None,
+            line_nr: *line,
+        };
+
+        Some(vec![Block::Verbatim(block)])
+    }
 }
 
 impl UmParse for Verbatim {
@@ -290,7 +370,7 @@ mod tests {
 
         let mut input_pairs = verbatim_res.unwrap();
 
-        let block_res = Verbatim::parse(&mut input_pairs, enclosed.as_span());
+        let block_res = <Verbatim as UmParse>::parse(&mut input_pairs, enclosed.as_span());
 
         assert!(block_res.is_ok(), "Cause: {:?}", block_res.unwrap_err());
 

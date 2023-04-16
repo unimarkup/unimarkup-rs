@@ -15,6 +15,8 @@ pub enum SymbolKind {
     Newline,
     /// Empty line, can be separator between blocks
     Blankline,
+    /// Symbol for Verbatim block delimiters
+    Verbatim,
     /// End of Unimarkup document
     EOI,
 }
@@ -90,6 +92,7 @@ impl Symbol<'_> {
         match self.kind {
             SymbolKind::Hash => "#",
             SymbolKind::Plain => &self.input[self.offset.start..self.offset.end],
+            SymbolKind::Verbatim => "`",
             SymbolKind::Newline | SymbolKind::Blankline => "\n",
             SymbolKind::EOI => "",
         }
@@ -124,6 +127,7 @@ impl From<&str> for SymbolKind {
         match value {
             "#" => SymbolKind::Hash,
             "\n" | "\r\n" => SymbolKind::Newline,
+            "`" => SymbolKind::Verbatim,
             _ => SymbolKind::Plain,
         }
     }
