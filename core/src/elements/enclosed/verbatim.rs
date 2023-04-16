@@ -24,7 +24,8 @@ pub struct Verbatim {
     pub content: String,
 
     /// Attributes of the verbatim block.
-    pub attributes: String,
+    // TODO: make attributes data structure
+    pub attributes: Option<String>,
 
     /// Line number, where the verbatim block occurs in
     /// the Unimarkup document.
@@ -45,7 +46,7 @@ impl UmParse for Verbatim {
         let mut block = Verbatim {
             id: format!("verbatim-{}", line_nr),
             content: String::new(),
-            attributes: String::new(),
+            attributes: None,
             line_nr,
         };
 
@@ -54,7 +55,7 @@ impl UmParse for Verbatim {
                 Rule::verbatim_lang => {
                     let attr = format!("{{ \"language\": \"{}\" }}", rule.as_str().trim());
 
-                    block.attributes = attr;
+                    block.attributes = Some(attr);
                 }
                 Rule::verbatim_content => {
                     block.content = String::from(rule.as_str().trim());
@@ -78,7 +79,7 @@ impl UmParse for Verbatim {
                         block.id = String::from(id);
                     }
 
-                    block.attributes = serde_json::to_string(&attributes).unwrap();
+                    block.attributes = serde_json::to_string(&attributes).ok();
                 }
                 other => {
                     use pest::error;
@@ -119,11 +120,14 @@ impl Render for Verbatim {
     fn render_html(&self) -> Result<Html, MappedLogId> {
         let mut res = String::with_capacity(self.content.capacity());
 
-        let attributes =
-            serde_json::from_str::<VerbatimAttributes>(&self.attributes).unwrap_or_default();
+        // TODO: improve handling of attributes
+        let attributes = serde_json::from_str::<VerbatimAttributes>(
+            &self.attributes.as_ref().cloned().unwrap_or_default(),
+        )
+        .ok();
 
-        let language = match attributes.language {
-            Some(language) => language,
+        let language = match attributes.as_ref() {
+            Some(attrs) => attrs.language.clone().unwrap_or(PLAIN_SYNTAX.to_string()),
             None => PLAIN_SYNTAX.to_string(),
         };
 
@@ -163,7 +167,7 @@ mod tests {
 
         let lang = "rust";
 
-        let attributes = format!("{{ \"language\": \"{}\" }}", lang);
+        let attributes = Some(format!("{{ \"language\": \"{}\" }}", lang));
 
         let block = Verbatim {
             id: id.clone(),
@@ -190,7 +194,7 @@ mod tests {
                  It also contains a newline",
         );
 
-        let attributes = String::from("{}");
+        let attributes = Some(String::from("{}"));
 
         let block = Verbatim {
             id: id.clone(),
@@ -215,7 +219,7 @@ mod tests {
         let expected = Verbatim {
             id: format!("verbatim-{}", 1),
             content: "fn main() {\n  println!(\"Hello World!\");\n}".to_owned(),
-            attributes: String::new(),
+            attributes: None,
             line_nr: 1,
         };
 
@@ -229,7 +233,7 @@ mod tests {
         let expected = Verbatim {
             id: format!("verbatim-{}", 1),
             content: "fn main() {\n  println!(\"Hello World!\");\n}".to_owned(),
-            attributes: "{ \"language\": \"rust\" }".to_owned(),
+            attributes: Some("{ \"language\": \"rust\" }".to_owned()),
             line_nr: 1,
         };
 
@@ -243,7 +247,7 @@ mod tests {
         let expected = Verbatim {
             id: "custom-id".to_owned(),
             content: "fn main() {\n  println!(\"Hello World!\");\n}".to_owned(),
-            attributes: "{\"id\":\"custom-id\",\"language\":\"rust\"}".to_owned(),
+            attributes: Some("{\"id\":\"custom-id\",\"language\":\"rust\"}".to_owned()),
             line_nr: 1,
         };
 
