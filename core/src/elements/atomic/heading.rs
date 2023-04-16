@@ -108,7 +108,7 @@ pub struct Heading {
     pub content: Vec<Inline>,
 
     /// Attributes of the heading.
-    pub attributes: String,
+    pub attributes: Option<String>,
 
     /// Line number, where the heading occurs in
     /// the Unimarkup document.
@@ -165,7 +165,7 @@ impl Heading {
             id,
             level: level.into(),
             content: heading_content.as_str().parse_unimarkup_inlines().collect(),
-            attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
+            attributes: serde_json::to_string(&attributes.unwrap_or_default()).ok(),
             line_nr,
         })
     }
@@ -246,8 +246,8 @@ mod tests {
                 id: String::from(&id),
                 level: HeadingLevel::from(level),
                 content: heading_content,
-                attributes: String::default(),
-                line_nr: level as usize,
+                attributes: None,
+                line_nr: level,
             };
 
             let html = heading.render_html().unwrap();
@@ -272,8 +272,8 @@ mod tests {
                 id: String::from(&id),
                 level: HeadingLevel::from(level),
                 content: heading_content,
-                attributes: String::default(),
-                line_nr: level as usize,
+                attributes: None,
+                line_nr: level,
             };
 
             let html = heading.render_html().unwrap();
