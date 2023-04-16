@@ -4,7 +4,13 @@ pub mod symbol;
 
 use symbol::Symbol;
 
-use crate::elements::Blocks;
+use crate::elements::{
+    atomic::{Heading, Paragraph},
+    enclosed::Verbatim,
+    Blocks,
+};
+
+use self::symbol::IntoSymbols;
 
 /// Parser as function that can parse Unimarkup content
 pub type ParserFn = for<'i> fn(&'i [Symbol<'i>]) -> Option<(Blocks, &'i [Symbol<'i>])>;
@@ -57,5 +63,66 @@ where
 
             Some((blocks, tokenize_output.rest_of_input))
         }
+    }
+}
+
+/// Parser of unimarkup content.
+#[derive(Clone)]
+pub struct MainParser {
+    parsers: Vec<ParserFn>,
+    default: ParserFn,
+}
+
+impl Default for MainParser {
+    fn default() -> Self {
+        let default = Paragraph::generate_parser();
+
+        let mut parser = Self {
+            parsers: Vec::with_capacity(2),
+            default,
+        };
+
+        parser.register_parser(Heading::generate_parser());
+        parser.register_parser(Verbatim::generate_parser());
+
+        parser
+    }
+}
+
+impl MainParser {
+    fn register_parser(&mut self, parser: ParserFn) {
+        self.parsers.push(parser);
+    }
+
+    /// Parses Unimarkup content and produces Unimarkup blocks.
+    pub fn parse<'s>(&self, input: impl IntoSymbols<'s, &'s [Symbol<'s>]>) -> Blocks {
+        let mut input = input.into_symbols();
+        let mut blocks = Vec::default();
+
+        #[cfg(debug_assertions)]
+        let mut input_len = input.len();
+
+        while input.first().is_some() {
+            for parser in &self.parsers {
+                if let Some((mut inner_blocks, rest_of_input)) = parser(input) {
+                    blocks.append(&mut inner_blocks);
+                    input = rest_of_input;
+                    break;
+                }
+            }
+
+            let (mut inner_blocks, rest_of_input) =
+                (self.default)(input).expect("Default parser could not parse content!");
+            blocks.append(&mut inner_blocks);
+            input = rest_of_input;
+
+            #[cfg(debug_assertions)]
+            {
+                assert_ne!(input.len(), input_len);
+                input_len = input.len();
+            }
+        }
+
+        blocks
     }
 }
