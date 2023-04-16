@@ -18,16 +18,6 @@ where
     pub(crate) rest_of_input: &'a [Symbol<'a>],
 }
 
-impl<'a, T: 'a> TokenizeOutput<'a, T> {
-    pub fn tokens(&self) -> &[T] {
-        &self.tokens
-    }
-
-    pub fn rest(&self) -> &[Symbol] {
-        self.rest_of_input
-    }
-}
-
 /// Trait implemented by a parser for each Unimarkup element.
 pub(crate) trait ElementParser {
     /// Token type produced by tokenization.
