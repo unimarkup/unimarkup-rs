@@ -9,11 +9,18 @@ use pest::Span;
 use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 use unimarkup_render::{html::Html, render::Render};
 
-use crate::elements::{inlines, log_id::GeneralErrLogId, Blocks};
 use crate::{
-    elements::types,
+    elements::{blocks::Block, types},
     frontend::parser::{self, custom_pest_error, Rule, UmParse},
     log_id::CORE_LOG_ID_MAP,
+    parser::{
+        symbol::{Symbol, SymbolKind},
+        TokenizeOutput,
+    },
+};
+use crate::{
+    elements::{inlines, log_id::GeneralErrLogId, Blocks},
+    parser::ElementParser,
 };
 
 /// Structure of a Unimarkup paragraph element.
@@ -26,11 +33,34 @@ pub struct Paragraph {
     pub content: Vec<Inline>,
 
     /// Attributes of the paragraph.
-    pub attributes: String,
+    pub attributes: Option<String>,
 
     /// Line number, where the paragraph occurs in
     /// the Unimarkup document.
     pub line_nr: usize,
+}
+
+impl Paragraph {}
+
+impl From<&[Symbol<'_>]> for Paragraph {
+    fn from(value: &[Symbol<'_>]) -> Self {
+        let content = Symbol::flatten(value).parse_unimarkup_inlines().collect();
+        let line_nr = value.get(0).map(|symbol| symbol.start.line).unwrap_or(0);
+
+        let id = parser::generate_id(&format!(
+            "paragraph{delim}{}",
+            line_nr,
+            delim = types::ELEMENT_TYPE_DELIMITER
+        ))
+        .unwrap();
+
+        Paragraph {
+            id,
+            content,
+            attributes: None,
+            line_nr,
+        }
+    }
 }
 
 impl UmParse for Paragraph {
@@ -86,11 +116,72 @@ impl UmParse for Paragraph {
         let paragraph_block = Paragraph {
             id,
             content,
-            attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
+            attributes: serde_json::to_string(&attributes.unwrap_or_default()).ok(),
             line_nr,
         };
 
         Ok(vec![paragraph_block.into()])
+    }
+}
+
+fn not_closing_symbol(symbol: &&Symbol) -> bool {
+    [SymbolKind::Blankline, SymbolKind::EOI]
+        .iter()
+        .all(|closing| *closing != symbol.kind)
+}
+
+enum TokenKind<'a> {
+    Start,
+    End,
+    Text(&'a [Symbol<'a>]),
+}
+
+pub(crate) struct Token<'a> {
+    kind: TokenKind<'a>,
+}
+
+impl ElementParser for Paragraph {
+    type Token<'a> = self::Token<'a>;
+
+    fn tokenize<'input>(
+        input: &'input [Symbol<'input>],
+    ) -> Option<TokenizeOutput<Self::Token<'input>>> {
+        let iter = input.iter();
+
+        let taken = iter.take_while(not_closing_symbol).count() + 1;
+
+        let tokens = vec![
+            Token {
+                kind: TokenKind::Start,
+            },
+            Token {
+                kind: TokenKind::Text(&input[..taken]),
+            },
+            Token {
+                kind: TokenKind::End,
+            },
+        ];
+
+        let input = &input[taken..];
+
+        let output = TokenizeOutput {
+            tokens,
+            rest_of_input: input,
+        };
+
+        Some(output)
+    }
+
+    fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
+        let content = match input[1].kind {
+            TokenKind::Start => &[],
+            TokenKind::End => &[],
+            TokenKind::Text(symbols) => symbols,
+        };
+
+        let block = Block::Paragraph(Paragraph::from(content));
+
+        Some(vec![block])
     }
 }
 
