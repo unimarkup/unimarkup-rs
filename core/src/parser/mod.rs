@@ -1,6 +1,6 @@
 //! Module for parsing of Unimarkup elements.
 
-mod symbol;
+pub mod symbol;
 
 use symbol::Symbol;
 
