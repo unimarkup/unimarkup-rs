@@ -9,11 +9,16 @@ use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 use unimarkup_render::html::Html;
 use unimarkup_render::render::Render;
 
+use crate::elements::blocks::Block;
 use crate::elements::log_id::GeneralErrLogId;
 use crate::elements::{inlines, Blocks};
 use crate::frontend::parser::custom_pest_error;
 use crate::frontend::parser::{self, Rule, UmParse};
 use crate::log_id::CORE_LOG_ID_MAP;
+use crate::parser::symbol::{Symbol, SymbolKind};
+use crate::parser::{ElementParser, TokenizeOutput};
+
+use super::log_id::AtomicErrLogId;
 
 /// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
@@ -81,17 +86,28 @@ impl From<&str> for HeadingLevel {
     }
 }
 
-impl From<usize> for HeadingLevel {
-    fn from(level_depth: usize) -> Self {
-        match level_depth {
+impl TryFrom<usize> for HeadingLevel {
+    type Error = MappedLogId;
+
+    fn try_from(level_depth: usize) -> Result<Self, Self::Error> {
+        let level = match level_depth {
             1 => Self::Level1,
             2 => Self::Level2,
             3 => Self::Level3,
             4 => Self::Level4,
             5 => Self::Level5,
             6 => Self::Level6,
-            _ => Self::Invalid,
-        }
+            _ => {
+                return Err((AtomicErrLogId::InvalidHeadingLvl as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    &format!("Invalid heading level: {level_depth}"),
+                    file!(),
+                    line!(),
+                ))
+            }
+        };
+
+        Ok(level)
     }
 }
 
@@ -198,6 +214,64 @@ impl UmParse for Heading {
     }
 }
 
+pub enum Token<'a> {
+    Level(HeadingLevel),
+    Content(&'a [Symbol<'a>]),
+    End,
+}
+
+impl ElementParser for Heading {
+    type Token<'a> = self::Token<'a>;
+
+    fn tokenize<'i>(input: &'i [Symbol<'i>]) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
+        let level_depth = input
+            .iter()
+            .take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
+            .count();
+
+        let level = HeadingLevel::try_from(level_depth).ok()?;
+        let content_symbols = input
+            .iter()
+            .skip(level_depth)
+            .take_while(|symbol| !matches!(symbol.kind, SymbolKind::Blankline | SymbolKind::EOI))
+            .count();
+
+        let content_start = level_depth;
+        let content_end = content_start + content_symbols;
+
+        let content = &input[content_start..content_end];
+        let rest = &input[content_end..];
+
+        let output = TokenizeOutput {
+            tokens: vec![Token::Level(level), Token::Content(content), Token::End],
+            rest_of_input: rest,
+        };
+
+        Some(output)
+    }
+
+    fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
+        let Token::Level(level) = input[0] else {return None};
+        let Token::Content(symbols) = input[1] else {return None};
+
+        let content = Symbol::flatten(symbols).parse_unimarkup_inlines().collect();
+        let line_nr = symbols.get(0)?.start.line;
+
+        // TODO: introduce data structure for Id of block.
+        // Right now we use generate_id function, that is not optimal. We can do better by
+        // encapsulating Id into a separate data structure and implement Render trait for it etc.
+        let block = Self {
+            id: String::default(),
+            level,
+            content,
+            attributes: None,
+            line_nr,
+        };
+
+        Some(vec![Block::Heading(block)])
+    }
+}
+
 impl AsRef<Self> for Heading {
     fn as_ref(&self) -> &Self {
         self
@@ -244,7 +318,7 @@ mod tests {
 
             let heading = Heading {
                 id: String::from(&id),
-                level: HeadingLevel::from(level),
+                level: HeadingLevel::try_from(level).unwrap(),
                 content: heading_content,
                 attributes: None,
                 line_nr: level,
@@ -270,7 +344,7 @@ mod tests {
 
             let heading = Heading {
                 id: String::from(&id),
-                level: HeadingLevel::from(level),
+                level: HeadingLevel::try_from(level).unwrap(),
                 content: heading_content,
                 attributes: None,
                 line_nr: level,
