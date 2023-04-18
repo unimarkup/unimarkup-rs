@@ -196,7 +196,6 @@ fn word_split(input: &str) -> Vec<Symbol> {
                     .collect::<Vec<usize>>()
                     .len()
                     - 1
-                // 2
             };
             let end_pos = if kind == SymbolKind::Newline {
                 Position {
