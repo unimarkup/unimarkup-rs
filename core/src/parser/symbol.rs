@@ -216,7 +216,7 @@ fn word_split(input: &str) -> Vec<Symbol> {
 
             let mut kind = SymbolKind::from(word);
 
-            if curr_pos.col_grapheme == 0 && kind == SymbolKind::Newline {
+            if curr_pos.col_utf8 == 0 && kind == SymbolKind::Newline {
                 // newline at the start of line -> Blankline
                 kind = SymbolKind::Blankline;
             }
