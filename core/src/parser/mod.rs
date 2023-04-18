@@ -10,7 +10,7 @@ use crate::elements::{
     Blocks,
 };
 
-use self::symbol::IntoSymbols;
+use self::symbol::{IntoSymbols, SymbolKind};
 
 /// Parser as function that can parse Unimarkup content
 pub type ParserFn = for<'i> fn(&'i [Symbol<'i>]) -> Option<(Blocks, &'i [Symbol<'i>])>;
@@ -103,18 +103,30 @@ impl MainParser {
         let mut input_len = input.len();
 
         while let Some(sym) = input.first() {
-            if sym.is_not_keyword() {
-                let (mut res_blocks, rest_of_input) =
-                    (self.default_parser)(input).expect("Default parser could not parse content!");
+            match sym.kind {
+                // skip blanklines
+                SymbolKind::Blankline => input = &input[1..],
 
-                blocks.append(&mut res_blocks);
-                input = rest_of_input;
-            } else {
-                for parser_fn in &self.parsers {
-                    if let Some((mut res_blocks, rest_of_input)) = parser_fn(input) {
-                        blocks.append(&mut res_blocks);
-                        input = rest_of_input;
-                        break; // start from first parser on next input
+                // stop parsing when end of input is reached
+                SymbolKind::EOI => break,
+
+                // no parser will match, parse with default parser
+                _ if sym.is_not_keyword() => {
+                    let (mut res_blocks, rest_of_input) = (self.default_parser)(input)
+                        .expect("Default parser could not parse content!");
+
+                    blocks.append(&mut res_blocks);
+                    input = rest_of_input;
+                }
+
+                // symbol is start of a block, some parser should match
+                _ => {
+                    for parser_fn in &self.parsers {
+                        if let Some((mut res_blocks, rest_of_input)) = parser_fn(input) {
+                            blocks.append(&mut res_blocks);
+                            input = rest_of_input;
+                            break; // start from first parser on next input
+                        }
                     }
                 }
             }
