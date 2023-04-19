@@ -3,6 +3,8 @@ use unimarkup_core::elements::Blocks;
 use unimarkup_core::frontend::parser;
 use unimarkup_inline::ParseUnimarkupInlines;
 
+use crate::assert_blocks_match;
+
 use super::tests_helper::*;
 
 #[test]
@@ -13,7 +15,7 @@ fn test__parse__valid_heading_with_subheading() {
     let um_blocks =
         parser::parse_unimarkup(&input, &mut config).expect("Parsing heading1.um should pass.");
 
-    assert_blocks_match(um_blocks, heading1_expected_result());
+    assert_blocks_match!(um_blocks, heading1_expected_result());
 }
 
 #[test]
@@ -24,7 +26,7 @@ fn test__parse__valid_nested_headings_with_blank_lines() {
     let um_blocks = parser::parse_unimarkup(&input, &mut config)
         .expect("Parsing heading_line_number.um should pass.");
 
-    assert_blocks_match(um_blocks, heading_line_number_expected_result());
+    assert_blocks_match!(um_blocks, heading_line_number_expected_result());
 }
 
 #[test]
@@ -35,7 +37,7 @@ fn test__parse__valid_multi_line_heading() {
     let um_blocks = parser::parse_unimarkup(&input, &mut config)
         .expect("Parsing multiline_headings.um should pass");
 
-    assert_blocks_match(um_blocks, multiline_headings_expected_result());
+    assert_blocks_match!(um_blocks, multiline_headings_expected_result());
 }
 
 pub fn heading1_expected_result() -> Blocks {

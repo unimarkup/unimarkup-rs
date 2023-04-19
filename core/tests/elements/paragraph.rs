@@ -3,6 +3,8 @@ use unimarkup_core::elements::Blocks;
 use unimarkup_core::frontend::parser;
 use unimarkup_inline::ParseUnimarkupInlines;
 
+use crate::assert_blocks_match;
+
 use super::tests_helper::*;
 
 #[test]
@@ -13,7 +15,7 @@ fn test__parse__valid_paragraph_with_heading() {
     let um_blocks =
         parser::parse_unimarkup(&input, &mut config).expect("Parsing paragraph1.um should pass.");
 
-    assert_blocks_match(um_blocks, paragraph1_expected_result());
+    assert_blocks_match!(um_blocks, paragraph1_expected_result());
 }
 
 #[test]
@@ -23,7 +25,7 @@ fn test__parse__valid_paragraph_with_multi_line_heading() {
 
     let um_blocks =
         parser::parse_unimarkup(&input, &mut config).expect("Parsing paragraph2.um should pass.");
-    assert_blocks_match(um_blocks, paragraph2_expected_result());
+    assert_blocks_match!(um_blocks, paragraph2_expected_result());
 }
 
 #[test]
@@ -34,7 +36,7 @@ fn test__parse__valid_paragraphs_with_sub_heading() {
     let um_blocks =
         parser::parse_unimarkup(&input, &mut config).expect("Parsing paragraph3.um should pass.");
 
-    assert_blocks_match(um_blocks, paragraph3_expected_result());
+    assert_blocks_match!(um_blocks, paragraph3_expected_result());
 }
 
 pub fn paragraph1_expected_result() -> Blocks {
