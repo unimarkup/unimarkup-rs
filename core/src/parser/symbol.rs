@@ -170,6 +170,7 @@ impl<'s> IntoSymbols<'s, &'s [Symbol<'s>]> for &'s [Symbol<'s>] {
     }
 }
 
+// TODO: pass locale from Config to this function.
 fn word_split(input: &str) -> Vec<Symbol> {
     let segmenter =
         WordSegmenter::try_new_unstable(&icu_testdata::unstable()).expect("Data exists");
