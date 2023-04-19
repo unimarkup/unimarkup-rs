@@ -2,12 +2,19 @@
 
 pub mod symbol;
 
+use logid::capturing::MappedLogId;
 use symbol::Symbol;
 
-use crate::elements::{
-    atomic::{Heading, Paragraph},
-    enclosed::Verbatim,
-    Blocks,
+use crate::{
+    config::Config,
+    document::Document,
+    elements::{
+        atomic::{Heading, Paragraph},
+        enclosed::Verbatim,
+        Blocks,
+    },
+    metadata::{Metadata, MetadataKind},
+    security,
 };
 
 use self::symbol::{IntoSymbols, SymbolKind};
@@ -141,4 +148,31 @@ impl MainParser {
 
         blocks
     }
+}
+
+/// Parses and returns a Unimarkup document.
+pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document, MappedLogId> {
+    let parser = MainParser::default();
+
+    let symbols = um_content.into_symbols();
+
+    let blocks = parser.parse(&symbols);
+
+    let mut unimarkup = Document {
+        config: config.clone(),
+        blocks,
+        ..Default::default()
+    };
+
+    let metadata = Metadata {
+        file: config.um_file.clone(),
+        contenthash: security::get_contenthash(um_content),
+        preamble: String::new(),
+        kind: MetadataKind::Root,
+        namespace: ".".to_string(),
+    };
+
+    unimarkup.metadata.push(metadata);
+
+    Ok(unimarkup)
 }
