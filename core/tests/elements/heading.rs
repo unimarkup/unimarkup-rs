@@ -7,6 +7,7 @@ use crate::assert_blocks_match;
 
 use super::tests_helper::*;
 
+// TODO: update input files with subheadings allowed in next line!
 #[test]
 fn test__parse__valid_heading_with_subheading() {
     let mut config = get_config("tests/test_files/frontend/heading1.um");
@@ -40,21 +41,22 @@ fn test__parse__valid_multi_line_heading() {
     assert_blocks_match!(um_blocks, multiline_headings_expected_result());
 }
 
+// TODO: update ids after new ID implementation
 pub fn heading1_expected_result() -> Blocks {
     let heading_1 = Heading {
-        id: String::from("head1"),
+        id: String::default(),
         level: HeadingLevel::Level1,
-        content: "head1".parse_unimarkup_inlines().collect(),
+        content: " head1".parse_unimarkup_inlines().collect(),
         attributes: None,
         line_nr: 1,
     };
 
     let subheading_1 = Heading {
-        id: String::from("subhead-1"),
+        id: String::default(),
         level: HeadingLevel::Level2,
-        content: "subhead 1".parse_unimarkup_inlines().collect(),
+        content: " subhead 1".parse_unimarkup_inlines().collect(),
         attributes: None,
-        line_nr: 2,
+        line_nr: 3,
     };
 
     [heading_1, subheading_1]
@@ -67,9 +69,9 @@ pub fn heading_line_number_expected_result() -> Blocks {
     let mut blocks = Vec::with_capacity(7);
 
     let head1 = Heading {
-        id: "head1".into(),
+        id: String::default(),
         level: HeadingLevel::Level1,
-        content: "head1".parse_unimarkup_inlines().collect(),
+        content: " head1".parse_unimarkup_inlines().collect(),
         attributes: None,
         line_nr: 1,
     };
@@ -77,61 +79,61 @@ pub fn heading_line_number_expected_result() -> Blocks {
     blocks.push(head1);
 
     let subhead_11 = Heading {
-        id: "subhead-11".into(),
+        id: String::default(),
         level: HeadingLevel::Level2,
-        content: "subhead 11".parse_unimarkup_inlines().collect(),
+        content: " subhead 11".parse_unimarkup_inlines().collect(),
         attributes: None,
-        line_nr: 2,
+        line_nr: 3,
     };
 
     blocks.push(subhead_11);
 
     let head2 = Heading {
-        id: "head2".into(),
+        id: String::default(),
         level: HeadingLevel::Level1,
-        content: "head2".parse_unimarkup_inlines().collect(),
+        content: " head2".parse_unimarkup_inlines().collect(),
         attributes: None,
-        line_nr: 4,
+        line_nr: 5,
     };
 
     blocks.push(head2);
 
     let subhead_21 = Heading {
-        id: "subhead-21".into(),
+        id: String::default(),
         level: HeadingLevel::Level2,
-        content: "subhead 21".parse_unimarkup_inlines().collect(),
+        content: " subhead 21".parse_unimarkup_inlines().collect(),
         attributes: None,
-        line_nr: 5,
+        line_nr: 7,
     };
 
     blocks.push(subhead_21);
 
     let head_3 = Heading {
-        id: "head3".into(),
+        id: String::default(),
         level: HeadingLevel::Level1,
-        content: "head3".parse_unimarkup_inlines().collect(),
+        content: " head3".parse_unimarkup_inlines().collect(),
         attributes: None,
-        line_nr: 8,
+        line_nr: 10,
     };
 
     blocks.push(head_3);
 
     let subhead_31 = Heading {
-        id: "subhead-31".into(),
+        id: String::default(),
         level: HeadingLevel::Level2,
-        content: "subhead 31".parse_unimarkup_inlines().collect(),
+        content: " subhead 31".parse_unimarkup_inlines().collect(),
         attributes: None,
-        line_nr: 9,
+        line_nr: 12,
     };
 
     blocks.push(subhead_31);
 
     let subsubhead_311 = Heading {
-        id: "subsubhead-311".into(),
+        id: String::default(),
         level: HeadingLevel::Level3,
-        content: "subsubhead 311".parse_unimarkup_inlines().collect(),
+        content: " subsubhead 311".parse_unimarkup_inlines().collect(),
         attributes: None,
-        line_nr: 10,
+        line_nr: 14,
     };
 
     blocks.push(subsubhead_311);
@@ -143,9 +145,9 @@ pub fn multiline_headings_expected_result() -> Blocks {
     let mut blocks: Blocks = Vec::new();
 
     let block = Heading {
-        id: "head1-multiline".into(),
+        id: String::default(),
         level: HeadingLevel::Level1,
-        content: "head1\nmultiline".parse_unimarkup_inlines().collect(),
+        content: " head1\nmultiline".parse_unimarkup_inlines().collect(),
         attributes: None,
         line_nr: 1,
     };
@@ -153,20 +155,21 @@ pub fn multiline_headings_expected_result() -> Blocks {
     blocks.push(block.into());
 
     let block = Heading {
-        id: "subhead2-multiline".into(),
+        id: String::default(),
         level: HeadingLevel::Level2,
-        content: "subhead2\nmultiline".parse_unimarkup_inlines().collect(),
+        content: " subhead2\nmultiline".parse_unimarkup_inlines().collect(),
         attributes: None,
-        line_nr: 3,
+        line_nr: 4,
     };
 
     blocks.push(block.into());
 
+    let paragraph_line_nr = 7;
     let block = Paragraph {
-        id: "paragraph-6".into(),
+        id: format!("paragraph-{paragraph_line_nr}"),
         content: "paragraph 2".parse_unimarkup_inlines().collect(),
         attributes: None,
-        line_nr: 6,
+        line_nr: paragraph_line_nr,
     };
 
     blocks.push(block.into());
