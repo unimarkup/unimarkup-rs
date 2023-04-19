@@ -82,6 +82,8 @@ pub struct MainParser {
 
 impl Default for MainParser {
     fn default() -> Self {
+        tracing::info!("Initializing MainParser");
+
         let default = Paragraph::generate_parser();
 
         let mut parser = Self {
@@ -93,6 +95,7 @@ impl Default for MainParser {
         parser.register_parser(Heading::generate_parser());
         parser.register_parser(Verbatim::generate_parser());
 
+        tracing::info!("MainParser initialized");
         parser
     }
 }
