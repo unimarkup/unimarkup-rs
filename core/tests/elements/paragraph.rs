@@ -1,6 +1,6 @@
 use unimarkup_core::elements::atomic::{Heading, HeadingLevel, Paragraph};
 use unimarkup_core::elements::Blocks;
-use unimarkup_core::frontend::parser;
+use unimarkup_core::parser;
 use unimarkup_inline::ParseUnimarkupInlines;
 
 use crate::assert_blocks_match;
