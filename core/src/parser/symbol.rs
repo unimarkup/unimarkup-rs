@@ -28,7 +28,7 @@ impl Default for SymbolKind {
 }
 
 /// Indicates position of a symbol in a Unimarkup document.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Position {
     /// Line the symbol is found at
     pub line: usize,
@@ -38,6 +38,18 @@ pub struct Position {
     pub col_utf16: usize,
     /// Column at which the symbol is located in line, when counting graphemes
     pub col_grapheme: usize,
+}
+
+// NOTE: text editors start counting from 1. Should we as well?
+impl Default for Position {
+    fn default() -> Self {
+        Self {
+            line: 1,
+            col_utf8: 1,
+            col_utf16: 1,
+            col_grapheme: 1,
+        }
+    }
 }
 
 // Note: start inclusive, end exclusive
@@ -186,6 +198,7 @@ fn word_split(input: &str) -> Vec<Symbol> {
         if let Some(word) = input.get(prev_offset..offset) {
             let kind = SymbolKind::from(word);
             let utf8_len = word.len();
+
             // only words > 1 byte may have different byte to grapheme count
             let grapheme_len = if utf8_len == 1 {
                 1
@@ -198,12 +211,11 @@ fn word_split(input: &str) -> Vec<Symbol> {
                     .len()
                     - 1
             };
+
             let end_pos = if kind == SymbolKind::Newline {
                 Position {
                     line: (curr_pos.line + 1),
-                    col_utf8: 0,
-                    col_utf16: 0,
-                    col_grapheme: 0,
+                    ..Default::default()
                 }
             } else {
                 Position {
@@ -216,7 +228,7 @@ fn word_split(input: &str) -> Vec<Symbol> {
 
             let mut kind = SymbolKind::from(word);
 
-            if curr_pos.col_utf8 == 0 && kind == SymbolKind::Newline {
+            if curr_pos.col_utf8 == 1 && kind == SymbolKind::Newline {
                 // newline at the start of line -> Blankline
                 kind = SymbolKind::Blankline;
             }
