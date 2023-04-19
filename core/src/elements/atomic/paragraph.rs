@@ -149,20 +149,21 @@ impl ElementParser for Paragraph {
         let iter = input.iter();
 
         let taken = iter.take_while(not_closing_symbol).count() + 1;
+        let end_of_input = taken.min(input.len());
 
         let tokens = vec![
             Token {
                 kind: TokenKind::Start,
             },
             Token {
-                kind: TokenKind::Text(&input[..taken]),
+                kind: TokenKind::Text(&input[..end_of_input]),
             },
             Token {
                 kind: TokenKind::End,
             },
         ];
 
-        let input = &input[taken..];
+        let input = &input[end_of_input..];
 
         let output = TokenizeOutput {
             tokens,
