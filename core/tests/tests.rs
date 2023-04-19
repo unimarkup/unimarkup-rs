@@ -12,7 +12,6 @@ mod elements {
     mod heading;
     mod inline;
     mod paragraph;
-    mod preamble;
     mod tests_helper;
 }
 
