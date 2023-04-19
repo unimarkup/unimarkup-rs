@@ -44,7 +44,7 @@ pub fn paragraph1_expected_result() -> Blocks {
         id: "head1".into(),
         level: HeadingLevel::Level1,
         content: "head1".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 1,
     };
 
@@ -53,7 +53,7 @@ pub fn paragraph1_expected_result() -> Blocks {
     let block = Paragraph {
         id: "paragraph-3".into(),
         content: "paragraph 1".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 3,
     };
 
@@ -69,7 +69,7 @@ pub fn paragraph2_expected_result() -> Blocks {
         id: "multi-line-header".into(),
         level: HeadingLevel::Level1,
         content: "multi\nline header".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 1,
     };
 
@@ -78,7 +78,7 @@ pub fn paragraph2_expected_result() -> Blocks {
     let block = Paragraph {
         id: "paragraph-4".into(),
         content: "paragraph".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 4,
     };
 
@@ -93,7 +93,7 @@ pub fn paragraph3_expected_result() -> Blocks {
         id: "head2".into(),
         level: HeadingLevel::Level1,
         content: "head2".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 1,
     };
 
@@ -102,7 +102,7 @@ pub fn paragraph3_expected_result() -> Blocks {
     let block = Paragraph {
         id: "paragraph-3".into(),
         content: "paragraph1".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 3,
     };
 
@@ -112,7 +112,7 @@ pub fn paragraph3_expected_result() -> Blocks {
         id: "subhead2".into(),
         level: HeadingLevel::Level2,
         content: "subhead2".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 5,
     };
 
@@ -121,7 +121,7 @@ pub fn paragraph3_expected_result() -> Blocks {
     let block = Paragraph {
         id: "paragraph-7".into(),
         content: "paragraph2".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 7,
     };
 

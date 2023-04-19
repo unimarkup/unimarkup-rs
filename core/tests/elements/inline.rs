@@ -10,7 +10,7 @@ fn test__render_html__valid_escaped_inline() {
     let mut block = Paragraph {
         id: id.clone(),
         content,
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 0,
     };
 

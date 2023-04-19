@@ -43,7 +43,7 @@ pub fn heading1_expected_result() -> Blocks {
         id: String::from("head1"),
         level: HeadingLevel::Level1,
         content: "head1".parse_unimarkup_inlines().collect(),
-        attributes: String::from("{}"),
+        attributes: None,
         line_nr: 1,
     };
 
@@ -51,7 +51,7 @@ pub fn heading1_expected_result() -> Blocks {
         id: String::from("subhead-1"),
         level: HeadingLevel::Level2,
         content: "subhead 1".parse_unimarkup_inlines().collect(),
-        attributes: String::from("{}"),
+        attributes: None,
         line_nr: 2,
     };
 
@@ -68,7 +68,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
         id: "head1".into(),
         level: HeadingLevel::Level1,
         content: "head1".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 1,
     };
 
@@ -78,7 +78,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
         id: "subhead-11".into(),
         level: HeadingLevel::Level2,
         content: "subhead 11".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 2,
     };
 
@@ -88,7 +88,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
         id: "head2".into(),
         level: HeadingLevel::Level1,
         content: "head2".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 4,
     };
 
@@ -98,7 +98,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
         id: "subhead-21".into(),
         level: HeadingLevel::Level2,
         content: "subhead 21".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 5,
     };
 
@@ -108,7 +108,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
         id: "head3".into(),
         level: HeadingLevel::Level1,
         content: "head3".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 8,
     };
 
@@ -118,7 +118,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
         id: "subhead-31".into(),
         level: HeadingLevel::Level2,
         content: "subhead 31".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 9,
     };
 
@@ -128,7 +128,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
         id: "subsubhead-311".into(),
         level: HeadingLevel::Level3,
         content: "subsubhead 311".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 10,
     };
 
@@ -144,7 +144,7 @@ pub fn multiline_headings_expected_result() -> Blocks {
         id: "head1-multiline".into(),
         level: HeadingLevel::Level1,
         content: "head1\nmultiline".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 1,
     };
 
@@ -154,7 +154,7 @@ pub fn multiline_headings_expected_result() -> Blocks {
         id: "subhead2-multiline".into(),
         level: HeadingLevel::Level2,
         content: "subhead2\nmultiline".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 3,
     };
 
@@ -163,7 +163,7 @@ pub fn multiline_headings_expected_result() -> Blocks {
     let block = Paragraph {
         id: "paragraph-6".into(),
         content: "paragraph 2".parse_unimarkup_inlines().collect(),
-        attributes: "{}".into(),
+        attributes: None,
         line_nr: 6,
     };
 
