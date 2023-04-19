@@ -1,19 +1,13 @@
-use std::collections::HashMap;
-
 use logid::capturing::{LogIdTracing, MappedLogId};
 use logid::log_id::LogId;
-use pest::iterators::{Pair, Pairs};
-use pest::Span;
+
 use strum_macros::*;
 use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 use unimarkup_render::html::Html;
 use unimarkup_render::render::Render;
 
 use crate::elements::blocks::Block;
-use crate::elements::log_id::GeneralErrLogId;
 use crate::elements::{inlines, Blocks};
-use crate::frontend::parser::custom_pest_error;
-use crate::frontend::parser::{self, Rule, UmParse};
 use crate::log_id::CORE_LOG_ID_MAP;
 use crate::parser::symbol::{Symbol, SymbolKind};
 use crate::parser::{ElementParser, TokenizeOutput};
@@ -129,89 +123,6 @@ pub struct Heading {
     /// Line number, where the heading occurs in
     /// the Unimarkup document.
     pub line_nr: usize,
-}
-
-impl Heading {
-    /// Parses a single instance of a heading element.
-    fn parse_single(pair: &Pair<Rule>) -> Result<Self, MappedLogId> {
-        let mut heading_data = pair.clone().into_inner();
-
-        let heading_start = heading_data.next().expect("heading rule has heading_start");
-
-        let heading_content = heading_data
-            .next()
-            .expect("heading rule has heading_content");
-
-        let attributes = match heading_data.next() {
-            Some(attrs_rule) => {
-                let attributes: HashMap<&str, &str> = serde_json::from_str(attrs_rule.as_str())
-                    .map_err(|err| {
-                        (GeneralErrLogId::InvalidAttribute as LogId)
-                            .set_event_with(
-                                &CORE_LOG_ID_MAP,
-                                &custom_pest_error(
-                                    "Heading attributes are not valid JSON",
-                                    attrs_rule.as_span(),
-                                ),
-                                file!(),
-                                line!(),
-                            )
-                            .add_info(&format!("Cause: {}", err))
-                    })?;
-
-                Some(attributes)
-            }
-            None => None,
-        };
-
-        let level = heading_start.as_str().trim();
-        let (line_nr, _) = heading_start.as_span().start_pos().line_col();
-
-        let generated_id = match parser::generate_id(heading_content.as_str()) {
-            Some(id) => id.to_lowercase(),
-            None => format!("heading-{}-line-{}", level, line_nr),
-        };
-
-        let id = match attributes {
-            Some(ref attrs) if attrs.get("id").is_some() => attrs.get("id").unwrap().to_string(),
-            _ => generated_id,
-        };
-
-        Ok(Heading {
-            id,
-            level: level.into(),
-            content: heading_content.as_str().parse_unimarkup_inlines().collect(),
-            attributes: serde_json::to_string(&attributes.unwrap_or_default()).ok(),
-            line_nr,
-        })
-    }
-}
-
-impl UmParse for Heading {
-    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<Blocks, MappedLogId>
-    where
-        Self: Sized,
-    {
-        let heading_pairs = pairs
-            .next()
-            .expect("At least one pair available")
-            .into_inner();
-
-        let mut headings: Blocks = Vec::new();
-
-        let (line_nr, _column_nr) = span.start_pos().line_col();
-
-        for pair in heading_pairs {
-            let mut heading = Self::parse_single(&pair)?;
-            // child line number starts with 1
-            // which leads to off by 1 error
-            // hence minus 1
-            heading.line_nr += line_nr - 1;
-            headings.push(heading.into());
-        }
-
-        Ok(headings)
-    }
 }
 
 pub enum Token<'a> {
