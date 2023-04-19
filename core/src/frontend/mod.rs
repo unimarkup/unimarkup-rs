@@ -20,7 +20,7 @@ pub mod parser;
 /// [`frontend`]: crate::frontend
 /// [`Document`]: crate::document
 pub fn run(um_content: &str, config: &mut Config) -> Result<Document, MappedLogId> {
-    let unimarkup = parser::parse_unimarkup(um_content, config)?;
+    let unimarkup = crate::parser::parse_unimarkup(um_content, config)?;
 
     Ok(unimarkup)
 }
