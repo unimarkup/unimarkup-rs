@@ -82,6 +82,7 @@ impl Default for MainParser {
             default_parser: default,
         };
 
+        // TODO: how to handle preamble parser?
         parser.register_parser(Heading::generate_parser());
         parser.register_parser(Verbatim::generate_parser());
 
