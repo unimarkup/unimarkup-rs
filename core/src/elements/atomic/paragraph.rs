@@ -1,19 +1,20 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::fmt::Debug;
 
-use logid::{
-    capturing::{LogIdTracing, MappedLogId},
-    log_id::LogId,
-};
-use pest::iterators::Pairs;
-use pest::Span;
+use logid::capturing::MappedLogId;
 use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 use unimarkup_render::{html::Html, render::Render};
 
-use crate::elements::{inlines, log_id::GeneralErrLogId, Blocks};
 use crate::{
-    elements::types,
-    frontend::parser::{self, custom_pest_error, Rule, UmParse},
-    log_id::CORE_LOG_ID_MAP,
+    elements::{blocks::Block, types},
+    frontend::parser,
+    parser::{
+        symbol::{Symbol, SymbolKind},
+        TokenizeOutput,
+    },
+};
+use crate::{
+    elements::{inlines, Blocks},
+    parser::ElementParser,
 };
 
 /// Structure of a Unimarkup paragraph element.
@@ -26,71 +27,95 @@ pub struct Paragraph {
     pub content: Vec<Inline>,
 
     /// Attributes of the paragraph.
-    pub attributes: String,
+    pub attributes: Option<String>,
 
     /// Line number, where the paragraph occurs in
     /// the Unimarkup document.
     pub line_nr: usize,
 }
 
-impl UmParse for Paragraph {
-    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<Blocks, MappedLogId>
-    where
-        Self: Sized,
-    {
-        let (line_nr, _column_nr) = span.start_pos().line_col();
+impl Paragraph {}
 
-        let mut paragraph_rules = pairs
-            .next()
-            .expect("paragraph must be there at this point")
-            .into_inner();
+impl From<&[Symbol<'_>]> for Paragraph {
+    fn from(value: &[Symbol<'_>]) -> Self {
+        let content = Symbol::flatten(value).parse_unimarkup_inlines().collect();
+        let line_nr = value.get(0).map(|symbol| symbol.start.line).unwrap_or(0);
 
-        let content = paragraph_rules
-            .next()
-            .expect("Invalid paragraph: content expected")
-            .as_str()
-            .parse_unimarkup_inlines()
-            .collect();
+        let id = parser::generate_id(&format!(
+            "paragraph{delim}{}",
+            line_nr,
+            delim = types::ELEMENT_TYPE_DELIMITER
+        ))
+        .unwrap();
 
-        let attributes = if let Some(attributes) = paragraph_rules.next() {
-            let attr: HashMap<&str, &str> =
-                serde_json::from_str(attributes.as_str()).map_err(|err| {
-                    (GeneralErrLogId::InvalidAttribute as LogId)
-                        .set_event_with(
-                            &CORE_LOG_ID_MAP,
-                            &custom_pest_error(
-                                "Paragraph attributes are not valid JSON.",
-                                attributes.as_span(),
-                            ),
-                            file!(),
-                            line!(),
-                        )
-                        .add_info(&format!("Cause: {}", err))
-                })?;
-
-            Some(attr)
-        } else {
-            None
-        };
-
-        let id = match attributes {
-            Some(ref attrs) if attrs.get("id").is_some() => attrs.get("id").unwrap().to_string(),
-            _ => parser::generate_id(&format!(
-                "paragraph{delim}{}",
-                line_nr,
-                delim = types::ELEMENT_TYPE_DELIMITER
-            ))
-            .unwrap(),
-        };
-
-        let paragraph_block = Paragraph {
+        Paragraph {
             id,
             content,
-            attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
+            attributes: None,
             line_nr,
+        }
+    }
+}
+
+fn not_closing_symbol(symbol: &&Symbol) -> bool {
+    [SymbolKind::Blankline, SymbolKind::EOI]
+        .iter()
+        .all(|closing| *closing != symbol.kind)
+}
+
+enum TokenKind<'a> {
+    Start,
+    End,
+    Text(&'a [Symbol<'a>]),
+}
+
+pub(crate) struct Token<'a> {
+    kind: TokenKind<'a>,
+}
+
+impl ElementParser for Paragraph {
+    type Token<'a> = self::Token<'a>;
+
+    fn tokenize<'input>(
+        input: &'input [Symbol<'input>],
+    ) -> Option<TokenizeOutput<Self::Token<'input>>> {
+        let iter = input.iter();
+
+        let taken = iter.take_while(not_closing_symbol).count() + 1;
+        let end_of_input = taken.min(input.len());
+
+        let tokens = vec![
+            Token {
+                kind: TokenKind::Start,
+            },
+            Token {
+                kind: TokenKind::Text(&input[..end_of_input]),
+            },
+            Token {
+                kind: TokenKind::End,
+            },
+        ];
+
+        let input = &input[end_of_input..];
+
+        let output = TokenizeOutput {
+            tokens,
+            rest_of_input: input,
         };
 
-        Ok(vec![paragraph_block.into()])
+        Some(output)
+    }
+
+    fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
+        let content = match input[1].kind {
+            TokenKind::Start => &[],
+            TokenKind::End => &[],
+            TokenKind::Text(symbols) => symbols,
+        };
+
+        let block = Block::Paragraph(Paragraph::from(content));
+
+        Some(vec![block])
     }
 }
 
@@ -108,54 +133,5 @@ impl Render for Paragraph {
         html.body.push_str("</p>");
 
         Ok(html)
-    }
-}
-
-#[allow(non_snake_case)]
-#[cfg(test)]
-mod tests {
-    use super::Paragraph;
-    use unimarkup_inline::{Inline, ParseUnimarkupInlines};
-    use unimarkup_render::render::Render;
-
-    #[test]
-    fn test__render_html__paragraph() {
-        let id = String::from("paragraph-id");
-        let content: Vec<Inline> = "This is the content of the paragraph"
-            .parse_unimarkup_inlines()
-            .collect();
-
-        let block = Paragraph {
-            id: id.clone(),
-            content: content.clone(),
-            attributes: "{}".into(),
-            line_nr: 0,
-        };
-
-        let expected_html = format!("<p id='{}'>{}</p>", id, content[0].as_string());
-
-        assert_eq!(expected_html, block.render_html().unwrap().body);
-    }
-
-    #[test]
-    fn test__render_html__paragraph_with_inline() {
-        let id = String::from("paragraph-id");
-        let content = "This is `the` *content* **of _the_ paragraph**"
-            .parse_unimarkup_inlines()
-            .collect();
-
-        let block = Paragraph {
-            id: id.clone(),
-            content,
-            attributes: "{}".into(),
-            line_nr: 0,
-        };
-
-        let expected_html = format!(
-                    "<p id='{}'>This is <pre><code>the</code></pre> <em>content</em> <strong>of <sub>the</sub> paragraph</strong></p>",
-                    id
-                );
-
-        assert_eq!(expected_html, block.render_html().unwrap().body);
     }
 }

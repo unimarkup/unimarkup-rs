@@ -1,19 +1,18 @@
-use std::collections::HashMap;
-
 use logid::capturing::{LogIdTracing, MappedLogId};
 use logid::log_id::LogId;
-use pest::iterators::{Pair, Pairs};
-use pest::Span;
+
 use strum_macros::*;
 use unimarkup_inline::{Inline, ParseUnimarkupInlines};
 use unimarkup_render::html::Html;
 use unimarkup_render::render::Render;
 
-use crate::elements::log_id::GeneralErrLogId;
+use crate::elements::blocks::Block;
 use crate::elements::{inlines, Blocks};
-use crate::frontend::parser::custom_pest_error;
-use crate::frontend::parser::{self, Rule, UmParse};
 use crate::log_id::CORE_LOG_ID_MAP;
+use crate::parser::symbol::{Symbol, SymbolKind};
+use crate::parser::{ElementParser, TokenizeOutput};
+
+use super::log_id::AtomicErrLogId;
 
 /// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
@@ -81,17 +80,28 @@ impl From<&str> for HeadingLevel {
     }
 }
 
-impl From<usize> for HeadingLevel {
-    fn from(level_depth: usize) -> Self {
-        match level_depth {
+impl TryFrom<usize> for HeadingLevel {
+    type Error = MappedLogId;
+
+    fn try_from(level_depth: usize) -> Result<Self, Self::Error> {
+        let level = match level_depth {
             1 => Self::Level1,
             2 => Self::Level2,
             3 => Self::Level3,
             4 => Self::Level4,
             5 => Self::Level5,
             6 => Self::Level6,
-            _ => Self::Invalid,
-        }
+            _ => {
+                return Err((AtomicErrLogId::InvalidHeadingLvl as LogId).set_event_with(
+                    &CORE_LOG_ID_MAP,
+                    &format!("Invalid heading level: {level_depth}"),
+                    file!(),
+                    line!(),
+                ))
+            }
+        };
+
+        Ok(level)
     }
 }
 
@@ -108,93 +118,68 @@ pub struct Heading {
     pub content: Vec<Inline>,
 
     /// Attributes of the heading.
-    pub attributes: String,
+    pub attributes: Option<String>,
 
     /// Line number, where the heading occurs in
     /// the Unimarkup document.
     pub line_nr: usize,
 }
 
-impl Heading {
-    /// Parses a single instance of a heading element.
-    fn parse_single(pair: &Pair<Rule>) -> Result<Self, MappedLogId> {
-        let mut heading_data = pair.clone().into_inner();
-
-        let heading_start = heading_data.next().expect("heading rule has heading_start");
-
-        let heading_content = heading_data
-            .next()
-            .expect("heading rule has heading_content");
-
-        let attributes = match heading_data.next() {
-            Some(attrs_rule) => {
-                let attributes: HashMap<&str, &str> = serde_json::from_str(attrs_rule.as_str())
-                    .map_err(|err| {
-                        (GeneralErrLogId::InvalidAttribute as LogId)
-                            .set_event_with(
-                                &CORE_LOG_ID_MAP,
-                                &custom_pest_error(
-                                    "Heading attributes are not valid JSON",
-                                    attrs_rule.as_span(),
-                                ),
-                                file!(),
-                                line!(),
-                            )
-                            .add_info(&format!("Cause: {}", err))
-                    })?;
-
-                Some(attributes)
-            }
-            None => None,
-        };
-
-        let level = heading_start.as_str().trim();
-        let (line_nr, _) = heading_start.as_span().start_pos().line_col();
-
-        let generated_id = match parser::generate_id(heading_content.as_str()) {
-            Some(id) => id.to_lowercase(),
-            None => format!("heading-{}-line-{}", level, line_nr),
-        };
-
-        let id = match attributes {
-            Some(ref attrs) if attrs.get("id").is_some() => attrs.get("id").unwrap().to_string(),
-            _ => generated_id,
-        };
-
-        Ok(Heading {
-            id,
-            level: level.into(),
-            content: heading_content.as_str().parse_unimarkup_inlines().collect(),
-            attributes: serde_json::to_string(&attributes.unwrap_or_default()).unwrap(),
-            line_nr,
-        })
-    }
+pub enum Token<'a> {
+    Level(HeadingLevel),
+    Content(&'a [Symbol<'a>]),
+    End,
 }
 
-impl UmParse for Heading {
-    fn parse(pairs: &mut Pairs<Rule>, span: Span) -> Result<Blocks, MappedLogId>
-    where
-        Self: Sized,
-    {
-        let heading_pairs = pairs
-            .next()
-            .expect("At least one pair available")
-            .into_inner();
+impl ElementParser for Heading {
+    type Token<'a> = self::Token<'a>;
 
-        let mut headings: Blocks = Vec::new();
+    fn tokenize<'i>(input: &'i [Symbol<'i>]) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
+        let level_depth = input
+            .iter()
+            .take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
+            .count();
 
-        let (line_nr, _column_nr) = span.start_pos().line_col();
+        let level = HeadingLevel::try_from(level_depth).ok()?;
+        let content_symbols = input
+            .iter()
+            .skip(level_depth)
+            .take_while(|symbol| !matches!(symbol.kind, SymbolKind::Blankline | SymbolKind::EOI))
+            .count();
 
-        for pair in heading_pairs {
-            let mut heading = Self::parse_single(&pair)?;
-            // child line number starts with 1
-            // which leads to off by 1 error
-            // hence minus 1
-            heading.line_nr += line_nr - 1;
-            headings.push(heading.into());
-        }
+        let content_start = level_depth;
+        let content_end = content_start + content_symbols;
 
-        Ok(headings)
+        let content = &input[content_start..content_end];
+        let rest = &input[content_end..];
+
+        let output = TokenizeOutput {
+            tokens: vec![Token::Level(level), Token::Content(content), Token::End],
+            rest_of_input: rest,
+        };
+
+        Some(output)
+    }
+
+    fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
+        let Token::Level(level) = input[0] else {return None};
+        let Token::Content(symbols) = input[1] else {return None};
+
+        let content = Symbol::flatten(symbols).parse_unimarkup_inlines().collect();
+        let line_nr = symbols.get(0)?.start.line;
+
+        // TODO: introduce data structure for Id of block.
+        // Right now we use generate_id function, that is not optimal. We can do better by
+        // encapsulating Id into a separate data structure and implement Render trait for it etc.
+        let block = Self {
+            id: String::default(),
+            level,
+            content,
+            attributes: None,
+            line_nr,
+        };
+
+        Some(vec![Block::Heading(block)])
     }
 }
 
@@ -244,10 +229,10 @@ mod tests {
 
             let heading = Heading {
                 id: String::from(&id),
-                level: HeadingLevel::from(level),
+                level: HeadingLevel::try_from(level).unwrap(),
                 content: heading_content,
-                attributes: String::default(),
-                line_nr: level as usize,
+                attributes: None,
+                line_nr: level,
             };
 
             let html = heading.render_html().unwrap();
@@ -270,10 +255,10 @@ mod tests {
 
             let heading = Heading {
                 id: String::from(&id),
-                level: HeadingLevel::from(level),
+                level: HeadingLevel::try_from(level).unwrap(),
                 content: heading_content,
-                attributes: String::default(),
-                line_nr: level as usize,
+                attributes: None,
+                line_nr: level,
             };
 
             let html = heading.render_html().unwrap();
