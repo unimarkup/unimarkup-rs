@@ -113,7 +113,7 @@ impl MainParser {
         #[cfg(debug_assertions)]
         let mut input_len = input.len();
 
-        while let Some(sym) = input.first() {
+        'outer: while let Some(sym) = input.first() {
             match sym.kind {
                 // skip blanklines
                 SymbolKind::Blankline => input = &input[1..],
@@ -136,9 +136,16 @@ impl MainParser {
                         if let Some((mut res_blocks, rest_of_input)) = parser_fn(input) {
                             blocks.append(&mut res_blocks);
                             input = rest_of_input;
-                            break; // start from first parser on next input
+                            continue 'outer; // start from first parser on next input
                         }
                     }
+                    
+                    // no registered parser matched -> use default parser
+                    let (mut res_blocks, rest_of_input) = (self.default_parser)(input)
+                        .expect("Default parser could not parse content!");
+
+                    blocks.append(&mut res_blocks);
+                    input = rest_of_input;
                 }
             }
 
