@@ -139,7 +139,7 @@ impl MainParser {
                             continue 'outer; // start from first parser on next input
                         }
                     }
-                    
+
                     // no registered parser matched -> use default parser
                     let (mut res_blocks, rest_of_input) = (self.default_parser)(input)
                         .expect("Default parser could not parse content!");
