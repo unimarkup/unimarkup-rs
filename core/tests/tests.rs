@@ -21,3 +21,5 @@ mod general {
     mod metadata;
     mod unimarkup;
 }
+
+mod test_runner;

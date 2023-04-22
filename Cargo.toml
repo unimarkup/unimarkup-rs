@@ -7,6 +7,14 @@ members = [
     "system_tests"
 ]
 
+# Compile snapshot testing library "insta" with "release" flag so that it runs
+# faster
+[profile.dev.package.insta]
+opt-level = 3
+
+[profile.dev.package.similar]
+opt-level = 3
+
 [workspace.package]
 version = "0.3.0"
 edition = "2021"
