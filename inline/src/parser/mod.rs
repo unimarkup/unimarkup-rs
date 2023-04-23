@@ -1,7 +1,8 @@
 use std::{collections::VecDeque, ops::Deref};
 
 use crate::{
-    Inline, InlineContent, NestedContent, PlainContent, Span, Token, TokenKind, Tokenize, Tokens,
+    Inline, InlineContent, NestedContent, PlainContent, Position, Span, Token, TokenKind, Tokenize,
+    Tokens,
 };
 
 /// Internal data structure used for parsing of Unimarkup [`Inline`]s.
@@ -134,18 +135,24 @@ impl Iterator for Parser {
 ///
 /// [`Parser`]: self::Parser
 /// [`Tokenize`]: crate::Tokenize
-pub trait ParseUnimarkupInlines {
+pub trait ParseInlines {
     /// Returns a parser over this type.
-    fn parse_unimarkup_inlines(&self) -> Parser;
+    fn parse_inlines(&self, pos: Option<Position>) -> Parser;
 }
 
-impl<T> ParseUnimarkupInlines for T
+impl<T> ParseInlines for T
 where
     T: Tokenize,
 {
-    fn parse_unimarkup_inlines(&self) -> Parser {
+    fn parse_inlines(&self, pos: Option<Position>) -> Parser {
+        let iter = if let Some(pos) = pos {
+            self.tokens_with_offs(pos)
+        } else {
+            self.tokens()
+        };
+
         Parser {
-            iter: self.tokens(),
+            iter,
             token_cache: None,
             inline_cache: VecDeque::default(),
         }

@@ -249,17 +249,16 @@ impl<'a> Lexer<'a> {
     /// [`TokenIterator`]: self::TokenIterator
     /// [`Lexer`]: self::Lexer
     fn iter(&self) -> TokenIterator<'a> {
-        let skip_lines_upto_index = self.pos.line.saturating_sub(1);
         let mut lines = self.input.lines().peekable();
 
         let curr = lines
-            .nth(skip_lines_upto_index)
+            .next()
             .map_or(Vec::default(), |line| Vec::from_iter(line.graphemes(true)));
 
         TokenIterator {
             lines,
             curr,
-            index: self.pos.column.saturating_sub(1),
+            index: 0,
             pos: self.pos,
             substitutor: Substitutor::new(),
         }

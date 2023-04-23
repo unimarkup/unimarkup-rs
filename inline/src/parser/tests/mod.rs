@@ -4,14 +4,14 @@ use super::*;
 
 #[test]
 fn parse_simple_plain() {
-    let parser = "Some text".parse_unimarkup_inlines();
+    let parser = "Some text".parse_inlines(None);
 
     assert_eq!(parser.count(), 1);
 }
 
 #[test]
 fn parse_simple_bold() {
-    let mut parser = "**Bold text**".parse_unimarkup_inlines();
+    let mut parser = "**Bold text**".parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position { line: 1, column: 3 };
@@ -35,7 +35,7 @@ fn parse_simple_bold() {
 
 #[test]
 fn parse_simple_italic() {
-    let mut parser = "*Italic text*".parse_unimarkup_inlines();
+    let mut parser = "*Italic text*".parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position { line: 1, column: 2 };
@@ -59,7 +59,7 @@ fn parse_simple_italic() {
 
 #[test]
 fn parse_italic_bold() {
-    let mut parser = "*Italic text***Bold text**".parse_unimarkup_inlines();
+    let mut parser = "*Italic text***Bold text**".parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position { line: 1, column: 2 };
@@ -98,7 +98,7 @@ fn parse_italic_bold() {
 
 #[test]
 fn parse_bold_italic_nested() {
-    let mut parser = "**This is bold *with* italic inside.**".parse_unimarkup_inlines();
+    let mut parser = "**This is bold *with* italic inside.**".parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position { line: 1, column: 1 };
@@ -170,7 +170,7 @@ fn parse_bold_italic_nested() {
 
 #[test]
 fn parse_text_group_simple() {
-    let mut parser = "This is text [with text group] as part of it.".parse_unimarkup_inlines();
+    let mut parser = "This is text [with text group] as part of it.".parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position { line: 1, column: 1 };
@@ -210,7 +210,7 @@ fn parse_text_group_simple() {
 #[test]
 fn parse_text_group_interrupt_bold() {
     let input = "This is **text [with text** group] as part of it.";
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     let inline = parser.next().unwrap();
 
@@ -265,7 +265,7 @@ fn parse_text_group_interrupt_bold() {
 #[test]
 fn parse_open_italic_closed_bold_hehe() {
     let input = "***This is input**";
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position::new(1, 1);
@@ -301,7 +301,7 @@ fn parse_open_italic_closed_bold_hehe() {
 #[test]
 fn parse_nested_text_group() {
     let input = "[This text group [has another one inside] of it.]";
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     let inline = parser.next().unwrap();
 
@@ -365,7 +365,7 @@ fn parse_nested_text_group() {
 #[test]
 fn parse_open_italic_closed_bold_in_tg() {
     let input = "This huhuu [***This is input**]";
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     let inline = parser.next().unwrap();
 
@@ -433,7 +433,7 @@ fn parse_open_italic_closed_bold_in_tg() {
 #[test]
 fn interrupt_italic() {
     let input = "**This *is input**";
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position::new(1, 1);
@@ -464,7 +464,7 @@ fn interrupt_italic() {
 fn parse_multi_line() {
     let input = "This is\ninput with\nmulti-line content.";
 
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     for inline in parser.clone() {
         dbg!(inline);
@@ -545,7 +545,7 @@ fn parse_multi_line() {
 fn parse_subst_alias() {
     let input = "This is text::with_alias::substitution inside.";
 
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     for inline in parser.clone() {
         dbg!(inline);
@@ -608,7 +608,7 @@ fn parse_subst_alias() {
 #[test]
 fn verbatim_with_escaped_accent() {
     let input = "`verbatim\\`escaped`";
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position::new(1, 1);
@@ -632,7 +632,7 @@ fn verbatim_with_escaped_accent() {
 #[test]
 fn plain_asterisk_no_bold() {
     let input = "******no bold**";
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position::new(1, 1);
@@ -656,7 +656,7 @@ fn plain_asterisk_no_bold() {
 #[test]
 fn two_open_italic_closing_at_end() {
     let input = "*open *2nd closing*";
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position::new(1, 1);
@@ -686,7 +686,7 @@ fn two_open_italic_closing_at_end() {
 #[test]
 fn bold_around_text_group() {
     let input = "**This bold [group**] and close** bold..";
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position::new(1, 1);
@@ -730,7 +730,7 @@ fn bold_around_text_group() {
 #[test]
 fn ambiguous_close_italic_then_bold() {
     let input = "***This bold* haha**";
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     let inline = parser.next().unwrap();
     let start = Position::new(1, 1);
@@ -753,7 +753,7 @@ fn ambiguous_close_italic_then_bold() {
 #[test]
 fn italicbold() {
     let input = "***bold italic***";
-    let mut parser = input.parse_unimarkup_inlines();
+    let mut parser = input.parse_inlines(None);
 
     // for inline in parser.clone() {
     //     dbg!(inline);
