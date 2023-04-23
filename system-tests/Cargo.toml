@@ -1,5 +1,6 @@
 [package]
 name = "system-tests"
+publish = false
 edition.workspace = true
 version.workspace = true
 license.workspace = true

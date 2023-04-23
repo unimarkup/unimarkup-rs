@@ -13,5 +13,5 @@ license.workspace = true
 
 [dependencies]
 logid.workspace = true
-unimarkup-render = { path = "../render/" }
+unimarkup-render = { path = "../render/", version = "0" }
 unicode-segmentation = "1.8.0"
