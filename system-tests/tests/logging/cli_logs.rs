@@ -25,7 +25,7 @@ fn test__main_log_trace__attributes_file() {
     assert!(logs.contains(&TEST_FILE.replace(".um", ".html")));
     assert!(logs.contains("64(origin): file="));
     assert!(logs.contains("65: Finished compiling: "));
-    assert!(logs.contains(&TEST_FILE));
+    assert!(logs.contains(TEST_FILE));
     assert!(logs.contains("65(origin): file="));
 }
 
