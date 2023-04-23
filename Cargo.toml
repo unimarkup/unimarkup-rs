@@ -13,6 +13,7 @@ edition = "2021"
 authors = ["Manuel Hatzl", "Nadir Fejzić"]
 description = "Unimarkup compiler written in Rust."
 repository = "https://github.com/Unimarkup/unimarkup-rs"
+homepage = "https://github.com/Unimarkup/unimarkup-rs"
 readme = "README.md"
 license = "MIT"
 
