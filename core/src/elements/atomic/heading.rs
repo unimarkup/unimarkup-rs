@@ -135,12 +135,21 @@ impl ElementParser for Heading {
     type Token<'a> = self::Token<'a>;
 
     fn tokenize<'i>(input: &'i [Symbol<'i>]) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
-        let level_depth = input
+        let mut level_depth = input
             .iter()
             .take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
             .count();
 
-        let level = HeadingLevel::try_from(level_depth).ok()?;
+        let level: HeadingLevel = HeadingLevel::try_from(level_depth).ok()?;
+        if let Some(token_after_hash) = input.get(level_depth) {
+            if token_after_hash.kind != SymbolKind::Whitespace {
+                return None;
+            } 
+        } else {
+            return None;
+        }
+        level_depth += 1; // +1 space offset
+
         let content_symbols = input
             .iter()
             .skip(level_depth)

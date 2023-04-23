@@ -257,7 +257,7 @@ impl<'a> Lexer<'a> {
         TokenIterator {
             lines,
             curr,
-            index: self.pos.column.saturating_sub(1),
+            index: 0,
             pos: self.pos,
             substitutor: Substitutor::new(),
         }

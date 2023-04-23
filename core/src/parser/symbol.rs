@@ -11,6 +11,8 @@ pub enum SymbolKind {
     Hash,
     /// Regular text with no semantic meaning
     Plain,
+    /// Any non-linebreaking whitespace
+    Whitespace,
     /// Line break
     Newline,
     /// Empty line, can be separator between blocks
@@ -102,7 +104,7 @@ impl Symbol<'_> {
     pub(crate) fn is_not_keyword(&self) -> bool {
         matches!(
             self.kind,
-            SymbolKind::Newline | SymbolKind::Plain | SymbolKind::Blankline | SymbolKind::EOI
+            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Plain | SymbolKind::Blankline | SymbolKind::EOI
         )
     }
 
@@ -112,6 +114,7 @@ impl Symbol<'_> {
             SymbolKind::Hash => "#",
             SymbolKind::Plain => &self.input[self.offset.start..self.offset.end],
             SymbolKind::Verbatim => "`",
+            SymbolKind::Whitespace => &self.input[self.offset.start..self.offset.end],
             SymbolKind::Newline | SymbolKind::Blankline => "\n",
             SymbolKind::EOI => "",
         }
@@ -147,6 +150,7 @@ impl From<&str> for SymbolKind {
             "#" => SymbolKind::Hash,
             "\n" | "\r\n" => SymbolKind::Newline,
             "`" => SymbolKind::Verbatim,
+            symbol if symbol != "\n" && symbol != "\r\n" && symbol.starts_with(char::is_whitespace) => SymbolKind::Whitespace,
             _ => SymbolKind::Plain,
         }
     }
