@@ -251,7 +251,8 @@ impl<'a> Lexer<'a> {
     fn iter(&self) -> TokenIterator<'a> {
         let mut lines = self.input.lines().peekable();
 
-        let curr = lines.next()
+        let curr = lines
+            .next()
             .map_or(Vec::default(), |line| Vec::from_iter(line.graphemes(true)));
 
         TokenIterator {

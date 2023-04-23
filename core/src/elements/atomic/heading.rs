@@ -144,7 +144,7 @@ impl ElementParser for Heading {
         if let Some(token_after_hash) = input.get(level_depth) {
             if token_after_hash.kind != SymbolKind::Whitespace {
                 return None;
-            } 
+            }
         } else {
             return None;
         }
@@ -175,7 +175,12 @@ impl ElementParser for Heading {
         let Token::Content(symbols) = input[1] else {return None};
         let inline_start = symbols[0].start;
 
-        let content = Symbol::flatten(symbols).parse_inlines(Some(unimarkup_inline::Position { line: inline_start.line, column: inline_start.col_utf8 })).collect();
+        let content = Symbol::flatten(symbols)
+            .parse_inlines(Some(unimarkup_inline::Position {
+                line: inline_start.line,
+                column: inline_start.col_utf8,
+            }))
+            .collect();
         let line_nr = symbols.get(0)?.start.line;
 
         // TODO: introduce data structure for Id of block.
@@ -258,9 +263,7 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = "`This` *is _a_* **heading**"
-                .parse_inlines(None)
-                .collect();
+            let heading_content = "`This` *is _a_* **heading**".parse_inlines(None).collect();
             let id = format!("heading-id-{}", level);
 
             let heading = Heading {

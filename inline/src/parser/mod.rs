@@ -1,7 +1,8 @@
 use std::{collections::VecDeque, ops::Deref};
 
 use crate::{
-    Inline, InlineContent, NestedContent, PlainContent, Span, Token, TokenKind, Tokenize, Tokens, Position,
+    Inline, InlineContent, NestedContent, PlainContent, Position, Span, Token, TokenKind, Tokenize,
+    Tokens,
 };
 
 /// Internal data structure used for parsing of Unimarkup [`Inline`]s.
@@ -144,7 +145,11 @@ where
     T: Tokenize,
 {
     fn parse_inlines(&self, pos: Option<Position>) -> Parser {
-        let iter = if let Some(pos) = pos {self.tokens_with_offs(pos)} else {self.tokens()};
+        let iter = if let Some(pos) = pos {
+            self.tokens_with_offs(pos)
+        } else {
+            self.tokens()
+        };
 
         Parser {
             iter,

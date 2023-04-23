@@ -104,7 +104,11 @@ impl Symbol<'_> {
     pub(crate) fn is_not_keyword(&self) -> bool {
         matches!(
             self.kind,
-            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Plain | SymbolKind::Blankline | SymbolKind::EOI
+            SymbolKind::Newline
+                | SymbolKind::Whitespace
+                | SymbolKind::Plain
+                | SymbolKind::Blankline
+                | SymbolKind::EOI
         )
     }
 
@@ -150,7 +154,13 @@ impl From<&str> for SymbolKind {
             "#" => SymbolKind::Hash,
             "\n" | "\r\n" => SymbolKind::Newline,
             "`" => SymbolKind::Verbatim,
-            symbol if symbol != "\n" && symbol != "\r\n" && symbol.starts_with(char::is_whitespace) => SymbolKind::Whitespace,
+            symbol
+                if symbol != "\n"
+                    && symbol != "\r\n"
+                    && symbol.starts_with(char::is_whitespace) =>
+            {
+                SymbolKind::Whitespace
+            }
             _ => SymbolKind::Plain,
         }
     }
