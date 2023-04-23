@@ -141,11 +141,7 @@ impl ElementParser for Heading {
             .count();
 
         let level: HeadingLevel = HeadingLevel::try_from(level_depth).ok()?;
-        if let Some(token_after_hash) = input.get(level_depth) {
-            if token_after_hash.kind != SymbolKind::Whitespace {
-                return None;
-            }
-        } else {
+        if input.get(level_depth)?.kind != SymbolKind::Whitespace {
             return None;
         }
         level_depth += 1; // +1 space offset
@@ -173,7 +169,7 @@ impl ElementParser for Heading {
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
         let Token::Level(level) = input[0] else {return None};
         let Token::Content(symbols) = input[1] else {return None};
-        let inline_start = symbols[0].start;
+        let inline_start = symbols.get(0)?.start;
 
         let content = Symbol::flatten(symbols)
             .parse_inlines(Some(unimarkup_inline::Position {
@@ -181,11 +177,7 @@ impl ElementParser for Heading {
                 column: inline_start.col_utf8,
             }))
             .collect();
-        let line_nr = symbols.get(0)?.start.line;
-
-        // TODO: introduce data structure for Id of block.
-        // Right now we use generate_id function, that is not optimal. We can do better by
-        // encapsulating Id into a separate data structure and implement Render trait for it etc.
+        let line_nr = inline_start.line;
         let block = Self {
             id: String::default(),
             level,
