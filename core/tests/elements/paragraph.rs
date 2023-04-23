@@ -103,7 +103,7 @@ pub fn paragraph3_expected_result() -> Blocks {
 
     let block = Paragraph {
         id: "paragraph-3".into(),
-        content: "paragraph1\n\n".parse_inlines(Some(unimarkup_inline::Position { line: 3, column: 1 })).collect(),
+        content: "paragraph1\n".parse_inlines(Some(unimarkup_inline::Position { line: 3, column: 1 })).collect(),
         attributes: None,
         line_nr: 3,
     };

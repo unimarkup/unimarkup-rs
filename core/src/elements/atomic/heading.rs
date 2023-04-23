@@ -166,7 +166,7 @@ impl ElementParser for Heading {
         let Token::Content(symbols) = input[1] else {return None};
         let inline_start = symbols[0].start;
 
-        let content = Symbol::flatten(symbols).parse_inlines(Some(unimarkup_inline::Position { line: inline_start.line, column: inline_start.col_utf16 })).collect();
+        let content = Symbol::flatten(symbols).parse_inlines(Some(unimarkup_inline::Position { line: inline_start.line, column: inline_start.col_utf8 })).collect();
         let line_nr = symbols.get(0)?.start.line;
 
         // TODO: introduce data structure for Id of block.
