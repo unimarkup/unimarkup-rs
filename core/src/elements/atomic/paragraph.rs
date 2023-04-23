@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use logid::capturing::MappedLogId;
-use unimarkup_inline::{Inline, ParseUnimarkupInlines};
+use unimarkup_inline::{Inline, ParseInlines};
 use unimarkup_render::{html::Html, render::Render};
 
 use crate::{
@@ -38,7 +38,8 @@ impl Paragraph {}
 
 impl From<&[Symbol<'_>]> for Paragraph {
     fn from(value: &[Symbol<'_>]) -> Self {
-        let content = Symbol::flatten(value).parse_unimarkup_inlines().collect();
+        let inline_start = value[0].start;
+        let content = Symbol::flatten(value).parse_inlines(Some(unimarkup_inline::Position { line: inline_start.line, column: inline_start.col_utf16 })).collect();
         let line_nr = value.get(0).map(|symbol| symbol.start.line).unwrap_or(0);
 
         let id = parser::generate_id(&format!(
