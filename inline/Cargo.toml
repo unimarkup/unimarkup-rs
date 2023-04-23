@@ -1,5 +1,5 @@
 [package]
-name = "unimarkup_inline"
+name = "unimarkup-inline"
 description = "Compiler for Unimarkup inline elements."
 version.workspace = true
 edition.workspace = true
@@ -12,5 +12,5 @@ license.workspace = true
 
 [dependencies]
 logid.workspace = true
-unimarkup_render = { path = "../render/" }
+unimarkup-render = { path = "../render/" }
 unicode-segmentation = "1.8.0"
