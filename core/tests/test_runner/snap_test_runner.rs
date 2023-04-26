@@ -143,9 +143,7 @@ macro_rules! test_parser_snap {
 
         let mut sub_path: PathBuf = path
             .components()
-            .skip_while(|component| {
-                Path::new(component) != Path::new("markup")
-            })
+            .skip_while(|component| Path::new(component) != Path::new("markup"))
             .skip(1)
             .collect();
 
