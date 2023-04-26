@@ -2,16 +2,10 @@
 source: core/tests/test_runner/mod.rs
 info: "core\\tests\\test_runner\\mod.rs"
 ---
-Paragraph(
-	This is a paragraph
-	spanning multiple
-	lines.
-)
+Paragraph(Paragraph **with** inlines.)
 ---
 With input:
 
-This is a paragraph
-spanning multiple
-lines.
+Paragraph **with** inlines.
 
 

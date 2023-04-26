@@ -1,96 +1,36 @@
 # Unimarkup specification version
 spec: "0.0.1"
 
-# Name that is prepended to every testname in this file.
-# Whitespace is replaced by `-`, and group and test name is separated by `_`.
-# e.g. test-group-name_test-name
-name: test-group name
-
-# Optional description for this test group
-description: Some general description about the tests in this file.
-
-# Optional preamble that is applied to all tests in this group
-preamble:
-  author: mhatzl
-  lang: en-US
+name: paragraph
+description: Test the paragraph block element.
 
 tests:
-  # One test inside this test group
-  - name: test-name
-    # Optional description for this test
-    description: >
-      Some description about the test
-
-    # Unimarkup input
-    input: |
-      ###
-      Enclosed content
-      ###
-
-    # Only contains the HTML body, since the content does not start with `<!DOCTYPE HTML>`.
-    # Note: If only the body content is given, the head content must be equal to the base template.
-    # Note: Whitespace between tags may be ignored.
-    html: |
-      <div>
-        <p>Enclosed content</p>
-      </div>
-
-    # Unimarkup as output
-    um: |
-      ###
-      Enclosed content
-      ###
-
-    # other output/intermediate formats may be added here
-
-  # Another test
-  - name: other-test
-
-    # Optional preamble
-    preamble:
-      title: some-title
+  - name: simple-paragraph
+    description: |
+      Parse a simple paragraph.
 
     input: |
-      Just some paragraph.
+      Simple paragraph.
 
-    # Full HTML output combining head and body content.
     html: |
-      <!DOCTYPE HTML>
-      <html lang="en-US">
-        <head>
-          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <meta name="author" content="mhatzl" />
-          <title>some-title</title>
-        </head>
-        <body>
-          <p>Just some paragraph.</p>
-        </body>
-      </html>
+      <p>Simple paragraph.</p>
 
-  # Another test
+
+  - name: paragraph-with-inlines
+
+    input: |
+      Paragraph **with** inlines.
+
+    html: |
+      <p>Paragraph <strong>with</strong> inlines.</p>
+
+
   - name: multi-line
-
-    # Optional preamble
-    preamble:
-      title: some-title
 
     input: |
       This is a paragraph
       spanning multiple
       lines.
 
-    # Full HTML output combining head and body content.
     html: |
-      <!DOCTYPE HTML>
-      <html lang="en-US">
-        <head>
-          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <meta name="author" content="mhatzl" />
-          <title>some-title</title>
-        </head>
-        <body>
-          <p>Just some paragraph.</p>
-        </body>
-      </html>
+      <p>This is a paragraph spanning multiple lines.</p>

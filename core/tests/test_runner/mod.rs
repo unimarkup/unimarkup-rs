@@ -10,6 +10,11 @@ pub mod spec_test_runner;
 pub mod test_file;
 
 #[test]
-pub fn test_paragraph_parser() {
+pub fn paragraph_parser() {
     crate::test_parser_snap!(Paragraph, "../spec/markup/blocks/paragraph.yml");
+}
+
+#[test]
+pub fn paragraph_with_main_parser() {
+    crate::test_parser_snap!("../spec/markup/blocks/paragraph.yml");
 }
