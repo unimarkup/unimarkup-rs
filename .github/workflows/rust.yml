@@ -1,4 +1,4 @@
-name: UniMarkup Dev Workflow
+name: Tests & Lints
 
 on:
   push:

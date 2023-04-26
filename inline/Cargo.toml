@@ -1,16 +1,17 @@
 [package]
-name = "unimarkup_inline"
+name = "unimarkup-inline"
 description = "Compiler for Unimarkup inline elements."
+readme = "README.md"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 repository.workspace = true
-readme.workspace = true
+homepage.workspace = true
 license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 logid.workspace = true
-unimarkup_render = { path = "../render/" }
+unimarkup-render = { path = "../render/", version = "0" }
 unicode-segmentation = "1.8.0"

@@ -2,7 +2,7 @@ use logid::capturing::{LogIdTracing, MappedLogId};
 use logid::log_id::LogId;
 
 use strum_macros::*;
-use unimarkup_inline::{Inline, ParseUnimarkupInlines};
+use unimarkup_inline::{Inline, ParseInlines};
 use unimarkup_render::html::Html;
 use unimarkup_render::render::Render;
 
@@ -135,12 +135,17 @@ impl ElementParser for Heading {
     type Token<'a> = self::Token<'a>;
 
     fn tokenize<'i>(input: &'i [Symbol<'i>]) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
-        let level_depth = input
+        let mut level_depth = input
             .iter()
             .take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
             .count();
 
-        let level = HeadingLevel::try_from(level_depth).ok()?;
+        let level: HeadingLevel = HeadingLevel::try_from(level_depth).ok()?;
+        if input.get(level_depth)?.kind != SymbolKind::Whitespace {
+            return None;
+        }
+        level_depth += 1; // +1 space offset
+
         let content_symbols = input
             .iter()
             .skip(level_depth)
@@ -164,13 +169,15 @@ impl ElementParser for Heading {
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
         let Token::Level(level) = input[0] else {return None};
         let Token::Content(symbols) = input[1] else {return None};
+        let inline_start = symbols.get(0)?.start;
 
-        let content = Symbol::flatten(symbols).parse_unimarkup_inlines().collect();
-        let line_nr = symbols.get(0)?.start.line;
-
-        // TODO: introduce data structure for Id of block.
-        // Right now we use generate_id function, that is not optimal. We can do better by
-        // encapsulating Id into a separate data structure and implement Render trait for it etc.
+        let content = Symbol::flatten(symbols)
+            .parse_inlines(Some(unimarkup_inline::Position {
+                line: inline_start.line,
+                column: inline_start.col_utf8,
+            }))
+            .collect();
+        let line_nr = inline_start.line;
         let block = Self {
             id: String::default(),
             level,
@@ -215,7 +222,7 @@ impl Render for Heading {
 #[cfg(test)]
 mod tests {
     use crate::elements::atomic::{Heading, HeadingLevel};
-    use unimarkup_inline::ParseUnimarkupInlines;
+    use unimarkup_inline::ParseInlines;
     use unimarkup_render::render::Render;
 
     #[test]
@@ -224,7 +231,7 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = "This is a heading".parse_unimarkup_inlines().collect();
+            let heading_content = "This is a heading".parse_inlines(None).collect();
             let id = format!("heading-id-{}", level);
 
             let heading = Heading {
@@ -248,9 +255,7 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = "`This` *is _a_* **heading**"
-                .parse_unimarkup_inlines()
-                .collect();
+            let heading_content = "`This` *is _a_* **heading**".parse_inlines(None).collect();
             let id = format!("heading-id-{}", level);
 
             let heading = Heading {

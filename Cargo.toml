@@ -4,7 +4,7 @@ members = [
     "cli",
     "core",
     "inline",
-    "system_tests"
+    "system-tests"
 ]
 
 # Compile snapshot testing library "insta" with "release" flag so that it runs
@@ -16,11 +16,12 @@ opt-level = 3
 opt-level = 3
 
 [workspace.package]
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 authors = ["Manuel Hatzl", "Nadir Fejzić"]
 description = "Unimarkup compiler written in Rust."
 repository = "https://github.com/Unimarkup/unimarkup-rs"
+homepage = "https://github.com/Unimarkup/unimarkup-rs"
 readme = "README.md"
 license = "MIT"
 
