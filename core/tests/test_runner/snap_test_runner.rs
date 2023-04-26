@@ -6,12 +6,6 @@ use unimarkup_core::parser::{
 
 use crate::test_runner::as_snapshot::AsSnapshot;
 
-#[derive(Serialize)]
-pub struct Context<'a> {
-    #[serde(rename = "Test in file")]
-    pub src_file: &'a str,
-}
-
 #[derive(Debug)]
 pub struct SnapTestRunner<'a, I = ()> {
     pub info: Option<I>,
@@ -98,38 +92,6 @@ where
             ..self
         }
     }
-
-    // pub fn run_test(&self) {
-    //     let mut settings = super::get_insta_settings();
-    //     settings.set_omit_expression(true);
-    //
-    //     if let Some(subfolder) = self.sub_path {
-    //         let curr_path = settings.snapshot_path();
-    //         let new_path = curr_path.join(subfolder);
-    //
-    //         settings.set_snapshot_path(new_path);
-    //     }
-    //
-    //     if let Some(ref info) = self.info {
-    //         settings.set_info(info);
-    //     }
-    //
-    //     if let Some(description) = self.desc {
-    //         settings.set_description(description);
-    //     }
-    //
-    //     let mut snap_content = self.snapshot.clone();
-    //     if let Some(ref input) = self.input {
-    //         let ref_input = format!("---\nWith input:\n\n{}\n", input);
-    //         snap_content.push_str(&ref_input);
-    //     }
-    //
-    //     settings.set_prepend_module_to_snapshot(false);
-    //
-    //     settings.bind(|| {
-    //         insta::assert_snapshot!(self.name.as_str(), snap_content);
-    //     })
-    // }
 }
 
 #[macro_export]
@@ -137,7 +99,8 @@ macro_rules! run_snap_test {
     ($snap_test:ident) => {
         let snap_test: $crate::test_runner::snap_test_runner::SnapTestRunner<_> = $snap_test;
 
-        let mut settings = $crate::test_runner::get_insta_settings();
+        let mut settings = insta::Settings::clone_current();
+        settings.set_snapshot_path("../spec/snapshots/");
         settings.set_omit_expression(true);
 
         if let Some(subfolder) = snap_test.sub_path {
@@ -166,5 +129,48 @@ macro_rules! run_snap_test {
         settings.bind(|| {
             insta::assert_snapshot!(snap_test.name.as_str(), snap_content);
         })
+    };
+}
+
+#[macro_export]
+macro_rules! test_parser_snap {
+    ($block_ty:ty, $file_path:literal) => {
+        let path = PathBuf::from(file!());
+        let mut path: PathBuf = path.strip_prefix("core").unwrap().into();
+
+        path.set_file_name("");
+        path.push($file_path);
+
+        let mut sub_path: PathBuf = path
+            .components()
+            .skip_while(|component| {
+                dbg!(component);
+                Path::new(component) != Path::new("markup")
+            })
+            .skip(1)
+            .collect();
+
+        sub_path.set_extension("");
+
+        let input = std::fs::read_to_string(&path).unwrap();
+        let test_file: $crate::test_runner::test_file::TestFile =
+            serde_yaml::from_str(&input).unwrap();
+
+        for test in &test_file.tests {
+            let mut snap_runner =
+                SnapTestRunner::with_parser::<$block_ty, &str>(&test.name, &test.input)
+                    .with_info(file!());
+
+            if let Some(ref description) = test.description {
+                snap_runner = snap_runner.with_description(description);
+            }
+
+            let snap_runner =
+                snap_runner.with_sub_path(sub_path.to_str().expect("Invalid sub path"));
+
+            // TODO: preamble?
+
+            $crate::run_snap_test!(snap_runner);
+        }
     };
 }
