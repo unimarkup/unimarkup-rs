@@ -28,32 +28,28 @@ pub fn assert_um_spec(test_group: &str, test: &Test, config: unimarkup_core::con
     }
 }
 
+/// Macro for spec testing of spec files.
+/// Spec tests compare the rendered outputs with the expected ones set in the spec files.
+///
+/// **Arguments:**
+///
+/// * *file_path* ... A path to the spec file to test, where the path must be relative to the `tests` directory of your crate (e.g. "spec/markup/blocks/paragraph.yml")
+///
+/// **Usage:**
+///
+/// ```ignore
+/// run_spec_test!("spec/markup/blocks/paragraph.yml");
+/// ```
 #[macro_export]
 macro_rules! run_spec_test {
     ($file_path:literal) => {
-        let path = PathBuf::from(file!());
-        let mut path: PathBuf = path.strip_prefix("core").unwrap().into();
+        let test_content = $crate::test_runner::test_file::get_test_content($file_path);
 
-        path.set_file_name("");
-        path.push($file_path);
-
-        let mut sub_path: PathBuf = path
-            .components()
-            .skip_while(|component| Path::new(component) != Path::new("markup"))
-            .skip(1)
-            .collect();
-
-        sub_path.set_extension("");
-
-        let input = std::fs::read_to_string(&path).unwrap();
-        let test_file: $crate::test_runner::test_file::TestFile =
-            serde_yaml::from_str(&input).unwrap();
-
-        for test in &test_file.tests {
+        for test in &test_content.test_file.tests {
             // TODO: preamble?
 
             $crate::test_runner::spec_test::assert_um_spec(
-                &test_file.name,
+                &test_content.test_file.name,
                 test,
                 unimarkup_core::config::Config::default(),
             );
