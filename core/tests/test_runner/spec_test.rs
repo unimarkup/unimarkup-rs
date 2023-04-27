@@ -31,11 +31,11 @@ pub fn assert_um_spec(test_group: &str, test: &Test, config: unimarkup_core::con
 /// Macro for spec testing of spec files.
 /// Spec tests compare the rendered outputs with the expected ones set in the spec files.
 ///
-/// **Arguments:**
+/// ## Arguments
 ///
 /// * *file_path* ... A path to the spec file to test, where the path must be relative to the `tests` directory of your crate (e.g. "spec/markup/blocks/paragraph.yml")
 ///
-/// **Usage:**
+/// ## Usage
 ///
 /// ```ignore
 /// run_spec_test!("spec/markup/blocks/paragraph.yml");

@@ -134,12 +134,12 @@ macro_rules! run_snap_test {
 
 /// Macro for snapshot testing of spec files.
 ///
-/// **Arguments:**
+/// ## Arguments
 ///
 /// * *file_path* ... A path to the spec file to test, where the path must be relative to the `tests` directory of your crate (e.g. "spec/markup/blocks/paragraph.yml")
 /// * *block_ty* ... A specific block element implementing `ParserGenerator` **may** be given as second argument to use the parser of the element for testing
 ///
-/// **Usage:**
+/// ## Usage
 ///
 /// ```ignore
 /// test_parser_snap!("spec/markup/blocks/paragraph.yml", Paragraph);
