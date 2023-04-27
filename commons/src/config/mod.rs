@@ -1,31 +1,35 @@
-use std::{path::PathBuf, collections::HashMap};
+use std::{path::PathBuf, collections::{HashMap, HashSet}};
 
 
 
 pub struct Config {
-  pub input: PathBuf,
-  pub output: Output,
-  pub metadata: Metadata,
-  pub cite: Citedata,
-  pub render: RenderConfig,
+  pub preamble: Preamble,
   pub merging: MergingConfig,
-  pub i18n: I18n,
+  pub input: PathBuf,
 }
-
-pub struct I18n {
-  pub lang: String,
-  pub langs: Vec<String>,
-}
-
 
 pub struct MergingConfig {
   pub ignore_preamble: bool,
 }
 
+pub struct Preamble {
+  pub output: Output,
+  pub metadata: Metadata,
+  pub cite: Citedata,
+  pub render: RenderConfig,
+  pub i18n: I18n,
+}
+
+pub struct I18n {
+  pub lang: Option<String>,
+  pub langs: HashSet<String>,
+}
+
+
 pub struct RenderConfig {
   /// K = element/attribute name, V = `true` to ignore
   pub ignore: HashMap<String, bool>, 
-  pub parameter: Vec<String>,
+  pub parameter: HashMap<String, String>,
   pub keep_comments: bool,
   pub non_strict: bool,
 }
@@ -35,22 +39,22 @@ pub struct RenderConfig {
 // This makes it easier to access the parsed data without creating another config struct.
 // It also makes compiling faster for bad inputs, since it would break before parsing starts.
 pub struct Citedata {
-  pub style: PathBuf,
-  pub references: Vec<PathBuf>,
+  pub style: Option<PathBuf>,
+  pub references: HashSet<PathBuf>,
 }
 
 pub struct Metadata {
-  pub title: String,
-  pub authors: Vec<String>,
-  pub description: String,
-  pub base: PathBuf,
-  pub fonts: Vec<PathBuf>,
+  pub title: Option<String>,
+  pub authors: HashSet<String>,
+  pub description: Option<String>,
+  pub base: Option<PathBuf>,
+  pub fonts: HashSet<PathBuf>,
 }
 
 
 pub struct Output {
-  pub file: PathBuf,
-  pub formats: Vec<OutputFormat>,
+  pub file: Option<PathBuf>,
+  pub formats: HashSet<OutputFormat>,
   pub format_specific: OutputFormatSpecific,
   /// `true` overwrites existing output files
   pub overwrite: bool,
@@ -65,7 +69,7 @@ pub struct OutputFormatSpecific {
 }
 
 pub struct HtmlSpecific {
-  pub favicon: PathBuf,
-  pub keywords: Vec<String>,
+  pub favicons: HashSet<PathBuf>,
+  pub keywords: HashSet<String>,
 }
 
