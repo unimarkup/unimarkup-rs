@@ -1,0 +1,38 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: paragraph
+description: Test the paragraph block element.
+
+tests:
+  - name: simple-paragraph
+    description: |
+      Parse a simple paragraph.
+
+    input: |
+      Simple paragraph.
+
+    html: |
+      <p>Simple paragraph.</p>
+
+
+  - name: paragraph-with-inlines
+
+    input: |
+      Paragraph **with** inlines.
+
+    html: |
+      <p>Paragraph <strong>with</strong> inlines.</p>
+
+
+# Note: Current implementation does not pass this test
+
+  # - name: multi-line
+
+  #   input: |
+  #     This is a paragraph
+  #     spanning multiple
+  #     lines.
+
+  #   html: |
+  #     <p>This is a paragraph spanning multiple lines.</p>

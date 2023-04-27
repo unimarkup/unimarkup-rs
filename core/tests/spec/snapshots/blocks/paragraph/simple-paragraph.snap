@@ -1,0 +1,12 @@
+---
+source: core/tests/test_runner/mod.rs
+description: "Parse a simple paragraph.\n"
+info: "Test 'paragraph-simple-paragraph' from: spec/markup/blocks/paragraph.yml"
+---
+Paragraph(Simple paragraph.)
+---
+With input:
+
+Simple paragraph.
+
+

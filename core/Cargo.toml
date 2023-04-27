@@ -31,3 +31,7 @@ hex = "0.4"
 icu = { version = "=1.1.0", features = ["experimental"] }
 icu_testdata = { version = "=1.1.2", default-features = false, features = ["buffer", "icu_segmenter"] }
 tracing = "0.1.37"
+
+[dev-dependencies]
+insta = {version = "1.29.0", features = ["serde"]}
+regex = "1.8.1"

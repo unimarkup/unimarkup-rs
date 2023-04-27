@@ -4,8 +4,29 @@ use unimarkup_core::parser;
 use unimarkup_inline::ParseInlines;
 
 use crate::assert_blocks_match;
+use crate::test_runner::as_snapshot::AsSnapshot;
 
 use super::tests_helper::*;
+
+impl AsSnapshot for Paragraph {
+    fn as_snapshot(&self) -> String {
+        let content: String = self
+            .content
+            .iter()
+            .map(|inline| inline.as_string())
+            .collect();
+
+        let is_multiline = content.lines().count() > 1;
+
+        if is_multiline {
+            let content: String = content.lines().map(|line| format!("\t{line}\n")).collect();
+            let content = content.trim_end();
+            format!("Paragraph(\n{content}\n)")
+        } else {
+            format!("Paragraph({content})")
+        }
+    }
+}
 
 #[test]
 fn test__parse__valid_paragraph_with_heading() {
