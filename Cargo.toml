@@ -2,6 +2,7 @@
 members = [
     "render",
     "cli",
+    "commons",
     "core",
     "inline",
     "system-tests"

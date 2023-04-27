@@ -1,0 +1,16 @@
+[package]
+name = "unimarkup-commons"
+description = "Crate providing common functionalities needed in core, inline, and render."
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+logid.workspace = true
+once_cell.workspace = true
