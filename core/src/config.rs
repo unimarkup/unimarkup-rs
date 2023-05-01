@@ -262,7 +262,16 @@ pub struct Config {
 
 /// Possible output formats for a Unimarkup file
 #[derive(
-    Debug, PartialEq, Eq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    Clone,
+    Copy,
+    EnumString,
+    ArgEnum,
+    strum_macros::Display,
+    Serialize,
+    Deserialize,
 )]
 pub enum OutputFormat {
     /// PDF output format
