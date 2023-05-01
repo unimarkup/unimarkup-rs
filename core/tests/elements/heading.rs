@@ -11,7 +11,7 @@ use super::tests_helper::*;
 #[test]
 fn test__parse__valid_heading_with_subheading() {
     let mut config = get_config("tests/test_files/frontend/heading1.um");
-    let input = get_file_content(&config.um_file);
+    let input = get_file_content(&config.input);
 
     let um_blocks =
         parser::parse_unimarkup(&input, &mut config).expect("Parsing heading1.um should pass.");
@@ -22,7 +22,7 @@ fn test__parse__valid_heading_with_subheading() {
 #[test]
 fn test__parse__valid_nested_headings_with_blank_lines() {
     let mut config = get_config("tests/test_files/frontend/heading_line_number.um");
-    let input = get_file_content(&config.um_file);
+    let input = get_file_content(&config.input);
 
     let um_blocks = parser::parse_unimarkup(&input, &mut config)
         .expect("Parsing heading_line_number.um should pass.");
@@ -33,7 +33,7 @@ fn test__parse__valid_nested_headings_with_blank_lines() {
 #[test]
 fn test__parse__valid_multi_line_heading() {
     let mut config = get_config("tests/test_files/frontend/multiline_headings.um");
-    let input = get_file_content(&config.um_file);
+    let input = get_file_content(&config.input);
 
     let um_blocks = parser::parse_unimarkup(&input, &mut config)
         .expect("Parsing multiline_headings.um should pass");

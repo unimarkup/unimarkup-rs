@@ -1,11 +1,15 @@
 use std::path::Path;
 
-use clap::StructOpt;
-use unimarkup_core::config::Config;
+use unimarkup_commons::config::{Config, OutputFormat};
 // use unimarkup_core::{config::Config, document::Document, elements::Blocks};
 
 pub fn get_config(path: &str) -> Config {
-    Config::parse_from(vec!["unimarkup", "--output-formats=html", path])
+    let mut cfg = Config::default();
+
+    cfg.preamble.output.formats.insert(OutputFormat::Html);
+    cfg.input = path.into();
+
+    cfg
 }
 
 pub fn get_file_content(path: &Path) -> String {
