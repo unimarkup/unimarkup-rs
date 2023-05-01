@@ -14,3 +14,6 @@ license.workspace = true
 [dependencies]
 logid.workspace = true
 once_cell.workspace = true
+
+icu = { version = "=1.1.0", features = ["experimental"] }
+icu_testdata = { version = "=1.1.2", default-features = false, features = ["buffer", "icu_segmenter"] }

@@ -1,9 +1,7 @@
 //! Module for parsing of Unimarkup elements.
 
-pub mod symbol;
-
 use logid::capturing::MappedLogId;
-use symbol::Symbol;
+use unimarkup_commons::symbols::{IntoSymbols, Symbol, SymbolKind};
 
 use crate::{
     config::Config,
@@ -16,8 +14,6 @@ use crate::{
     metadata::{Metadata, MetadataKind},
     security,
 };
-
-use self::symbol::{IntoSymbols, SymbolKind};
 
 /// Parser as function that can parse Unimarkup content
 pub type ParserFn = for<'i> fn(&'i [Symbol<'i>]) -> Option<(Blocks, &'i [Symbol<'i>])>;

@@ -7,15 +7,13 @@ use unimarkup_render::{html::Html, render::Render};
 use crate::{
     elements::{blocks::Block, types},
     frontend::parser,
-    parser::{
-        symbol::{Symbol, SymbolKind},
-        TokenizeOutput,
-    },
+    parser::TokenizeOutput,
 };
 use crate::{
     elements::{inlines, Blocks},
     parser::ElementParser,
 };
+use unimarkup_commons::symbols::{Symbol, SymbolKind};
 
 /// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

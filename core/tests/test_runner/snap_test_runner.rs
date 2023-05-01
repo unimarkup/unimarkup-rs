@@ -1,8 +1,6 @@
 use serde::Serialize;
-use unimarkup_core::parser::{
-    symbol::{IntoSymbols, Symbol},
-    MainParser, ParserGenerator,
-};
+use unimarkup_commons::symbols::{IntoSymbols, Symbol};
+use unimarkup_core::parser::{MainParser, ParserGenerator};
 
 use crate::test_runner::as_snapshot::AsSnapshot;
 
