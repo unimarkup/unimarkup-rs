@@ -88,8 +88,8 @@ pub struct Output {
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Hash)]
 pub enum OutputFormat {
-  #[default]
-  Html,
+    #[default]
+    Html,
 }
 
 impl FromStr for OutputFormat {
