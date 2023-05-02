@@ -14,3 +14,4 @@ license.workspace = true
 [dependencies]
 logid.workspace = true
 once_cell.workspace = true
+clap = { version = "4.2", features = ["derive"] }
