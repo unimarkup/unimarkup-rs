@@ -4,11 +4,13 @@ use unimarkup_core::parser;
 use unimarkup_inline::ParseInlines;
 
 use crate::assert_blocks_match;
-use crate::test_runner::as_snapshot::AsSnapshot;
+use crate::test_runner::Snapshot;
+
+use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
 
 use super::tests_helper::*;
 
-impl AsSnapshot for Paragraph {
+impl AsSnapshot for Snapshot<&Paragraph> {
     fn as_snapshot(&self) -> String {
         let content: String = self
             .content
@@ -20,7 +22,6 @@ impl AsSnapshot for Paragraph {
 
         if is_multiline {
             let content: String = content.lines().map(|line| format!("\t{line}\n")).collect();
-            let content = content.trim_end();
             format!("Paragraph(\n{content}\n)")
         } else {
             format!("Paragraph({content})")
@@ -31,7 +32,7 @@ impl AsSnapshot for Paragraph {
 #[test]
 fn test__parse__valid_paragraph_with_heading() {
     let mut config = get_config("tests/test_files/frontend/paragraph1.um");
-    let input = get_file_content(&config.um_file);
+    let input = get_file_content(&config.input);
 
     let um_blocks =
         parser::parse_unimarkup(&input, &mut config).expect("Parsing paragraph1.um should pass.");
@@ -42,7 +43,7 @@ fn test__parse__valid_paragraph_with_heading() {
 #[test]
 fn test__parse__valid_paragraph_with_multi_line_heading() {
     let mut config = get_config("tests/test_files/frontend/paragraph2.um");
-    let input = get_file_content(&config.um_file);
+    let input = get_file_content(&config.input);
 
     let um_blocks =
         parser::parse_unimarkup(&input, &mut config).expect("Parsing paragraph2.um should pass.");
@@ -52,7 +53,7 @@ fn test__parse__valid_paragraph_with_multi_line_heading() {
 #[test]
 fn test__parse__valid_paragraphs_with_sub_heading() {
     let mut config = get_config("tests/test_files/frontend/paragraph3.um");
-    let input = get_file_content(&config.um_file);
+    let input = get_file_content(&config.input);
 
     let um_blocks =
         parser::parse_unimarkup(&input, &mut config).expect("Parsing paragraph3.um should pass.");

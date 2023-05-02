@@ -1,12 +1,9 @@
 //! Module for parsing of Unimarkup elements.
 
-pub mod symbol;
-
 use logid::capturing::MappedLogId;
-use symbol::Symbol;
+use unimarkup_commons::symbols::{IntoSymbols, Symbol, SymbolKind};
 
 use crate::{
-    config::Config,
     document::Document,
     elements::{
         atomic::{Heading, Paragraph},
@@ -16,8 +13,7 @@ use crate::{
     metadata::{Metadata, MetadataKind},
     security,
 };
-
-use self::symbol::{IntoSymbols, SymbolKind};
+use unimarkup_commons::config::Config;
 
 /// Parser as function that can parse Unimarkup content
 pub type ParserFn = for<'i> fn(&'i [Symbol<'i>]) -> Option<(Blocks, &'i [Symbol<'i>])>;
@@ -175,7 +171,7 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document
     };
 
     let metadata = Metadata {
-        file: config.um_file.clone(),
+        file: config.input.clone(),
         contenthash: security::get_contenthash(um_content),
         preamble: String::new(),
         kind: MetadataKind::Root,

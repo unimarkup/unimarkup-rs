@@ -6,7 +6,7 @@ use std::{
 
 use clap::{Args, Parser, ValueEnum};
 
-#[derive(Parser)]
+#[derive(Parser, Debug, PartialEq, Eq, Clone, Default)]
 #[command(author, version, about, long_about = None)]
 pub struct Config {
     #[command(flatten)]
@@ -16,13 +16,13 @@ pub struct Config {
     pub input: PathBuf,
 }
 
-#[derive(Args, Clone)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MergingConfig {
     #[arg(long)]
     pub ignore_preamble: bool,
 }
 
-#[derive(Args, Clone)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
 pub struct Preamble {
     #[command(flatten)]
     pub output: Output,
@@ -36,7 +36,7 @@ pub struct Preamble {
     pub i18n: I18n,
 }
 
-#[derive(Args, Clone)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
 pub struct I18n {
     #[arg(default_value_t = String::from("en-US"))]
     pub lang: String,
@@ -44,7 +44,7 @@ pub struct I18n {
     pub langs: HashSet<String>,
 }
 
-#[derive(Args, Clone)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
 pub struct RenderConfig {
     #[arg(long, value_parser = parse_to_hashset::<String>)]
     pub ignore: HashSet<String>,
@@ -57,14 +57,14 @@ pub struct RenderConfig {
 // TODO: Instead of PathBufs, file contents should be parsed on deserialization.
 // This makes it easier to access the parsed data without creating another config struct.
 // It also makes compiling faster for bad inputs, since it would break before parsing starts.
-#[derive(Args, Clone)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
 pub struct Citedata {
     pub style: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>)]
     pub references: HashSet<PathBuf>,
 }
 
-#[derive(Args, Clone)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
 pub struct Metadata {
     pub title: Option<String>,
     #[arg(long, value_parser = parse_to_hashset::<String>)]
@@ -75,7 +75,7 @@ pub struct Metadata {
     pub fonts: HashSet<PathBuf>,
 }
 
-#[derive(Args, Clone)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
 pub struct Output {
     pub file: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<OutputFormat>)]
@@ -86,9 +86,10 @@ pub struct Output {
     pub overwrite: bool,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Hash)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Hash)]
 pub enum OutputFormat {
-    Html,
+  #[default]
+  Html,
 }
 
 impl FromStr for OutputFormat {
@@ -102,13 +103,13 @@ impl FromStr for OutputFormat {
     }
 }
 
-#[derive(Args, Clone)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
 pub struct OutputFormatSpecific {
     #[command(flatten)]
     pub html: HtmlSpecific,
 }
 
-#[derive(Args, Clone)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
 pub struct HtmlSpecific {
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>)]
     pub favicons: HashSet<PathBuf>,
