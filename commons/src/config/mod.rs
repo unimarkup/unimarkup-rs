@@ -5,38 +5,46 @@ use std::{
 };
 
 use clap::{Args, Parser, ValueEnum};
+use serde::{Deserialize, Serialize};
 
-#[derive(Parser, Debug, PartialEq, Eq, Clone, Default)]
+#[derive(Parser, Debug, PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
 #[command(author, version, about, long_about = None)]
 pub struct Config {
     #[command(flatten)]
+    #[serde(flatten)]
     pub preamble: Preamble,
     #[command(flatten)]
+    #[serde(flatten)]
     pub merging: MergingConfig,
     pub input: PathBuf,
 }
 
-#[derive(Args, Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct MergingConfig {
     #[arg(long)]
     pub ignore_preamble: bool,
 }
 
-#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Preamble {
     #[command(flatten)]
+    #[serde(flatten)]
     pub output: Output,
     #[command(flatten)]
+    #[serde(flatten)]
     pub metadata: Metadata,
     #[command(flatten)]
+    #[serde(flatten)]
     pub cite: Citedata,
     #[command(flatten)]
+    #[serde(flatten)]
     pub render: RenderConfig,
     #[command(flatten)]
+    #[serde(flatten)]
     pub i18n: I18n,
 }
 
-#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct I18n {
     #[arg(default_value_t = String::from("en-US"))]
     pub lang: String,
@@ -44,7 +52,7 @@ pub struct I18n {
     pub langs: HashSet<String>,
 }
 
-#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderConfig {
     #[arg(long, value_parser = parse_to_hashset::<String>)]
     pub ignore: HashSet<String>,
@@ -57,14 +65,14 @@ pub struct RenderConfig {
 // TODO: Instead of PathBufs, file contents should be parsed on deserialization.
 // This makes it easier to access the parsed data without creating another config struct.
 // It also makes compiling faster for bad inputs, since it would break before parsing starts.
-#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Citedata {
     pub style: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>)]
     pub references: HashSet<PathBuf>,
 }
 
-#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Metadata {
     pub title: Option<String>,
     #[arg(long, value_parser = parse_to_hashset::<String>)]
@@ -75,18 +83,32 @@ pub struct Metadata {
     pub fonts: HashSet<PathBuf>,
 }
 
-#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Output {
     pub file: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<OutputFormat>)]
     pub formats: HashSet<OutputFormat>,
     #[command(flatten)]
+    #[serde(flatten)]
     pub format_specific: OutputFormatSpecific,
     /// `true` overwrites existing output files
     pub overwrite: bool,
 }
 
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Hash)]
+#[derive(
+    Default,
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    ValueEnum,
+    Hash,
+    Serialize,
+    Deserialize,
+)]
 pub enum OutputFormat {
     #[default]
     Html,
@@ -103,13 +125,14 @@ impl FromStr for OutputFormat {
     }
 }
 
-#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OutputFormatSpecific {
     #[command(flatten)]
+    #[serde(flatten)]
     pub html: HtmlSpecific,
 }
 
-#[derive(Args, Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HtmlSpecific {
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>)]
     pub favicons: HashSet<PathBuf>,
