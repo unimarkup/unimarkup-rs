@@ -7,14 +7,14 @@ use std::{
 use clap::{Args, Parser, ValueEnum};
 use serde::{Deserialize, Serialize};
 
+const UNIMARKUP_NAME: &str = "unimarkup";
+
 #[derive(Parser, Debug, PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
-#[command(author, version, about, long_about = None)]
+#[command(name = UNIMARKUP_NAME, author, version, about, long_about = None)]
 pub struct Config {
     #[command(flatten)]
-    #[serde(flatten)]
     pub preamble: Preamble,
     #[command(flatten)]
-    #[serde(flatten)]
     pub merging: MergingConfig,
     pub input: PathBuf,
 }
