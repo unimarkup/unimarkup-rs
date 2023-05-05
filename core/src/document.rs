@@ -3,7 +3,7 @@
 use unimarkup_render::{html::Html, render::Render};
 
 use crate::{elements::Blocks, metadata::Metadata};
-use unimarkup_commons::config::{Config, OutputFormat};
+use unimarkup_commons::config::{output::OutputFormat, Config};
 
 /// Struct representing a Unimarkup document
 #[derive(Default, Debug)]

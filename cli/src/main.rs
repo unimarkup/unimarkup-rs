@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use clap::Parser;
 use log_id::CLI_LOG_ID_MAP;
 use logid::{capturing::LogIdTracing, log_id::LogId};
-use unimarkup_commons::config::OutputFormat;
+use unimarkup_commons::config::output::OutputFormat;
 use unimarkup_core::config::{Config, OutputFormat as CoreOutputFormat};
 
 use crate::log_id::{GeneralErrLogId, GeneralInfLogId};

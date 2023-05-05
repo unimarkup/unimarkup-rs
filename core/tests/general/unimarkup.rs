@@ -1,4 +1,4 @@
-use unimarkup_commons::config::{Config, OutputFormat};
+use unimarkup_commons::config::{output::OutputFormat, Config};
 
 #[test]
 fn test__compile__empty_content() {

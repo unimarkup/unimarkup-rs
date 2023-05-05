@@ -6,7 +6,7 @@ use logid::{
     capturing::{LogIdTracing, MappedLogId},
     log_id::LogId,
 };
-use unimarkup_commons::config::{Config, OutputFormat};
+use unimarkup_commons::config::{output::OutputFormat, Config};
 
 use crate::log_id::{GeneralErrLogId, GeneralInfLogId, CLI_LOG_ID_MAP};
 

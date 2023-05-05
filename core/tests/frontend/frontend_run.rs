@@ -1,4 +1,4 @@
-use unimarkup_commons::config::{Config, OutputFormat};
+use unimarkup_commons::config::{output::OutputFormat, Config};
 use unimarkup_core::frontend;
 
 #[test]

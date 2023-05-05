@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use unimarkup_commons::config::{Config, OutputFormat};
+use unimarkup_commons::config::{output::OutputFormat, Config};
 // use unimarkup_core::{config::Config, document::Document, elements::Blocks};
 
 pub fn get_config(path: &str) -> Config {
