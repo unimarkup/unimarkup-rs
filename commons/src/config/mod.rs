@@ -4,13 +4,15 @@ use std::{
     str::FromStr,
 };
 
-use clap::{Args, Parser, ValueEnum};
+use clap::{crate_authors, Args, Parser, ValueEnum};
 use serde::{Deserialize, Serialize};
 
 const UNIMARKUP_NAME: &str = "unimarkup";
+const ABOUT: &str = "The official compiler for Unimarkup.";
+const HELP_TEMPLATE: &str = "{about-section}\nAuthors: {author}";
 
 #[derive(Parser, Debug, PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
-#[command(name = UNIMARKUP_NAME, author, version, about, long_about = None)]
+#[command(name = UNIMARKUP_NAME, help_template = HELP_TEMPLATE, author = crate_authors!(", "), version, about = ABOUT, long_about = None)]
 pub struct Config {
     #[command(flatten)]
     pub preamble: Preamble,
@@ -46,19 +48,21 @@ pub struct Preamble {
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct I18n {
-    #[arg(default_value_t = String::from("en-US"))]
+    #[arg(long, default_value_t = String::from("en-US"))]
     pub lang: String,
-    #[arg(long, value_parser = parse_to_hashset::<String>)]
+    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
     pub langs: HashSet<String>,
 }
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderConfig {
-    #[arg(long, value_parser = parse_to_hashset::<String>)]
+    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
     pub ignore: HashSet<String>,
-    #[arg(long, value_parser = parse_parameter)]
+    #[arg(long, value_parser = parse_parameter, required = false, default_value = "")]
     pub parameter: HashMap<String, String>,
+    #[arg(long)]
     pub keep_comments: bool,
+    #[arg(long)]
     pub non_strict: bool,
 }
 
@@ -67,24 +71,29 @@ pub struct RenderConfig {
 // It also makes compiling faster for bad inputs, since it would break before parsing starts.
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Citedata {
+    #[arg(long)]
     pub style: Option<PathBuf>,
-    #[arg(long, value_parser = parse_to_hashset::<PathBuf>)]
+    #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
     pub references: HashSet<PathBuf>,
 }
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Metadata {
+    #[arg(long)]
     pub title: Option<String>,
-    #[arg(long, value_parser = parse_to_hashset::<String>)]
+    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
     pub authors: HashSet<String>,
+    #[arg(long)]
     pub description: Option<String>,
+    #[arg(long)]
     pub base: Option<PathBuf>,
-    #[arg(long, value_parser = parse_to_hashset::<PathBuf>)]
+    #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
     pub fonts: HashSet<PathBuf>,
 }
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Output {
+    #[arg(long)]
     pub file: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<OutputFormat>)]
     pub formats: HashSet<OutputFormat>,
@@ -92,6 +101,7 @@ pub struct Output {
     #[serde(flatten)]
     pub format_specific: OutputFormatSpecific,
     /// `true` overwrites existing output files
+    #[clap(long)]
     pub overwrite: bool,
 }
 
@@ -134,9 +144,9 @@ pub struct OutputFormatSpecific {
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HtmlSpecific {
-    #[arg(long, value_parser = parse_to_hashset::<PathBuf>)]
+    #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
     pub favicons: HashSet<PathBuf>,
-    #[arg(long, value_parser = parse_to_hashset::<String>)]
+    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
     pub keywords: HashSet<String>,
 }
 
