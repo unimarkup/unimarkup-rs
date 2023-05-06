@@ -1,10 +1,7 @@
-use std::collections::HashSet;
-
 use clap::Parser;
 use log_id::CLI_LOG_ID_MAP;
 use logid::{capturing::LogIdTracing, log_id::LogId};
-use unimarkup_commons::config::OutputFormat;
-use unimarkup_core::config::{Config, OutputFormat as CoreOutputFormat};
+use unimarkup_commons::config::Config;
 
 use crate::log_id::{GeneralErrLogId, GeneralInfLogId};
 
@@ -16,31 +13,7 @@ fn main() {
     logger::init_logger();
 
     match Config::try_parse() {
-        Ok(config) => {
-            let mut cfg: unimarkup_commons::config::Config = unimarkup_commons::config::Config {
-                input: config.um_file,
-                ..Default::default()
-            };
-
-            let out_formats: Vec<_> = config
-                .out_formats
-                .map(|formats| {
-                    formats
-                        .iter()
-                        .filter_map(|format| {
-                            if matches!(format, CoreOutputFormat::Html) {
-                                Some(OutputFormat::Html)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect()
-                })
-                .unwrap_or_default();
-
-            cfg.preamble.output.formats = HashSet::from_iter(out_formats.into_iter());
-            cfg.preamble.output.file = config.out_file;
-
+        Ok(cfg) => {
             let input = cfg.input.clone();
 
             match unimarkup::compile(cfg) {
@@ -73,7 +46,7 @@ fn main() {
                     line!(),
                 )
                 .add_info(&format!(
-                    "Cause: {}",
+                    "Cause:\n\n{}",
                     error.to_string().replace("error: ", "")
                 ));
         }
