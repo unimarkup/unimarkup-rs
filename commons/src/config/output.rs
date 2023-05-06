@@ -10,13 +10,15 @@ use super::{log_id::ConfigErrLogId, parse_to_hashset, ConfigFns, ReplaceIfNone};
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Output {
+    #[arg(long = "output-file")]
     pub file: Option<PathBuf>,
-    #[arg(long, value_parser = parse_to_hashset::<OutputFormat>)]
+    #[arg(long, alias = "output-formats", value_parser = parse_to_hashset::<OutputFormat>)]
     pub formats: HashSet<OutputFormat>,
     #[command(flatten)]
     #[serde(flatten)]
     pub format_specific: OutputFormatSpecific,
     /// `true` overwrites existing output files
+    #[arg(long, alias = "overwrite-out-files")]
     pub overwrite: bool,
 }
 
@@ -119,9 +121,9 @@ impl ConfigFns for OutputFormatSpecific {
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HtmlSpecific {
-    #[arg(long, value_parser = parse_to_hashset::<PathBuf>)]
+    #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
     pub favicons: HashSet<PathBuf>,
-    #[arg(long, value_parser = parse_to_hashset::<String>)]
+    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
     pub keywords: HashSet<String>,
 }
 

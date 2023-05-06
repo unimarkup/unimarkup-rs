@@ -50,9 +50,9 @@ impl ConfigFns for Preamble {
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct I18n {
-    #[arg(default_value_t = String::from("en-US"))]
+    #[arg(long, default_value_t = String::from("en-US"))]
     pub lang: String,
-    #[arg(long, value_parser = parse_to_hashset::<String>)]
+    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
     pub langs: HashSet<String>,
 }
 
@@ -70,11 +70,13 @@ impl ConfigFns for I18n {
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderConfig {
-    #[arg(long, value_parser = parse_to_hashset::<String>)]
+    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
     pub ignore: HashSet<String>,
-    #[arg(long, value_parser = parse_parameter)]
+    #[arg(long, value_parser = parse_parameter, required = false, default_value = "")]
     pub parameter: HashMap<String, String>,
+    #[arg(long)]
     pub keep_comments: bool,
+    #[arg(long)]
     pub allow_unsafe: bool,
 }
 
@@ -95,8 +97,9 @@ impl ConfigFns for RenderConfig {
 // It also makes compiling faster for bad inputs, since it would break before parsing starts.
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Citedata {
+    #[arg(long)]
     pub style: Option<PathBuf>,
-    #[arg(long, value_parser = parse_to_hashset::<PathBuf>)]
+    #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
     pub references: HashSet<PathBuf>,
 }
 
@@ -135,12 +138,15 @@ impl ConfigFns for Citedata {
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Metadata {
+    #[arg(long)]
     pub title: Option<String>,
-    #[arg(long, value_parser = parse_to_hashset::<String>)]
+    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
     pub authors: HashSet<String>,
+    #[arg(long)]
     pub description: Option<String>,
+    #[arg(long)]
     pub base: Option<PathBuf>,
-    #[arg(long, value_parser = parse_to_hashset::<PathBuf>)]
+    #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
     pub fonts: HashSet<PathBuf>,
 }
 

@@ -41,6 +41,7 @@ pub struct Config {
     pub preamble: Preamble,
     #[command(flatten)]
     pub merging: MergingConfig,
+    #[arg(index = 1)]
     pub input: PathBuf,
 }
 
@@ -89,6 +90,10 @@ where
     T: std::str::FromStr + std::cmp::Eq + std::hash::Hash,
     <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
+    if s.is_empty() {
+        return Ok(HashSet::default());
+    }
+
     let try_entries: Result<Vec<T>, _> = s.split(',').map(|e| T::from_str(e.trim())).collect();
     let entries = try_entries.map_err(|err| {
         clap::Error::raw(
@@ -110,5 +115,71 @@ impl<T> ReplaceIfNone<T> for Option<T> {
         if self.is_none() {
             *self = other;
         }
+    }
+}
+
+#[allow(non_snake_case)]
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate__valid_config() {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .canonicalize()
+            .unwrap();
+        path.push("tests/sample_files/empty.um");
+
+        let cfg: Config = Config::parse_from(vec![
+            "unimarkup",
+            "--formats=html",
+            "--title=\"Valid Config Test\"",
+            path.to_str().unwrap(),
+        ]);
+
+        let result = cfg.validate();
+        assert!(
+            result.is_ok(),
+            "Cause: {:?}",
+            COMMONS_LOG_ID_MAP.get_entries(result.unwrap_err())
+        );
+    }
+
+    #[should_panic]
+    #[test]
+    fn validate__invalid_config() {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .canonicalize()
+            .unwrap();
+        path.push("tests/sample_files/empty.um");
+
+        let cfg: Config = Config::parse_from(vec![
+            "unimarkup",
+            "--output-formats=html",
+            //invalid attribute "shouldfail" on purpose
+            "--style=shouldfail",
+            path.to_str().unwrap(),
+        ]);
+
+        cfg.validate().unwrap();
+    }
+
+    #[should_panic]
+    #[test]
+    fn test__validate__invalid_multi_file_config() {
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .canonicalize()
+            .unwrap();
+        path.push("tests/sample_files/empty.um");
+
+        let cfg: Config = Config::parse_from(vec![
+            "unimarkup",
+            "--output-formats=html",
+            //invalid attribute "shouldfail" on purpose
+            &format!("--fonts=shouldfail,{}", path.to_str().unwrap(),),
+            path.to_str().unwrap(),
+        ]);
+
+        cfg.validate().unwrap();
     }
 }
