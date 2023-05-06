@@ -14,8 +14,8 @@ license.workspace = true
 [dependencies]
 logid.workspace = true
 once_cell.workspace = true
+clap.workspace = true
 
-clap = { version = "4.2", features = ["derive"] }
 icu = { version = "=1.1.0", features = ["experimental"] }
 icu_testdata = { version = "=1.1.2", default-features = false, features = ["buffer", "icu_segmenter"] }
 serde = { version = "1.0", features = ["derive"] }
