@@ -1,6 +1,6 @@
 use std::{collections::HashSet, path::PathBuf};
 
-use clap::{Args, Parser};
+use clap::{crate_authors, Args, Parser};
 use logid::{log_id::LogId, set_event_with};
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +13,13 @@ pub mod output;
 pub mod preamble;
 
 const UNIMARKUP_NAME: &str = "unimarkup";
+const ABOUT: &str = "The official compiler for Unimarkup.";
+const HELP_TEMPLATE: &str = r#"
+{before-help}{name} {version} - {about-with-newline}
+Written by: {author-with-newline}
+{usage-heading} {usage}
+
+{all-args}{after-help}"#;
 
 /// Trait defining functions every configuration struct must implement.
 pub trait ConfigFns {
@@ -35,7 +42,7 @@ pub trait ConfigFns {
 }
 
 #[derive(Parser, Debug, PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
-#[command(name = UNIMARKUP_NAME, author, version, about, long_about = None)]
+#[command(name = UNIMARKUP_NAME, help_template = HELP_TEMPLATE, author = crate_authors!(", "), version, about = ABOUT, long_about = None)]
 pub struct Config {
     #[command(flatten)]
     pub preamble: Preamble,

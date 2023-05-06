@@ -1,6 +1,7 @@
 //! Structs and enums representing the unimarkup type system.
 
-use clap::ArgEnum;
+use clap::ValueEnum;
+
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
@@ -13,7 +14,15 @@ pub const ELEMENT_TYPE_DELIMITER: char = '-';
 /// explanation of available Unimarkup elements consult the
 /// official [frontend reference of Unimarkup](https://github.com/Unimarkup/Specification/tree/main/Frontend).
 #[derive(
-    Debug, PartialEq, Eq, Clone, EnumString, ArgEnum, strum_macros::Display, Serialize, Deserialize,
+    Debug,
+    PartialEq,
+    Eq,
+    Clone,
+    EnumString,
+    ValueEnum,
+    strum_macros::Display,
+    Serialize,
+    Deserialize,
 )]
 #[strum(ascii_case_insensitive, serialize_all = "kebab-case")]
 pub enum ElementType {
