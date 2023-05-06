@@ -5,7 +5,6 @@ members = [
     "commons",
     "core",
     "inline",
-    "system-tests"
 ]
 
 # Compile snapshot testing library "insta" with "release" flag so that it runs
