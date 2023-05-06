@@ -1,8 +1,6 @@
 //! Log-id handling functionality for unimarkup-rs
 
-use logid::{
-    id_map::LogIdMap,
-};
+use logid::id_map::LogIdMap;
 use once_cell::sync::Lazy;
 
 /// Map to store [`LogId`]s set in the [`core`] crate.
