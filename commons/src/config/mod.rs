@@ -9,7 +9,12 @@ use serde::{Deserialize, Serialize};
 
 const UNIMARKUP_NAME: &str = "unimarkup";
 const ABOUT: &str = "The official compiler for Unimarkup.";
-const HELP_TEMPLATE: &str = "{about-section}\nAuthors: {author}";
+const HELP_TEMPLATE: &str = r#"
+{before-help}{name} {version} - {about-with-newline}
+Written by: {author-with-newline}
+{usage-heading} {usage}
+
+{all-args}{after-help}"#;
 
 #[derive(Parser, Debug, PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
 #[command(name = UNIMARKUP_NAME, help_template = HELP_TEMPLATE, author = crate_authors!(", "), version, about = ABOUT, long_about = None)]
