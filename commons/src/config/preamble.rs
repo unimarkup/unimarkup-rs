@@ -97,7 +97,7 @@ impl ConfigFns for RenderConfig {
 // It also makes compiling faster for bad inputs, since it would break before parsing starts.
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Citedata {
-    #[arg(long)]
+    #[arg(long = "citation-style")]
     pub style: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
     pub references: HashSet<PathBuf>,

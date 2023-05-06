@@ -164,7 +164,7 @@ mod tests {
             "unimarkup",
             "--output-formats=html",
             //invalid attribute "shouldfail" on purpose
-            "--style=shouldfail",
+            "--citation-style=shouldfail",
             path.to_str().unwrap(),
         ]);
 
