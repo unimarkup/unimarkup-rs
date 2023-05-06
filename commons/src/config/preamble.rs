@@ -70,7 +70,7 @@ impl ConfigFns for I18n {
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderConfig {
-    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
+    #[arg(long = "ignore-file", value_parser = parse_ignore_file, required = false, default_value = "")]
     pub ignore: HashSet<String>,
     #[arg(long, value_parser = parse_parameter, required = false, default_value = "")]
     pub parameter: HashMap<String, String>,
@@ -179,4 +179,10 @@ pub fn parse_parameter(_s: &str) -> Result<HashMap<String, String>, clap::Error>
     //TODO: Implement once parameter parser is implemented
 
     Ok(HashMap::default())
+}
+
+pub fn parse_ignore_file(_s: &str) -> Result<HashSet<String>, clap::Error> {
+    //TODO: Implement once ignore file parser is implemented
+
+    Ok(HashSet::default())
 }
