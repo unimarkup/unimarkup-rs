@@ -43,7 +43,7 @@ impl AsSnapshot for Snapshot<&Block> {
 macro_rules! snapshot_parser {
     ($ty:ty) => {
         |input| {
-            let parse = Paragraph::generate_parser();
+            let parse = <$ty>::generate_parser();
 
             parse(input)
                 .map(|(block, rest)| (Snapshot(block).as_snapshot(), rest))
