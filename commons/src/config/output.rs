@@ -41,12 +41,13 @@ impl ConfigFns for Output {
             .into());
         }
 
-        if let Some(ref file) = self.file {
+        if let (Some(ref file), false) = (&self.file, self.overwrite) {
             let mut filepath = file.clone();
+
             for format in &self.formats {
                 filepath.set_extension(format.extension());
 
-                if filepath.exists() && !self.overwrite {
+                if filepath.exists() {
                     return Err(set_event_with!(
                         ConfigErrLogId::InvalidConfig,
                         &COMMONS_LOG_ID_MAP,
