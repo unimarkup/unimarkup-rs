@@ -12,10 +12,10 @@ pub struct SnapTestRunner<'a, I = ()> {
 }
 
 impl<'a> SnapTestRunner<'a> {
-    pub fn with_parser<S, PF>(name: &str, input: S, parser: PF) -> SnapTestRunner<'a, ()>
+    pub fn with_parser<S, PF>(name: &str, input: S, mut parser: PF) -> SnapTestRunner<'a, ()>
     where
         S: IntoSymbols<'a, Vec<Symbol<'a>>> + Clone + Into<&'a str>,
-        PF: for<'s> Fn(&'s [Symbol<'s>]) -> (String, &'s [Symbol<'s>]),
+        PF: for<'s> FnMut(&'s [Symbol<'s>]) -> (String, &'s [Symbol<'s>]),
     {
         let symbols = input.clone().into_symbols();
         let (snapshot, rest) = parser(&symbols);
