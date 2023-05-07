@@ -1,12 +1,16 @@
 //! Entry module for unimarkup-rs.
 
-use std::fs;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use logid::{
     capturing::{LogIdTracing, MappedLogId},
     log_id::LogId,
 };
 use unimarkup_commons::config::{output::OutputFormat, Config};
+use unimarkup_core::document::Document;
 
 use crate::log_id::{GeneralErrLogId, GeneralInfLogId, CLI_LOG_ID_MAP};
 
@@ -44,31 +48,36 @@ pub fn compile(config: Config) -> Result<(), MappedLogId> {
 
     let document = unimarkup_core::unimarkup::compile(&source, config)?;
 
-    let output_formats = document.output_formats();
-    if output_formats.contains(&&OutputFormat::Html) {
-        let html = document.html();
-
-        let mut out_path_html = out_path;
-        out_path_html.set_extension("html");
-
-        (GeneralInfLogId::WritingToFile as LogId).set_event_with(
-            &CLI_LOG_ID_MAP,
-            &format!("Writing to file: {:?}", out_path_html),
-            file!(),
-            line!(),
-        );
-
-        std::fs::write(&out_path_html, html.body).map_err(|err| {
-            (GeneralErrLogId::FailedWritingFile as LogId)
-                .set_event_with(
-                    &CLI_LOG_ID_MAP,
-                    &format!("Could not write to file: {:?}", out_path_html),
-                    file!(),
-                    line!(),
-                )
-                .add_info(&format!("Cause: {}", err))
-        })?;
+    for format in document.output_formats() {
+        match format {
+            OutputFormat::Html => write_html(&document, &out_path)?,
+        }
     }
 
     Ok(())
+}
+
+fn write_html(document: &Document, out_path: impl AsRef<Path>) -> Result<(), MappedLogId> {
+    let html = document.html();
+
+    let mut out_path_html: PathBuf = out_path.as_ref().into();
+    out_path_html.set_extension("html");
+
+    (GeneralInfLogId::WritingToFile as LogId).set_event_with(
+        &CLI_LOG_ID_MAP,
+        &format!("Writing to file: {:?}", out_path_html),
+        file!(),
+        line!(),
+    );
+
+    std::fs::write(&out_path_html, html.body).map_err(|err| {
+        (GeneralErrLogId::FailedWritingFile as LogId)
+            .set_event_with(
+                &CLI_LOG_ID_MAP,
+                &format!("Could not write to file: {:?}", out_path_html),
+                file!(),
+                line!(),
+            )
+            .add_info(&format!("Cause: {}", err))
+    })
 }

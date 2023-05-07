@@ -45,7 +45,7 @@ impl Document {
     }
 
     /// Returns the configured output formats for this Unimarkup document
-    pub fn output_formats(&self) -> Vec<&OutputFormat> {
-        self.config.preamble.output.formats.iter().collect()
+    pub fn output_formats(&self) -> impl Iterator<Item = &OutputFormat> {
+        self.config.preamble.output.formats.iter()
     }
 }
