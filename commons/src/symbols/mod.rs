@@ -101,7 +101,8 @@ impl fmt::Debug for Symbol<'_> {
 }
 
 impl Symbol<'_> {
-    pub(crate) fn is_not_keyword(&self) -> bool {
+    // TODO: extension trait in core?
+    pub fn is_not_keyword(&self) -> bool {
         matches!(
             self.kind,
             SymbolKind::Newline
@@ -128,7 +129,7 @@ impl Symbol<'_> {
     /// position of first symbol until the end of last symbol.
     ///
     /// Note: The input must be same in all symbols!
-    pub(crate) fn flatten(symbols: &[Self]) -> &str {
+    pub fn flatten(symbols: &[Self]) -> &str {
         debug_assert!(symbols
             .windows(2)
             .all(|window| window[0].input == window[1].input));

@@ -1,7 +1,7 @@
 use clap::Parser;
 use log_id::CLI_LOG_ID_MAP;
 use logid::{capturing::LogIdTracing, log_id::LogId};
-use unimarkup_core::config::Config;
+use unimarkup_commons::config::Config;
 
 use crate::log_id::{GeneralErrLogId, GeneralInfLogId};
 
@@ -13,14 +13,14 @@ fn main() {
     logger::init_logger();
 
     match Config::try_parse() {
-        Ok(config) => {
-            let um_file = config.um_file.clone();
+        Ok(cfg) => {
+            let input = cfg.input.clone();
 
-            match unimarkup::compile(config) {
+            match unimarkup::compile(cfg) {
                 Ok(_) => {
                     (GeneralInfLogId::FinishedCompiling as LogId).set_event_with(
                         &CLI_LOG_ID_MAP,
-                        &format!("Finished compiling: {:?}", um_file),
+                        &format!("Finished compiling: {:?}", input),
                         file!(),
                         line!(),
                     );
@@ -29,7 +29,7 @@ fn main() {
                     (GeneralErrLogId::FailedCompiling as LogId)
                         .set_event_with(
                             &CLI_LOG_ID_MAP,
-                            &format!("Failed compiling: {:?}", um_file),
+                            &format!("Failed compiling: {:?}", input),
                             file!(),
                             line!(),
                         )
@@ -46,7 +46,7 @@ fn main() {
                     line!(),
                 )
                 .add_info(&format!(
-                    "Cause: {}",
+                    "Cause:\n\n{}",
                     error.to_string().replace("error: ", "")
                 ));
         }

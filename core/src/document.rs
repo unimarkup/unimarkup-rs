@@ -2,11 +2,8 @@
 
 use unimarkup_render::{html::Html, render::Render};
 
-use crate::{
-    config::{Config, OutputFormat},
-    elements::Blocks,
-    metadata::Metadata,
-};
+use crate::{elements::Blocks, metadata::Metadata};
+use unimarkup_commons::config::{output::OutputFormat, Config};
 
 /// Struct representing a Unimarkup document
 #[derive(Default, Debug)]
@@ -48,7 +45,7 @@ impl Document {
     }
 
     /// Returns the configured output formats for this Unimarkup document
-    pub fn output_formats(&self) -> Option<&Vec<OutputFormat>> {
-        self.config.out_formats.as_ref()
+    pub fn output_formats(&self) -> impl Iterator<Item = &OutputFormat> {
+        self.config.preamble.output.formats.iter()
     }
 }

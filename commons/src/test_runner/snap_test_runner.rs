@@ -1,10 +1,5 @@
+use crate::symbols::{IntoSymbols, Symbol};
 use serde::Serialize;
-use unimarkup_core::parser::{
-    symbol::{IntoSymbols, Symbol},
-    MainParser, ParserGenerator,
-};
-
-use crate::test_runner::as_snapshot::AsSnapshot;
 
 #[derive(Debug)]
 pub struct SnapTestRunner<'a, I = ()> {
@@ -17,15 +12,13 @@ pub struct SnapTestRunner<'a, I = ()> {
 }
 
 impl<'a> SnapTestRunner<'a> {
-    pub fn with_parser<PG, S>(name: &str, input: S) -> SnapTestRunner<'a, ()>
+    pub fn with_parser<S, PF>(name: &str, input: S, mut parser: PF) -> SnapTestRunner<'a, ()>
     where
-        PG: ParserGenerator,
         S: IntoSymbols<'a, Vec<Symbol<'a>>> + Clone + Into<&'a str>,
+        PF: for<'s> FnMut(&'s [Symbol<'s>]) -> (String, &'s [Symbol<'s>]),
     {
         let symbols = input.clone().into_symbols();
-        let parser_fn = PG::generate_parser();
-
-        let (blocks, rest) = parser_fn(&symbols).unwrap();
+        let (snapshot, rest) = parser(&symbols);
 
         assert_eq!(rest.len(), 0, "Whole input should be parsed");
 
@@ -35,28 +28,7 @@ impl<'a> SnapTestRunner<'a> {
             input: Some(input.into()),
             name: name.into(),
             sub_path: None,
-            snapshot: blocks.as_snapshot(),
-        }
-    }
-}
-
-impl<'a> SnapTestRunner<'a> {
-    pub fn with_main_parser<S>(name: &str, input: S) -> SnapTestRunner<'a, ()>
-    where
-        S: IntoSymbols<'a, Vec<Symbol<'a>>> + Clone + Into<&'a str>,
-    {
-        let symbols = input.clone().into_symbols();
-        let parser = MainParser::default();
-
-        let blocks = parser.parse(&symbols);
-
-        SnapTestRunner {
-            info: None,
-            desc: None,
-            input: Some(input.into()),
-            name: name.into(),
-            sub_path: None,
-            snapshot: blocks.as_snapshot(),
+            snapshot,
         }
     }
 }
@@ -120,7 +92,7 @@ macro_rules! run_snap_test {
 
         let mut snap_content = snap_test.snapshot.clone();
         if let Some(ref input) = snap_test.input {
-            let ref_input = format!("---\nWith input:\n\n{}\n", input);
+            let ref_input = format!("\n---\nWith input:\n\n{}\n", input);
             snap_content.push_str(&ref_input);
         }
 
@@ -147,17 +119,18 @@ macro_rules! run_snap_test {
 /// ```
 #[macro_export]
 macro_rules! test_parser_snap {
-    ($file_path:literal, $block_ty:ty) => {
-        let test_content = $crate::test_runner::test_file::get_test_content($file_path);
+    ($paths:expr, $parser_fn:expr) => {
+        let test_content = $crate::test_runner::test_file::get_test_content($paths.0, $paths.1);
 
         for test in &test_content.test_file.tests {
             let mut snap_runner =
-                SnapTestRunner::with_parser::<$block_ty, &str>(&test.name, &test.input).with_info(
-                    format!(
+                SnapTestRunner::with_parser::<&str, _>(&test.name, &test.input, $parser_fn)
+                    .with_info(format!(
                         "Test '{}-{}' from: {}",
-                        &test_content.test_file.name, &test.name, $file_path
-                    ),
-                );
+                        &test_content.test_file.name,
+                        &test.name,
+                        $paths.0.to_string_lossy()
+                    ));
 
             if let Some(ref description) = test.description {
                 snap_runner = snap_runner.with_description(description);
@@ -175,7 +148,7 @@ macro_rules! test_parser_snap {
         let test_content = $crate::test_runner::test_file::get_test_content($file_path);
 
         for test in &test_content.test_file.tests {
-            let mut snap_runner = SnapTestRunner::with_main_parser::<&str>(&test.name, &test.input)
+            let mut snap_runner = SnapTestRunner::with_parser::<&str, _>(&test.name, &test.input)
                 .with_info(format!(
                     "Test '{}-{}' from: {}",
                     &test_content.test_file.name, &test.name, $file_path

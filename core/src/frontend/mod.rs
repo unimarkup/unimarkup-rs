@@ -5,7 +5,8 @@
 
 use logid::capturing::MappedLogId;
 
-use crate::{config::Config, document::Document};
+use crate::document::Document;
+use unimarkup_commons::config::Config;
 
 pub mod log_id;
 pub mod parser;

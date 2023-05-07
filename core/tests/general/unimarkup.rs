@@ -1,13 +1,13 @@
-use clap::Parser;
-use unimarkup_core::config::Config;
+use unimarkup_commons::config::{output::OutputFormat, Config};
 
 #[test]
 fn test__compile__empty_content() {
-    let cfg: Config = Config::parse_from(vec![
-        "unimarkup",
-        "--output-formats=html",
-        "tests/test_files/all_syntax.um",
-    ]);
+    let mut cfg = Config {
+        input: "tests/test_files/all_syntax.um".into(),
+        ..Default::default()
+    };
+
+    cfg.preamble.output.formats.insert(OutputFormat::Html);
 
     let rendered_result = unimarkup_core::unimarkup::compile("", cfg);
 

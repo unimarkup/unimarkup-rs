@@ -9,8 +9,8 @@ use unimarkup_render::render::Render;
 use crate::elements::blocks::Block;
 use crate::elements::{inlines, Blocks};
 use crate::log_id::CORE_LOG_ID_MAP;
-use crate::parser::symbol::{Symbol, SymbolKind};
 use crate::parser::{ElementParser, TokenizeOutput};
+use unimarkup_commons::symbols::{Symbol, SymbolKind};
 
 use super::log_id::AtomicErrLogId;
 

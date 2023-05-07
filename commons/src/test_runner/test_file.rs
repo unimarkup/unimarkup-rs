@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
@@ -41,27 +41,8 @@ pub struct TestContent {
     pub snap_path: PathBuf,
 }
 
-pub fn get_test_content(test_filepath: &str) -> TestContent {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .canonicalize()
-        .unwrap();
-    path.push("tests/");
-    let sanitized_filepath = if test_filepath.starts_with(|c| c == '/' || c == '\\') {
-        &test_filepath[1..]
-    } else {
-        test_filepath
-    };
-    path.push(sanitized_filepath);
-
-    let mut snap_path: PathBuf = path
-        .components()
-        .skip_while(|component| Path::new(component) != Path::new("markup"))
-        .skip(1)
-        .collect();
-
-    snap_path.set_extension("");
-
-    let input = std::fs::read_to_string(&path).unwrap();
+pub fn get_test_content(test_filepath: PathBuf, snap_path: PathBuf) -> TestContent {
+    let input = std::fs::read_to_string(test_filepath).unwrap();
     let test_file: crate::test_runner::test_file::TestFile = serde_yaml::from_str(&input).unwrap();
 
     TestContent {

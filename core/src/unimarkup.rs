@@ -2,9 +2,9 @@
 
 use logid::capturing::MappedLogId;
 
-use crate::config::Config;
 use crate::document::Document;
 use crate::frontend;
+use unimarkup_commons::config::Config;
 
 /// Compiles Unimarkup content, and returns a [`Document`] representing the given content.
 ///

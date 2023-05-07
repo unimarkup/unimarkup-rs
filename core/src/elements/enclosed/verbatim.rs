@@ -6,8 +6,8 @@ use unimarkup_render::render::Render;
 
 use crate::elements::blocks::Block;
 use crate::elements::Blocks;
-use crate::parser::symbol::{Symbol, SymbolKind};
 use crate::parser::{ElementParser, TokenizeOutput};
+use unimarkup_commons::symbols::{Symbol, SymbolKind};
 
 /// Structure of a Unimarkup verbatim block element.
 #[derive(Debug, PartialEq, Eq, Clone)]
