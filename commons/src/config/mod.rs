@@ -37,7 +37,7 @@ pub trait ConfigFns {
 
     /// Returns `true` if `validate()` returned `Ok`.
     fn is_valid(&self) -> bool {
-        Self::validate(self).is_ok()
+        ConfigFns::validate(self).is_ok()
     }
 }
 
