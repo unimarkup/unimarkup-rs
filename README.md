@@ -16,6 +16,7 @@ We use the following tools for development:
 This repository is split into several crates:
 
 - [unimarkup](/cli/README.md) ... This crate is located under [/cli](/cli/README.md), and is a CLI wrapper over [core](/core/README.md)
+- [unimarkup-commons](/commons/README.md) ... This crate contains common functionalities needed in other Unimarkup crates
 - [unimarkup-core](/core/README.md) ... This crate contains the core reference implementation
 - [unimarkup-inline](/inline/README.md) ... This crate contains the reference compiler for inline elements
 - [unimarkup-render](/render/README.md) ... This crate contains traits needed in **core** and **inline** to render Unimarkup content to supported output formats

@@ -1,6 +1,6 @@
 [package]
 name = "unimarkup-commons"
-description = "Crate providing common functionalities needed in core, inline, and render."
+description = "Crate providing common functionalities needed in other Unimarkup crates."
 readme = "README.md"
 version.workspace = true
 edition.workspace = true
