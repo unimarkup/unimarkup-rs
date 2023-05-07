@@ -30,6 +30,7 @@ hex = "0.4"
 tracing = "0.1.37"
 
 [dev-dependencies]
+clap.workspace = true
 insta = {version = "1.29.0", features = ["serde"]}
 unimarkup-commons = { path ="../commons/", version = "0", features = ["testing"] }
 regex = "1.8.1"
