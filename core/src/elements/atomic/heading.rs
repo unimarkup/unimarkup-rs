@@ -56,6 +56,7 @@ impl From<HeadingLevel> for u8 {
     fn from(level: HeadingLevel) -> Self {
         match level {
             HeadingLevel::Level1 => 1,
+            HeadingLevel::Level2 => 2,
             HeadingLevel::Level3 => 3,
             HeadingLevel::Level4 => 4,
             HeadingLevel::Level5 => 5,
