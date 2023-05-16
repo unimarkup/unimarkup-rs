@@ -1,5 +1,7 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
+use unimarkup_commons::scanner::position::Position as CommonsPos;
+
 use super::resolver::Resolved;
 use super::ContentOption;
 use crate::{Inline, Symbol};
@@ -740,6 +742,16 @@ impl Sub for Spacing {
 pub struct Span {
     pub(crate) start: Position,
     pub(crate) end: Position,
+}
+
+// TODO: remove this once we switch to `unimarkup_commons::scanner::position::Position` everywhere.
+impl From<CommonsPos> for Position {
+    fn from(value: CommonsPos) -> Self {
+        Self {
+            line: value.line,
+            column: value.col_grapheme,
+        }
+    }
 }
 
 impl Span {
