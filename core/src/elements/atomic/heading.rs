@@ -10,7 +10,7 @@ use crate::elements::blocks::Block;
 use crate::elements::{inlines, Blocks};
 use crate::log_id::CORE_LOG_ID_MAP;
 use crate::parser::{ElementParser, TokenizeOutput};
-use unimarkup_commons::symbols::{Symbol, SymbolKind};
+use unimarkup_commons::scanner::{Symbol, SymbolKind};
 
 use super::log_id::AtomicErrLogId;
 
@@ -56,7 +56,6 @@ impl From<HeadingLevel> for u8 {
     fn from(level: HeadingLevel) -> Self {
         match level {
             HeadingLevel::Level1 => 1,
-            HeadingLevel::Level2 => 2,
             HeadingLevel::Level3 => 3,
             HeadingLevel::Level4 => 4,
             HeadingLevel::Level5 => 5,

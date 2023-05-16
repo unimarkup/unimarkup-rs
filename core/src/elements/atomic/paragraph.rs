@@ -13,7 +13,7 @@ use crate::{
     elements::{inlines, Blocks},
     parser::ElementParser,
 };
-use unimarkup_commons::symbols::{Symbol, SymbolKind};
+use unimarkup_commons::scanner::{Symbol, SymbolKind};
 
 /// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

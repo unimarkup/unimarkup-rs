@@ -1,7 +1,7 @@
 //! Module for parsing of Unimarkup elements.
 
 use logid::capturing::MappedLogId;
-use unimarkup_commons::symbols::{IntoSymbols, Symbol, SymbolKind};
+use unimarkup_commons::scanner::{IntoSymbols, Symbol, SymbolKind};
 
 use crate::{
     document::Document,

@@ -1,4 +1,4 @@
-use crate::symbols::{IntoSymbols, Symbol};
+use crate::scanner::{IntoSymbols, Symbol};
 use serde::Serialize;
 
 #[derive(Debug)]
