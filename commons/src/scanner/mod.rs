@@ -15,7 +15,7 @@ pub enum SymbolKind {
     Plain,
     /// Any non-linebreaking whitespace
     Whitespace,
-    /// Line break
+    /// A line break literal (for example `\n` or '\r\n')
     Newline,
     /// Empty line, can be separator between blocks
     Blankline,
@@ -23,6 +23,42 @@ pub enum SymbolKind {
     Verbatim,
     /// End of Unimarkup document
     EOI,
+
+    /// The backslash (`\`) is used for escaping other symbols.
+    Backslash,
+    /// The start (`*`) literal is used for bold and/or italic formatting.
+    Star,
+    /// The underline (`_`) literal is used for underline and/or subscript formatting.
+    Underline,
+    /// The caret (`^`) literal is used for superscript formatting.
+    Caret,
+    /// The tick (```) literal is used for verbatim formatting.
+    Tick,
+    /// The overline (`‾`) literal is used for overline formatting.
+    Overline,
+    /// The pipe (`|`) literal is used for highlight formatting.
+    Pipe,
+    /// The tilde (`~`) literal is used for strikethrough formatting.
+    Tilde,
+    /// The quote (`"`) literal is used for quotation formatting.
+    Quote,
+    /// The dollar (`$`) literal is used for math mode formatting.
+    Dollar,
+    /// The open parentheses (`(`) literal is used for additional data to text group elements (e.g.
+    /// image insert).
+    OpenParenthesis,
+    /// The close parentheses (`)`) literal is used to close the additional data to text group.
+    CloseParenthesis,
+    /// The open bracket (`[`) literal is used for text group elements.
+    OpenBracket,
+    /// The close bracket (`]`) literal is used for text group elements.
+    CloseBracket,
+    /// The open brace (`{`) literal is used for inline attributes.
+    OpenBrace,
+    /// The close brace (`}`) literal is used for inline attributes.
+    CloseBrace,
+    /// A colon literal used for alias substitutions (`::heart::`).
+    Colon,
 }
 
 impl Default for SymbolKind {
@@ -92,6 +128,23 @@ impl Symbol<'_> {
             SymbolKind::Whitespace => &self.input[self.offset.start..self.offset.end],
             SymbolKind::Newline | SymbolKind::Blankline => "\n",
             SymbolKind::EOI => "",
+            SymbolKind::Backslash => "\\",
+            SymbolKind::Star => "*",
+            SymbolKind::Underline => "_",
+            SymbolKind::Caret => "^",
+            SymbolKind::Tick => "`",
+            SymbolKind::Overline => "‾",
+            SymbolKind::Pipe => "|",
+            SymbolKind::Tilde => "~",
+            SymbolKind::Quote => "\"",
+            SymbolKind::Dollar => "$",
+            SymbolKind::OpenParenthesis => "(",
+            SymbolKind::CloseParenthesis => ")",
+            SymbolKind::OpenBracket => "[",
+            SymbolKind::CloseBracket => "]",
+            SymbolKind::OpenBrace => "{",
+            SymbolKind::CloseBrace => "}",
+            SymbolKind::Colon => ":",
         }
     }
 
