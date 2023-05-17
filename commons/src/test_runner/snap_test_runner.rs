@@ -14,7 +14,7 @@ pub struct SnapTestRunner<'a, I = ()> {
 impl<'a> SnapTestRunner<'a> {
     pub fn with_parser<S, PF>(name: &str, input: S, mut parser: PF) -> SnapTestRunner<'a, ()>
     where
-        S: IntoSymbols<'a, Vec<Symbol<'a>>> + Clone + Into<&'a str>,
+        S: IntoSymbols<'a, Output = Vec<Symbol<'a>>> + Clone + Into<&'a str>,
         PF: for<'s> FnMut(&'s [Symbol<'s>]) -> (String, &'s [Symbol<'s>]),
     {
         let symbols = input.clone().into_symbols();

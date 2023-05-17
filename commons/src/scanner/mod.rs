@@ -191,31 +191,41 @@ impl From<&str> for SymbolKind {
 }
 
 /// Trait for conversion of input into Unimarkup symbols.
-pub trait IntoSymbols<'s, T> {
-    /// Converts input into Unimarkup symbols.
-    fn into_symbols(self) -> T;
+pub trait IntoSymbols<'s> {
+    type Output;
+
+    /// Converts input into collection of Unimarkup symbols.
+    fn into_symbols(self) -> Self::Output;
 }
 
-impl<'s> IntoSymbols<'s, Vec<Symbol<'s>>> for &'s str {
-    fn into_symbols(self) -> Vec<Symbol<'s>> {
+impl<'s> IntoSymbols<'s> for &'s str {
+    type Output = Vec<Symbol<'s>>;
+
+    fn into_symbols(self) -> Self::Output {
         word_split(self)
     }
 }
 
-impl<'s> IntoSymbols<'s, Vec<Symbol<'s>>> for Vec<Symbol<'s>> {
-    fn into_symbols(self) -> Vec<Symbol<'s>> {
+impl<'s> IntoSymbols<'s> for Vec<Symbol<'s>> {
+    type Output = Vec<Symbol<'s>>;
+
+    fn into_symbols(self) -> Self::Output {
         self
     }
 }
 
-impl<'s> IntoSymbols<'s, &'s [Symbol<'s>]> for &'s Vec<Symbol<'s>> {
-    fn into_symbols(self) -> &'s [Symbol<'s>] {
+impl<'s> IntoSymbols<'s> for &'s Vec<Symbol<'s>> {
+    type Output = &'s [Symbol<'s>];
+
+    fn into_symbols(self) -> Self::Output {
         self
     }
 }
 
-impl<'s> IntoSymbols<'s, &'s [Symbol<'s>]> for &'s [Symbol<'s>] {
-    fn into_symbols(self) -> &'s [Symbol<'s>] {
+impl<'s> IntoSymbols<'s> for &'s [Symbol<'s>] {
+    type Output = &'s [Symbol<'s>];
+
+    fn into_symbols(self) -> Self::Output {
         self
     }
 }
