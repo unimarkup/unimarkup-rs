@@ -38,7 +38,7 @@ impl ElementParser for Verbatim {
     fn tokenize<'i>(input: &'i [Symbol<'i>]) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
         let start_delim = input
             .iter()
-            .take_while(|symbol| matches!(symbol.kind, SymbolKind::Verbatim))
+            .take_while(|symbol| matches!(symbol.kind, SymbolKind::Tick))
             .count();
 
         if start_delim < 3 {
@@ -52,13 +52,13 @@ impl ElementParser for Verbatim {
         let content_count = input
             .iter()
             .skip(start_delim)
-            .take_while(|symbol| !matches!(symbol.kind, SymbolKind::Verbatim))
+            .take_while(|symbol| !matches!(symbol.kind, SymbolKind::Tick))
             .count();
 
         let end_delim = input
             .iter()
             .skip(start_delim + content_count)
-            .take_while(|sym| matches!(sym.kind, SymbolKind::Verbatim))
+            .take_while(|sym| matches!(sym.kind, SymbolKind::Tick))
             .count();
 
         if end_delim != start_delim {

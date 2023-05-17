@@ -19,8 +19,6 @@ pub enum SymbolKind {
     Newline,
     /// Empty line, can be separator between blocks
     Blankline,
-    /// Symbol for Verbatim block delimiters
-    Verbatim,
     /// End of Unimarkup document
     EOI,
 
@@ -32,7 +30,7 @@ pub enum SymbolKind {
     Underline,
     /// The caret (`^`) literal is used for superscript formatting.
     Caret,
-    /// The tick (```) literal is used for verbatim formatting.
+    /// The tick (```) literal is used for verbatim blocks and formatting.
     Tick,
     /// The overline (`‾`) literal is used for overline formatting.
     Overline,
@@ -124,7 +122,7 @@ impl Symbol<'_> {
         match self.kind {
             SymbolKind::Hash => "#",
             SymbolKind::Plain => &self.input[self.offset.start..self.offset.end],
-            SymbolKind::Verbatim => "`",
+            SymbolKind::Tick => "`",
             SymbolKind::Whitespace => &self.input[self.offset.start..self.offset.end],
             SymbolKind::Newline | SymbolKind::Blankline => "\n",
             SymbolKind::EOI => "",
@@ -132,7 +130,6 @@ impl Symbol<'_> {
             SymbolKind::Star => "*",
             SymbolKind::Underline => "_",
             SymbolKind::Caret => "^",
-            SymbolKind::Tick => "`",
             SymbolKind::Overline => "‾",
             SymbolKind::Pipe => "|",
             SymbolKind::Tilde => "~",
