@@ -144,7 +144,6 @@ pub trait ParseInlines {
 impl<T> ParseInlines for T
 where
     T: Tokenize,
-    T: ?Sized,
 {
     fn parse_inlines(&self) -> Parser {
         let iter = self.tokens();
