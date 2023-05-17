@@ -167,6 +167,24 @@ impl Symbol<'_> {
 
         &input[start..end]
     }
+
+    /// Flattens the iterator of consecutive symbols. Returns the slice of input starting from start
+    /// position of first symbol until the end of last symbol.
+    ///
+    /// Note: The input must be same in all symbols!
+    pub fn flatten_iter<'s>(mut iter: impl Iterator<Item = &'s Symbol<'s>>) -> Option<&'s str> {
+        let first = iter.next()?;
+        let last = iter.last()?;
+
+        debug_assert!(first.input == last.input);
+
+        let input = first.input;
+
+        let start = first.offset.start;
+        let end = last.offset.end;
+
+        Some(&input[start..end])
+    }
 }
 
 impl From<&str> for SymbolKind {
