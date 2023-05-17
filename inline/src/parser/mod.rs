@@ -143,13 +143,10 @@ pub trait ParseInlines {
 impl<T> ParseInlines for T
 where
     T: Tokenize,
+    T: ?Sized,
 {
-    fn parse_inlines(&self, pos: Option<Position>) -> Parser {
-        let iter = if let Some(pos) = pos {
-            self.tokens_with_offs(pos)
-        } else {
-            self.tokens()
-        };
+    fn parse_inlines(&self, _pos: Option<Position>) -> Parser {
+        let iter = self.tokens();
 
         Parser {
             iter,

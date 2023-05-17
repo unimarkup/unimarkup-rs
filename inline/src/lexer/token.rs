@@ -1,10 +1,10 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-use unimarkup_commons::scanner::position::Position as CommonsPos;
+use unimarkup_commons::scanner::{self, position::Position as CommonsPos, SymbolKind};
 
 use super::resolver::Resolved;
 use super::ContentOption;
-use crate::{Inline, Symbol};
+use crate::Inline;
 
 /// Token lexed from Unimarkup text.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -522,36 +522,36 @@ impl From<&Inline> for TokenKind {
     }
 }
 
-impl From<(Symbol<'_>, usize)> for TokenKind {
-    fn from((symbol, len): (Symbol, usize)) -> Self {
+impl From<(&scanner::Symbol<'_>, usize)> for TokenKind {
+    fn from((symbol, len): (&scanner::Symbol, usize)) -> Self {
         match len {
-            1 => match symbol {
-                Symbol::Star => Self::Italic,
-                Symbol::Underline => Self::Subscript,
-                Symbol::Caret => Self::Superscript,
-                Symbol::Tick => Self::Verbatim,
-                Symbol::Overline => Self::Overline,
-                Symbol::Dollar => Self::Math,
-                Symbol::OpenParenthesis => Self::OpenParens,
-                Symbol::CloseParenthesis => Self::CloseParens,
-                Symbol::OpenBracket => Self::OpenBracket,
-                Symbol::CloseBracket => Self::CloseBracket,
-                Symbol::OpenBrace => Self::OpenBrace,
-                Symbol::CloseBrace => Self::CloseBrace,
+            1 => match symbol.kind {
+                SymbolKind::Star => Self::Italic,
+                SymbolKind::Underline => Self::Subscript,
+                SymbolKind::Caret => Self::Superscript,
+                SymbolKind::Tick => Self::Verbatim,
+                SymbolKind::Overline => Self::Overline,
+                SymbolKind::Dollar => Self::Math,
+                SymbolKind::OpenParenthesis => Self::OpenParens,
+                SymbolKind::CloseParenthesis => Self::CloseParens,
+                SymbolKind::OpenBracket => Self::OpenBracket,
+                SymbolKind::CloseBracket => Self::CloseBracket,
+                SymbolKind::OpenBrace => Self::OpenBrace,
+                SymbolKind::CloseBrace => Self::CloseBrace,
                 _ => Self::Plain,
             },
-            2 => match symbol {
-                Symbol::Star => Self::Bold,
-                Symbol::Underline => Self::Underline,
-                Symbol::Pipe => Self::Highlight,
-                Symbol::Tilde => Self::Strikethrough,
-                Symbol::Quote => Self::Quote,
-                Symbol::Colon => Self::Substitution,
+            2 => match symbol.kind {
+                SymbolKind::Star => Self::Bold,
+                SymbolKind::Underline => Self::Underline,
+                SymbolKind::Pipe => Self::Highlight,
+                SymbolKind::Tilde => Self::Strikethrough,
+                SymbolKind::Quote => Self::Quote,
+                SymbolKind::Colon => Self::Substitution,
                 _ => Self::Plain,
             },
-            3 => match symbol {
-                Symbol::Star => Self::ItalicBold,
-                Symbol::Underline => Self::UnderlineSubscript,
+            3 => match symbol.kind {
+                SymbolKind::Star => Self::ItalicBold,
+                SymbolKind::Underline => Self::UnderlineSubscript,
                 _ => Self::Plain,
             },
             _ => Self::Plain,
