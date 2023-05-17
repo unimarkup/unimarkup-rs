@@ -46,9 +46,7 @@ pub fn heading1_expected_result() -> Blocks {
     let heading_1 = Heading {
         id: String::default(),
         level: HeadingLevel::Level1,
-        content: "head1"
-            .parse_inlines(Some(unimarkup_inline::Position { line: 1, column: 2 }))
-            .collect(),
+        content: "head1".parse_inlines().collect(),
         attributes: None,
         line_nr: 1,
     };
@@ -56,9 +54,7 @@ pub fn heading1_expected_result() -> Blocks {
     let subheading_1 = Heading {
         id: String::default(),
         level: HeadingLevel::Level2,
-        content: "subhead 1"
-            .parse_inlines(Some(unimarkup_inline::Position { line: 3, column: 3 }))
-            .collect(),
+        content: "subhead 1".parse_inlines().collect(),
         attributes: None,
         line_nr: 3,
     };
@@ -75,9 +71,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
     let head1 = Heading {
         id: String::default(),
         level: HeadingLevel::Level1,
-        content: "head1"
-            .parse_inlines(Some(unimarkup_inline::Position { line: 1, column: 2 }))
-            .collect(),
+        content: "head1".parse_inlines().collect(),
         attributes: None,
         line_nr: 1,
     };
@@ -87,9 +81,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
     let subhead_11 = Heading {
         id: String::default(),
         level: HeadingLevel::Level2,
-        content: "subhead 11"
-            .parse_inlines(Some(unimarkup_inline::Position { line: 3, column: 3 }))
-            .collect(),
+        content: "subhead 11".parse_inlines().collect(),
         attributes: None,
         line_nr: 3,
     };
@@ -99,9 +91,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
     let head2 = Heading {
         id: String::default(),
         level: HeadingLevel::Level1,
-        content: "head2"
-            .parse_inlines(Some(unimarkup_inline::Position { line: 5, column: 2 }))
-            .collect(),
+        content: "head2".parse_inlines().collect(),
         attributes: None,
         line_nr: 5,
     };
@@ -111,9 +101,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
     let subhead_21 = Heading {
         id: String::default(),
         level: HeadingLevel::Level2,
-        content: "subhead 21"
-            .parse_inlines(Some(unimarkup_inline::Position { line: 7, column: 3 }))
-            .collect(),
+        content: "subhead 21".parse_inlines().collect(),
         attributes: None,
         line_nr: 7,
     };
@@ -123,12 +111,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
     let head_3 = Heading {
         id: String::default(),
         level: HeadingLevel::Level1,
-        content: "head3"
-            .parse_inlines(Some(unimarkup_inline::Position {
-                line: 10,
-                column: 2,
-            }))
-            .collect(),
+        content: "head3".parse_inlines().collect(),
         attributes: None,
         line_nr: 10,
     };
@@ -138,12 +121,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
     let subhead_31 = Heading {
         id: String::default(),
         level: HeadingLevel::Level2,
-        content: "subhead 31"
-            .parse_inlines(Some(unimarkup_inline::Position {
-                line: 12,
-                column: 3,
-            }))
-            .collect(),
+        content: "subhead 31".parse_inlines().collect(),
         attributes: None,
         line_nr: 12,
     };
@@ -153,12 +131,7 @@ pub fn heading_line_number_expected_result() -> Blocks {
     let subsubhead_311 = Heading {
         id: String::default(),
         level: HeadingLevel::Level3,
-        content: "subsubhead 311"
-            .parse_inlines(Some(unimarkup_inline::Position {
-                line: 14,
-                column: 4,
-            }))
-            .collect(),
+        content: "subsubhead 311".parse_inlines().collect(),
         attributes: None,
         line_nr: 14,
     };
@@ -174,9 +147,7 @@ pub fn multiline_headings_expected_result() -> Blocks {
     let block = Heading {
         id: String::default(),
         level: HeadingLevel::Level1,
-        content: "head1\nmultiline"
-            .parse_inlines(Some(unimarkup_inline::Position { line: 1, column: 2 }))
-            .collect(),
+        content: "head1\nmultiline".parse_inlines().collect(),
         attributes: None,
         line_nr: 1,
     };
@@ -186,9 +157,7 @@ pub fn multiline_headings_expected_result() -> Blocks {
     let block = Heading {
         id: String::default(),
         level: HeadingLevel::Level2,
-        content: "subhead2\nmultiline"
-            .parse_inlines(Some(unimarkup_inline::Position { line: 4, column: 3 }))
-            .collect(),
+        content: "subhead2\nmultiline".parse_inlines().collect(),
         attributes: None,
         line_nr: 4,
     };
@@ -198,12 +167,7 @@ pub fn multiline_headings_expected_result() -> Blocks {
     let paragraph_line_nr = 7;
     let block = Paragraph {
         id: format!("paragraph-{paragraph_line_nr}"),
-        content: "paragraph 2"
-            .parse_inlines(Some(unimarkup_inline::Position {
-                line: paragraph_line_nr,
-                column: 1,
-            }))
-            .collect(),
+        content: "paragraph 2".parse_inlines().collect(),
         attributes: None,
         line_nr: paragraph_line_nr,
     };

@@ -1,6 +1,8 @@
 use std::ops::Not;
 
-use crate::{Spacing, Span, Token, TokenKind};
+use unimarkup_commons::scanner::span::Span;
+
+use crate::{Spacing, Token, TokenKind};
 
 // Token can either be opening one, closing one, or neither
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -50,7 +52,7 @@ impl RawToken {
         self.order();
 
         self.tail.take().map(|mut token| {
-            if self.token.span.start.column < token.token.span.start.column {
+            if self.token.span.start.col_utf8 < token.token.span.start.col_utf8 {
                 let (first, second) = self.token.span.swapped(&token.token.span);
                 self.token.span = first;
                 token.token.span = second;

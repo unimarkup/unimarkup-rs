@@ -5,7 +5,7 @@ use unimarkup_render::render::Render;
 #[test]
 fn test__render_html__valid_escaped_inline() {
     let id = String::from("paragraph-id");
-    let content = "\\*23\\*3".parse_inlines(None).collect();
+    let content = "\\*23\\*3".parse_inlines().collect();
 
     let mut block = Paragraph {
         id: id.clone(),
@@ -24,7 +24,7 @@ fn test__render_html__valid_escaped_inline() {
         "Html file does not match with expected output"
     );
 
-    block.content = "\\ *italic*\\".parse_inlines(None).collect();
+    block.content = "\\ *italic*\\".parse_inlines().collect();
     expected_html = format!("<p id='{}'> <em>italic</em></p>", id);
 
     let result = block.render_html();
@@ -35,7 +35,7 @@ fn test__render_html__valid_escaped_inline() {
         "Html file does not match with expected output"
     );
 
-    block.content = "**\\*only bold\\***".parse_inlines(None).collect();
+    block.content = "**\\*only bold\\***".parse_inlines().collect();
     expected_html = format!("<p id='{}'><strong>*only bold*</strong></p>", id);
 
     let result = block.render_html();

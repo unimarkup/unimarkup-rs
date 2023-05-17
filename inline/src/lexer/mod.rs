@@ -2,7 +2,11 @@ mod resolver;
 mod token;
 
 pub use token::*;
-use unimarkup_commons::scanner::{IntoSymbols, Symbol, SymbolKind};
+use unimarkup_commons::scanner::{
+    position,
+    span::{Span, SpanLen},
+    IntoSymbols, Symbol, SymbolKind,
+};
 
 use crate::{Substitute, Substitutor};
 
@@ -26,7 +30,6 @@ where
 {
     fn tokens(&self) -> Tokens {
         let symbols = self.into_symbols();
-        dbg!(symbols.as_ref());
         let lexer = Lexer {
             input: symbols.as_ref(),
         };
@@ -253,8 +256,8 @@ impl TokenIterator<'_> {
 
         if symbol.is_newline() {
             let spacing = self.spacing_around(1);
-            let start = Position::from(symbol.start);
-            let end = Position::from(symbol.end);
+            let start = symbol.start;
+            let end = symbol.end;
             self.index += 1;
             return Some(Token::new(
                 TokenKind::Newline,
@@ -265,12 +268,13 @@ impl TokenIterator<'_> {
 
         let subst = self.try_lex_substitution(symbol);
 
-        let start_pos = Position::from(symbol.start);
+        let start_pos = symbol.start;
         let end_pos = subst
             .as_ref()
             .map_or_else(|| self.symbol_len(symbol), |subst| subst.span().end);
 
-        let symbol_len = end_pos.column.saturating_sub(start_pos.column);
+        let span = Span::from((start_pos, end_pos));
+        let symbol_len = span.len_grapheme()?;
         let spacing = self.spacing_around(symbol_len);
 
         let kind = subst.as_ref().map_or_else(
@@ -329,7 +333,7 @@ impl TokenIterator<'_> {
     /// [`TokenKind::Italic`]: self::token::TokenKind::Italic
     /// [`TokenKind::Bold`]: self::token::TokenKind::Bold
     /// [`TokenKind::ItalicBold`]: self::token::TokenKind::ItalicBold
-    fn symbol_len(&self, symbol: &Symbol) -> Position {
+    fn symbol_len(&self, symbol: &Symbol) -> position::Position {
         let end_index = self.literal_end_index(symbol);
         let scanned_len = end_index - self.index;
 
@@ -341,7 +345,6 @@ impl TokenIterator<'_> {
         self.get_symbol(idx)
             .expect("Symbol already seen, must exist")
             .end
-            .into()
     }
 
     /// Finds the furthest grapheme in line where, starting from the current cursor position, each grapheme
@@ -403,7 +406,7 @@ impl TokenIterator<'_> {
     /// [`Token`]: self::token::Token
     /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
     fn lex_plain(&mut self) -> Option<Token> {
-        let start_pos: crate::Position = self.get_symbol(self.index)?.start.into();
+        let start_pos: position::Position = self.get_symbol(self.index)?.start;
         let mut content = String::with_capacity(self.symbols.len());
 
         // multiple cases:
@@ -433,9 +436,10 @@ impl TokenIterator<'_> {
         }
 
         // NOTE: index points to the NEXT character, token Span is UP TO that character
-        let end_pos: Position = self.get_symbol(self.index - 1)?.end.into();
+        let end_pos = self.get_symbol(self.index - 1)?.end;
 
-        let len = end_pos.column.saturating_sub(start_pos.column);
+        let span = Span::from((start_pos, end_pos));
+        let len = span.len_grapheme()?;
 
         // TODO: improve this logic
         // let temp_idx = self.index;
@@ -463,8 +467,8 @@ impl TokenIterator<'_> {
         let symbol = self.get_symbol(self.index)?;
 
         // NOTE: index here is pointing to the current grapheme
-        let start_pos = self.get_symbol(self.index)?.start.into(); // escape character
-        let end_pos = start_pos + (0, symbol.len());
+        let start_pos = self.get_symbol(self.index)?.start; // escape character
+        let end_pos = start_pos + SpanLen::from(symbol.len());
 
         let token_kind = if symbol.is_whitespace() {
             TokenKind::Whitespace

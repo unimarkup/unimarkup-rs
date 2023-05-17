@@ -1,6 +1,7 @@
 //! Symbol and helper types and traits for structurization of Unimarkup input.
 
 pub mod position;
+pub mod span;
 
 use icu::segmenter::GraphemeClusterSegmenter;
 use position::{Offset, Position};

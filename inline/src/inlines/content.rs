@@ -3,7 +3,9 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::{Inline, Span, Token, TokenKind};
+use unimarkup_commons::scanner::span::Span;
+
+use crate::{Inline, Token, TokenKind};
 
 /// Content of an [`Inline`].
 ///
@@ -78,7 +80,7 @@ impl NestedContent {
     /// Returns the [`Span`] that this [`NestedContent`] occupies.
     ///
     /// [`NestedContent`]: self::NestedContent
-    /// [`Span`]: crate::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     pub fn span(&self) -> Span {
         self.span
     }
@@ -101,7 +103,7 @@ impl IndexMut<usize> for NestedContent {
 impl PlainContent {
     /// Creates a new `PlainContent` with the given text and [`Span`].
     ///
-    /// [`Span`]: crate::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     pub fn new(content: String, span: Span) -> Self {
         Self { content, span }
     }
@@ -128,7 +130,7 @@ impl PlainContent {
     /// Returns the [`Span`] that this [`PlainContent`] occupies.
     ///
     /// [`PlainContent`]: self::PlainContent
-    /// [`Span`]: crate::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     pub fn span(&self) -> Span {
         self.span
     }
@@ -341,7 +343,7 @@ impl InlineContent<PlainContent, NestedContent> {
 
     /// Updates the [`Span`] that this content occupies.
     ///
-    /// [`Span`]: crate::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     pub(crate) fn set_span(&mut self, span: Span) {
         match self {
             InlineContent::Plain(ref mut plain_content) => plain_content.span = span,

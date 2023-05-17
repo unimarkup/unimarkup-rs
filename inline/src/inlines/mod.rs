@@ -1,4 +1,4 @@
-use crate::{Span, TokenDelimiters, TokenKind};
+use crate::{TokenDelimiters, TokenKind};
 
 mod content;
 mod render;
@@ -7,6 +7,7 @@ mod substitute;
 pub use content::*;
 pub use render::*;
 pub use substitute::*;
+use unimarkup_commons::scanner::span::Span;
 
 /// Representation of Unimarkup inline-formatted text.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -291,7 +292,7 @@ impl Inline {
     /// Returns the [`Span`] that this [`Inline`] occupies.
     ///
     /// [`Inline`]: self::Inline
-    /// [`Span`]: crate::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     pub fn span(&self) -> Span {
         self.as_ref().span()
     }

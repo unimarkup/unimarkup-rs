@@ -1,6 +1,7 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-use unimarkup_commons::scanner::{self, position::Position as CommonsPos, SymbolKind};
+use unimarkup_commons::scanner::span::{Span, SpanLen};
+use unimarkup_commons::scanner::{self, SymbolKind};
 
 use super::resolver::Resolved;
 use super::ContentOption;
@@ -21,7 +22,7 @@ impl Token {
     ///
     /// [`Token`]: self::Token
     /// [`TokenKind`]: self::TokenKind
-    /// [`Span`]: self::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     /// [`Spacing`]: self::Spacing
     pub fn new(kind: TokenKind, span: Span, spacing: Spacing) -> Self {
         Self {
@@ -119,7 +120,7 @@ impl Token {
     /// Returns the [`Span`] that this [`Token`] occupies in original input.
     ///
     /// [`Token`]: self::Token
-    /// [`Span`]: self::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     pub fn span(&self) -> Span {
         self.span
     }
@@ -127,7 +128,7 @@ impl Token {
     /// Updates the [`Span`] that this [`Token`] occupies in original input.
     ///
     /// [`Token`]: self::Token
-    /// [`Span`]: self::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     pub fn set_span(&mut self, span: Span) {
         self.span = span;
     }
@@ -296,14 +297,12 @@ impl Token {
                 any_other_kind => (any_other_kind, any_other_kind),
             };
 
-            let first_span = Span::from((
-                self.span.start(),
-                self.span.start() + (0, first_kind.len() - 1),
-            ));
+            let len = SpanLen::from(first_kind.len() - 1);
+            let first_span = Span::from((self.span.start, self.span.start + len));
 
             let second_span = Span::from((
-                first_span.end() + (0, 1),
-                first_span.end() + (0, second_kind.len()),
+                first_span.end() + SpanLen::from(1),
+                first_span.end() + SpanLen::from(second_kind.len()),
             ));
 
             let first_spacing = self.spacing() - Spacing::Post;
@@ -735,58 +734,8 @@ impl Sub for Spacing {
     }
 }
 
-/// Span used to store information about the space some [`Token`] occupies in Unimarkup document.
-///
-/// [`Token`]: self::Token
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Span {
-    pub(crate) start: Position,
-    pub(crate) end: Position,
-}
-
-// TODO: remove this once we switch to `unimarkup_commons::scanner::position::Position` everywhere.
-impl From<CommonsPos> for Position {
-    fn from(value: CommonsPos) -> Self {
-        Self {
-            line: value.line,
-            column: value.col_grapheme,
-        }
-    }
-}
-
-impl Span {
-    /// Returns the start position of this span.
-    pub fn start(&self) -> Position {
-        self.start
-    }
-
-    /// Returns the end position of this span.
-    pub fn end(&self) -> Position {
-        self.end
-    }
-
-    /// Returns the difference between end and start [`Position`] of this [`Span`].
-    ///
-    /// # Panics
-    ///
-    /// * if [`Span`] occupies multiple lines in original document. Length cannot be approximated
-    ///   in such case, since it is unknown how long each of the lines was.
-    ///
-    /// [`Position`]: self::Position
-    /// [`Span`]: self::Span
-    #[allow(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
-        if self.start.line != self.end.line {
-            panic!("Length cannot be approximated for Spans over multiple lines.");
-        }
-
-        self.end.column - self.start.column
-    }
-
-    fn overlaps(&self, other: Span) -> bool {
-        (self.start >= other.start && self.start <= other.end)
-            || (self.end >= other.start && self.end <= other.end)
-    }
+pub(crate) trait SpanExt {
+    fn overlaps(&self, other: Span) -> bool;
 
     /// Removes the `other` [`Span`] from `self`. In case the spans do not overlap, the `other`
     /// span will be laid over `self` in following manner:
@@ -800,33 +749,47 @@ impl Span {
     ///
     /// Tuple containing the resulting span and the removed span.
     ///
-    /// [`Span`]: self::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
+    fn remove(self, other: Span) -> (Span, Span);
+    fn swapped(&self, other: &Span) -> (Span, Span)
+    where
+        Self: Sized;
+}
+
+impl SpanExt for Span {
+    fn overlaps(&self, other: Span) -> bool {
+        (self.start() >= other.start() && self.start() <= other.end())
+            || (self.end() >= other.start() && self.end() <= other.end())
+    }
+
     fn remove(self, other: Span) -> (Span, Span) {
         let other = if self.overlaps(other) {
             other
-        } else if other.end < self.start {
+        } else if other.end() < self.start() {
             let start = self.start;
-            let end = start + (0, other.len());
+            let end = start + other.len();
 
             Span::from((start, end))
         } else {
             // !self.overlaps implies that in this case other.start > self.end
-            let end = self.end;
-            let start = end - (0, other.len());
+            let end = self.end();
+            let start = end - other.len();
 
             Span::from((start, end))
         };
 
-        let start = if self.start < other.start {
-            self.start
+        // NOTE: from this point forward, assumption is that this function is called
+        // on spans of symbols where len_utf8 == len_utf16 == len_grapheme
+        let start = if self.start() < other.start() {
+            self.start()
         } else {
-            other.end + (0, 1)
+            other.end() + SpanLen::from(1)
         };
 
-        let end = if self.end > other.end {
-            self.end
+        let end = if self.end() > other.end() {
+            self.end()
         } else {
-            other.start - (0, 1)
+            other.start() - SpanLen::from(1)
         };
 
         let removed_span = other;
@@ -835,8 +798,8 @@ impl Span {
         (resulting_span, removed_span)
     }
 
-    pub(crate) fn swapped(&self, other: &Self) -> (Self, Self) {
-        let (mut first, mut second) = if self.start.column < other.start.column {
+    fn swapped(&self, other: &Span) -> (Span, Span) {
+        let (mut first, mut second) = if self.start().col_grapheme < other.start().col_grapheme {
             (*self, *other)
         } else {
             (*other, *self)
@@ -845,91 +808,10 @@ impl Span {
         let first_len = first.len();
         let second_len = second.len();
 
-        first.end.column = first.start.column + second_len;
-        second.start.column = first.end.column + 1;
-        second.end.column = second.start.column + first_len;
+        first.end = first.start + second_len;
+        second.start = first.end + SpanLen::from(1);
+        second.end = second.start + first_len;
 
         (second, first)
-    }
-}
-
-impl From<(Position, Position)> for Span {
-    fn from((start, end): (Position, Position)) -> Self {
-        Self { start, end }
-    }
-}
-
-/// Representation of a position in Unimarkup input.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Position {
-    /// Represents the line in Unimarkup input.
-    pub line: usize,
-
-    /// Represents the column in Unimarkup input.
-    pub column: usize,
-}
-
-impl Position {
-    /// Creates a new position with given line and column.
-    pub fn new(line: usize, column: usize) -> Self {
-        Position { line, column }
-    }
-}
-
-impl Default for Position {
-    fn default() -> Self {
-        Self { line: 1, column: 1 }
-    }
-}
-
-impl AddAssign for Position {
-    fn add_assign(&mut self, rhs: Self) {
-        self.line += rhs.line;
-        self.column += rhs.column;
-    }
-}
-
-impl AddAssign<(usize, usize)> for Position {
-    fn add_assign(&mut self, (line, column): (usize, usize)) {
-        self.line += line;
-        self.column += column;
-    }
-}
-
-impl<T> Add<T> for Position
-where
-    Position: AddAssign<T>,
-{
-    type Output = Position;
-
-    fn add(mut self, rhs: T) -> Self::Output {
-        self += rhs;
-        self
-    }
-}
-
-impl SubAssign for Position {
-    fn sub_assign(&mut self, rhs: Self) {
-        self.line -= rhs.line;
-        self.column -= rhs.column;
-    }
-}
-
-impl SubAssign<(usize, usize)> for Position {
-    fn sub_assign(&mut self, (line, column): (usize, usize)) {
-        self.line -= line;
-        self.column -= column;
-    }
-}
-
-impl<T> Sub<T> for Position
-where
-    Position: SubAssign<T>,
-{
-    type Output = Position;
-
-    fn sub(mut self, rhs: T) -> Self::Output {
-        self -= rhs;
-        self
     }
 }

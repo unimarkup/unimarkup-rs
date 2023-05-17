@@ -171,12 +171,7 @@ impl ElementParser for Heading {
         let Token::Content(symbols) = input[1] else {return None};
         let inline_start = symbols.get(0)?.start;
 
-        let content = Symbol::flatten(symbols)
-            .parse_inlines(Some(unimarkup_inline::Position {
-                line: inline_start.line,
-                column: inline_start.col_utf8,
-            }))
-            .collect();
+        let content = Symbol::flatten(symbols).parse_inlines().collect();
         let line_nr = inline_start.line;
         let block = Self {
             id: String::default(),
@@ -231,7 +226,7 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = "This is a heading".parse_inlines(None).collect();
+            let heading_content = "This is a heading".parse_inlines().collect();
             let id = format!("heading-id-{}", level);
 
             let heading = Heading {
@@ -255,7 +250,7 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = "`This` *is _a_* **heading**".parse_inlines(None).collect();
+            let heading_content = "`This` *is _a_* **heading**".parse_inlines().collect();
             let id = format!("heading-id-{}", level);
 
             let heading = Heading {

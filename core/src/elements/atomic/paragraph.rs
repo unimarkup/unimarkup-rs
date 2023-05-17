@@ -36,13 +36,7 @@ impl Paragraph {}
 
 impl From<&[Symbol<'_>]> for Paragraph {
     fn from(value: &[Symbol<'_>]) -> Self {
-        let inline_start = value[0].start;
-        let content = Symbol::flatten(value)
-            .parse_inlines(Some(unimarkup_inline::Position {
-                line: inline_start.line,
-                column: inline_start.col_utf8,
-            }))
-            .collect();
+        let content = Symbol::flatten(value).parse_inlines().collect();
         let line_nr = value.get(0).map(|symbol| symbol.start.line).unwrap_or(0);
 
         let id = parser::generate_id(&format!(

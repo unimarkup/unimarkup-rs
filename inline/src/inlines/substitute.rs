@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use unimarkup_commons::scanner;
+use unimarkup_commons::scanner::{self, span::Span};
 
 /// ASCII Emojis that can be replaced with their Unicode versions in a Unimarkup text.
 pub const EMOJIS: [(&str, &str); 18] = [
@@ -96,7 +96,7 @@ impl Substitutor<'_> {
         }
     }
 
-    pub(crate) fn try_subst(&self, slice: &str, span: crate::Span) -> Option<Substitute> {
+    pub(crate) fn try_subst(&self, slice: &str, span: Span) -> Option<Substitute> {
         let val = self.direct.get(slice)?;
 
         Some(Substitute {
@@ -112,10 +112,10 @@ impl Substitutor<'_> {
         let slice = scanner::Symbol::flatten_iter(iter.clone())?;
         let mut tmp_iter = iter;
         let first = tmp_iter.next()?;
-        let start = first.start.into();
-        let end = tmp_iter.last().map_or(first.end, |sym| sym.end).into();
+        let start = first.start;
+        let end = tmp_iter.last().map_or(first.end, |sym| sym.end);
 
-        let span = crate::Span { start, end };
+        let span = Span::from((start, end));
 
         self.try_subst(slice, span)
     }
@@ -137,7 +137,7 @@ impl Substitutor<'_> {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) struct Substitute {
     content: String,
-    span: crate::Span,
+    span: Span,
 }
 
 impl Substitute {
@@ -147,7 +147,7 @@ impl Substitute {
     }
 
     /// Returns the length of the content of this Substitute before substitutions have taken place.
-    pub fn span(&self) -> crate::Span {
+    pub fn span(&self) -> Span {
         self.span
     }
 }
