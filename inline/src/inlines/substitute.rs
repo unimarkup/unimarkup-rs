@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::Symbol;
+use unimarkup_commons::scanner;
 
 /// ASCII Emojis that can be replaced with their Unicode versions in a Unimarkup text.
 pub const EMOJIS: [(&str, &str); 18] = [
@@ -105,7 +105,22 @@ impl Substitutor<'_> {
         })
     }
 
-    pub(crate) fn is_start_of_subst(&self, symbol: &Symbol) -> bool {
+    pub(crate) fn try_subst_iter<'a, I>(&self, iter: I) -> Option<Substitute>
+    where
+        I: Iterator<Item = &'a scanner::Symbol<'a>> + Clone,
+    {
+        let slice = scanner::Symbol::flatten_iter(iter.clone())?;
+        let mut tmp_iter = iter;
+        let first = tmp_iter.next()?;
+        let start = first.start.into();
+        let end = tmp_iter.last().map_or(first.end, |sym| sym.end).into();
+
+        let span = crate::Span { start, end };
+
+        self.try_subst(slice, span)
+    }
+
+    pub(crate) fn is_start_of_subst(&self, symbol: &scanner::Symbol) -> bool {
         self.first_grapheme.contains(symbol.as_str())
     }
 
