@@ -2,7 +2,7 @@
 
 pub mod position;
 
-use icu::segmenter::{GraphemeClusterSegmenter, WordSegmenter};
+use icu::segmenter::GraphemeClusterSegmenter;
 use position::{Offset, Position};
 use std::fmt;
 
@@ -202,7 +202,7 @@ impl<'s> IntoSymbols<'s> for &'s str {
     type Output = Vec<Symbol<'s>>;
 
     fn into_symbols(self) -> Self::Output {
-        word_split(self)
+        grapheme_split(self)
     }
 }
 
@@ -231,34 +231,19 @@ impl<'s> IntoSymbols<'s> for &'s [Symbol<'s>] {
 }
 
 // TODO: pass locale from Config to this function.
-fn word_split(input: &str) -> Vec<Symbol> {
+fn grapheme_split(input: &str) -> Vec<Symbol> {
     let segmenter =
-        WordSegmenter::try_new_unstable(&icu_testdata::unstable()).expect("Data exists");
-    let grapheme_segmenter =
         GraphemeClusterSegmenter::try_new_unstable(&icu_testdata::unstable()).expect("Data exists");
 
-    let mut words: Vec<Symbol> = Vec::new();
+    let mut symbols: Vec<Symbol> = Vec::new();
     let mut curr_pos: Position = Position::default();
     let mut prev_offset = 0;
 
     // skip(1) to ignore break at start of input
     for offset in segmenter.segment_str(input).skip(1) {
-        if let Some(word) = input.get(prev_offset..offset) {
-            let kind = SymbolKind::from(word);
-            let utf8_len = word.len();
-
-            // only words > 1 byte may have different byte to grapheme count
-            let grapheme_len = if utf8_len == 1 {
-                1
-            } else {
-                // grapheme counting has huge performance impact (10x increase)
-                // -1 because start of input is always a grapheme breakpoint
-                grapheme_segmenter
-                    .segment_str(word)
-                    .collect::<Vec<usize>>()
-                    .len()
-                    - 1
-            };
+        if let Some(grapheme) = input.get(prev_offset..offset) {
+            let kind = SymbolKind::from(grapheme);
+            let grapheme_len = 1;
 
             let end_pos = if kind == SymbolKind::Newline {
                 Position {
@@ -268,20 +253,20 @@ fn word_split(input: &str) -> Vec<Symbol> {
             } else {
                 Position {
                     line: curr_pos.line,
-                    col_utf8: (curr_pos.col_utf8 + utf8_len),
-                    col_utf16: (curr_pos.col_utf16 + word.encode_utf16().count()),
+                    col_utf8: (curr_pos.col_utf8 + grapheme.len()),
+                    col_utf16: (curr_pos.col_utf16 + grapheme.encode_utf16().count()),
                     col_grapheme: (curr_pos.col_grapheme + grapheme_len),
                 }
             };
 
-            let mut kind = SymbolKind::from(word);
+            let mut kind = SymbolKind::from(grapheme);
 
             if curr_pos.col_utf8 == 1 && kind == SymbolKind::Newline {
                 // newline at the start of line -> Blankline
                 kind = SymbolKind::Blankline;
             }
 
-            words.push(Symbol {
+            symbols.push(Symbol {
                 input,
                 kind,
                 offset: Offset {
@@ -298,5 +283,5 @@ fn word_split(input: &str) -> Vec<Symbol> {
     }
 
     // last offset not needed, because break at EOI is always available
-    words
+    symbols
 }
