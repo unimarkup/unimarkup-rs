@@ -174,7 +174,23 @@ impl From<&str> for SymbolKind {
         match value {
             "#" => SymbolKind::Hash,
             "\n" | "\r\n" => SymbolKind::Newline,
-            "`" => SymbolKind::Verbatim,
+            "`" => SymbolKind::Tick,
+            "\\" => SymbolKind::Backslash,
+            "*" => SymbolKind::Star,
+            "_" => SymbolKind::Underline,
+            "^" => SymbolKind::Caret,
+            "‾" => SymbolKind::Overline,
+            "|" => SymbolKind::Pipe,
+            "~" => SymbolKind::Tilde,
+            "\"" => SymbolKind::Quote,
+            "$" => SymbolKind::Dollar,
+            "(" => SymbolKind::OpenParenthesis,
+            ")" => SymbolKind::CloseParenthesis,
+            "[" => SymbolKind::OpenBracket,
+            "]" => SymbolKind::CloseBracket,
+            "{" => SymbolKind::OpenBrace,
+            "}" => SymbolKind::CloseBrace,
+            ":" => SymbolKind::Colon,
             symbol
                 if symbol != "\n"
                     && symbol != "\r\n"
