@@ -96,12 +96,12 @@ impl Substitutor<'_> {
         }
     }
 
-    pub(crate) fn try_subst(&self, slice: &str) -> Option<Substitute> {
+    pub(crate) fn try_subst(&self, slice: &str, span: crate::Span) -> Option<Substitute> {
         let val = self.direct.get(slice)?;
 
         Some(Substitute {
             content: String::from(*val),
-            original_len: slice.len(),
+            span,
         })
     }
 
@@ -122,7 +122,7 @@ impl Substitutor<'_> {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) struct Substitute {
     content: String,
-    original_len: usize,
+    span: crate::Span,
 }
 
 impl Substitute {
@@ -132,7 +132,7 @@ impl Substitute {
     }
 
     /// Returns the length of the content of this Substitute before substitutions have taken place.
-    pub fn original_len(&self) -> usize {
-        self.original_len
+    pub fn span(&self) -> crate::Span {
+        self.span
     }
 }
