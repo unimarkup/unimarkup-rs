@@ -1,6 +1,5 @@
 ---
 source: inline/tests/lexer/mod.rs
-assertion_line: 104
 info: "Test 'simple-bold' from: 'bold.yml'"
 ---
 **Bold**

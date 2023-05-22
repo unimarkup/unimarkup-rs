@@ -1,6 +1,5 @@
 ---
 source: inline/tests/lexer/mod.rs
-assertion_line: 104
 info: "Test 'not-opened-bold' from: 'bold.yml'"
 ---
 ** not bold**
