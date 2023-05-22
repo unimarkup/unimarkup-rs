@@ -20,3 +20,5 @@ unicode-segmentation = "1.8.0"
 [dev-dependencies]
 insta = {version = "1.29.0", features = ["serde"]}
 unimarkup-commons = { path ="../commons/", version = "0", features = ["test_runner"] }
+serde.workspace = true
+serde_yaml.workspace = true

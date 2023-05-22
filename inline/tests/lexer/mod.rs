@@ -1,152 +1,60 @@
-use std::ops::{Deref, DerefMut};
+use unimarkup_commons::test_runner::test_file::TestFile;
 
-use unimarkup_commons::{
-    run_snap_test,
-    test_runner::{as_snapshot::AsSnapshot, snap_test_runner::SnapTestRunner},
-};
-use unimarkup_inline::{Token, TokenKind, Tokenize, Tokens};
-
-/// Wrapper type for implementing the `AsSnapshot` trait.
-/// Integration `tests` is treated as an extra crate, so we can't implement
-/// trait for types where neither are defined in this (`tests`) crate.
-pub(crate) struct Snapshot<T>(T);
-
-impl<T> Deref for Snapshot<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T> DerefMut for Snapshot<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl AsSnapshot for Snapshot<(&str, Tokens)> {
-    fn as_snapshot(&self) -> String {
-        let input = (self.0).0;
-        let mut lines = input.lines();
-
-        let tokens = (self.0).1.clone();
-
-        let mut curr_line_nr = 0;
-        let mut content = String::new();
-
-        for token in tokens {
-            if token.span().start.line != curr_line_nr {
-                let line = lines.next().unwrap();
-
-                if curr_line_nr > 0 {
-                    content.push('\n');
-                }
-
-                content.push_str(line);
-                content.push('\n');
-                curr_line_nr += 1;
-            }
-
-            {};
-
-            let token_as_snap = Snapshot(token).as_snapshot();
-            content.push_str(&token_as_snap);
-        }
-
-        content
-    }
-}
-
-impl AsSnapshot for Snapshot<Token> {
-    fn as_snapshot(&self) -> String {
-        let span = self.0.span();
-
-        let indent = " ".repeat(span.start.col_utf8.saturating_sub(1));
-        let mut content = String::from(&indent);
-        // only newline token spans 2 lines, should not be the case for others!
-
-        let inner = match self.as_str() {
-            "\n" => "\u{23CE}",
-            other => other,
-        };
-        content.push_str(inner);
-        content.push('\n');
-        content.push_str(&indent);
-
-        let underline = "^".repeat(span.len_utf8().unwrap_or(1));
-        content.push_str(&underline);
-        content.push_str(" -> ");
-
-        let kind = Snapshot(self.kind()).as_snapshot();
-
-        let start = span.start;
-        let end = span.end;
-        content.push_str(&format!(
-            "{} @ ({}:{})->({}:{})\n",
-            kind, start.line, start.col_utf8, end.line, end.col_utf8
-        ));
-
-        content
-    }
-}
-
-impl AsSnapshot for Snapshot<TokenKind> {
-    fn as_snapshot(&self) -> String {
-        let string = match self.0 {
-            TokenKind::Bold => "Bold",
-            TokenKind::Italic => "Italic",
-            TokenKind::ItalicBold => "ItalicBold",
-            TokenKind::Underline => "Underline",
-            TokenKind::Subscript => "Subscript",
-            TokenKind::UnderlineSubscript => "UnderlineSubscript",
-            TokenKind::Superscript => "Superscript",
-            TokenKind::Overline => "Overline",
-            TokenKind::Strikethrough => "Strikethrough",
-            TokenKind::Highlight => "Highlight",
-            TokenKind::Verbatim => "Verbatim",
-            TokenKind::Quote => "Quote",
-            TokenKind::Math => "Math",
-            TokenKind::OpenParens => "OpenParens",
-            TokenKind::CloseParens => "CloseParens",
-            TokenKind::OpenBracket => "OpenBracket",
-            TokenKind::CloseBracket => "CloseBracket",
-            TokenKind::OpenBrace => "OpenBrace",
-            TokenKind::CloseBrace => "CloseBrace",
-            TokenKind::Substitution => "Substitution",
-            TokenKind::Newline => "Newline",
-            TokenKind::EndOfLine => "EndOfLine",
-            TokenKind::Whitespace => "Whitespace",
-            TokenKind::Plain => "Plain",
-        };
-
-        string.into()
-    }
-}
+mod snapshot;
 
 macro_rules! test_lexing {
-    ($name:ident, $input:expr) => {
-        #[test]
-        fn $name() {
-            let runner = SnapTestRunner::with_fn(stringify!($name), $input, |symbols| {
-                let rest = &[];
-                let snapshot = Snapshot(($input, symbols.tokens())).as_snapshot();
-                (snapshot, rest)
-            });
+    (
+        test_name: $test_name:expr,
+        test_file: $test_file:expr,
+        input: $input:expr, 
+        out_path: $out_path:expr
+    ) => {
+        use unimarkup_commons::test_runner::{
+            as_snapshot::AsSnapshot, snap_test_runner::SnapTestRunner,
+        };
+        use unimarkup_inline::Tokenize;
+        use $crate::lexer::snapshot::Snapshot;
 
-            let mut path_buf = $crate::snap_path();
-            path_buf.push("lexer");
+        let runner = SnapTestRunner::with_fn(&$test_name, $input, |symbols| {
+            let rest = &[];
+            let snapshot = Snapshot(($input, symbols.tokens())).as_snapshot();
+            (snapshot, rest)
+        })
+        .with_info(format!(
+            "Test '{}' from: '{}'",
+            $test_name,
+            $test_file,
+        ));
 
-            let path = path_buf.as_path();
-
-            run_snap_test!(runner, path);
-        }
+        unimarkup_commons::run_snap_test!(runner, $out_path);
     };
 }
 
-test_lexing!(plain_input, "This is some input");
-test_lexing!(bold_input, "This **is some bold** input");
-test_lexing!(
-    multiline_multiformat,
-    "***Italic and bold*** with\nsome other __formats__ in ^new^ line."
-);
+#[test]
+fn test_lexer_snapshots() {
+    let mut markups_path = crate::tests_path();
+    markups_path.push("spec/markup");
+
+    let entries = crate::collect_entries(markups_path, "yml").unwrap();
+
+    for entry in entries {
+        let path = entry.path();
+        let input = std::fs::read_to_string(&path).unwrap();
+
+        let test_file: TestFile = serde_yaml::from_str(&input).unwrap();
+
+        for test in test_file.tests {
+            let input = test.input;
+            let out_path = crate::gen_snap_path("spec/snapshots/lexer", &path);
+
+            let file_name = path.file_name().and_then(|file| file.to_str()).unwrap();
+
+            test_lexing!{
+                test_name: test.name, 
+                test_file: file_name,
+                input: input.as_str(), 
+                out_path: &out_path
+            }
+        }
+    }
+}

@@ -1,0 +1,16 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: plain
+description: Test lexing of text with no inline formatting.
+
+tests:
+  - name: simple-plain
+    description: |
+      Parse a simple text.
+
+    input: |
+      Simple text.
+
+    html: |
+      Simple text.
