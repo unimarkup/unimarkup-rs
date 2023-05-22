@@ -68,11 +68,15 @@ where
 
 #[macro_export]
 macro_rules! run_snap_test {
-    ($snap_test:ident) => {
+    ($snap_test:expr $(, $path:expr)?) => {
         let snap_test: $crate::test_runner::snap_test_runner::SnapTestRunner<_> = $snap_test;
 
         let mut settings = insta::Settings::clone_current();
-        settings.set_snapshot_path("../spec/snapshots/");
+
+        let mut path = std::path::Path::new("../spec/snapshots/");
+        $(path = $path;)?
+
+        settings.set_snapshot_path(path);
         settings.set_omit_expression(true);
 
         if let Some(subfolder) = snap_test.sub_path {
