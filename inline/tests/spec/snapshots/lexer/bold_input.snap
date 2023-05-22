@@ -1,0 +1,20 @@
+---
+source: inline/tests/lexer/mod.rs
+---
+This **is some bold** input
+This 
+^^^^^ -> Plain @ (1:1)->(1:6)
+     **
+     ^^ -> Bold @ (1:6)->(1:8)
+       is some bold
+       ^^^^^^^^^^^^ -> Plain @ (1:8)->(1:20)
+                   **
+                   ^^ -> Bold @ (1:20)->(1:22)
+                      input
+                     ^^^^^^ -> Plain @ (1:22)->(1:28)
+
+---
+With input:
+
+This **is some bold** input
+

@@ -16,3 +16,7 @@ logid.workspace = true
 unimarkup-commons = { path = "../commons/", version = "0" }
 unimarkup-render = { path = "../render/", version = "0" }
 unicode-segmentation = "1.8.0"
+
+[dev-dependencies]
+insta = {version = "1.29.0", features = ["serde"]}
+unimarkup-commons = { path ="../commons/", version = "0", features = ["test_runner"] }

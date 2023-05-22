@@ -1,0 +1,12 @@
+---
+source: inline/tests/lexer/mod.rs
+---
+This is some input
+This is some input
+^^^^^^^^^^^^^^^^^^ -> Plain @ (1:1)->(1:19)
+
+---
+With input:
+
+This is some input
+

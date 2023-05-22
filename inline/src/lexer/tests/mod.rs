@@ -31,7 +31,7 @@ use super::*;
 // mod tick;
 // mod tilde;
 // mod underline;
-//
+
 #[test]
 fn tokenization_1() {
     let input = "**This bold [group**] and close** bold..";

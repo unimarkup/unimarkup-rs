@@ -1,0 +1,45 @@
+---
+source: inline/tests/lexer/mod.rs
+---
+***Italic and bold*** with
+*
+^ -> Italic @ (1:1)->(1:2)
+ **
+ ^^ -> Bold @ (1:2)->(1:4)
+   Italic and bold
+   ^^^^^^^^^^^^^^^ -> Plain @ (1:4)->(1:19)
+                  **
+                  ^^ -> Bold @ (1:19)->(1:21)
+                    *
+                    ^ -> Italic @ (1:21)->(1:22)
+                      with
+                     ^^^^^ -> Plain @ (1:22)->(1:27)
+                          ⏎
+                          ^ -> Newline @ (1:27)->(2:1)
+
+some other __formats__ in ^new^ line.
+some other 
+^^^^^^^^^^^ -> Plain @ (2:1)->(2:12)
+           __
+           ^^ -> Underline @ (2:12)->(2:14)
+             formats
+             ^^^^^^^ -> Plain @ (2:14)->(2:21)
+                    __
+                    ^^ -> Underline @ (2:21)->(2:23)
+                       in 
+                      ^^^^ -> Plain @ (2:23)->(2:27)
+                          ^
+                          ^ -> Superscript @ (2:27)->(2:28)
+                           new
+                           ^^^ -> Plain @ (2:28)->(2:31)
+                              ^
+                              ^ -> Superscript @ (2:31)->(2:32)
+                                line.
+                               ^^^^^^ -> Plain @ (2:32)->(2:38)
+
+---
+With input:
+
+***Italic and bold*** with
+some other __formats__ in ^new^ line.
+
