@@ -12,7 +12,7 @@ pub struct SnapTestRunner<'a, I = ()> {
 }
 
 impl<'a> SnapTestRunner<'a> {
-    pub fn with_parser<S, PF>(name: &str, input: S, mut parser: PF) -> SnapTestRunner<'a, ()>
+    pub fn with_fn<S, PF>(name: &str, input: S, mut parser: PF) -> SnapTestRunner<'a, ()>
     where
         S: IntoSymbols<'a, Output = Vec<Symbol<'a>>> + Clone + Into<&'a str>,
         PF: for<'s> FnMut(&'s [Symbol<'s>]) -> (String, &'s [Symbol<'s>]),
@@ -128,13 +128,14 @@ macro_rules! test_parser_snap {
 
         for test in &test_content.test_file.tests {
             let mut snap_runner =
-                SnapTestRunner::with_parser::<&str, _>(&test.name, &test.input, $parser_fn)
-                    .with_info(format!(
+                SnapTestRunner::with_fn::<&str, _>(&test.name, &test.input, $parser_fn).with_info(
+                    format!(
                         "Test '{}-{}' from: {}",
                         &test_content.test_file.name,
                         &test.name,
                         $paths.0.to_string_lossy()
-                    ));
+                    ),
+                );
 
             if let Some(ref description) = test.description {
                 snap_runner = snap_runner.with_description(description);
