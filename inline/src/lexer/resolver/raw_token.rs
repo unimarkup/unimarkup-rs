@@ -48,7 +48,7 @@ impl RawToken {
     }
 
     pub(crate) fn pop(&mut self) -> Option<RawToken> {
-        // moves the next token to `tail` so it can be `take`n
+        // moves the next token to `tail` so it can be taken
         self.order();
 
         self.tail.take().map(|mut token| {

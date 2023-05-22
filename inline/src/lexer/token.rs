@@ -297,11 +297,11 @@ impl Token {
                 any_other_kind => (any_other_kind, any_other_kind),
             };
 
-            let len = SpanLen::from(first_kind.len() - 1);
+            let len = SpanLen::from(first_kind.len());
             let first_span = Span::from((self.span.start, self.span.start + len));
 
             let second_span = Span::from((
-                first_span.end() + SpanLen::from(1),
+                first_span.end(),
                 first_span.end() + SpanLen::from(second_kind.len()),
             ));
 

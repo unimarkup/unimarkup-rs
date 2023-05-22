@@ -116,12 +116,7 @@ impl Span {
         let second_len = second.len();
 
         first.end = first.start + second_len;
-        second.start = first.end
-            + SpanLen {
-                len_utf8: 1,
-                len_utf16: 1,
-                len_grapheme: 1,
-            };
+        second.start = first.end;
         second.end = second.start + first_len;
 
         (second, first)
