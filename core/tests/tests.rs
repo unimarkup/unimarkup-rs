@@ -12,7 +12,6 @@ mod elements {
     mod heading;
     mod inline;
     mod paragraph;
-    mod tests_helper;
 }
 
 // allows using `__` for better separation in functionnames
