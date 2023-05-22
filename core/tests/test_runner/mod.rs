@@ -55,7 +55,7 @@ macro_rules! snapshot_parser {
 macro_rules! spec_parser {
     () => {
         |test: &Test, cfg| {
-            let input = &test.input;
+            let input = test.input.trim_end();
 
             let res = unimarkup::compile(input, cfg).expect("Could not parse content.");
 
