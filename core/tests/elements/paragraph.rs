@@ -18,6 +18,8 @@ impl AsSnapshot for Snapshot<&Paragraph> {
             .map(|inline| inline.as_string())
             .collect();
 
+        let content = content.trim_end();
+
         let is_multiline = content.lines().count() > 1;
 
         if is_multiline {
