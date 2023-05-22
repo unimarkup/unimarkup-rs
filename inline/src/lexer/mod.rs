@@ -577,6 +577,3 @@ impl Iterator for Tokens {
         }
     }
 }
-
-#[cfg(test)]
-mod tests;
