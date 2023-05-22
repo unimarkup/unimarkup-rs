@@ -6,7 +6,7 @@ macro_rules! test_lexing {
     (
         test_name: $test_name:expr,
         test_file: $test_file:expr,
-        input: $input:expr, 
+        input: $input:expr,
         out_path: $out_path:expr
     ) => {
         use unimarkup_commons::test_runner::{
@@ -20,11 +20,7 @@ macro_rules! test_lexing {
             let snapshot = Snapshot(($input, symbols.tokens())).as_snapshot();
             (snapshot, rest)
         })
-        .with_info(format!(
-            "Test '{}' from: '{}'",
-            $test_name,
-            $test_file,
-        ));
+        .with_info(format!("Test '{}' from: '{}'", $test_name, $test_file,));
 
         unimarkup_commons::run_snap_test!(runner, $out_path);
     };
@@ -49,10 +45,10 @@ fn test_lexer_snapshots() {
 
             let file_name = path.file_name().and_then(|file| file.to_str()).unwrap();
 
-            test_lexing!{
-                test_name: test.name, 
+            test_lexing! {
+                test_name: test.name,
                 test_file: file_name,
-                input: input.as_str(), 
+                input: input.as_str(),
                 out_path: &out_path
             }
         }
