@@ -1,11 +1,16 @@
 use std::{
     fs::DirEntry,
+    ops::{Deref, DerefMut},
     path::{Path, PathBuf},
 };
 
 mod lexer;
+mod parser;
+mod snapshot;
 
-/// Returns the path to the integration `tests` folder.
+pub use snapshot::*;
+
+/// Returns the absolute path to the integration `tests` folder.
 pub fn tests_path() -> PathBuf {
     let curr = std::env!("CARGO_MANIFEST_DIR");
 

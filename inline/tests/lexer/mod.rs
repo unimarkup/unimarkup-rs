@@ -13,7 +13,7 @@ macro_rules! test_lexing {
             as_snapshot::AsSnapshot, snap_test_runner::SnapTestRunner,
         };
         use unimarkup_inline::Tokenize;
-        use $crate::lexer::snapshot::Snapshot;
+        use $crate::Snapshot;
 
         let runner = SnapTestRunner::with_fn(&$test_name, $input, |symbols| {
             let rest = &[];
