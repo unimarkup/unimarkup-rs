@@ -57,13 +57,7 @@ impl AsSnapshot for Snapshot<Token> {
         content.push_str(" -> ");
 
         let kind = Snapshot(self.kind()).as_snapshot();
-
-        let start = span.start;
-        let end = span.end;
-        content.push_str(&format!(
-            "{} @ ({}:{})->({}:{})\n",
-            kind, start.line, start.col_utf8, end.line, end.col_utf8
-        ));
+        content.push_str(&format!("{} {}", kind, Snapshot(&span).as_snapshot()));
 
         content
     }
