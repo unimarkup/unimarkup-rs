@@ -52,12 +52,14 @@ impl AsSnapshot for Snapshot<Token> {
         content.push('\n');
         content.push_str(&indent);
 
-        let underline = "^".repeat(span.len_utf8().unwrap_or(1));
+        let underline = "^".repeat(span.len_grapheme().unwrap_or(1));
         content.push_str(&underline);
         content.push_str(" -> ");
 
         let kind = Snapshot(self.kind()).as_snapshot();
-        content.push_str(&format!("{} {}", kind, Snapshot(&span).as_snapshot()));
+        content.push_str(&format!("{}{}", kind, Snapshot(&span).as_snapshot()));
+
+        content.push('\n');
 
         content
     }
