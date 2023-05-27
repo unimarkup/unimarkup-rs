@@ -40,7 +40,7 @@ impl AsSnapshot for Snapshot<Token> {
     fn as_snapshot(&self) -> String {
         let span = self.0.span();
 
-        let indent = " ".repeat(span.start.col_utf8.saturating_sub(1));
+        let indent = " ".repeat(span.start.col_grapheme.saturating_sub(1));
         let mut content = String::from(&indent);
         // only newline token spans 2 lines, should not be the case for others!
 
