@@ -9,15 +9,13 @@ macro_rules! test_lexing {
         input: $input:expr,
         out_path: $out_path:expr
     ) => {
-        use unimarkup_commons::test_runner::{
-            as_snapshot::AsSnapshot, snap_test_runner::SnapTestRunner,
-        };
+        use unimarkup_commons::test_runner::snap_test_runner::SnapTestRunner;
         use unimarkup_inline::Tokenize;
         use $crate::Snapshot;
 
         let runner = SnapTestRunner::with_fn(&$test_name, $input, |symbols| {
             let rest = &[];
-            let snapshot = Snapshot(($input, symbols.tokens())).as_snapshot();
+            let snapshot = Snapshot::snap(($input, symbols.tokens()));
             (snapshot, rest)
         })
         .with_info(format!("Test '{}' from: '{}'", $test_name, $test_file,));

@@ -8,7 +8,7 @@ use unimarkup_commons::{
 /// Wrapper type for implementing the `AsSnapshot` trait.
 /// Integration `tests` is treated as an extra crate, so we can't implement
 /// trait for types where neither are defined in this (`tests`) crate.
-pub(crate) struct Snapshot<T>(pub T);
+pub struct Snapshot<T>(pub T);
 
 impl<T> Deref for Snapshot<T> {
     type Target = T;
@@ -35,5 +35,14 @@ impl AsSnapshot for Snapshot<&Span> {
 impl AsSnapshot for Snapshot<&Position> {
     fn as_snapshot(&self) -> String {
         format!("{}:{}", self.line, self.col_grapheme)
+    }
+}
+
+impl<T> Snapshot<T> {
+    pub fn snap(inner: T) -> String
+    where
+        Snapshot<T>: AsSnapshot,
+    {
+        AsSnapshot::as_snapshot(&Snapshot(inner))
     }
 }

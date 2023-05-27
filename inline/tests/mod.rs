@@ -1,6 +1,5 @@
 use std::{
     fs::DirEntry,
-    ops::{Deref, DerefMut},
     path::{Path, PathBuf},
 };
 
@@ -8,7 +7,7 @@ mod lexer;
 mod parser;
 mod snapshot;
 
-pub use snapshot::*;
+pub(crate) use snapshot::*;
 
 /// Returns the absolute path to the integration `tests` folder.
 pub fn tests_path() -> PathBuf {
