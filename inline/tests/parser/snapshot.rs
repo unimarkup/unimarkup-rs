@@ -14,8 +14,6 @@ impl AsSnapshot for Snapshot<&[Inline]> {
 
 impl AsSnapshot for Snapshot<&Inline> {
     fn as_snapshot(&self) -> String {
-        dbg!(self.0);
-
         let start = match self.0 {
             Inline::Bold(_) => "Bold",
             Inline::Italic(_) => "Italic",
