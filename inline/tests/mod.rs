@@ -8,6 +8,50 @@ mod parser;
 mod snapshot;
 
 pub(crate) use snapshot::*;
+use unimarkup_commons::test_runner::test_file::TestFile;
+
+pub struct TestCase {
+    name: String,
+    input: String,
+    file_name: String,
+    out_path: PathBuf,
+}
+
+/// Generates test cases from test files
+///
+/// # Arguments
+/// * `markups` - Path to the folder containing the (input) test files
+/// * `output` - Path to the folder where the (output) snapshot files will be saved
+pub fn prepare_test_cases(markups: impl AsRef<Path>, output: impl AsRef<Path>) -> Vec<TestCase> {
+    let mut markups_path = crate::tests_path();
+    markups_path.push(markups);
+
+    let entries = crate::collect_entries(markups_path, "yml").unwrap();
+
+    let cases = entries.iter().flat_map(|entry| {
+        let path = entry.path();
+        let input = std::fs::read_to_string(&path).unwrap();
+
+        let mut test_file: TestFile = serde_yaml::from_str(&input).unwrap();
+
+        let output = output.as_ref();
+        let cases = test_file.tests.drain(..).map(move |test| {
+            let file_name = path.file_name().and_then(|file| file.to_str()).unwrap();
+            let out_path = crate::gen_snap_path(output, &path);
+
+            TestCase {
+                name: test.name,
+                input: test.input,
+                file_name: String::from(file_name),
+                out_path,
+            }
+        });
+
+        cases.collect::<Vec<_>>()
+    });
+
+    cases.collect()
+}
 
 /// Returns the absolute path to the integration `tests` folder.
 pub fn tests_path() -> PathBuf {
