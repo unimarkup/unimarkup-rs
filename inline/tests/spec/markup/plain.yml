@@ -14,3 +14,14 @@ tests:
 
     html: |
       Simple text.
+
+  - name: breaking-unicode
+    description: |
+      Parse a character that exposed bug in some LSP clients and implementations.
+      The used character does not have the same length in UTF8 and UTF16
+
+    input: |
+      The character 𝛂 broke some stuff.
+
+    html: |
+      The character <strong>𝛂</strong> broke some stuff.
