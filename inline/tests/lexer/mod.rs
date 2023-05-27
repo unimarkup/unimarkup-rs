@@ -1,28 +1,8 @@
-use unimarkup_commons::test_runner::test_file::TestFile;
+use crate::Snapshot;
+use unimarkup_commons::test_runner::{snap_test_runner::SnapTestRunner, test_file::TestFile};
+use unimarkup_inline::Tokenize;
 
 mod snapshot;
-
-macro_rules! test_lexing {
-    (
-        test_name: $test_name:expr,
-        test_file: $test_file:expr,
-        input: $input:expr,
-        out_path: $out_path:expr
-    ) => {
-        use unimarkup_commons::test_runner::snap_test_runner::SnapTestRunner;
-        use unimarkup_inline::Tokenize;
-        use $crate::Snapshot;
-
-        let runner = SnapTestRunner::with_fn(&$test_name, $input, |symbols| {
-            let rest = &[];
-            let snapshot = Snapshot::snap(($input, symbols.tokens()));
-            (snapshot, rest)
-        })
-        .with_info(format!("Test '{}' from: '{}'", $test_name, $test_file,));
-
-        unimarkup_commons::run_snap_test!(runner, $out_path);
-    };
-}
 
 #[test]
 fn test_lexer_snapshots() {
@@ -43,12 +23,14 @@ fn test_lexer_snapshots() {
 
             let file_name = path.file_name().and_then(|file| file.to_str()).unwrap();
 
-            test_lexing! {
-                test_name: test.name,
-                test_file: file_name,
-                input: input.as_str(),
-                out_path: &out_path
-            }
+            let runner = SnapTestRunner::with_fn(&test.name, input.as_str(), |symbols| {
+                let rest = &[];
+                let snapshot = Snapshot::snap((input.as_str(), symbols.tokens()));
+                (snapshot, rest)
+            })
+            .with_info(format!("Test '{}' from: '{}'", test.name, file_name));
+
+            unimarkup_commons::run_snap_test!(runner, &out_path);
         }
     }
 }
