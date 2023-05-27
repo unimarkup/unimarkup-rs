@@ -1,0 +1,14 @@
+---
+source: inline/tests/parser/mod.rs
+info: "Test 'not-bold' from: 'bold.yml'"
+---
+Plain @ (1:1)->(1:15) (
+    ** not bold **
+)
+
+---
+With input:
+
+** not bold **
+
+

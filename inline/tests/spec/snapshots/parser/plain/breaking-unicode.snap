@@ -1,0 +1,14 @@
+---
+source: inline/tests/parser/mod.rs
+info: "Test 'breaking-unicode' from: 'plain.yml'"
+---
+Plain @ (1:1)->(1:34) (
+    The character 𝛂 broke some stuff.
+)
+
+---
+With input:
+
+The character 𝛂 broke some stuff.
+
+
