@@ -148,7 +148,7 @@ impl Symbol<'_> {
     /// Flattens the input of consecutive symbols. Returns the slice of input starting from start
     /// position of first symbol until the end of last symbol.
     ///
-    /// Returns `None` if the referenced input is symbols is not the same.
+    /// Returns `None` if the referenced input in the given symbols is not the same.
     pub fn flatten(symbols: &[Self]) -> Option<&str> {
         debug_assert!(symbols
             .windows(2)
