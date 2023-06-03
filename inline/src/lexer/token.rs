@@ -1,8 +1,11 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
+use unimarkup_commons::scanner::span::{Span, SpanLen};
+use unimarkup_commons::scanner::{self, SymbolKind};
+
 use super::resolver::Resolved;
 use super::ContentOption;
-use crate::{Inline, Symbol};
+use crate::Inline;
 
 /// Token lexed from Unimarkup text.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -19,7 +22,7 @@ impl Token {
     ///
     /// [`Token`]: self::Token
     /// [`TokenKind`]: self::TokenKind
-    /// [`Span`]: self::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     /// [`Spacing`]: self::Spacing
     pub fn new(kind: TokenKind, span: Span, spacing: Spacing) -> Self {
         Self {
@@ -117,7 +120,7 @@ impl Token {
     /// Returns the [`Span`] that this [`Token`] occupies in original input.
     ///
     /// [`Token`]: self::Token
-    /// [`Span`]: self::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     pub fn span(&self) -> Span {
         self.span
     }
@@ -125,7 +128,7 @@ impl Token {
     /// Updates the [`Span`] that this [`Token`] occupies in original input.
     ///
     /// [`Token`]: self::Token
-    /// [`Span`]: self::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     pub fn set_span(&mut self, span: Span) {
         self.span = span;
     }
@@ -285,44 +288,40 @@ impl Token {
     ///
     /// [`Token`]: self::Token
     pub fn split_ambiguous(self) -> (Self, Self) {
-        if !self.is_ambiguous() {
-            panic!("Cannot meaningfully split a Token that is not ambiguous.");
-        } else {
-            let (first_kind, second_kind) = match self.kind() {
-                TokenKind::ItalicBold => (TokenKind::Italic, TokenKind::Bold),
-                TokenKind::UnderlineSubscript => (TokenKind::Subscript, TokenKind::Underline),
-                any_other_kind => (any_other_kind, any_other_kind),
-            };
+        assert!(self.is_ambiguous(), "Non-ambiguous Tokens cannot be split.");
 
-            let first_span = Span::from((
-                self.span.start(),
-                self.span.start() + (0, first_kind.len() - 1),
-            ));
+        let (first_kind, second_kind) = match self.kind() {
+            TokenKind::ItalicBold => (TokenKind::Italic, TokenKind::Bold),
+            TokenKind::UnderlineSubscript => (TokenKind::Subscript, TokenKind::Underline),
+            _ => unreachable!("Token must be ambiguous."),
+        };
 
-            let second_span = Span::from((
-                first_span.end() + (0, 1),
-                first_span.end() + (0, second_kind.len()),
-            ));
+        let len = SpanLen::from(first_kind.len());
+        let first_span = Span::from((self.span.start, self.span.start + len));
 
-            let first_spacing = self.spacing() - Spacing::Post;
-            let second_spacing = self.spacing() - Spacing::Pre;
+        let second_span = Span::from((
+            first_span.end(),
+            first_span.end() + SpanLen::from(second_kind.len()),
+        ));
 
-            let first = Self {
-                kind: first_kind,
-                span: first_span,
-                spacing: first_spacing,
-                content: None,
-            };
+        let first_spacing = self.spacing() - Spacing::Post;
+        let second_spacing = self.spacing() - Spacing::Pre;
 
-            let second = Self {
-                kind: second_kind,
-                span: second_span,
-                spacing: second_spacing,
-                content: None,
-            };
+        let first = Self {
+            kind: first_kind,
+            span: first_span,
+            spacing: first_spacing,
+            content: None,
+        };
 
-            (first, second)
-        }
+        let second = Self {
+            kind: second_kind,
+            span: second_span,
+            spacing: second_spacing,
+            content: None,
+        };
+
+        (first, second)
     }
 }
 
@@ -520,36 +519,36 @@ impl From<&Inline> for TokenKind {
     }
 }
 
-impl From<(Symbol<'_>, usize)> for TokenKind {
-    fn from((symbol, len): (Symbol, usize)) -> Self {
+impl From<(&scanner::Symbol<'_>, usize)> for TokenKind {
+    fn from((symbol, len): (&scanner::Symbol, usize)) -> Self {
         match len {
-            1 => match symbol {
-                Symbol::Star => Self::Italic,
-                Symbol::Underline => Self::Subscript,
-                Symbol::Caret => Self::Superscript,
-                Symbol::Tick => Self::Verbatim,
-                Symbol::Overline => Self::Overline,
-                Symbol::Dollar => Self::Math,
-                Symbol::OpenParenthesis => Self::OpenParens,
-                Symbol::CloseParenthesis => Self::CloseParens,
-                Symbol::OpenBracket => Self::OpenBracket,
-                Symbol::CloseBracket => Self::CloseBracket,
-                Symbol::OpenBrace => Self::OpenBrace,
-                Symbol::CloseBrace => Self::CloseBrace,
+            1 => match symbol.kind {
+                SymbolKind::Star => Self::Italic,
+                SymbolKind::Underline => Self::Subscript,
+                SymbolKind::Caret => Self::Superscript,
+                SymbolKind::Tick => Self::Verbatim,
+                SymbolKind::Overline => Self::Overline,
+                SymbolKind::Dollar => Self::Math,
+                SymbolKind::OpenParenthesis => Self::OpenParens,
+                SymbolKind::CloseParenthesis => Self::CloseParens,
+                SymbolKind::OpenBracket => Self::OpenBracket,
+                SymbolKind::CloseBracket => Self::CloseBracket,
+                SymbolKind::OpenBrace => Self::OpenBrace,
+                SymbolKind::CloseBrace => Self::CloseBrace,
                 _ => Self::Plain,
             },
-            2 => match symbol {
-                Symbol::Star => Self::Bold,
-                Symbol::Underline => Self::Underline,
-                Symbol::Pipe => Self::Highlight,
-                Symbol::Tilde => Self::Strikethrough,
-                Symbol::Quote => Self::Quote,
-                Symbol::Colon => Self::Substitution,
+            2 => match symbol.kind {
+                SymbolKind::Star => Self::Bold,
+                SymbolKind::Underline => Self::Underline,
+                SymbolKind::Pipe => Self::Highlight,
+                SymbolKind::Tilde => Self::Strikethrough,
+                SymbolKind::Quote => Self::Quote,
+                SymbolKind::Colon => Self::Substitution,
                 _ => Self::Plain,
             },
-            3 => match symbol {
-                Symbol::Star => Self::ItalicBold,
-                Symbol::Underline => Self::UnderlineSubscript,
+            3 => match symbol.kind {
+                SymbolKind::Star => Self::ItalicBold,
+                SymbolKind::Underline => Self::UnderlineSubscript,
                 _ => Self::Plain,
             },
             _ => Self::Plain,
@@ -733,48 +732,13 @@ impl Sub for Spacing {
     }
 }
 
-/// Span used to store information about the space some [`Token`] occupies in Unimarkup document.
+/// Extension trait for [`Span`] with functions used specifically for lexing of
+/// Unimarkup inline formats.
 ///
-/// [`Token`]: self::Token
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Span {
-    pub(crate) start: Position,
-    pub(crate) end: Position,
-}
-
-impl Span {
-    /// Returns the start position of this span.
-    pub fn start(&self) -> Position {
-        self.start
-    }
-
-    /// Returns the end position of this span.
-    pub fn end(&self) -> Position {
-        self.end
-    }
-
-    /// Returns the difference between end and start [`Position`] of this [`Span`].
-    ///
-    /// # Panics
-    ///
-    /// * if [`Span`] occupies multiple lines in original document. Length cannot be approximated
-    ///   in such case, since it is unknown how long each of the lines was.
-    ///
-    /// [`Position`]: self::Position
-    /// [`Span`]: self::Span
-    #[allow(clippy::len_without_is_empty)]
-    pub fn len(&self) -> usize {
-        if self.start.line != self.end.line {
-            panic!("Length cannot be approximated for Spans over multiple lines.");
-        }
-
-        self.end.column - self.start.column
-    }
-
-    fn overlaps(&self, other: Span) -> bool {
-        (self.start >= other.start && self.start <= other.end)
-            || (self.end >= other.start && self.end <= other.end)
-    }
+/// [`Span`]: unimarkup_comons::scanner::span::Span
+pub trait SpanExt {
+    /// Cheks whether this and the `other` [`Span`] overlap each other.
+    fn overlaps(&self, other: Span) -> bool;
 
     /// Removes the `other` [`Span`] from `self`. In case the spans do not overlap, the `other`
     /// span will be laid over `self` in following manner:
@@ -788,33 +752,67 @@ impl Span {
     ///
     /// Tuple containing the resulting span and the removed span.
     ///
-    /// [`Span`]: self::Span
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
+    fn remove(self, other: Span) -> (Span, Span);
+
+    /// Swaps the two [`Span`]s and returns a new pair of [`Span`]s where:
+    /// - first [`Span`] is the one that was originally second
+    /// - second [`Span`] is the one that was originally first
+    ///
+    /// # Example:
+    /// ```rust
+    /// # use unimarkup_commons::scanner::span::Span;
+    /// # use unimarkup_commons::scanner::position::Position;
+    /// # use unimarkup_inline::SpanExt;
+    ///
+    /// let span1 = Span::from((Position::new(0, 0), Position::new(0, 2)));
+    /// let span2 = Span::from((Position::new(0, 2), Position::new(0, 3)));
+    ///
+    /// let (first, second) = span1.swap(&span2);
+    /// dbg!(second);
+    ///
+    /// assert!(first.start.col_grapheme == 0 && first.end.col_grapheme == 1);
+    /// assert!(second.start.col_grapheme == 1 && second.end.col_grapheme == 3);
+    /// ```
+    fn swap(&self, other: &Span) -> (Span, Span)
+    where
+        Self: Sized;
+}
+
+impl SpanExt for Span {
+    fn overlaps(&self, other: Span) -> bool {
+        (self.start() >= other.start() && self.start() <= other.end())
+            || (self.end() >= other.start() && self.end() <= other.end())
+    }
+
     fn remove(self, other: Span) -> (Span, Span) {
         let other = if self.overlaps(other) {
             other
-        } else if other.end < self.start {
+        } else if other.end() < self.start() {
             let start = self.start;
-            let end = start + (0, other.len());
+            let end = start + other.len();
 
             Span::from((start, end))
         } else {
             // !self.overlaps implies that in this case other.start > self.end
-            let end = self.end;
-            let start = end - (0, other.len());
+            let end = self.end();
+            let start = end - other.len();
 
             Span::from((start, end))
         };
 
-        let start = if self.start < other.start {
-            self.start
+        // NOTE: from this point forward, assumption is that this function is called
+        // on spans of symbols where len_utf8 == len_utf16 == len_grapheme
+        let start = if self.start() < other.start() {
+            self.start()
         } else {
-            other.end + (0, 1)
+            other.end() + SpanLen::from(1)
         };
 
-        let end = if self.end > other.end {
-            self.end
+        let end = if self.end() > other.end() {
+            self.end()
         } else {
-            other.start - (0, 1)
+            other.start() - SpanLen::from(1)
         };
 
         let removed_span = other;
@@ -823,8 +821,8 @@ impl Span {
         (resulting_span, removed_span)
     }
 
-    pub(crate) fn swapped(&self, other: &Self) -> (Self, Self) {
-        let (mut first, mut second) = if self.start.column < other.start.column {
+    fn swap(&self, other: &Span) -> (Span, Span) {
+        let (mut first, mut second) = if self.start().col_grapheme < other.start().col_grapheme {
             (*self, *other)
         } else {
             (*other, *self)
@@ -833,91 +831,10 @@ impl Span {
         let first_len = first.len();
         let second_len = second.len();
 
-        first.end.column = first.start.column + second_len;
-        second.start.column = first.end.column + 1;
-        second.end.column = second.start.column + first_len;
+        first.end = first.start + second_len;
+        second.start = first.end;
+        second.end = second.start + first_len;
 
-        (second, first)
-    }
-}
-
-impl From<(Position, Position)> for Span {
-    fn from((start, end): (Position, Position)) -> Self {
-        Self { start, end }
-    }
-}
-
-/// Representation of a position in Unimarkup input.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Position {
-    /// Represents the line in Unimarkup input.
-    pub line: usize,
-
-    /// Represents the column in Unimarkup input.
-    pub column: usize,
-}
-
-impl Position {
-    /// Creates a new position with given line and column.
-    pub fn new(line: usize, column: usize) -> Self {
-        Position { line, column }
-    }
-}
-
-impl Default for Position {
-    fn default() -> Self {
-        Self { line: 1, column: 1 }
-    }
-}
-
-impl AddAssign for Position {
-    fn add_assign(&mut self, rhs: Self) {
-        self.line += rhs.line;
-        self.column += rhs.column;
-    }
-}
-
-impl AddAssign<(usize, usize)> for Position {
-    fn add_assign(&mut self, (line, column): (usize, usize)) {
-        self.line += line;
-        self.column += column;
-    }
-}
-
-impl<T> Add<T> for Position
-where
-    Position: AddAssign<T>,
-{
-    type Output = Position;
-
-    fn add(mut self, rhs: T) -> Self::Output {
-        self += rhs;
-        self
-    }
-}
-
-impl SubAssign for Position {
-    fn sub_assign(&mut self, rhs: Self) {
-        self.line -= rhs.line;
-        self.column -= rhs.column;
-    }
-}
-
-impl SubAssign<(usize, usize)> for Position {
-    fn sub_assign(&mut self, (line, column): (usize, usize)) {
-        self.line -= line;
-        self.column -= column;
-    }
-}
-
-impl<T> Sub<T> for Position
-where
-    Position: SubAssign<T>,
-{
-    type Output = Position;
-
-    fn sub(mut self, rhs: T) -> Self::Output {
-        self -= rhs;
-        self
+        (first, second)
     }
 }

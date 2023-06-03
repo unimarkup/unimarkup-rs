@@ -1,0 +1,27 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: plain
+description: Test lexing of text with no inline formatting.
+
+tests:
+  - name: simple-plain
+    description: |
+      Parse a simple text.
+
+    input: |
+      Simple text.
+
+    html: |
+      Simple text.
+
+  - name: breaking-unicode
+    description: |
+      Parse a character that exposed bug in some LSP clients and implementations.
+      The used character does not have the same length in UTF8 and UTF16
+
+    input: |
+      The character 𝛂 broke some stuff.
+
+    html: |
+      The character 𝛂 broke some stuff.

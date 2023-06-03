@@ -1,0 +1,16 @@
+---
+source: inline/tests/lexer/mod.rs
+info: "Test 'simple-plain' from: 'plain.yml'"
+---
+Simple text.
+Simple text.
+^^^^^^^^^^^^ -> Plain @ (1:1)->(1:13)
+            ⏎
+            ^ -> Newline @ (1:13)->(2:1)
+
+---
+With input:
+
+Simple text.
+
+

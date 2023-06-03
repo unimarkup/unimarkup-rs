@@ -1,0 +1,66 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: plain
+description: Test lexing of text with bold formatting.
+
+tests:
+  - name: simple-bold
+    description: |
+      Simple bold text.
+
+    input: |
+      **Bold**
+
+    html: |
+      <strong>Bold</strong>
+
+  - name: bold-not-bold
+    description: |
+      Bold combined with plain.
+
+    input: |
+      **Bold** not bold.
+
+    html: |
+      <strong>Bold</strong> not bold.
+
+  - name: not-bold
+    description: |
+      Bold that's not correctly opened nor closed.
+
+    input: |
+      ** not bold **
+
+    html: |
+      ** not bold **
+
+  - name: not-closed-bold
+    description: |
+      Bold that's not correctly closed.
+
+    input: |
+      **not bold **
+
+    html: |
+      **not bold **
+
+  - name: not-opened-bold
+    description: |
+      Bold that's not correctly opened.
+
+    input: |
+      ** not bold**
+
+    html: |
+      ** not bold**
+
+  - name: escaped-bold
+    description: |
+      Bold that's escaped.
+
+    input: |
+      \*\*not bold\*\*
+
+    html: |
+      **not bold**

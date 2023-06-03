@@ -1,0 +1,22 @@
+---
+source: inline/tests/lexer/mod.rs
+info: "Test 'bold-not-bold' from: 'bold.yml'"
+---
+**Bold** not bold.
+**
+^^ -> Bold @ (1:1)->(1:3)
+  Bold
+  ^^^^ -> Plain @ (1:3)->(1:7)
+      **
+      ^^ -> Bold @ (1:7)->(1:9)
+         not bold.
+        ^^^^^^^^^^ -> Plain @ (1:9)->(1:19)
+                  ⏎
+                  ^ -> Newline @ (1:19)->(2:1)
+
+---
+With input:
+
+**Bold** not bold.
+
+

@@ -1,11 +1,12 @@
-use std::{iter::Peekable, str::Lines};
-
-use unicode_segmentation::*;
-
 mod resolver;
 mod token;
 
 pub use token::*;
+use unimarkup_commons::scanner::{
+    position,
+    span::{Span, SpanLen},
+    IntoSymbols, Symbol, SymbolKind,
+};
 
 use crate::{Substitute, Substitutor};
 
@@ -19,23 +20,19 @@ use self::resolver::{RawToken, TokenResolver};
 pub trait Tokenize {
     /// Returns tokens found in self.
     fn tokens(&self) -> Tokens;
-
-    /// Returns tokens found in self starting from the given position.
-    fn tokens_with_offs(&self, pos: Position) -> Tokens;
 }
 
-impl<'a> Tokenize for &'a str {
+impl<'s, T> Tokenize for T
+where
+    T: IntoSymbols<'s>,
+    T: Copy,
+    T::Output: AsRef<[Symbol<'s>]>,
+{
     fn tokens(&self) -> Tokens {
+        let symbols = self.into_symbols();
         let lexer = Lexer {
-            input: self,
-            pos: Position { line: 1, column: 1 },
+            input: symbols.as_ref(),
         };
-
-        Tokens::new(lexer.resolved())
-    }
-
-    fn tokens_with_offs(&self, pos: Position) -> Tokens {
-        let lexer = Lexer { input: self, pos };
 
         Tokens::new(lexer.resolved())
     }
@@ -45,148 +42,68 @@ impl<'a> Tokenize for &'a str {
 ///
 /// [`Token`]: self::token::Token
 pub struct Lexer<'a> {
-    input: &'a str,
-    pos: Position,
+    input: &'a [Symbol<'a>],
 }
 
-/// Symbols with significance in Unimarkup inline formatting.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Symbol<'a> {
-    /// The backslash (`\`) is used for escaping other symbols.
-    Backslash,
-    /// The start (`*`) literal is used for bold and/or italic formatting.
-    Star,
-    /// The underline (`_`) literal is used for underline and/or subscript formatting.
-    Underline,
-    /// The caret (`^`) literal is used for superscript formatting.
-    Caret,
-    /// The tick (```) literal is used for verbatim formatting.
-    Tick,
-    /// The overline (`‾`) literal is used for overline formatting.
-    Overline,
-    /// The pipe (`|`) literal is used for highlight formatting.
-    Pipe,
-    /// The tilde (`~`) literal is used for strikethrough formatting.
-    Tilde,
-    /// The quote (`"`) literal is used for quotation formatting.
-    Quote,
-    /// The dollar (`$`) literal is used for math mode formatting.
-    Dollar,
-    /// The open parentheses (`(`) literal is used for additional data to text group elements (e.g.
-    /// image insert).
-    OpenParenthesis,
-    /// The close parentheses (`)`) literal is used to close the additional data to text group.
-    CloseParenthesis,
-    /// The open bracket (`[`) literal is used for text group elements.
-    OpenBracket,
-    /// The close bracket (`]`) literal is used for text group elements.
-    CloseBracket,
-    /// The open brace (`{`) literal is used for inline attributes.
-    OpenBrace,
-    /// The close brace (`}`) literal is used for inline attributes.
-    CloseBrace,
-    /// The plain symbol represents any other literal with no significance in Unimarkup inline
-    /// formatting.
-    Plain(&'a str),
-    /// A whitespace literal (` `)
-    Whitespace(&'a str),
-    /// A newline literal (`\n` or '\r\n')
-    Newline,
-    /// A colon literal used for alias substitutions (`::heart::`).
-    Colon,
-}
-
-impl<'a> From<&'a str> for Symbol<'a> {
-    fn from(input: &'a str) -> Self {
-        match input {
-            "\\" => Symbol::Backslash,
-            "*" => Symbol::Star,
-            "_" => Symbol::Underline,
-            "^" => Symbol::Caret,
-            "`" => Symbol::Tick,
-            "‾" => Symbol::Overline,
-            "|" => Symbol::Pipe,
-            "~" => Symbol::Tilde,
-            "\"" => Symbol::Quote,
-            "$" => Symbol::Dollar,
-            "(" => Symbol::OpenParenthesis,
-            ")" => Symbol::CloseParenthesis,
-            "[" => Symbol::OpenBracket,
-            "]" => Symbol::CloseBracket,
-            "{" => Symbol::OpenBrace,
-            "}" => Symbol::CloseBrace,
-            "\n" | "\r\n" => Symbol::Newline,
-            ":" => Symbol::Colon,
-            other => match other.chars().next() {
-                // NOTE: multi-character grapheme is most probably not a whitespace
-                Some(literal) if literal.is_whitespace() => Symbol::Whitespace(other),
-                _ => Symbol::Plain(input),
-            },
-        }
-    }
-}
-
-impl<'a> From<&&'a str> for Symbol<'a> {
-    fn from(input: &&'a str) -> Self {
-        Self::from(*input)
-    }
-}
-
-impl From<Symbol<'_>> for String {
-    fn from(symbol: Symbol) -> Self {
-        String::from(symbol.as_str())
-    }
-}
-
-impl Symbol<'_> {
+pub(crate) trait SymbolExt {
     /// Returns the [`LexLength`] a given symbol may have.
     ///
     /// [`LexLength`]: self::LexLength
-    pub(crate) fn allowed_len(&self) -> LexLength {
-        match self {
-            Symbol::Star | Symbol::Underline => LexLength::Limited(3),
+    fn allowed_len(&self) -> LexLength;
 
-            Symbol::Backslash
-            | Symbol::Caret
-            | Symbol::Overline
-            | Symbol::Tick
-            | Symbol::Dollar => LexLength::Limited(1),
+    fn len(&self) -> usize;
 
-            Symbol::OpenParenthesis
-            | Symbol::CloseParenthesis
-            | Symbol::OpenBracket
-            | Symbol::CloseBracket
-            | Symbol::OpenBrace
-            | Symbol::CloseBrace => LexLength::Exact(1),
+    /// Checks whether the grapheme is some Unimarkup Inline symbol.
+    /// e.g. "*" can be start of Unimarkup Italic or Bold.
+    fn is_keyword(&self) -> bool;
 
-            Symbol::Pipe | Symbol::Tilde | Symbol::Quote | Symbol::Colon => LexLength::Limited(2),
+    fn is_start_of_subst(&self, substitutor: &Substitutor) -> bool;
 
-            Symbol::Whitespace(_) | Symbol::Newline | Symbol::Plain(_) => LexLength::Unlimited,
-        }
-    }
+    /// Checks whether the grapheme is "\".
+    fn is_esc(&self) -> bool;
 
-    pub(crate) fn as_str(&self) -> &str {
-        match self {
-            Symbol::Backslash => "\\",
-            Symbol::Star => "*",
-            Symbol::Underline => "_",
-            Symbol::Caret => "^",
-            Symbol::Tick => "`",
-            Symbol::Overline => "‾",
-            Symbol::Pipe => "|",
-            Symbol::Tilde => "~",
-            Symbol::Quote => "\"",
-            Symbol::Dollar => "$",
-            Symbol::OpenParenthesis => "(",
-            Symbol::CloseParenthesis => ")",
-            Symbol::OpenBracket => "[",
-            Symbol::CloseBracket => "]",
-            Symbol::OpenBrace => "{",
-            Symbol::CloseBrace => "}",
-            Symbol::Plain(content) => content,
-            Symbol::Whitespace(literal) => literal,
-            Symbol::Newline => "\n",
-            Symbol::Colon => ":",
+    /// Checks whether the grapheme is any of the whitespace characters.
+    fn is_whitespace(&self) -> bool;
+
+    /// Checks whether the grapheme is a valid newline symbol.
+    fn is_newline(&self) -> bool;
+
+    /// Checks whether the grapheme has any significance in escape sequence.
+    /// e.g. The lexer interprets "\ " as a Whitespace `Token`
+    fn is_significant_esc(&self) -> bool;
+}
+
+impl SymbolExt for Symbol<'_> {
+    /// Returns the [`LexLength`] a given symbol may have.
+    ///
+    /// [`LexLength`]: self::LexLength
+    fn allowed_len(&self) -> LexLength {
+        match self.kind {
+            SymbolKind::Star | SymbolKind::Underline => LexLength::Limited(3),
+
+            SymbolKind::Backslash
+            | SymbolKind::Caret
+            | SymbolKind::Overline
+            | SymbolKind::Tick
+            | SymbolKind::Dollar => LexLength::Limited(1),
+
+            SymbolKind::OpenParenthesis
+            | SymbolKind::CloseParenthesis
+            | SymbolKind::OpenBracket
+            | SymbolKind::CloseBracket
+            | SymbolKind::OpenBrace
+            | SymbolKind::CloseBrace => LexLength::Exact(1),
+
+            SymbolKind::Pipe | SymbolKind::Tilde | SymbolKind::Quote | SymbolKind::Colon => {
+                LexLength::Limited(2)
+            }
+
+            SymbolKind::Whitespace | SymbolKind::Newline | SymbolKind::Plain => {
+                LexLength::Unlimited
+            }
+
+            // Symbols not part of inline syntax are treated as plain text
+            _ => LexLength::Unlimited,
         }
     }
 
@@ -198,22 +115,24 @@ impl Symbol<'_> {
     /// e.g. "*" can be start of Unimarkup Italic or Bold.
     fn is_keyword(&self) -> bool {
         matches!(
-            self,
-            Symbol::Star
-                | Symbol::Underline
-                | Symbol::Caret
-                | Symbol::Tick
-                | Symbol::Overline
-                | Symbol::Pipe
-                | Symbol::Tilde
-                | Symbol::Quote
-                | Symbol::Dollar
-                | Symbol::OpenParenthesis
-                | Symbol::CloseParenthesis
-                | Symbol::OpenBracket
-                | Symbol::CloseBracket
-                | Symbol::OpenBrace
-                | Symbol::CloseBrace
+            self.kind,
+            SymbolKind::Star
+                | SymbolKind::Underline
+                | SymbolKind::Caret
+                | SymbolKind::Tick
+                | SymbolKind::Overline
+                | SymbolKind::Pipe
+                | SymbolKind::Tilde
+                | SymbolKind::Quote
+                | SymbolKind::Dollar
+                | SymbolKind::OpenParenthesis
+                | SymbolKind::CloseParenthesis
+                | SymbolKind::OpenBracket
+                | SymbolKind::CloseBracket
+                | SymbolKind::OpenBrace
+                | SymbolKind::CloseBrace
+                | SymbolKind::Newline
+                | SymbolKind::Blankline
         )
     }
 
@@ -223,17 +142,17 @@ impl Symbol<'_> {
 
     /// Checks whether the grapheme is "\".
     fn is_esc(&self) -> bool {
-        matches!(self, Symbol::Backslash)
+        matches!(self.kind, SymbolKind::Backslash)
     }
 
     /// Checks whether the grapheme is any of the whitespace characters.
     fn is_whitespace(&self) -> bool {
-        matches!(self, Self::Whitespace(_))
+        matches!(self.kind, SymbolKind::Whitespace)
     }
 
     /// Checks whether the grapheme is a valid newline symbol.
     fn is_newline(&self) -> bool {
-        matches!(self, Self::Newline)
+        matches!(self.kind, SymbolKind::Newline | SymbolKind::Blankline)
     }
 
     /// Checks whether the grapheme has any significance in escape sequence.
@@ -249,17 +168,11 @@ impl<'a> Lexer<'a> {
     /// [`TokenIterator`]: self::TokenIterator
     /// [`Lexer`]: self::Lexer
     fn iter(&self) -> TokenIterator<'a> {
-        let mut lines = self.input.lines().peekable();
-
-        let curr = lines
-            .next()
-            .map_or(Vec::default(), |line| Vec::from_iter(line.graphemes(true)));
+        let symbols = self.input;
 
         TokenIterator {
-            lines,
-            curr,
+            symbols,
             index: 0,
-            pos: self.pos,
             substitutor: Substitutor::new(),
         }
     }
@@ -320,57 +233,14 @@ impl From<usize> for LexLength {
 /// [`Token`]: self::token::Token
 #[derive(Debug, Clone)]
 pub struct TokenIterator<'a> {
-    lines: Peekable<Lines<'a>>,
-    curr: Vec<&'a str>,
+    symbols: &'a [Symbol<'a>],
     index: usize,
-    pos: Position, // in input text
     substitutor: Substitutor<'a>,
 }
 
 impl TokenIterator<'_> {
-    /// Returns true if no more characters are available in currently observed line.
-    fn is_end_of_line(&self) -> bool {
-        self.index >= self.curr.len()
-    }
-
-    /// Returns the `EndOfLine` [`Token`] for the current line if next line exists, `None`
-    /// otherwise.
-    ///
-    /// [`Token`]: crate::Token
-    fn next_line(&mut self) -> Option<Token> {
-        // remove last line from cache
-        let start = self.pos;
-        let end = self.pos;
-        let spacing = if self.is_whitespace_at_offs(-1) {
-            Spacing::Pre
-        } else {
-            Spacing::None
-        };
-
-        self.curr.clear();
-
-        if let Some(next_line) = self.lines.next() {
-            // load next line into cache
-            self.curr.extend(next_line.graphemes(true));
-
-            // update index into current line
-            self.index = 0;
-
-            self.pos.line += 1;
-            self.pos.column = 1;
-
-            Some(Token::new(
-                TokenKind::EndOfLine,
-                Span::from((start, end)),
-                spacing,
-            ))
-        } else {
-            None
-        }
-    }
-
-    fn get_symbol(&self, index: usize) -> Option<Symbol> {
-        self.curr.get(index).map(Symbol::from)
+    fn get_symbol(&self, index: usize) -> Option<&Symbol> {
+        self.symbols.get(index)
     }
 
     /// Lexes a given [`Symbol`] with significance, i.e. `**` and produces a [`Token`] out of it, if possible.
@@ -383,15 +253,28 @@ impl TokenIterator<'_> {
         // sequence is lexed as plain (e.g. ****).
 
         let symbol = self.get_symbol(self.index)?;
-        let subst = self.try_lex_substitution(&symbol);
 
-        let symbol_len = subst
+        if symbol.is_newline() {
+            let spacing = self.spacing_around(1);
+            let start = symbol.start;
+            let end = symbol.end;
+            self.index += 1;
+            return Some(Token::new(
+                TokenKind::Newline,
+                Span::from((start, end)),
+                spacing,
+            ));
+        }
+
+        let subst = self.try_lex_substitution(symbol);
+
+        let start_pos = symbol.start;
+        let end_pos = subst
             .as_ref()
-            .map_or_else(|| self.symbol_len(symbol), |subst| subst.original_len());
+            .map_or_else(|| self.symbol_len(symbol), |subst| subst.span().end);
 
-        let start_pos = self.pos;
-        let end_pos = start_pos + (0, symbol_len - 1);
-
+        let span = Span::from((start_pos, end_pos));
+        let symbol_len = span.len_grapheme()?;
         let spacing = self.spacing_around(symbol_len);
 
         let kind = subst.as_ref().map_or_else(
@@ -400,9 +283,9 @@ impl TokenIterator<'_> {
         );
 
         let curr_index = self.index + symbol_len;
-        let content = subst.map_or_else(
-            || self.curr[self.index..curr_index].concat(),
-            |subst| subst.as_str().to_string(),
+        let content = subst.as_ref().map_or_else(
+            || Symbol::flatten(&self.symbols[self.index..curr_index]).unwrap(),
+            |subst| subst.as_str(),
         );
 
         let token = Token::with_conditional_content(
@@ -450,14 +333,18 @@ impl TokenIterator<'_> {
     /// [`TokenKind::Italic`]: self::token::TokenKind::Italic
     /// [`TokenKind::Bold`]: self::token::TokenKind::Bold
     /// [`TokenKind::ItalicBold`]: self::token::TokenKind::ItalicBold
-    fn symbol_len(&self, symbol: Symbol) -> usize {
-        let end_pos = self.literal_end_index(symbol);
-        let scanned_len = end_pos - self.index;
+    fn symbol_len(&self, symbol: &Symbol) -> position::Position {
+        let end_index = self.literal_end_index(symbol);
+        let scanned_len = end_index - self.index;
 
-        match symbol.allowed_len() {
-            LexLength::Exact(len) => scanned_len.min(len),
-            _ => scanned_len,
-        }
+        let idx = match symbol.allowed_len() {
+            LexLength::Exact(len) => self.index + scanned_len.min(len),
+            _ => end_index,
+        };
+
+        self.get_symbol(idx)
+            .expect("Symbol already seen, must exist")
+            .end
     }
 
     /// Finds the furthest grapheme in line where, starting from the current cursor position, each grapheme
@@ -465,13 +352,13 @@ impl TokenIterator<'_> {
     ///
     /// Note that the current cursor position will be returned if the grapheme under cursor doesn't match the
     /// `symbol` grapheme provided as the function parameter.
-    fn literal_end_index(&self, symbol: Symbol) -> usize {
+    fn literal_end_index(&self, symbol: &Symbol) -> usize {
         let mut pos = self.index;
 
         loop {
             match self.get_symbol(pos) {
-                Some(sym) if sym == symbol => pos += 1,
-                _ => break pos,
+                Some(sym) if sym.kind == symbol.kind => pos += 1,
+                _ => break pos - 1,
             }
         }
     }
@@ -505,8 +392,8 @@ impl TokenIterator<'_> {
         } else {
             match self.index.saturating_add(offset as usize) {
                 // NOTE: end of line symbol IS whitespace
-                pos if pos == self.curr.len() => return true,
-                pos if pos > self.curr.len() => return false,
+                pos if pos == self.symbols.len() => return true,
+                pos if pos > self.symbols.len() => return false,
                 pos => pos,
             }
         };
@@ -519,8 +406,8 @@ impl TokenIterator<'_> {
     /// [`Token`]: self::token::Token
     /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
     fn lex_plain(&mut self) -> Option<Token> {
-        let start_pos = self.pos;
-        let mut content = String::with_capacity(self.curr.len());
+        let start_pos: position::Position = self.get_symbol(self.index)?.start;
+        let mut content = String::with_capacity(self.symbols.len());
 
         // multiple cases:
         // 1. got to end of line -> interpret as end of token
@@ -549,14 +436,10 @@ impl TokenIterator<'_> {
         }
 
         // NOTE: index points to the NEXT character, token Span is UP TO that character
-        let offset = self.index - start_pos.column;
-        let end_pos = self.pos + (0, offset);
+        let end_pos = self.get_symbol(self.index - 1)?.end;
 
-        let len = self.index - start_pos.column.saturating_sub(1);
-
-        // TODO: improve this logic
-        let temp_idx = self.index;
-        self.index = self.pos.column.saturating_sub(1);
+        let span = Span::from((start_pos, end_pos));
+        let len = span.len_grapheme()?;
 
         let token = Token {
             kind: TokenKind::Plain,
@@ -564,8 +447,6 @@ impl TokenIterator<'_> {
             spacing: self.spacing_around(len),
             content: Some(content),
         };
-
-        self.index = temp_idx;
 
         Some(token)
     }
@@ -580,8 +461,8 @@ impl TokenIterator<'_> {
         let symbol = self.get_symbol(self.index)?;
 
         // NOTE: index here is pointing to the current grapheme
-        let start_pos = self.pos; // escape character
-        let end_pos = start_pos + (0, symbol.len());
+        let start_pos = self.get_symbol(self.index)?.start; // escape character
+        let end_pos = start_pos + SpanLen::from(symbol.len());
 
         let token_kind = if symbol.is_whitespace() {
             TokenKind::Whitespace
@@ -593,29 +474,27 @@ impl TokenIterator<'_> {
             kind: token_kind,
             span: Span::from((start_pos, end_pos)),
             spacing: Spacing::None,
-            content: Some(symbol.into()),
+            content: Some(symbol.as_str().into()),
         };
 
         self.index += 1;
         Some(token)
     }
 
-    fn try_lex_substitution(&self, symbol: &Symbol) -> Option<Substitute> {
-        if self.substitutor.is_start_of_subst(symbol) {
-            let slice: String = {
-                self.curr[self.index..]
-                    .iter()
-                    .take(self.substitutor.max_len())
-                    .take_while(|inner| !Symbol::from(*inner).is_whitespace())
-                    .copied()
-                    .collect()
-            };
+    fn try_lex_substitution(&self, symbol: &Symbol<'_>) -> Option<Substitute> {
+        if !self.substitutor.is_start_of_subst(symbol) {
+            return None;
+        }
 
-            if let Spacing::Both = self.spacing_around(slice.len()) {
-                self.substitutor.try_subst(&slice)
-            } else {
-                None
-            }
+        let iter = {
+            self.symbols[self.index..]
+                .iter()
+                .take(self.substitutor.max_len())
+                .take_while(|symbol| !symbol.is_whitespace())
+        };
+
+        if let Spacing::Both = self.spacing_around(iter.clone().count()) {
+            self.substitutor.try_subst_iter(iter)
         } else {
             None
         }
@@ -626,19 +505,12 @@ impl<'a> Iterator for TokenIterator<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // NOTE: pos.line is updated only in next_line() function
-        self.pos.column = self.index + 1;
-
-        if self.is_end_of_line() {
-            return self.next_line();
-        }
-
         // three cases:
         // 1. next grapheme is keyword -> generate some token
         // 2. next grapheme is '\' -> handle escape sequence
         // 3. next grapheme is not a keyword -> it is plain text
 
-        match self.get_symbol(self.index) {
+        let token = match self.get_symbol(self.index) {
             Some(symbol) if symbol.is_keyword() || symbol.is_start_of_subst(&self.substitutor) => {
                 self.lex_keyword()
             }
@@ -646,38 +518,20 @@ impl<'a> Iterator for TokenIterator<'a> {
                 // Three cases:
                 // 1. next character has significance in escape sequence -> some token
                 // 2. next character has no significance -> lex as plain text
-                // 3. there is no next character. That implies that we've got to end of line, which
-                //    implies that the character following '\' is either '\n' or '\r\t' -> lex newline
+                // 3. there is no next character. That implies that we've got to end of input.
 
-                match self.get_symbol(self.index + 1) {
-                    Some(grapheme) if grapheme.is_significant_esc() => {
-                        self.index += 1;
-                        self.lex_escape_seq()
-                    }
-                    Some(_) => self.lex_plain(),
-                    None => {
-                        // is end of line -> newline token!
-
-                        if self.lines.peek().is_some() {
-                            self.index += 1;
-                            let start_pos = self.pos;
-                            let end_pos = start_pos + (0, 1);
-
-                            let token = Token::new(
-                                TokenKind::Newline,
-                                Span::from((start_pos, end_pos)),
-                                self.spacing_around(1),
-                            );
-
-                            Some(token)
-                        } else {
-                            None
-                        }
-                    }
+                let sym = self.get_symbol(self.index + 1)?;
+                if sym.is_significant_esc() {
+                    self.index += 1;
+                    self.lex_escape_seq()
+                } else {
+                    self.lex_plain()
                 }
             }
             _ => self.lex_plain(),
-        }
+        };
+
+        token
     }
 }
 
@@ -717,6 +571,3 @@ impl Iterator for Tokens {
         }
     }
 }
-
-#[cfg(test)]
-mod tests;

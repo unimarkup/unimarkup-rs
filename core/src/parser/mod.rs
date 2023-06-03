@@ -1,7 +1,7 @@
 //! Module for parsing of Unimarkup elements.
 
 use logid::capturing::MappedLogId;
-use unimarkup_commons::symbols::{IntoSymbols, Symbol, SymbolKind};
+use unimarkup_commons::scanner::{IntoSymbols, Symbol, SymbolKind};
 
 use crate::{
     document::Document,
@@ -102,7 +102,7 @@ impl MainParser {
     }
 
     /// Parses Unimarkup content and produces Unimarkup blocks.
-    pub fn parse<'s>(&self, input: impl IntoSymbols<'s, &'s [Symbol<'s>]>) -> Blocks {
+    pub fn parse<'s>(&self, input: impl IntoSymbols<'s, Output = &'s [Symbol<'s>]>) -> Blocks {
         let mut input = input.into_symbols();
         let mut blocks = Vec::default();
 

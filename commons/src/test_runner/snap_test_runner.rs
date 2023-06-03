@@ -1,4 +1,4 @@
-use crate::symbols::{IntoSymbols, Symbol};
+use crate::scanner::{IntoSymbols, Symbol};
 use serde::Serialize;
 
 #[derive(Debug)]
@@ -12,9 +12,9 @@ pub struct SnapTestRunner<'a, I = ()> {
 }
 
 impl<'a> SnapTestRunner<'a> {
-    pub fn with_parser<S, PF>(name: &str, input: S, mut parser: PF) -> SnapTestRunner<'a, ()>
+    pub fn with_fn<S, PF>(name: &str, input: S, mut parser: PF) -> SnapTestRunner<'a, ()>
     where
-        S: IntoSymbols<'a, Vec<Symbol<'a>>> + Clone + Into<&'a str>,
+        S: IntoSymbols<'a, Output = Vec<Symbol<'a>>> + Clone + Into<&'a str>,
         PF: for<'s> FnMut(&'s [Symbol<'s>]) -> (String, &'s [Symbol<'s>]),
     {
         let symbols = input.clone().into_symbols();
@@ -68,11 +68,15 @@ where
 
 #[macro_export]
 macro_rules! run_snap_test {
-    ($snap_test:ident) => {
+    ($snap_test:expr $(, $path:expr)?) => {
         let snap_test: $crate::test_runner::snap_test_runner::SnapTestRunner<_> = $snap_test;
 
         let mut settings = insta::Settings::clone_current();
-        settings.set_snapshot_path("../spec/snapshots/");
+
+        let mut path = std::path::Path::new("../spec/snapshots/");
+        $(path = $path;)?
+
+        settings.set_snapshot_path(path);
         settings.set_omit_expression(true);
 
         if let Some(subfolder) = snap_test.sub_path {
@@ -124,13 +128,14 @@ macro_rules! test_parser_snap {
 
         for test in &test_content.test_file.tests {
             let mut snap_runner =
-                SnapTestRunner::with_parser::<&str, _>(&test.name, &test.input, $parser_fn)
-                    .with_info(format!(
+                SnapTestRunner::with_fn::<&str, _>(&test.name, &test.input, $parser_fn).with_info(
+                    format!(
                         "Test '{}-{}' from: {}",
                         &test_content.test_file.name,
                         &test.name,
                         $paths.0.to_string_lossy()
-                    ));
+                    ),
+                );
 
             if let Some(ref description) = test.description {
                 snap_runner = snap_runner.with_description(description);

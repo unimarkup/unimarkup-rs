@@ -7,7 +7,7 @@ use unimarkup_render::render::Render;
 use crate::elements::blocks::Block;
 use crate::elements::Blocks;
 use crate::parser::{ElementParser, TokenizeOutput};
-use unimarkup_commons::symbols::{Symbol, SymbolKind};
+use unimarkup_commons::scanner::{Symbol, SymbolKind};
 
 /// Structure of a Unimarkup verbatim block element.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -38,7 +38,7 @@ impl ElementParser for Verbatim {
     fn tokenize<'i>(input: &'i [Symbol<'i>]) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
         let start_delim = input
             .iter()
-            .take_while(|symbol| matches!(symbol.kind, SymbolKind::Verbatim))
+            .take_while(|symbol| matches!(symbol.kind, SymbolKind::Tick))
             .count();
 
         if start_delim < 3 {
@@ -52,13 +52,13 @@ impl ElementParser for Verbatim {
         let content_count = input
             .iter()
             .skip(start_delim)
-            .take_while(|symbol| !matches!(symbol.kind, SymbolKind::Verbatim))
+            .take_while(|symbol| !matches!(symbol.kind, SymbolKind::Tick))
             .count();
 
         let end_delim = input
             .iter()
             .skip(start_delim + content_count)
-            .take_while(|sym| matches!(sym.kind, SymbolKind::Verbatim))
+            .take_while(|sym| matches!(sym.kind, SymbolKind::Tick))
             .count();
 
         if end_delim != start_delim {
@@ -91,7 +91,7 @@ impl ElementParser for Verbatim {
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
         let Token::Delimiter { line } = input.get(0)? else {return None};
         let Token::Content(symbols) = input.get(1)? else { return None };
-        let content = Symbol::flatten(symbols);
+        let content = Symbol::flatten(symbols)?;
 
         let block = Self {
             id: String::default(),
