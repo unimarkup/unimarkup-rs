@@ -287,7 +287,6 @@ fn grapheme_split(input: &str) -> Vec<Symbol> {
     for offset in segmenter.segment_str(input).skip(1) {
         if let Some(grapheme) = input.get(prev_offset..offset) {
             let kind = SymbolKind::from(grapheme);
-            let grapheme_len = 1;
 
             let end_pos = if kind == SymbolKind::Newline {
                 Position {
@@ -299,7 +298,7 @@ fn grapheme_split(input: &str) -> Vec<Symbol> {
                     line: curr_pos.line,
                     col_utf8: (curr_pos.col_utf8 + grapheme.len()),
                     col_utf16: (curr_pos.col_utf16 + grapheme.encode_utf16().count()),
-                    col_grapheme: (curr_pos.col_grapheme + grapheme_len),
+                    col_grapheme: (curr_pos.col_grapheme + 1),
                 }
             };
 
