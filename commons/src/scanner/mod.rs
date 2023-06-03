@@ -148,24 +148,29 @@ impl Symbol<'_> {
     /// Flattens the input of consecutive symbols. Returns the slice of input starting from start
     /// position of first symbol until the end of last symbol.
     ///
-    /// Note: The input must be same in all symbols!
-    pub fn flatten(symbols: &[Self]) -> &str {
+    /// Returns `None` if the referenced input is symbols is not the same.
+    pub fn flatten(symbols: &[Self]) -> Option<&str> {
         debug_assert!(symbols
             .windows(2)
             .all(|window| window[0].input == window[1].input));
 
         if symbols.is_empty() {
-            return "";
+            return Some("");
         }
 
-        let first = symbols.first().unwrap();
-        let last = symbols.last().unwrap();
-        let input = first.input;
+        let first = symbols.first()?;
+        let last = symbols.last()?;
 
-        let start = first.offset.start;
-        let end = last.offset.end;
+        if first.input == last.input {
+            let input = first.input;
 
-        &input[start..end]
+            let start = first.offset.start;
+            let end = last.offset.end;
+
+            Some(&input[start..end])
+        } else {
+            None
+        }
     }
 
     /// Flattens the iterator of consecutive symbols. Returns the slice of input starting from start

@@ -171,7 +171,7 @@ impl ElementParser for Heading {
         let Token::Content(symbols) = input[1] else {return None};
         let inline_start = symbols.get(0)?.start;
 
-        let content = Symbol::flatten(symbols).parse_inlines().collect();
+        let content = Symbol::flatten(symbols)?.parse_inlines().collect();
         let line_nr = inline_start.line;
         let block = Self {
             id: String::default(),

@@ -284,7 +284,7 @@ impl TokenIterator<'_> {
 
         let curr_index = self.index + symbol_len;
         let content = subst.as_ref().map_or_else(
-            || Symbol::flatten(&self.symbols[self.index..curr_index]),
+            || Symbol::flatten(&self.symbols[self.index..curr_index]).unwrap(),
             |subst| subst.as_str(),
         );
 
