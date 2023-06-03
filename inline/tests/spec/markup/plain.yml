@@ -24,4 +24,4 @@ tests:
       The character 𝛂 broke some stuff.
 
     html: |
-      The character <strong>𝛂</strong> broke some stuff.
+      The character 𝛂 broke some stuff.
