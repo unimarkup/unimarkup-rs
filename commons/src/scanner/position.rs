@@ -16,17 +16,6 @@ pub struct Position {
     pub col_grapheme: usize,
 }
 
-impl Default for Position {
-    fn default() -> Self {
-        Self {
-            line: 1,
-            col_utf8: 1,
-            col_utf16: 1,
-            col_grapheme: 1,
-        }
-    }
-}
-
 /// Symbol offset in the original input.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Offset {
@@ -36,6 +25,28 @@ pub(crate) struct Offset {
     /// End offset of a symbol, exclusive. This is the same as the start offset
     /// of the next symbol.
     pub end: usize,
+}
+
+impl Position {
+    pub fn new(line: usize, column: usize) -> Self {
+        Self {
+            line,
+            col_grapheme: column,
+            col_utf8: column,
+            col_utf16: column,
+        }
+    }
+}
+
+impl Default for Position {
+    fn default() -> Self {
+        Self {
+            line: 1,
+            col_utf8: 1,
+            col_utf16: 1,
+            col_grapheme: 1,
+        }
+    }
 }
 
 impl AddAssign for Position {
