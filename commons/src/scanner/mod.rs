@@ -24,13 +24,13 @@ pub enum SymbolKind {
     EOI,
     /// The backslash (`\`) is used for escaping other symbols.
     Backslash,
-    /// The start (`*`) literal is used for bold and/or italic formatting.
+    /// The star (`*`) literal is used for bold and/or italic formatting.
     Star,
     /// The underline (`_`) literal is used for underline and/or subscript formatting.
     Underline,
     /// The caret (`^`) literal is used for superscript formatting.
     Caret,
-    /// The tick (```) literal is used for verbatim blocks and formatting.
+    /// The tick (`` ` ``) literal is used for verbatim blocks and formatting.
     Tick,
     /// The overline (`‾`) literal is used for overline formatting.
     Overline,
@@ -55,7 +55,7 @@ pub enum SymbolKind {
     OpenBrace,
     /// The close brace (`}`) literal is used for inline attributes.
     CloseBrace,
-    /// A colon literal used for alias substitutions (`::heart::`).
+    /// A colon literal (`:`) is used as marker (e.g. for alias substitutions `::heart::`).
     Colon,
 }
 

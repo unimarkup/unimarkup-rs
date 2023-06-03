@@ -2,7 +2,8 @@ use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 use super::span::SpanLen;
 
-/// Indicates position of a symbol in a Unimarkup document.
+/// Indicates position of a symbol in a Unimarkup document. Both line and column
+/// counting starts from 1.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Position {
     /// Line the symbol is found at
@@ -15,7 +16,6 @@ pub struct Position {
     pub col_grapheme: usize,
 }
 
-// NOTE: text editors start counting from 1. Should we as well?
 impl Default for Position {
     fn default() -> Self {
         Self {
@@ -27,10 +27,14 @@ impl Default for Position {
     }
 }
 
-// Note: start inclusive, end exclusive
+/// Symbol offset in the original input.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Offset {
+    /// Start offset of a symbol, inclusive. This is the same as the end offset
+    /// of the previous symbol.
     pub start: usize,
+    /// End offset of a symbol, exclusive. This is the same as the start offset
+    /// of the next symbol.
     pub end: usize,
 }
 
