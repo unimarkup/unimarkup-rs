@@ -104,39 +104,6 @@ impl Span {
             len_grapheme,
         })
     }
-
-    /// Swaps the two [`Span`]s and returns a new pair of [`Span`]s where:
-    /// - first [`Span`] is the one that was originally second
-    /// - second [`Span`] is the one that was originally first
-    ///
-    /// # Example:
-    /// ```rust
-    /// # use unimarkup_commons::scanner::span::Span;
-    /// # use unimarkup_commons::scanner::position::Position;
-    /// let span1 = Span::from((Position::new(0, 0), Position::new(0, 2)));
-    /// let span2 = Span::from((Position::new(0, 2), Position::new(0, 3)));
-    ///
-    /// let (first, second) = span1.swap(&span2);
-    ///
-    /// assert!(first.start.col_grapheme == 0 && first.end.col_grapheme == 1);
-    /// assert!(second.start.col_grapheme == 1 && second.end.col_grapheme == 3);
-    /// ```
-    pub fn swap(&self, other: &Self) -> (Self, Self) {
-        let (mut first, mut second) = if self.start.col_grapheme < other.start.col_grapheme {
-            (*self, *other)
-        } else {
-            (*other, *self)
-        };
-
-        let first_len = first.len();
-        let second_len = second.len();
-
-        first.end = first.start + second_len;
-        second.start = first.end;
-        second.end = second.start + first_len;
-
-        (first, second)
-    }
 }
 
 impl From<(Position, Position)> for Span {

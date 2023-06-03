@@ -2,7 +2,7 @@ use std::ops::Not;
 
 use unimarkup_commons::scanner::span::Span;
 
-use crate::{Spacing, Token, TokenKind};
+use crate::{Spacing, SpanExt, Token, TokenKind};
 
 // Token can either be opening one, closing one, or neither
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
