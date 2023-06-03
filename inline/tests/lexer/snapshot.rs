@@ -26,8 +26,6 @@ impl AsSnapshot for Snapshot<(&str, Tokens)> {
                 curr_line_nr += 1;
             }
 
-            {};
-
             let token_as_snap = Snapshot(token).as_snapshot();
             content.push_str(&token_as_snap);
         }
