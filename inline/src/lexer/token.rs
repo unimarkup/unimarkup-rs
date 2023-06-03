@@ -288,42 +288,40 @@ impl Token {
     ///
     /// [`Token`]: self::Token
     pub fn split_ambiguous(self) -> (Self, Self) {
-        if !self.is_ambiguous() {
-            panic!("Cannot meaningfully split a Token that is not ambiguous.");
-        } else {
-            let (first_kind, second_kind) = match self.kind() {
-                TokenKind::ItalicBold => (TokenKind::Italic, TokenKind::Bold),
-                TokenKind::UnderlineSubscript => (TokenKind::Subscript, TokenKind::Underline),
-                any_other_kind => (any_other_kind, any_other_kind),
-            };
+        assert!(self.is_ambiguous(), "Non-ambiguous Tokens cannot be split.");
 
-            let len = SpanLen::from(first_kind.len());
-            let first_span = Span::from((self.span.start, self.span.start + len));
+        let (first_kind, second_kind) = match self.kind() {
+            TokenKind::ItalicBold => (TokenKind::Italic, TokenKind::Bold),
+            TokenKind::UnderlineSubscript => (TokenKind::Subscript, TokenKind::Underline),
+            _ => unreachable!("Token must be ambiguous."),
+        };
 
-            let second_span = Span::from((
-                first_span.end(),
-                first_span.end() + SpanLen::from(second_kind.len()),
-            ));
+        let len = SpanLen::from(first_kind.len());
+        let first_span = Span::from((self.span.start, self.span.start + len));
 
-            let first_spacing = self.spacing() - Spacing::Post;
-            let second_spacing = self.spacing() - Spacing::Pre;
+        let second_span = Span::from((
+            first_span.end(),
+            first_span.end() + SpanLen::from(second_kind.len()),
+        ));
 
-            let first = Self {
-                kind: first_kind,
-                span: first_span,
-                spacing: first_spacing,
-                content: None,
-            };
+        let first_spacing = self.spacing() - Spacing::Post;
+        let second_spacing = self.spacing() - Spacing::Pre;
 
-            let second = Self {
-                kind: second_kind,
-                span: second_span,
-                spacing: second_spacing,
-                content: None,
-            };
+        let first = Self {
+            kind: first_kind,
+            span: first_span,
+            spacing: first_spacing,
+            content: None,
+        };
 
-            (first, second)
-        }
+        let second = Self {
+            kind: second_kind,
+            span: second_span,
+            spacing: second_spacing,
+            content: None,
+        };
+
+        (first, second)
     }
 }
 
