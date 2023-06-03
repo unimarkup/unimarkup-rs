@@ -176,12 +176,20 @@ impl Symbol<'_> {
     /// Flattens the iterator of consecutive symbols. Returns the slice of input starting from start
     /// position of first symbol until the end of last symbol.
     ///
-    /// Note: The input must be same in all symbols!
+    /// It is assumed (and checked in debug release) that the symbols are in contiguous order.
+    ///
+    /// Returns `None` if the referenced input is not same in all symbols.
     pub fn flatten_iter<'s>(mut iter: impl Iterator<Item = &'s Symbol<'s>>) -> Option<&'s str> {
         let first = iter.next()?;
-        let last = iter.last()?;
 
-        debug_assert!(first.input == last.input);
+        #[cfg(debug_assertions)]
+        let last = std::iter::once(first).chain(iter).reduce(|prev, curr| {
+            debug_assert!(prev.end.col_grapheme == curr.start.col_grapheme);
+            curr
+        })?;
+
+        #[cfg(not(debug_assertions))]
+        let last = iter.last().unwrap_or(first);
 
         let input = first.input;
 
