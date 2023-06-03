@@ -22,7 +22,6 @@ pub enum SymbolKind {
     Blankline,
     /// End of Unimarkup document
     EOI,
-
     /// The backslash (`\`) is used for escaping other symbols.
     Backslash,
     /// The start (`*`) literal is used for bold and/or italic formatting.
