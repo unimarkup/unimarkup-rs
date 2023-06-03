@@ -441,18 +441,12 @@ impl TokenIterator<'_> {
         let span = Span::from((start_pos, end_pos));
         let len = span.len_grapheme()?;
 
-        // TODO: improve this logic
-        // let temp_idx = self.index;
-        // self.index = self.pos.column.saturating_sub(1);
-
         let token = Token {
             kind: TokenKind::Plain,
             span: Span::from((start_pos, end_pos)),
             spacing: self.spacing_around(len),
             content: Some(content),
         };
-
-        // self.index = temp_idx;
 
         Some(token)
     }
