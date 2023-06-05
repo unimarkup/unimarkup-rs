@@ -2,28 +2,21 @@
 
 use std::{fs, path::Path};
 
-use logid::{
-    capturing::{LogIdTracing, MappedLogId},
-    log_id::LogId,
-};
+use logid::{log, logging::event_entry::AddonKind};
 use sha3::{Digest, Sha3_256};
 
-use crate::log_id::CORE_LOG_ID_MAP;
-
-use super::log_id::HashingErrLogId;
+use super::log_id::HashingError;
 
 /// Calculates the sha3-256 hash of a given file
-pub fn get_filehash(file: &Path) -> Result<Vec<u8>, MappedLogId> {
+pub fn get_filehash(file: &Path) -> Result<Vec<u8>, HashingError> {
     let mut hasher = Sha3_256::new();
     let source = fs::read_to_string(file).map_err(|err| {
-        (HashingErrLogId::FailedReadingFile as LogId)
-            .set_event_with(
-                &CORE_LOG_ID_MAP,
-                &format!("Could not read file: '{:?}'", file),
-                file!(),
-                line!(),
-            )
-            .add_info(&format!("Cause: {}", err))
+        log!(
+            HashingError::FailedReadingFile,
+            &format!("Could not read file: '{:?}'", file),
+            add: AddonKind::Info(format!("Cause: {}", err))
+        );
+        HashingError::FailedReadingFile
     })?;
 
     hasher.update(source);

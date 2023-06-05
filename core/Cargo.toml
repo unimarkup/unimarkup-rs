@@ -13,6 +13,7 @@ license.workspace = true
 
 [dependencies]
 logid.workspace = true
+thiserror.workspace = true
 once_cell.workspace = true
 unimarkup-render = { path = "../render/", version = "0" }
 unimarkup-inline = { path = "../inline/", version = "0" }
