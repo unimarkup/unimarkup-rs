@@ -1,3 +1,6 @@
+//! Utilities for tracking the positional information about symbols, tokens and other elements in
+//! original input.
+
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 use super::span::SpanLen;
