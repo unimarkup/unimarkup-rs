@@ -1,12 +1,10 @@
 use std::{collections::HashSet, path::PathBuf};
 
 use clap::{crate_authors, Args, Parser};
-use logid::{log_id::LogId, set_event_with};
+use logid::err;
 use serde::{Deserialize, Serialize};
 
-use crate::log_id::COMMONS_LOG_ID_MAP;
-
-use self::{log_id::ConfigErrLogId, preamble::Preamble};
+use self::{log_id::ConfigErr, preamble::Preamble};
 
 pub mod log_id;
 pub mod output;
@@ -33,7 +31,7 @@ pub trait ConfigFns {
 
     /// Checks if all set values are valid.
     /// e.g. that set files exist
-    fn validate(&self) -> Result<(), LogId>;
+    fn validate(&self) -> Result<(), ConfigErr>;
 
     /// Returns `true` if `validate()` returned `Ok`.
     fn is_valid(&self) -> bool {
@@ -60,17 +58,15 @@ impl ConfigFns for Config {
         //Note: `input` is always taken from `self`
     }
 
-    fn validate(&self) -> Result<(), LogId> {
+    fn validate(&self) -> Result<(), ConfigErr> {
         self.preamble.validate()?;
         self.merging.validate()?;
 
         if !self.input.exists() {
-            return Err(set_event_with!(
-                ConfigErrLogId::InvalidFile,
-                &COMMONS_LOG_ID_MAP,
+            return err!(
+                ConfigErr::InvalidFile,
                 &format!("Input file not found: {:?}", self.input)
-            )
-            .into());
+            );
         }
         Ok(())
     }
@@ -87,7 +83,7 @@ impl ConfigFns for MergingConfig {
         // only main config counts for `bool` values according to specification
     }
 
-    fn validate(&self) -> Result<(), LogId> {
+    fn validate(&self) -> Result<(), ConfigErr> {
         Ok(())
     }
 }
@@ -145,11 +141,7 @@ mod tests {
         ]);
 
         let result = cfg.validate();
-        assert!(
-            result.is_ok(),
-            "Cause: {:?}",
-            COMMONS_LOG_ID_MAP.get_entries(result.unwrap_err())
-        );
+        assert!(result.is_ok(), "Valid config was not recognized as valid.");
     }
 
     #[should_panic]

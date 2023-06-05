@@ -4,12 +4,10 @@ use std::{
 };
 
 use clap::Args;
-use logid::set_event_with;
+use logid::err;
 use serde::{Deserialize, Serialize};
 
-use crate::log_id::COMMONS_LOG_ID_MAP;
-
-use super::{log_id::ConfigErrLogId, output::Output, parse_to_hashset, ConfigFns, ReplaceIfNone};
+use super::{log_id::ConfigErr, output::Output, parse_to_hashset, ConfigFns, ReplaceIfNone};
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Preamble {
@@ -39,7 +37,7 @@ impl ConfigFns for Preamble {
         self.i18n.merge(other.i18n);
     }
 
-    fn validate(&self) -> Result<(), logid::log_id::LogId> {
+    fn validate(&self) -> Result<(), ConfigErr> {
         self.output.validate()?;
         self.metadata.validate()?;
         self.cite.validate()?;
@@ -61,7 +59,7 @@ impl ConfigFns for I18n {
         self.langs.extend(other.langs.into_iter());
     }
 
-    fn validate(&self) -> Result<(), logid::log_id::LogId> {
+    fn validate(&self) -> Result<(), ConfigErr> {
         // TODO: make sure strings are valid bcp-47 locales
 
         Ok(())
@@ -86,7 +84,7 @@ impl ConfigFns for RenderConfig {
         self.parameter.extend(other.parameter.into_iter());
     }
 
-    fn validate(&self) -> Result<(), logid::log_id::LogId> {
+    fn validate(&self) -> Result<(), ConfigErr> {
         // TODO: validate ignore and parameter syntax
         Ok(())
     }
@@ -109,26 +107,22 @@ impl ConfigFns for Citedata {
         self.references.extend(other.references.into_iter());
     }
 
-    fn validate(&self) -> Result<(), logid::log_id::LogId> {
+    fn validate(&self) -> Result<(), ConfigErr> {
         if let Some(file) = &self.style {
             if !file.exists() {
-                return Err(set_event_with!(
-                    ConfigErrLogId::InvalidFile,
-                    &COMMONS_LOG_ID_MAP,
+                return err!(
+                    ConfigErr::InvalidFile,
                     &format!("Citation Style Language file not found: {:?}", file)
-                )
-                .into());
+                );
             }
         }
 
         for reference in &self.references {
             if !reference.exists() {
-                return Err(set_event_with!(
-                    ConfigErrLogId::InvalidFile,
-                    &COMMONS_LOG_ID_MAP,
+                return err!(
+                    ConfigErr::InvalidFile,
                     &format!("Bibliography references file not found: {:?}", reference)
-                )
-                .into());
+                );
             }
         }
 
@@ -159,15 +153,13 @@ impl ConfigFns for Metadata {
         // Note: `base` and `description` must not be merged with sub-configs according to specification.
     }
 
-    fn validate(&self) -> Result<(), logid::log_id::LogId> {
+    fn validate(&self) -> Result<(), ConfigErr> {
         for font in &self.fonts {
             if !font.exists() {
-                return Err(set_event_with!(
-                    ConfigErrLogId::InvalidFile,
-                    &COMMONS_LOG_ID_MAP,
+                return err!(
+                    ConfigErr::InvalidFile,
                     &format!("Font file not found: {:?}", font)
-                )
-                .into());
+                );
             }
         }
 
