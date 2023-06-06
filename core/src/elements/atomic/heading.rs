@@ -1,6 +1,3 @@
-use logid::capturing::{LogIdTracing, MappedLogId};
-use logid::log_id::LogId;
-
 use strum_macros::*;
 use unimarkup_inline::{Inline, ParseInlines};
 use unimarkup_render::html::Html;
@@ -8,11 +5,10 @@ use unimarkup_render::render::Render;
 
 use crate::elements::blocks::Block;
 use crate::elements::{inlines, Blocks};
-use crate::log_id::CORE_LOG_ID_MAP;
 use crate::parser::{ElementParser, TokenizeOutput};
 use unimarkup_commons::scanner::{Symbol, SymbolKind};
 
-use super::log_id::AtomicErrLogId;
+use super::log_id::AtomicError;
 
 /// Enum of possible heading levels for unimarkup headings
 #[derive(Eq, PartialEq, Debug, strum_macros::Display, EnumString, Clone, Copy)]
@@ -81,7 +77,7 @@ impl From<&str> for HeadingLevel {
 }
 
 impl TryFrom<usize> for HeadingLevel {
-    type Error = MappedLogId;
+    type Error = AtomicError;
 
     fn try_from(level_depth: usize) -> Result<Self, Self::Error> {
         let level = match level_depth {
@@ -91,14 +87,7 @@ impl TryFrom<usize> for HeadingLevel {
             4 => Self::Level4,
             5 => Self::Level5,
             6 => Self::Level6,
-            _ => {
-                return Err((AtomicErrLogId::InvalidHeadingLvl as LogId).set_event_with(
-                    &CORE_LOG_ID_MAP,
-                    &format!("Invalid heading level: {level_depth}"),
-                    file!(),
-                    line!(),
-                ))
-            }
+            _ => return Err(AtomicError::InvalidHeadingLvl),
         };
 
         Ok(level)
@@ -192,7 +181,7 @@ impl AsRef<Self> for Heading {
 }
 
 impl Render for Heading {
-    fn render_html(&self) -> Result<Html, MappedLogId> {
+    fn render_html(&self) -> Html {
         let mut html = Html::default();
 
         let tag_level = u8::from(self.level).to_string();
@@ -203,13 +192,13 @@ impl Render for Heading {
         html.body.push_str(&self.id);
         html.body.push_str("'>");
 
-        inlines::push_inlines(&mut html, &self.content)?;
+        inlines::push_inlines(&mut html, &self.content);
 
         html.body.push_str("</h");
         html.body.push_str(&tag_level);
         html.body.push('>');
 
-        Ok(html)
+        html
     }
 }
 
@@ -237,7 +226,7 @@ mod tests {
                 line_nr: level,
             };
 
-            let html = heading.render_html().unwrap();
+            let html = heading.render_html();
 
             let expected = format!("<h{} id='{}'>This is a heading</h{}>", level, id, level);
             assert_eq!(html.body, expected);
@@ -261,7 +250,7 @@ mod tests {
                 line_nr: level,
             };
 
-            let html = heading.render_html().unwrap();
+            let html = heading.render_html();
 
             let expected = format!(
                 "<h{} id='{}'><pre><code>This</code></pre> <em>is <sub>a</sub></em> <strong>heading</strong></h{}>",

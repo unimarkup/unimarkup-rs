@@ -1,5 +1,6 @@
 //! Module for parsing of Unimarkup elements.
 
+use logid::log;
 use unimarkup_commons::scanner::{IntoSymbols, Symbol, SymbolKind};
 
 use crate::{
@@ -10,6 +11,7 @@ use crate::{
         Blocks,
     },
     metadata::{Metadata, MetadataKind},
+    parser::log_id::MainParserInfo,
     security,
 };
 use unimarkup_commons::config::Config;
@@ -80,7 +82,7 @@ pub struct MainParser {
 
 impl Default for MainParser {
     fn default() -> Self {
-        tracing::info!("Initializing MainParser");
+        log!(MainParserInfo::StartInitializing);
 
         let default = Paragraph::generate_parser();
 
@@ -93,7 +95,7 @@ impl Default for MainParser {
         parser.register_parser(Heading::generate_parser());
         parser.register_parser(Verbatim::generate_parser());
 
-        tracing::info!("MainParser initialized");
+        log!(MainParserInfo::Initialized);
         parser
     }
 }

@@ -30,15 +30,9 @@ impl Document {
         let mut output = Html::default();
 
         for block in &self.blocks {
-            match block.render_html() {
-                Ok(html) => {
-                    output.body.push_str(&html.body);
-                    output.head.push_str(&html.head);
-                }
-                Err(id) => {
-                    id.add_info("This error caused HTML rendering to fail!");
-                }
-            }
+            let html = block.render_html();
+            output.body.push_str(&html.body);
+            output.head.push_str(&html.head);
         }
 
         output

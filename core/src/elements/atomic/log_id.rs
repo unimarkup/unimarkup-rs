@@ -1,17 +1,12 @@
 //! Defines log-ids for atomic elements
 
-use logid::log_id::{self, EventLevel};
-
-use crate::{elements::log_id::LogIdSubGrp, log_id::LogIdMainGrp};
+use logid::ErrLogId;
+use thiserror::Error;
 
 /// Atomic error log-ids for the element section
-#[derive(Debug)]
-pub enum AtomicErrLogId {
+#[derive(Debug, Clone, Error, ErrLogId)]
+pub enum AtomicError {
     /// Log-id denoting an invalid heading level
-    InvalidHeadingLvl = log_id::get_log_id(
-        LogIdMainGrp::Element as u8,
-        LogIdSubGrp::Atomic as u8,
-        EventLevel::Error,
-        0,
-    ),
+    #[error("Invalid heading level detected.")]
+    InvalidHeadingLvl,
 }
