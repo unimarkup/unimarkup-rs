@@ -1,9 +1,7 @@
 //! Entry module for unimarkup-rs.
 
-use logid::capturing::MappedLogId;
-
 use crate::document::Document;
-use crate::frontend;
+use crate::parser;
 use unimarkup_commons::config::Config;
 
 /// Compiles Unimarkup content, and returns a [`Document`] representing the given content.
@@ -16,14 +14,14 @@ use unimarkup_commons::config::Config;
 /// # Errors
 ///
 /// Returns a [`MappedLogId`], if error occurs during compilation.
-pub fn compile(um_content: &str, mut config: Config) -> Result<Document, MappedLogId> {
+pub fn compile(um_content: &str, mut config: Config) -> Document {
     if um_content.is_empty() {
-        return Ok(Document {
+        return Document {
             blocks: vec![],
             config,
             ..Default::default()
-        });
+        };
     }
 
-    frontend::run(um_content, &mut config)
+    parser::parse_unimarkup(um_content, &mut config)
 }
