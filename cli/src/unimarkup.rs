@@ -5,14 +5,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use logid::{
-    capturing::{LogIdTracing, MappedLogId},
-    log_id::LogId,
-};
+use logid::{log, logging::event_entry::AddonKind};
 use unimarkup_commons::config::{output::OutputFormat, Config};
 use unimarkup_core::document::Document;
 
-use crate::log_id::{GeneralErrLogId, GeneralInfLogId, CLI_LOG_ID_MAP};
+use crate::log_id::{GeneralError, GeneralInfo};
 
 /// Compiles a Unimarkup document.
 ///
@@ -22,17 +19,15 @@ use crate::log_id::{GeneralErrLogId, GeneralInfLogId, CLI_LOG_ID_MAP};
 ///
 /// # Errors
 ///
-/// Returns a [`MappedLogId`] if error occurs during compilation.
-pub fn compile(config: Config) -> Result<(), MappedLogId> {
-    let source = fs::read_to_string(&config.input).map_err(|err| {
-        (GeneralErrLogId::FailedReadingFile as LogId)
-            .set_event_with(
-                &CLI_LOG_ID_MAP,
-                &format!("Could not read file: '{:?}'", &config.input),
-                file!(),
-                line!(),
-            )
-            .add_info(&format!("Cause: {}", err))
+/// Returns a [`GeneralError`] if error occurs during compilation.
+pub fn compile(config: Config) -> Result<(), GeneralError> {
+    let source = fs::read_to_string(&config.input).map_err(|error| {
+        log!(
+            GeneralError::FailedReadingFile,
+            &format!("Could not read file: '{:?}'", &config.input),
+            add: AddonKind::Info(format!("Cause: {}", error))
+        );
+        GeneralError::FailedReadingFile
     })?;
 
     let out_path = {
@@ -46,7 +41,7 @@ pub fn compile(config: Config) -> Result<(), MappedLogId> {
         }
     };
 
-    let document = unimarkup_core::unimarkup::compile(&source, config)?;
+    let document = unimarkup_core::unimarkup::compile(&source, config);
 
     for format in document.output_formats() {
         match format {
@@ -57,27 +52,23 @@ pub fn compile(config: Config) -> Result<(), MappedLogId> {
     Ok(())
 }
 
-fn write_html(document: &Document, out_path: impl AsRef<Path>) -> Result<(), MappedLogId> {
+fn write_html(document: &Document, out_path: impl AsRef<Path>) -> Result<(), GeneralError> {
     let html = document.html();
 
     let mut out_path_html: PathBuf = out_path.as_ref().into();
     out_path_html.set_extension("html");
 
-    (GeneralInfLogId::WritingToFile as LogId).set_event_with(
-        &CLI_LOG_ID_MAP,
+    log!(
+        GeneralInfo::WritingToFile,
         &format!("Writing to file: {:?}", out_path_html),
-        file!(),
-        line!(),
     );
 
-    std::fs::write(&out_path_html, html.body).map_err(|err| {
-        (GeneralErrLogId::FailedWritingFile as LogId)
-            .set_event_with(
-                &CLI_LOG_ID_MAP,
-                &format!("Could not write to file: {:?}", out_path_html),
-                file!(),
-                line!(),
-            )
-            .add_info(&format!("Cause: {}", err))
+    std::fs::write(&out_path_html, html.body).map_err(|error| {
+        log!(
+            GeneralError::FailedWritingFile,
+            &format!("Could not write to file: {:?}", out_path_html),
+            add: AddonKind::Info(format!("Cause: {}", error))
+        );
+        GeneralError::FailedWritingFile
     })
 }

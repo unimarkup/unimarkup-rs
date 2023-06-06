@@ -1,70 +1,46 @@
 //! Defines log-ids for the cli crate
 
-use logid::{
-    id_map::LogIdMap,
-    log_id::{self, EventLevel},
-};
-use once_cell::sync::Lazy;
-
-/// Map to store [`LogId`]s set in the [`cli`] crate.
-pub(crate) static CLI_LOG_ID_MAP: Lazy<LogIdMap> = Lazy::new(LogIdMap::new);
-
-enum LogIdMainGrp {
-    General = 0,
-}
-
-enum LogIdSubGrp {
-    General = 0,
-}
+use logid::{ErrLogId, InfoLogId};
+use thiserror::Error;
 
 /// General error log-ids for the cli crate
-#[derive(Debug)]
+#[derive(Debug, Clone, Error, ErrLogId)]
 #[allow(clippy::enum_variant_names)]
-pub enum GeneralErrLogId {
+pub enum GeneralError {
     /// Log-id denoting a fail while reading a file
-    FailedReadingFile = log_id::get_log_id(
-        LogIdMainGrp::General as u8,
-        LogIdSubGrp::General as u8,
-        EventLevel::Error,
-        0,
-    ),
+    #[error("Failed reading a file.")]
+    FailedReadingFile,
+
     /// Log-id denoting a fail while writing to a file
-    FailedWritingFile = log_id::get_log_id(
-        LogIdMainGrp::General as u8,
-        LogIdSubGrp::General as u8,
-        EventLevel::Error,
-        1,
-    ),
-    /// Log-id denoting a fail while parsing a file
-    FailedParsingArgs = log_id::get_log_id(
-        LogIdMainGrp::General as u8,
-        LogIdSubGrp::General as u8,
-        EventLevel::Error,
-        2,
-    ),
+    #[error("Failed writing to a file.")]
+    FailedWritingFile,
+
+    /// Log-id denoting a fail while parsing CLI arguments
+    #[error("Failed parsing given comandline arguments.")]
+    FailedParsingArgs,
+
     /// Log-id denoting that compilation failed
-    FailedCompiling = log_id::get_log_id(
-        LogIdMainGrp::General as u8,
-        LogIdSubGrp::General as u8,
-        EventLevel::Error,
-        3,
-    ),
+    #[error("Failed compiling given input.")]
+    FailedCompiling,
 }
 
-#[derive(Debug)]
-pub enum GeneralInfLogId {
+#[derive(Debug, Clone, InfoLogId)]
+pub enum GeneralInfo {
     /// Log-id denoting that unimarkup-rs is writing to the output file
-    WritingToFile = log_id::get_log_id(
-        LogIdMainGrp::General as u8,
-        LogIdSubGrp::General as u8,
-        EventLevel::Info,
-        0,
-    ),
+    WritingToFile,
     /// Log-id denoting that compilation finished
-    FinishedCompiling = log_id::get_log_id(
-        LogIdMainGrp::General as u8,
-        LogIdSubGrp::General as u8,
-        EventLevel::Info,
-        1,
-    ),
+    FinishedCompiling,
+
+    /// Log-id to notify log-thread to stop logging
+    StopLogging,
+}
+
+impl std::fmt::Display for GeneralInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GeneralInfo::WritingToFile => write!(f, "Unimarkup is writing to a file."),
+            GeneralInfo::FinishedCompiling => write!(f, "Unimarkup finished compiling."),
+            GeneralInfo::StopLogging => write!(f, "Notify listeners to stop logging."),
+        }
+    }
 }

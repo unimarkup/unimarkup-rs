@@ -1,15 +1,29 @@
 //! Traits and helper functions for logging functionality.
 
-use tracing::metadata::LevelFilter;
+use std::thread::JoinHandle;
 
-/// Initializes a [`tracing_subscriber`] used for logging functionality of
-/// [`unimarkup-rs`]
-pub fn init_logger() {
-    let subscriber = tracing_subscriber::fmt()
-        .compact()
-        .without_time()
-        .with_target(false)
-        .with_max_level(LevelFilter::TRACE)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+use logid::logging::LOGGER;
+
+use crate::log_id::GeneralInfo;
+
+/// Creates a thread to capture logs set during compilation, and prints them to stdout.
+///
+/// Set a log with log-id `GeneralInfo::StopLogging` to stop the thread.
+pub fn init_log_thread() -> JoinHandle<()> {
+    std::thread::spawn(|| {
+        if let Ok(recv) = LOGGER.subscribe_to_all_events() {
+            while let Ok(log_event) = recv.get_receiver().recv() {
+                if log_event.get_id() == &GeneralInfo::StopLogging.into() {
+                    break;
+                }
+
+                println!(
+                    "{}: {}",
+                    log_event.get_id().get_log_level(),
+                    log_event.get_msg()
+                );
+            }
+        }
+        LOGGER.shutdown();
+    })
 }

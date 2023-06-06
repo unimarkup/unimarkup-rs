@@ -13,7 +13,7 @@ license.workspace = true
 
 [dependencies]
 logid.workspace = true
-once_cell.workspace = true
+thiserror.workspace = true
 clap.workspace = true
 unimarkup-core = { path = "../core/", version = "0" }
 unimarkup-commons = { path = "../commons/", version = "0" }
