@@ -1,6 +1,5 @@
 //! Module for parsing of Unimarkup elements.
 
-use logid::capturing::MappedLogId;
 use unimarkup_commons::scanner::{IntoSymbols, Symbol, SymbolKind};
 
 use crate::{
@@ -14,6 +13,9 @@ use crate::{
     security,
 };
 use unimarkup_commons::config::Config;
+
+pub mod generate_id;
+pub mod log_id;
 
 /// Parser as function that can parse Unimarkup content
 pub type ParserFn = for<'i> fn(&'i [Symbol<'i>]) -> Option<(Blocks, &'i [Symbol<'i>])>;
@@ -157,7 +159,7 @@ impl MainParser {
 }
 
 /// Parses and returns a Unimarkup document.
-pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document, MappedLogId> {
+pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let parser = MainParser::default();
 
     let symbols = um_content.into_symbols();
@@ -180,5 +182,5 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document
 
     unimarkup.metadata.push(metadata);
 
-    Ok(unimarkup)
+    unimarkup
 }
