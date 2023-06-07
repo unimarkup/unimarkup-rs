@@ -10,7 +10,7 @@ pub use symbol::{Symbol, SymbolKind};
 
 /// Trait for conversion of input into Unimarkup symbols.
 pub trait IntoSymbols<'s> {
-    type Output;
+    type Output: AsRef<[Symbol<'s>]>;
 
     /// Converts input into collection of Unimarkup symbols.
     fn into_symbols(self) -> Self::Output;
