@@ -19,7 +19,7 @@ fn main() {
                 }
                 Err(error) => {
                     log!(
-                        GeneralError::FailedCompiling,
+                        GeneralError::Compile,
                         add: AddonKind::Info(format!("Cause: {:?}", error))
                     );
                 }
@@ -27,7 +27,7 @@ fn main() {
         }
         Err(error) => {
             log!(
-                GeneralError::FailedParsingArgs,
+                GeneralError::ArgParse,
                 add: AddonKind::Info(
                     format!("Cause:\n\n{}", error.to_string().replace("error: ", "")),
                 )

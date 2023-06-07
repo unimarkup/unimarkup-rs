@@ -5,23 +5,22 @@ use thiserror::Error;
 
 /// General error log-ids for the cli crate
 #[derive(Debug, Clone, Error, ErrLogId)]
-#[allow(clippy::enum_variant_names)]
 pub enum GeneralError {
     /// Log-id denoting a fail while reading a file
     #[error("Failed reading a file.")]
-    FailedReadingFile,
+    FileRead,
 
     /// Log-id denoting a fail while writing to a file
     #[error("Failed writing to a file.")]
-    FailedWritingFile,
+    FileWrite,
 
     /// Log-id denoting a fail while parsing CLI arguments
     #[error("Failed parsing given comandline arguments.")]
-    FailedParsingArgs,
+    ArgParse,
 
     /// Log-id denoting that compilation failed
     #[error("Failed compiling given input.")]
-    FailedCompiling,
+    Compile,
 }
 
 #[derive(Debug, Clone, InfoLogId)]

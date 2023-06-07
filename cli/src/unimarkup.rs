@@ -23,11 +23,11 @@ use crate::log_id::{GeneralError, GeneralInfo};
 pub fn compile(config: Config) -> Result<(), GeneralError> {
     let source = fs::read_to_string(&config.input).map_err(|error| {
         log!(
-            GeneralError::FailedReadingFile,
+            GeneralError::FileRead,
             &format!("Could not read file: '{:?}'", &config.input),
             add: AddonKind::Info(format!("Cause: {}", error))
         );
-        GeneralError::FailedReadingFile
+        GeneralError::FileRead
     })?;
 
     let out_path = {
@@ -65,10 +65,10 @@ fn write_html(document: &Document, out_path: impl AsRef<Path>) -> Result<(), Gen
 
     std::fs::write(&out_path_html, html.body).map_err(|error| {
         log!(
-            GeneralError::FailedWritingFile,
+            GeneralError::FileWrite,
             &format!("Could not write to file: {:?}", out_path_html),
             add: AddonKind::Info(format!("Cause: {}", error))
         );
-        GeneralError::FailedWritingFile
+        GeneralError::FileWrite
     })
 }
