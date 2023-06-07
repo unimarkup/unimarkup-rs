@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use logid::{log, logging::event_entry::AddonKind};
+use logid::{log, logging::event_entry::AddonKind, pipe};
 use unimarkup_commons::config::{output::OutputFormat, Config};
 use unimarkup_core::document::Document;
 
@@ -22,12 +22,11 @@ use crate::log_id::{GeneralError, GeneralInfo};
 /// Returns a [`GeneralError`] if error occurs during compilation.
 pub fn compile(config: Config) -> Result<(), GeneralError> {
     let source = fs::read_to_string(&config.input).map_err(|error| {
-        log!(
+        pipe!(
             GeneralError::FileRead,
             &format!("Could not read file: '{:?}'", &config.input),
             add: AddonKind::Info(format!("Cause: {}", error))
-        );
-        GeneralError::FileRead
+        )
     })?;
 
     let out_path = {
@@ -64,11 +63,10 @@ fn write_html(document: &Document, out_path: impl AsRef<Path>) -> Result<(), Gen
     );
 
     std::fs::write(&out_path_html, html.body).map_err(|error| {
-        log!(
+        pipe!(
             GeneralError::FileWrite,
             &format!("Could not write to file: {:?}", out_path_html),
             add: AddonKind::Info(format!("Cause: {}", error))
-        );
-        GeneralError::FileWrite
+        )
     })
 }

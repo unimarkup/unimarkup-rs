@@ -2,7 +2,7 @@
 
 use std::{fs, path::Path};
 
-use logid::{log, logging::event_entry::AddonKind};
+use logid::{logging::event_entry::AddonKind, pipe};
 use sha3::{Digest, Sha3_256};
 
 use super::log_id::HashingError;
@@ -11,12 +11,11 @@ use super::log_id::HashingError;
 pub fn get_filehash(file: &Path) -> Result<Vec<u8>, HashingError> {
     let mut hasher = Sha3_256::new();
     let source = fs::read_to_string(file).map_err(|err| {
-        log!(
+        pipe!(
             HashingError::FailedReadingFile,
             &format!("Could not read file: '{:?}'", file),
             add: AddonKind::Info(format!("Cause: {}", err))
-        );
-        HashingError::FailedReadingFile
+        )
     })?;
 
     hasher.update(source);
