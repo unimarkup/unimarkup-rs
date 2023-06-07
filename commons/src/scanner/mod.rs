@@ -6,47 +6,7 @@ mod symbol;
 
 use icu::segmenter::GraphemeClusterSegmenter;
 use position::{Offset, Position};
-pub use symbol::{Symbol, SymbolKind};
-
-/// Trait for conversion of input into Unimarkup symbols.
-pub trait IntoSymbols<'s> {
-    type Output: AsRef<[Symbol<'s>]>;
-
-    /// Converts input into collection of Unimarkup symbols.
-    fn into_symbols(self) -> Self::Output;
-}
-
-impl<'s> IntoSymbols<'s> for &'s str {
-    type Output = Vec<Symbol<'s>>;
-
-    fn into_symbols(self) -> Self::Output {
-        grapheme_split(self)
-    }
-}
-
-impl<'s> IntoSymbols<'s> for Vec<Symbol<'s>> {
-    type Output = Vec<Symbol<'s>>;
-
-    fn into_symbols(self) -> Self::Output {
-        self
-    }
-}
-
-impl<'s> IntoSymbols<'s> for &'s Vec<Symbol<'s>> {
-    type Output = &'s [Symbol<'s>];
-
-    fn into_symbols(self) -> Self::Output {
-        self
-    }
-}
-
-impl<'s> IntoSymbols<'s> for &'s [Symbol<'s>] {
-    type Output = &'s [Symbol<'s>];
-
-    fn into_symbols(self) -> Self::Output {
-        self
-    }
-}
+pub use symbol::{IntoSymbols, Symbol, SymbolKind};
 
 // TODO: pass locale from Config to this function.
 fn grapheme_split(input: &str) -> Vec<Symbol> {
