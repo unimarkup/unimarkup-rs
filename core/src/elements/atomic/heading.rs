@@ -114,14 +114,20 @@ pub struct Heading {
     pub line_nr: usize,
 }
 
-pub enum Token<'a> {
+/// HeadingToken for the [`ElementParser`]
+pub enum HeadingToken<'a> {
+    /// Level of the heading
     Level(HeadingLevel),
+
+    /// Content of the heading
     Content(&'a [Symbol<'a>]),
+
+    /// Marks the end of the heading
     End,
 }
 
 impl ElementParser for Heading {
-    type Token<'a> = self::Token<'a>;
+    type Token<'a> = self::HeadingToken<'a>;
 
     fn tokenize<'i>(input: &'i [Symbol<'i>]) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
         let mut level_depth = input
@@ -148,7 +154,11 @@ impl ElementParser for Heading {
         let rest = &input[content_end..];
 
         let output = TokenizeOutput {
-            tokens: vec![Token::Level(level), Token::Content(content), Token::End],
+            tokens: vec![
+                HeadingToken::Level(level),
+                HeadingToken::Content(content),
+                HeadingToken::End,
+            ],
             rest_of_input: rest,
         };
 
@@ -156,8 +166,8 @@ impl ElementParser for Heading {
     }
 
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
-        let Token::Level(level) = input[0] else {return None};
-        let Token::Content(symbols) = input[1] else {return None};
+        let HeadingToken::Level(level) = input[0] else {return None};
+        let HeadingToken::Content(symbols) = input[1] else {return None};
         let inline_start = symbols.get(0)?.start;
 
         let content = Symbol::flatten(symbols)?.parse_inlines().collect();

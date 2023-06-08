@@ -65,12 +65,12 @@ enum TokenKind<'a> {
     Text(&'a [Symbol<'a>]),
 }
 
-pub(crate) struct Token<'a> {
+pub(crate) struct ParagraphToken<'a> {
     kind: TokenKind<'a>,
 }
 
 impl ElementParser for Paragraph {
-    type Token<'a> = self::Token<'a>;
+    type Token<'a> = self::ParagraphToken<'a>;
 
     fn tokenize<'input>(
         input: &'input [Symbol<'input>],
@@ -81,13 +81,13 @@ impl ElementParser for Paragraph {
         let end_of_input = taken.min(input.len());
 
         let tokens = vec![
-            Token {
+            ParagraphToken {
                 kind: TokenKind::Start,
             },
-            Token {
+            ParagraphToken {
                 kind: TokenKind::Text(&input[..end_of_input]),
             },
-            Token {
+            ParagraphToken {
                 kind: TokenKind::End,
             },
         ];
