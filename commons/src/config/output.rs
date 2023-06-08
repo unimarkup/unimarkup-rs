@@ -1,12 +1,10 @@
 use std::{collections::HashSet, path::PathBuf, str::FromStr};
 
 use clap::{Args, ValueEnum};
-use logid::set_event_with;
+use logid::err;
 use serde::{Deserialize, Serialize};
 
-use crate::log_id::COMMONS_LOG_ID_MAP;
-
-use super::{log_id::ConfigErrLogId, parse_to_hashset, ConfigFns, ReplaceIfNone};
+use super::{log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone};
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Output {
@@ -29,16 +27,11 @@ impl ConfigFns for Output {
         self.format_specific.merge(other.format_specific);
     }
 
-    fn validate(&self) -> Result<(), logid::log_id::LogId> {
+    fn validate(&self) -> Result<(), ConfigErr> {
         self.format_specific.validate()?;
 
         if self.formats.is_empty() {
-            return Err(set_event_with!(
-                ConfigErrLogId::InvalidConfig,
-                &COMMONS_LOG_ID_MAP,
-                "No output format was set."
-            )
-            .into());
+            return err!(ConfigErr::InvalidConfig, "No output format was set.");
         }
 
         if let (Some(ref file), false) = (&self.file, self.overwrite) {
@@ -48,15 +41,13 @@ impl ConfigFns for Output {
                 filepath.set_extension(format.extension());
 
                 if filepath.exists() {
-                    return Err(set_event_with!(
-                        ConfigErrLogId::InvalidConfig,
-                        &COMMONS_LOG_ID_MAP,
+                    return err!(
+                        ConfigErr::InvalidConfig,
                         &format!(
                             "Output file '{:?}' already exists, but `overwrite` was not set.",
                             filepath
                         )
-                    )
-                    .into());
+                    );
                 }
             }
         }
@@ -115,7 +106,7 @@ impl ConfigFns for OutputFormatSpecific {
         self.html.merge(other.html);
     }
 
-    fn validate(&self) -> Result<(), logid::log_id::LogId> {
+    fn validate(&self) -> Result<(), ConfigErr> {
         self.html.validate()
     }
 }
@@ -134,15 +125,13 @@ impl ConfigFns for HtmlSpecific {
         self.keywords.extend(other.keywords.into_iter());
     }
 
-    fn validate(&self) -> Result<(), logid::log_id::LogId> {
+    fn validate(&self) -> Result<(), ConfigErr> {
         for fav in &self.favicons {
             if !fav.exists() {
-                return Err(set_event_with!(
-                    ConfigErrLogId::InvalidFile,
-                    &COMMONS_LOG_ID_MAP,
+                return err!(
+                    ConfigErr::InvalidFile,
                     &format!("Favicon file not found: {:?}", fav)
-                )
-                .into());
+                );
             }
         }
 

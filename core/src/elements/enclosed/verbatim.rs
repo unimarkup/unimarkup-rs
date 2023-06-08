@@ -1,4 +1,3 @@
-use logid::capturing::MappedLogId;
 use serde::{Deserialize, Serialize};
 use unimarkup_render::highlight::{self, DEFAULT_THEME, PLAIN_SYNTAX};
 use unimarkup_render::html::Html;
@@ -110,7 +109,7 @@ struct VerbatimAttributes {
 }
 
 impl Render for Verbatim {
-    fn render_html(&self) -> Result<Html, MappedLogId> {
+    fn render_html(&self) -> Html {
         let mut res = String::with_capacity(self.content.capacity());
 
         // TODO: improve handling of attributes
@@ -135,9 +134,9 @@ impl Render for Verbatim {
         ));
         res.push_str("</div>");
 
-        Ok(Html {
+        Html {
             body: res,
             ..Default::default()
-        })
+        }
     }
 }

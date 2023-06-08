@@ -1,13 +1,11 @@
 use std::fmt::Debug;
 
-use logid::capturing::MappedLogId;
 use unimarkup_inline::{Inline, ParseInlines};
 use unimarkup_render::{html::Html, render::Render};
 
 use crate::{
     elements::{blocks::Block, types},
-    frontend::parser,
-    parser::TokenizeOutput,
+    parser::{self, TokenizeOutput},
 };
 use crate::{
     elements::{inlines, Blocks},
@@ -39,7 +37,7 @@ impl From<&[Symbol<'_>]> for Paragraph {
         let content = Symbol::flatten(value).unwrap().parse_inlines().collect();
         let line_nr = value.get(0).map(|symbol| symbol.start.line).unwrap_or(0);
 
-        let id = parser::generate_id(&format!(
+        let id = parser::generate_id::generate_id(&format!(
             "paragraph{delim}{}",
             line_nr,
             delim = types::ELEMENT_TYPE_DELIMITER
@@ -67,12 +65,12 @@ enum TokenKind<'a> {
     Text(&'a [Symbol<'a>]),
 }
 
-pub(crate) struct Token<'a> {
+pub(crate) struct ParagraphToken<'a> {
     kind: TokenKind<'a>,
 }
 
 impl ElementParser for Paragraph {
-    type Token<'a> = self::Token<'a>;
+    type Token<'a> = self::ParagraphToken<'a>;
 
     fn tokenize<'input>(
         input: &'input [Symbol<'input>],
@@ -83,13 +81,13 @@ impl ElementParser for Paragraph {
         let end_of_input = taken.min(input.len());
 
         let tokens = vec![
-            Token {
+            ParagraphToken {
                 kind: TokenKind::Start,
             },
-            Token {
+            ParagraphToken {
                 kind: TokenKind::Text(&input[..end_of_input]),
             },
-            Token {
+            ParagraphToken {
                 kind: TokenKind::End,
             },
         ];
@@ -118,7 +116,7 @@ impl ElementParser for Paragraph {
 }
 
 impl Render for Paragraph {
-    fn render_html(&self) -> Result<Html, MappedLogId> {
+    fn render_html(&self) -> Html {
         let mut html = Html::default();
 
         html.body.push_str("<p");
@@ -126,10 +124,10 @@ impl Render for Paragraph {
         html.body.push_str(&self.id);
         html.body.push_str("'>");
 
-        inlines::push_inlines(&mut html, &self.content)?;
+        inlines::push_inlines(&mut html, &self.content);
 
         html.body.push_str("</p>");
 
-        Ok(html)
+        html
     }
 }

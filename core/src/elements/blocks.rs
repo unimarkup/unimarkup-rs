@@ -1,6 +1,5 @@
 //! Defines the generic Unimarkup Block that is the base for all block elements.
 
-use logid::capturing::MappedLogId;
 use unimarkup_render::{html::Html, render::Render};
 
 use super::{
@@ -52,7 +51,7 @@ impl_from!(Verbatim from Verbatim);
 impl_from!(Paragraph from Paragraph);
 
 impl Render for Block {
-    fn render_html(&self) -> Result<Html, MappedLogId> {
+    fn render_html(&self) -> Html {
         match self {
             Block::Heading(heading) => heading.render_html(),
             Block::Paragraph(paragraph) => paragraph.render_html(),

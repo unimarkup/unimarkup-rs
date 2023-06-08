@@ -1,25 +1,13 @@
-use logid::log_id::EventLevel;
-
-use crate::log_id::LogIdMainGrp;
-
-enum LogIdSubGrp {
-    General = 0,
-}
+use logid::ErrLogId;
+use thiserror::Error;
 
 /// Log-ids for config errors
-pub enum ConfigErrLogId {
+#[derive(Debug, Clone, Error, ErrLogId)]
+pub enum ConfigErr {
     /// Log-id denoting an invalid file in the config
-    InvalidFile = logid::log_id::get_log_id(
-        LogIdMainGrp::Config as u8,
-        LogIdSubGrp::General as u8,
-        EventLevel::Error,
-        0,
-    ),
+    #[error("Invalid file was given in config.")]
+    InvalidFile,
     /// Log-id denoting an invalid config
-    InvalidConfig = logid::log_id::get_log_id(
-        LogIdMainGrp::Config as u8,
-        LogIdSubGrp::General as u8,
-        EventLevel::Error,
-        2,
-    ),
+    #[error("Config is invalid.")]
+    InvalidConfig,
 }

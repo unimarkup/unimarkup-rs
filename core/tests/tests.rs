@@ -1,11 +1,6 @@
 #![allow(non_snake_case)]
 // allows using `__` for better separation in functionnames
 
-#[allow(non_snake_case)]
-mod frontend {
-    mod frontend_run;
-}
-
 // allows using `__` for better separation in functionnames
 #[allow(non_snake_case)]
 mod elements {

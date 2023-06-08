@@ -1,4 +1,4 @@
-//! [`parser`](crate::frontend::parser) is the module which implements parsing of the Unimarkup syntax
+//! Provides functionality to generate IDs for Unimarkup elements.
 
 use crate::elements::types;
 
@@ -20,10 +20,10 @@ use crate::elements::types;
 /// # Examples
 ///
 /// ```rust
-/// use unimarkup_core::frontend::parser::generate_id;
+/// use unimarkup_core::parser::generate_id;
 ///
 /// let input = "This is some input string";
-/// assert_eq!(generate_id(input).unwrap(), "This-is-some-input-string");
+/// assert_eq!(generate_id::generate_id(input).unwrap(), "This-is-some-input-string");
 /// ```
 pub fn generate_id(input: &str) -> Option<String> {
     if input.trim().is_empty() {

@@ -1,12 +1,11 @@
 //! Implementation of Render trait for Unimarkup inlines
 
-use logid::capturing::MappedLogId;
 use unimarkup_render::{html::Html, render::Render};
 
 use crate::{Inline, InlineContent, TokenDelimiters, TokenKind};
 
 impl Render for TokenDelimiters {
-    fn render_html(&self) -> Result<Html, MappedLogId> {
+    fn render_html(&self) -> Html {
         let open_tag = match self.open() {
             TokenKind::Bold => "<strong>",
             TokenKind::Italic => "<em>",
@@ -68,17 +67,17 @@ impl Render for TokenDelimiters {
             tags.push_str(close_tag);
         }
 
-        Ok(Html {
+        Html {
             body: tags,
             ..Default::default()
-        })
+        }
     }
 }
 
 impl Render for Inline {
-    fn render_html(&self) -> Result<Html, MappedLogId> {
+    fn render_html(&self) -> Html {
         let mut res = String::new();
-        let tags = self.delimiters().render_html()?.body;
+        let tags = self.delimiters().render_html().body;
         let mut tags = tags.split('|');
 
         if let Some(open_tag) = tags.next() {
@@ -91,7 +90,7 @@ impl Render for Inline {
                 let mut content = String::new();
 
                 for inline in nested_inlines.iter() {
-                    let html = inline.render_html()?.body;
+                    let html = inline.render_html().body;
                     content.push_str(&html);
                 }
 
@@ -105,9 +104,9 @@ impl Render for Inline {
             res.push_str(close_tag);
         }
 
-        Ok(Html {
+        Html {
             body: res,
             ..Default::default()
-        })
+        }
     }
 }

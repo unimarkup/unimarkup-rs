@@ -57,10 +57,10 @@ macro_rules! spec_parser {
         |test: &Test, cfg| {
             let input = test.input.trim_end();
 
-            let res = unimarkup::compile(input, cfg).expect("Could not parse content.");
+            let doc = unimarkup::compile(input, cfg);
 
             TestOutputs {
-                html: Some(res.html().body),
+                html: Some(doc.html().body),
                 um: Some(test.input.clone()),
             }
         }

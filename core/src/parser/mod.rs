@@ -1,6 +1,6 @@
 //! Module for parsing of Unimarkup elements.
 
-use logid::capturing::MappedLogId;
+use logid::log;
 use unimarkup_commons::scanner::{IntoSymbols, Symbol, SymbolKind};
 
 use crate::{
@@ -11,9 +11,13 @@ use crate::{
         Blocks,
     },
     metadata::{Metadata, MetadataKind},
+    parser::log_id::MainParserInfo,
     security,
 };
 use unimarkup_commons::config::Config;
+
+pub mod generate_id;
+pub mod log_id;
 
 /// Parser as function that can parse Unimarkup content
 pub type ParserFn = for<'i> fn(&'i [Symbol<'i>]) -> Option<(Blocks, &'i [Symbol<'i>])>;
@@ -78,7 +82,7 @@ pub struct MainParser {
 
 impl Default for MainParser {
     fn default() -> Self {
-        tracing::info!("Initializing MainParser");
+        log!(MainParserInfo::StartInitializing);
 
         let default = Paragraph::generate_parser();
 
@@ -91,7 +95,7 @@ impl Default for MainParser {
         parser.register_parser(Heading::generate_parser());
         parser.register_parser(Verbatim::generate_parser());
 
-        tracing::info!("MainParser initialized");
+        log!(MainParserInfo::Initialized);
         parser
     }
 }
@@ -157,7 +161,7 @@ impl MainParser {
 }
 
 /// Parses and returns a Unimarkup document.
-pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document, MappedLogId> {
+pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let parser = MainParser::default();
 
     let symbols = um_content.into_symbols();
@@ -180,5 +184,5 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Result<Document
 
     unimarkup.metadata.push(metadata);
 
-    Ok(unimarkup)
+    unimarkup
 }
