@@ -1,15 +1,17 @@
 use clap::Parser;
-use logid::{log, logging::event_entry::AddonKind};
+use logid::{event_handler::LogEventHandlerBuilder, log, logging::event_entry::AddonKind};
 use unimarkup_commons::config::Config;
 
 use crate::log_id::{GeneralError, GeneralInfo};
 
 mod log_id;
-mod logger;
 mod unimarkup;
 
 fn main() {
-    let log_thread = logger::init_log_thread();
+    let log_handler = LogEventHandlerBuilder::new()
+        .write_to_console()
+        .all_log_events()
+        .build();
 
     match Config::try_parse() {
         Ok(cfg) => {
@@ -35,8 +37,5 @@ fn main() {
         }
     }
 
-    // Notify log-thread to stop waiting for logs
-    log!(GeneralInfo::StopLogging);
-
-    let _ = log_thread.join();
+    log_handler.shutdown();
 }

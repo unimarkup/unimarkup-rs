@@ -29,9 +29,6 @@ pub enum GeneralInfo {
     WritingToFile,
     /// Log-id denoting that compilation finished
     FinishedCompiling,
-
-    /// Log-id to notify log-thread to stop logging
-    StopLogging,
 }
 
 impl std::fmt::Display for GeneralInfo {
@@ -39,7 +36,6 @@ impl std::fmt::Display for GeneralInfo {
         match self {
             GeneralInfo::WritingToFile => write!(f, "Unimarkup is writing to a file."),
             GeneralInfo::FinishedCompiling => write!(f, "Unimarkup finished compiling."),
-            GeneralInfo::StopLogging => write!(f, "Notify listeners to stop logging."),
         }
     }
 }
