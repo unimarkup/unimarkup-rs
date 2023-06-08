@@ -82,15 +82,45 @@ impl ConfigFns for I18n {
         locales.sort_by_key(LanguageIdentifier::to_string);
         locales.dedup();
 
-        let blob = match &self.locales_file {
-            Some(file) if file.exists() => std::fs::read(file)
+        let blob = self.get_blob()?;
+
+        if let Some(blob) = blob {
+            // check if it loads
+            icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice())
                 .map_err(|_| {
                     pipe!(
                         ConfigErr::InvalidFile,
-                        &format!("Locales file not found: {}", file.to_string_lossy())
+                        &format!(
+                            "Failed to read locales file: {}",
+                            self.locales_file.as_ref().unwrap().to_string_lossy()
+                        )
                     )
-                })
-                .ok(),
+                })?;
+
+            // TODO: check if locales are present in loaded data file
+        }
+
+        Ok(())
+    }
+}
+
+impl I18n {
+    pub(crate) fn get_blob(&self) -> Result<Option<Vec<u8>>, ConfigErr> {
+        let mut locales: Vec<_> = std::iter::once(&self.lang)
+            .chain(self.langs.iter())
+            .map(|lang| lang.id.clone())
+            .collect();
+
+        locales.sort_by_key(LanguageIdentifier::to_string);
+        locales.dedup();
+
+        let blob = match &self.locales_file {
+            Some(file) if file.exists() => Some(std::fs::read(file).map_err(|_| {
+                pipe!(
+                    ConfigErr::InvalidFile,
+                    &format!("Locales file not found: {}", file.to_string_lossy())
+                )
+            })?),
             Some(file) if self.download => {
                 let f = File::create(file).map_err(|_| {
                     pipe!(
@@ -128,23 +158,7 @@ impl ConfigFns for I18n {
             _ => None,
         };
 
-        if let Some(blob) = blob {
-            // check if it loads
-            icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice())
-                .map_err(|_| {
-                    pipe!(
-                        ConfigErr::InvalidFile,
-                        &format!(
-                            "Failed to read locales file: {}",
-                            self.locales_file.as_ref().unwrap().to_string_lossy()
-                        )
-                    )
-                })?;
-
-            // TODO: check if locales are present in loaded data file
-        }
-
-        Ok(())
+        Ok(blob)
     }
 }
 

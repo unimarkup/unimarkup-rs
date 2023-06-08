@@ -1,7 +1,8 @@
 use std::{collections::HashSet, path::PathBuf};
 
 use clap::{crate_authors, Args, Parser};
-use logid::err;
+use icu_provider::BufferProvider;
+use logid::{err, pipe};
 use serde::{Deserialize, Serialize};
 
 use self::{log_id::ConfigErr, preamble::Preamble};
@@ -70,6 +71,28 @@ impl ConfigFns for Config {
             );
         }
         Ok(())
+    }
+}
+
+impl Config {
+    pub fn icu_provider(&self) -> Option<impl BufferProvider> {
+        let blob = self.preamble.i18n.get_blob().ok();
+        let locales_file = &self.preamble.i18n.locales_file;
+
+        blob.flatten().and_then(|blob| {
+            // check if it loads
+            icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice())
+                .map_err(|_| {
+                    pipe!(
+                        ConfigErr::InvalidFile,
+                        &format!(
+                            "Failed to read locales file: {:?}",
+                            locales_file.as_ref().map(|p| p.to_string_lossy())
+                        )
+                    )
+                })
+                .ok()
+        })
     }
 }
 
