@@ -4,10 +4,13 @@ use std::{
 };
 
 use clap::Args;
+use icu_locid::Locale;
 use logid::err;
 use serde::{Deserialize, Serialize};
 
-use super::{log_id::ConfigErr, output::Output, parse_to_hashset, ConfigFns, ReplaceIfNone};
+use super::{
+    locale, log_id::ConfigErr, output::Output, parse_to_hashset, ConfigFns, ReplaceIfNone,
+};
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Preamble {
@@ -48,10 +51,12 @@ impl ConfigFns for Preamble {
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct I18n {
-    #[arg(long, default_value_t = String::from("en-US"))]
-    pub lang: String,
-    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
-    pub langs: HashSet<String>,
+    #[arg(long, value_parser = locale::clap::parse_locale, default_value = "en-US")]
+    #[serde(with = "locale::serde::single")]
+    pub lang: Locale,
+    #[arg(long, value_parser = parse_to_hashset::<Locale>, required = false, default_value = "")]
+    #[serde(with = "locale::serde::multiple")]
+    pub langs: HashSet<Locale>,
 }
 
 impl ConfigFns for I18n {

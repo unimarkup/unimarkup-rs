@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use self::{log_id::ConfigErr, preamble::Preamble};
 
+pub mod locale;
 pub mod log_id;
 pub mod output;
 pub mod preamble;
