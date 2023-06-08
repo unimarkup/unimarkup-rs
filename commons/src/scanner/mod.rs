@@ -4,7 +4,7 @@ pub mod position;
 pub mod span;
 mod symbol;
 
-use icu::segmenter::GraphemeClusterSegmenter;
+use icu_segmenter::GraphemeClusterSegmenter;
 use position::{Offset, Position};
 pub use symbol::{IntoSymbols, Symbol, SymbolKind};
 
