@@ -10,4 +10,10 @@ pub enum ConfigErr {
     /// Log-id denoting an invalid config
     #[error("Config is invalid.")]
     InvalidConfig,
+    /// Log-id denoting failure when creating a file
+    #[error("File could not be created")]
+    FileCreate,
+    /// Log-id denoting failure to download locales file
+    #[error("Locales file could not be downloaded.")]
+    LocaleDownload,
 }

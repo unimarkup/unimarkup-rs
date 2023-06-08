@@ -1,11 +1,13 @@
 use std::{
     collections::{HashMap, HashSet},
+    fs::File,
     path::PathBuf,
 };
 
 use clap::Args;
-use icu_locid::Locale;
-use logid::err;
+use icu_datagen::{all_keys, Out, SourceData};
+use icu_locid::{LanguageIdentifier, Locale};
+use logid::{err, pipe};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -54,9 +56,16 @@ pub struct I18n {
     #[arg(long, value_parser = locale::clap::parse_locale, default_value = "en-US")]
     #[serde(with = "locale::serde::single")]
     pub lang: Locale,
+
     #[arg(long, value_parser = parse_to_hashset::<Locale>, required = false, default_value = "")]
     #[serde(with = "locale::serde::multiple")]
     pub langs: HashSet<Locale>,
+
+    #[arg(long = "locales-file")]
+    pub locales_file: Option<PathBuf>,
+
+    #[arg(long = "download-locales")]
+    pub download: bool,
 }
 
 impl ConfigFns for I18n {
@@ -65,7 +74,75 @@ impl ConfigFns for I18n {
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
-        // TODO: make sure strings are valid bcp-47 locales
+        let mut locales: Vec<_> = std::iter::once(&self.lang)
+            .chain(self.langs.iter())
+            .map(|lang| lang.id.clone())
+            .collect();
+
+        locales.sort_by_key(LanguageIdentifier::to_string);
+        locales.dedup();
+
+        let blob = match &self.locales_file {
+            Some(file) if file.exists() => std::fs::read(file)
+                .map_err(|_| {
+                    pipe!(
+                        ConfigErr::InvalidFile,
+                        &format!("Locales file not found: {}", file.to_string_lossy())
+                    )
+                })
+                .ok(),
+            Some(file) if self.download => {
+                let f = File::create(file).map_err(|_| {
+                    pipe!(
+                        ConfigErr::FileCreate,
+                        &format!("Failed to create locales file: {}", file.to_string_lossy())
+                    )
+                })?;
+
+                let out = vec![Out::Blob(Box::new(f))];
+                icu_datagen::datagen(
+                    Some(&locales),
+                    &all_keys(),
+                    &SourceData::latest_tested(),
+                    out,
+                )
+                .map_err(|_| {
+                    pipe!(
+                        ConfigErr::LocaleDownload,
+                        &format!(
+                            "Failed to download locales file: {}",
+                            file.to_string_lossy()
+                        )
+                    )
+                })?;
+
+                std::fs::read(file)
+                    .map_err(|_| {
+                        pipe!(
+                            ConfigErr::InvalidFile,
+                            &format!("Locales file not found: {}", file.to_string_lossy())
+                        )
+                    })
+                    .ok()
+            }
+            _ => None,
+        };
+
+        if let Some(blob) = blob {
+            // check if it loads
+            icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice())
+                .map_err(|_| {
+                    pipe!(
+                        ConfigErr::InvalidFile,
+                        &format!(
+                            "Failed to read locales file: {}",
+                            self.locales_file.as_ref().unwrap().to_string_lossy()
+                        )
+                    )
+                })?;
+
+            // TODO: check if locales are present in loaded data file
+        }
 
         Ok(())
     }
