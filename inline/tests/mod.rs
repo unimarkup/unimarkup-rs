@@ -8,13 +8,22 @@ mod parser;
 mod snapshot;
 
 pub(crate) use snapshot::*;
-use unimarkup_commons::test_runner::test_file::TestFile;
+use unimarkup_commons::{
+    scanner::{Scanner, Symbol},
+    test_runner::test_file::TestFile,
+};
 
 pub struct TestCase {
     name: String,
     input: String,
     file_name: String,
     out_path: PathBuf,
+}
+
+/// Scans the string with icu_testdata used as provider for Scanner.
+pub fn scan_str(input: &str) -> Vec<Symbol> {
+    let scanner = Scanner::try_new_with_any(icu_testdata::any()).unwrap();
+    scanner.scan_str(input)
 }
 
 /// Generates test cases from test files

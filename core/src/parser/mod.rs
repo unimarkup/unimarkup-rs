@@ -1,7 +1,7 @@
 //! Module for parsing of Unimarkup elements.
 
 use logid::log;
-use unimarkup_commons::scanner::{IntoSymbols, Symbol, SymbolKind};
+use unimarkup_commons::scanner::{Scanner, Symbol, SymbolKind};
 
 use crate::{
     document::Document,
@@ -106,8 +106,8 @@ impl MainParser {
     }
 
     /// Parses Unimarkup content and produces Unimarkup blocks.
-    pub fn parse<'s>(&self, input: impl IntoSymbols<'s, Output = &'s [Symbol<'s>]>) -> Blocks {
-        let mut input = input.into_symbols();
+    pub fn parse<'s>(&self, input: impl AsRef<[Symbol<'s>]>) -> Blocks {
+        let mut input = input.as_ref();
         let mut blocks = Vec::default();
 
         #[cfg(debug_assertions)]
@@ -164,9 +164,16 @@ impl MainParser {
 pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let parser = MainParser::default();
 
-    let symbols = um_content.into_symbols();
+    let symbols = match config.icu_provider() {
+        Some(buf_prov) => Scanner::try_new(buf_prov)
+            .expect("Invalid provider used")
+            .scan_str(um_content),
+        None => Scanner::try_new_with_any(icu_testdata::any())
+            .expect("TODO: use embedded provider if no locales file given.")
+            .scan_str(um_content),
+    };
 
-    let blocks = parser.parse(&symbols);
+    let blocks = parser.parse(symbols);
 
     let mut unimarkup = Document {
         config: config.clone(),

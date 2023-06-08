@@ -7,7 +7,8 @@ mod snapshot;
 #[test]
 fn test_lexer_snapshots() {
     for case in crate::prepare_test_cases("spec/markup", "spec/snapshots/lexer") {
-        let runner = SnapTestRunner::with_fn(&case.name, case.input.as_str(), |symbols| {
+        let symbols = crate::scan_str(&case.input);
+        let runner = SnapTestRunner::with_fn(&case.name, &symbols, |symbols| {
             let rest = &[];
             let snapshot = Snapshot::snap((case.input.as_ref(), symbols.tokens()));
             (snapshot, rest)
