@@ -84,28 +84,27 @@ impl ConfigFns for I18n {
 
         let blob = self.get_blob()?;
 
-        if let Some(blob) = blob {
-            // check if it loads
-            icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice())
-                .map_err(|_| {
-                    pipe!(
-                        ConfigErr::InvalidFile,
-                        &format!(
-                            "Failed to read locales file: {}",
-                            self.locales_file.as_ref().unwrap().to_string_lossy()
-                        )
+        // check if it loads
+        icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice()).map_err(
+            |_| {
+                pipe!(
+                    ConfigErr::InvalidFile,
+                    &format!(
+                        "Failed to read locales file: {}",
+                        self.locales_file.as_ref().unwrap().to_string_lossy()
                     )
-                })?;
+                )
+            },
+        )?;
 
-            // TODO: check if locales are present in loaded data file
-        }
+        // TODO: check if locales are present in loaded data file
 
         Ok(())
     }
 }
 
 impl I18n {
-    pub(crate) fn get_blob(&self) -> Result<Option<Vec<u8>>, ConfigErr> {
+    pub(crate) fn get_blob(&self) -> Result<Vec<u8>, ConfigErr> {
         let mut locales: Vec<_> = std::iter::once(&self.lang)
             .chain(self.langs.iter())
             .map(|lang| lang.id.clone())
@@ -115,12 +114,12 @@ impl I18n {
         locales.dedup();
 
         let blob = match &self.locales_file {
-            Some(file) if file.exists() => Some(std::fs::read(file).map_err(|_| {
+            Some(file) if file.exists() => std::fs::read(file).map_err(|_| {
                 pipe!(
                     ConfigErr::InvalidFile,
                     &format!("Locales file not found: {}", file.to_string_lossy())
                 )
-            })?),
+            })?,
             Some(file) if self.download => {
                 let f = File::create(file).map_err(|_| {
                     pipe!(
@@ -136,26 +135,28 @@ impl I18n {
                     &SourceData::latest_tested(),
                     out,
                 )
-                .map_err(|_| {
+                .map_err(|err| {
                     pipe!(
                         ConfigErr::LocaleDownload,
                         &format!(
-                            "Failed to download locales file: {}",
-                            file.to_string_lossy()
+                            "Failed to download locales file: {}. Cause: {}",
+                            file.to_string_lossy(),
+                            err,
                         )
                     )
                 })?;
 
-                std::fs::read(file)
-                    .map_err(|_| {
-                        pipe!(
-                            ConfigErr::InvalidFile,
-                            &format!("Locales file not found: {}", file.to_string_lossy())
-                        )
-                    })
-                    .ok()
+                std::fs::read(file).map_err(|_| {
+                    pipe!(
+                        ConfigErr::InvalidFile,
+                        &format!("Locales file not found: {}", file.to_string_lossy())
+                    )
+                })?
             }
-            _ => None,
+            _ => {
+                let content = include_bytes!("../../locale-default/data.postcard");
+                Vec::from(content.as_slice())
+            }
         };
 
         Ok(blob)

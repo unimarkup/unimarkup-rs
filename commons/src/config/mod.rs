@@ -79,7 +79,7 @@ impl Config {
         let blob = self.preamble.i18n.get_blob().ok();
         let locales_file = &self.preamble.i18n.locales_file;
 
-        blob.flatten().and_then(|blob| {
+        blob.and_then(|blob| {
             // check if it loads
             icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice())
                 .map_err(|_| {
