@@ -6,8 +6,10 @@ use std::{
 
 use clap::Args;
 use icu_datagen::{all_keys, Out, SourceData};
-use icu_locid::{LanguageIdentifier, Locale};
-use logid::{err, pipe};
+use icu_locid::{langid, LanguageIdentifier, Locale};
+
+use icu_provider::{BufferProvider, DataRequest};
+use logid::{err, logging::event_entry::AddonKind, pipe};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -76,28 +78,81 @@ impl ConfigFns for I18n {
     fn validate(&self) -> Result<(), ConfigErr> {
         let mut locales: Vec<_> = std::iter::once(&self.lang)
             .chain(self.langs.iter())
-            .map(|lang| lang.id.clone())
             .collect();
 
-        locales.sort_by_key(LanguageIdentifier::to_string);
+        locales.sort_by_key(|locale| locale.to_string());
         locales.dedup();
+
+        if self.locales_file.is_none() {
+            let allowed_locales = [
+                langid!("en"),
+                langid!("en-US"),
+                langid!("en-UK"),
+                langid!("de"),
+                langid!("de-DE"),
+                langid!("de-AT"),
+                langid!("bs"),
+                langid!("bs-BA"),
+            ];
+
+            if !locales
+                .iter()
+                .all(|langid| allowed_locales.contains(&langid.id))
+            {
+                return err!(ConfigErr::BadLocaleUsed);
+            }
+        }
 
         let blob = self.get_blob()?;
 
         // check if it loads
-        icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice()).map_err(
-            |_| {
-                pipe!(
-                    ConfigErr::InvalidFile,
-                    &format!(
-                        "Failed to read locales file: {}",
-                        self.locales_file.as_ref().unwrap().to_string_lossy()
+        let provider =
+            icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.clone().into_boxed_slice())
+                .map_err(|_| {
+                    pipe!(
+                        ConfigErr::InvalidFile,
+                        &format!(
+                            "Failed to read locales file: {}",
+                            self.locales_file.as_ref().unwrap().to_string_lossy()
+                        )
                     )
-                )
-            },
-        )?;
+                })?;
 
-        // TODO: check if locales are present in loaded data file
+        let key = icu_datagen::key("decimal/symbols@1").expect("decimal/symbols@1 is a valid key.");
+        for locale in locales {
+            let req = DataRequest {
+                locale: &(locale).into(),
+                metadata: Default::default(),
+            };
+
+            if provider.load_buffer(key, req).is_err() {
+                logid::log!(
+                    ConfigErr::LocaleMissingKeys,
+                    add: AddonKind::Info(
+                        format!(
+                            "Locale {} is not contained in the provided file. Using fallback locale '{}'.",
+                            locale.to_string(),
+                            locale.id.language.to_string()
+                        )
+                    )
+                );
+
+                let locale = &Locale::from(locale.id.language).into();
+                let req = DataRequest {
+                    locale,
+                    metadata: Default::default(),
+                };
+                provider.load_buffer(key, req).map_err(|err| {
+                    pipe!(
+                        ConfigErr::BadLocaleUsed,
+                        &format!(
+                            "Could not find locale '{}' in data file. Cause: {}",
+                            locale, err
+                        )
+                    )
+                })?;
+            }
+        }
 
         Ok(())
     }
@@ -109,6 +164,12 @@ impl I18n {
             .chain(self.langs.iter())
             .map(|lang| lang.id.clone())
             .collect();
+
+        // extend with languages without region. Example: bs-BA -> bs
+        locales.extend(locales.clone().iter().map(|locale| {
+            let lang = LanguageIdentifier::from(locale.language);
+            lang
+        }));
 
         locales.sort_by_key(LanguageIdentifier::to_string);
         locales.dedup();
@@ -154,7 +215,7 @@ impl I18n {
                 })?
             }
             _ => {
-                let content = include_bytes!("../../locale-default/data.postcard");
+                let content = include_bytes!("../../locale/data.postcard");
                 Vec::from(content.as_slice())
             }
         };
