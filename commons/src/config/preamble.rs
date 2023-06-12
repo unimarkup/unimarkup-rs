@@ -107,7 +107,7 @@ impl ConfigFns for I18n {
 
         // check if it loads
         let provider =
-            icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.clone().into_boxed_slice())
+            icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice())
                 .map_err(|_| {
                     pipe!(
                         ConfigErr::InvalidFile,
@@ -131,8 +131,8 @@ impl ConfigFns for I18n {
                     add: AddonKind::Info(
                         format!(
                             "Locale {} is not contained in the provided file. Using fallback locale '{}'.",
-                            locale.to_string(),
-                            locale.id.language.to_string()
+                            locale,
+                            locale.id.language
                         )
                     )
                 );
@@ -166,10 +166,12 @@ impl I18n {
             .collect();
 
         // extend with languages without region. Example: bs-BA -> bs
-        locales.extend(locales.clone().iter().map(|locale| {
-            let lang = LanguageIdentifier::from(locale.language);
-            lang
-        }));
+        locales.extend(
+            locales
+                .clone()
+                .iter()
+                .map(|locale| LanguageIdentifier::from(locale.language)),
+        );
 
         locales.sort_by_key(LanguageIdentifier::to_string);
         locales.dedup();
