@@ -19,9 +19,9 @@ serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
 once_cell = { workspace = true, optional = true }
+icu_testdata.workspace = true
 icu_locid = "=1.2.0"
 icu_segmenter = "=1.2.0"
-icu_testdata = "=1.2.0"
 icu_provider = { version = "=1.2.0" }
 icu_provider_blob = "=1.2.0"
 icu_datagen = { version = "=1.2.5", features = ["networking"] }
