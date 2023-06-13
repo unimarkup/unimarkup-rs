@@ -216,14 +216,9 @@ impl Render for Heading {
 #[cfg(test)]
 mod tests {
     use crate::elements::atomic::{Heading, HeadingLevel};
-    use unimarkup_commons::scanner::{Scanner, Symbol};
+    use unimarkup_commons::test_runner;
     use unimarkup_inline::ParseInlines;
     use unimarkup_render::render::Render;
-
-    fn scan_str(input: &str) -> Vec<Symbol> {
-        let scanner = Scanner::try_new_with_any(icu_testdata::any()).unwrap();
-        scanner.scan_str(input)
-    }
 
     #[test]
     fn test__render_html__heading() {
@@ -231,7 +226,9 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = scan_str("This is a heading").parse_inlines().collect();
+            let heading_content = test_runner::scan_str("This is a heading")
+                .parse_inlines()
+                .collect();
             let id = format!("heading-id-{}", level);
 
             let heading = Heading {
@@ -255,7 +252,7 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = scan_str("`This` *is _a_* **heading**")
+            let heading_content = test_runner::scan_str("`This` *is _a_* **heading**")
                 .parse_inlines()
                 .collect();
             let id = format!("heading-id-{}", level);
