@@ -1,3 +1,6 @@
+//! Utilities for tracking the positional information about ranges of input occupied
+//! by various Unimarkup elements.
+
 use super::position::Position;
 
 /// Span used to store information about the space some [`Token`] occupies in Unimarkup document.

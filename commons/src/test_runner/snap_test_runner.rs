@@ -1,4 +1,4 @@
-use crate::scanner::{IntoSymbols, Symbol};
+use crate::scanner::Symbol;
 use serde::Serialize;
 
 #[derive(Debug)]
@@ -12,20 +12,19 @@ pub struct SnapTestRunner<'a, I = ()> {
 }
 
 impl<'a> SnapTestRunner<'a> {
-    pub fn with_fn<S, PF>(name: &str, input: S, mut parser: PF) -> SnapTestRunner<'a, ()>
+    pub fn with_fn<S, PF>(name: &str, input: &'a S, mut parser: PF) -> SnapTestRunner<'a, ()>
     where
-        S: IntoSymbols<'a, Output = Vec<Symbol<'a>>> + Clone + Into<&'a str>,
+        S: AsRef<[Symbol<'a>]>,
         PF: for<'s> FnMut(&'s [Symbol<'s>]) -> (String, &'s [Symbol<'s>]),
     {
-        let symbols = input.clone().into_symbols();
-        let (snapshot, rest) = parser(&symbols);
+        let (snapshot, rest) = parser(input.as_ref());
 
         assert_eq!(rest.len(), 0, "Whole input should be parsed");
 
         SnapTestRunner {
             info: None,
             desc: None,
-            input: Some(input.into()),
+            input: Symbol::flatten(input.as_ref()),
             name: name.into(),
             sub_path: None,
             snapshot,
@@ -125,17 +124,19 @@ macro_rules! run_snap_test {
 macro_rules! test_parser_snap {
     ($paths:expr, $parser_fn:expr) => {
         let test_content = $crate::test_runner::test_file::get_test_content($paths.0, $paths.1);
+        let cfg = $crate::config::Config::default();
+        let scanner = $crate::scanner::Scanner::try_new(cfg.icu_provider()).unwrap();
 
         for test in &test_content.test_file.tests {
-            let mut snap_runner =
-                SnapTestRunner::with_fn::<&str, _>(&test.name, &test.input, $parser_fn).with_info(
-                    format!(
-                        "Test '{}-{}' from: {}",
-                        &test_content.test_file.name,
-                        &test.name,
-                        $paths.0.to_string_lossy()
-                    ),
-                );
+            let symbols = scanner.scan_str(&test.input);
+
+            let mut snap_runner = SnapTestRunner::with_fn::<_, _>(&test.name, &symbols, $parser_fn)
+                .with_info(format!(
+                    "Test '{}-{}' from: {}",
+                    &test_content.test_file.name,
+                    &test.name,
+                    $paths.0.to_string_lossy()
+                ));
 
             if let Some(ref description) = test.description {
                 snap_runner = snap_runner.with_description(description);

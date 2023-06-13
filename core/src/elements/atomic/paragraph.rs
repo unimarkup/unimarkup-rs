@@ -34,7 +34,7 @@ impl Paragraph {}
 
 impl From<&[Symbol<'_>]> for Paragraph {
     fn from(value: &[Symbol<'_>]) -> Self {
-        let content = Symbol::flatten(value).unwrap().parse_inlines().collect();
+        let content = value.parse_inlines().collect();
         let line_nr = value.get(0).map(|symbol| symbol.start.line).unwrap_or(0);
 
         let id = parser::generate_id::generate_id(&format!(

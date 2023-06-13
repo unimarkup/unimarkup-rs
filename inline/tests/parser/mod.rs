@@ -1,5 +1,5 @@
 use crate::snapshot::Snapshot;
-use unimarkup_commons::test_runner::snap_test_runner::SnapTestRunner;
+use unimarkup_commons::test_runner::{self, snap_test_runner::SnapTestRunner};
 use unimarkup_inline::ParseInlines;
 
 mod snapshot;
@@ -7,7 +7,9 @@ mod snapshot;
 #[test]
 fn test_parser_snapshots() {
     for case in crate::prepare_test_cases("spec/markup", "spec/snapshots/parser") {
-        let runner = SnapTestRunner::with_fn(&case.name, case.input.as_str(), |symbols| {
+        let symbols = test_runner::scan_str(&case.input);
+
+        let runner = SnapTestRunner::with_fn(&case.name, &symbols, |symbols| {
             let rest: &[_] = &[];
             let inlines: Vec<_> = symbols.parse_inlines().collect();
             let snapshot = Snapshot::snap(&inlines[..]);

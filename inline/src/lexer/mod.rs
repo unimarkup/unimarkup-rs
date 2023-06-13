@@ -5,7 +5,7 @@ pub use token::*;
 use unimarkup_commons::scanner::{
     position,
     span::{Span, SpanLen},
-    IntoSymbols, Symbol, SymbolKind,
+    Symbol, SymbolKind,
 };
 
 use crate::{Substitute, Substitutor};
@@ -24,14 +24,11 @@ pub trait Tokenize {
 
 impl<'s, T> Tokenize for T
 where
-    T: IntoSymbols<'s>,
-    T: Copy,
-    T::Output: AsRef<[Symbol<'s>]>,
+    T: AsRef<[Symbol<'s>]>,
 {
     fn tokens(&self) -> Tokens {
-        let symbols = self.into_symbols();
         let lexer = Lexer {
-            input: symbols.as_ref(),
+            input: self.as_ref(),
         };
 
         Tokens::new(lexer.resolved())

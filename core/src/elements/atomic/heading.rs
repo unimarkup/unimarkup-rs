@@ -170,7 +170,7 @@ impl ElementParser for Heading {
         let HeadingToken::Content(symbols) = input[1] else {return None};
         let inline_start = symbols.get(0)?.start;
 
-        let content = Symbol::flatten(symbols)?.parse_inlines().collect();
+        let content = symbols.parse_inlines().collect();
         let line_nr = inline_start.line;
         let block = Self {
             id: String::default(),
@@ -216,6 +216,7 @@ impl Render for Heading {
 #[cfg(test)]
 mod tests {
     use crate::elements::atomic::{Heading, HeadingLevel};
+    use unimarkup_commons::test_runner;
     use unimarkup_inline::ParseInlines;
     use unimarkup_render::render::Render;
 
@@ -225,7 +226,9 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = "This is a heading".parse_inlines().collect();
+            let heading_content = test_runner::scan_str("This is a heading")
+                .parse_inlines()
+                .collect();
             let id = format!("heading-id-{}", level);
 
             let heading = Heading {
@@ -249,7 +252,9 @@ mod tests {
         let highest_level = HeadingLevel::Level6 as usize;
 
         for level in lowest_level..=highest_level {
-            let heading_content = "`This` *is _a_* **heading**".parse_inlines().collect();
+            let heading_content = test_runner::scan_str("`This` *is _a_* **heading**")
+                .parse_inlines()
+                .collect();
             let id = format!("heading-id-{}", level);
 
             let heading = Heading {
