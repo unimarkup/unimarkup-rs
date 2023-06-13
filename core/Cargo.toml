@@ -20,7 +20,6 @@ unimarkup-commons = { path ="../commons/", version = "0" }
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
-icu_testdata.workspace = true
 strum = "0.22.0"
 strum_macros = "0.22.0"
 sha3 = "0.10"

@@ -124,7 +124,8 @@ macro_rules! run_snap_test {
 macro_rules! test_parser_snap {
     ($paths:expr, $parser_fn:expr) => {
         let test_content = $crate::test_runner::test_file::get_test_content($paths.0, $paths.1);
-        let scanner = $crate::scanner::Scanner::try_new_with_any(icu_testdata::any()).unwrap();
+        let cfg = $crate::config::Config::default();
+        let scanner = $crate::scanner::Scanner::try_new(cfg.icu_provider()).unwrap();
 
         for test in &test_content.test_file.tests {
             let symbols = scanner.scan_str(&test.input);
