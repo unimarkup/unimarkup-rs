@@ -75,24 +75,21 @@ impl ConfigFns for Config {
 }
 
 impl Config {
-    pub fn icu_provider(&self) -> Option<impl BufferProvider> {
-        let blob = self.preamble.i18n.get_blob().ok();
+    pub fn icu_provider(&self) -> impl BufferProvider {
+        let blob = self.preamble.i18n.get_blob();
         let locales_file = &self.preamble.i18n.locales_file;
 
-        blob.and_then(|blob| {
-            // check if it loads
-            icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice())
-                .map_err(|_| {
-                    pipe!(
-                        ConfigErr::InvalidFile,
-                        &format!(
-                            "Failed to read locales file: {:?}",
-                            locales_file.as_ref().map(|p| p.to_string_lossy())
-                        )
+        icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice())
+            .map_err(|_| {
+                pipe!(
+                    ConfigErr::InvalidFile,
+                    &format!(
+                        "Failed to read locales file: {:?}",
+                        locales_file.as_ref().map(|p| p.to_string_lossy())
                     )
-                })
-                .ok()
-        })
+                )
+            })
+            .expect("There must exist fallback icu data compatible with provider.")
     }
 }
 

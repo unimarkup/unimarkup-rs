@@ -1,7 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use clap::Args;
@@ -103,7 +103,7 @@ impl ConfigFns for I18n {
             }
         }
 
-        let blob = self.get_blob()?;
+        let blob = self.get_blob();
 
         // check if it loads
         let provider =
@@ -159,7 +159,7 @@ impl ConfigFns for I18n {
 }
 
 impl I18n {
-    pub(crate) fn get_blob(&self) -> Result<Vec<u8>, ConfigErr> {
+    pub(crate) fn get_blob(&self) -> Vec<u8> {
         let mut locales: Vec<_> = std::iter::once(&self.lang)
             .chain(self.langs.iter())
             .map(|lang| lang.id.clone())
@@ -176,53 +176,69 @@ impl I18n {
         locales.sort_by_key(LanguageIdentifier::to_string);
         locales.dedup();
 
-        let blob = match &self.locales_file {
-            Some(file) if file.exists() => std::fs::read(file).map_err(|_| {
-                pipe!(
-                    ConfigErr::InvalidFile,
-                    &format!("Locales file not found: {}", file.to_string_lossy())
-                )
-            })?,
-            Some(file) if self.download => {
-                let f = File::create(file).map_err(|_| {
-                    pipe!(
-                        ConfigErr::FileCreate,
-                        &format!("Failed to create locales file: {}", file.to_string_lossy())
-                    )
-                })?;
+        let blob = 'find_file: {
+            if let Some(file_path) = &self.locales_file {
+                if !file_path.exists()
+                    && self.download
+                    && self.try_download_icu_file(file_path, &locales).is_err()
+                {
+                    break 'find_file None;
+                }
 
-                let out = vec![Out::Blob(Box::new(f))];
-                icu_datagen::datagen(
-                    Some(&locales),
-                    &all_keys(),
-                    &SourceData::latest_tested(),
-                    out,
-                )
-                .map_err(|err| {
-                    pipe!(
-                        ConfigErr::LocaleDownload,
-                        &format!(
-                            "Failed to download locales file: {}. Cause: {}",
-                            file.to_string_lossy(),
-                            err,
-                        )
-                    )
-                })?;
+                match std::fs::read(file_path) {
+                    Ok(file) => break 'find_file Some(file),
+                    Err(err) => {
+                        logid::log!(
+                            ConfigErr::InvalidFile,
+                            &format!(
+                                "Locales file not found: {}. Cause: {}. Using default locales file.",
+                                file_path.to_string_lossy(),
+                                err
+                            )
+                        );
+                        break 'find_file None;
+                    }
+                }
+            }
 
-                std::fs::read(file).map_err(|_| {
-                    pipe!(
-                        ConfigErr::InvalidFile,
-                        &format!("Locales file not found: {}", file.to_string_lossy())
-                    )
-                })?
-            }
-            _ => {
-                let content = include_bytes!("../../locale/data.postcard");
-                Vec::from(content.as_slice())
-            }
+            None
         };
 
-        Ok(blob)
+        blob.unwrap_or_else(|| Vec::from(include_bytes!("../../locale/data.postcard").as_slice()))
+    }
+
+    fn try_download_icu_file(
+        &self,
+        file_path: impl AsRef<Path>,
+        locales: &[LanguageIdentifier],
+    ) -> Result<(), ConfigErr> {
+        let f = File::create(&file_path).map_err(|_| {
+            pipe!(
+                ConfigErr::FileCreate,
+                &format!(
+                    "Failed to create locales file: {}",
+                    file_path.as_ref().to_string_lossy()
+                )
+            )
+        })?;
+
+        let out = vec![Out::Blob(Box::new(f))];
+        icu_datagen::datagen(
+            Some(locales),
+            &all_keys(),
+            &SourceData::latest_tested(),
+            out,
+        )
+        .map_err(|err| {
+            pipe!(
+                ConfigErr::LocaleDownload,
+                &format!(
+                    "Failed to download locales file: {}. Cause: {}",
+                    file_path.as_ref().to_string_lossy(),
+                    err,
+                )
+            )
+        })
     }
 }
 

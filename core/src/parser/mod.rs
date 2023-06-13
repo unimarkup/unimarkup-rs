@@ -164,14 +164,9 @@ impl MainParser {
 pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let parser = MainParser::default();
 
-    let symbols = match config.icu_provider() {
-        Some(buf_prov) => Scanner::try_new(buf_prov)
-            .expect("Invalid provider used")
-            .scan_str(um_content),
-        None => Scanner::try_new_with_any(icu_testdata::any())
-            .expect("TODO: use embedded provider if no locales file given.")
-            .scan_str(um_content),
-    };
+    let symbols = Scanner::try_new(config.icu_provider())
+        .expect("Must be valid provider.")
+        .scan_str(um_content);
 
     let blocks = parser.parse(symbols);
 
