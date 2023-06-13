@@ -130,7 +130,7 @@ impl ConfigFns for I18n {
                     ConfigErr::LocaleMissingKeys,
                     add: AddonKind::Info(
                         format!(
-                            "Locale {} is not contained in the provided file. Using fallback locale '{}'.",
+                            "Locale {} is not contained in the provided file. Trying to use fallback locale '{}'.",
                             locale,
                             locale.id.language
                         )
