@@ -8,7 +8,7 @@ pub struct HtmlRenderer {}
 impl Renderer<Html> for HtmlRenderer {
     fn render_paragraph(
         &mut self,
-        paragraph: &unimarkup_core::elements::atomic::Paragraph,
+        paragraph: &unimarkup_parser::elements::atomic::Paragraph,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_inlines(&paragraph.content, context)?;
@@ -18,7 +18,7 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_heading(
         &mut self,
-        heading: &unimarkup_core::elements::atomic::Heading,
+        heading: &unimarkup_parser::elements::atomic::Heading,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_inlines(&heading.content, context)?;
@@ -34,7 +34,7 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_verbatim_block(
         &mut self,
-        _verbatim: &unimarkup_core::elements::enclosed::Verbatim,
+        _verbatim: &unimarkup_parser::elements::enclosed::Verbatim,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         Err(crate::log_id::RenderError::Unimplemented)

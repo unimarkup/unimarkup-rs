@@ -1,6 +1,7 @@
 //! Contains the [`Render`] trait definition.
 
-use unimarkup_core::{
+use unimarkup_inline::{Inline, NestedContent, PlainContent};
+use unimarkup_parser::{
     document::Document,
     elements::{
         atomic::{Heading, Paragraph},
@@ -8,7 +9,6 @@ use unimarkup_core::{
         enclosed,
     },
 };
-use unimarkup_inline::{Inline, NestedContent, PlainContent};
 
 use crate::log_id::RenderError;
 
@@ -32,7 +32,7 @@ pub trait OutputFormat: Default {
     fn append(&mut self, other: Self) -> Result<(), RenderError>;
 }
 
-/// The [`Renderer`] trait allows to create custom output formats for a Unimarkup [`unimarkup_core::document::Document`].
+/// The [`Renderer`] trait allows to create custom output formats for a Unimarkup [`unimarkup_parser::document::Document`].
 pub trait Renderer<T: OutputFormat> {
     // Note: Default implementation with `Err(RenderError::Unimplemented)` prevents breaking changes when adding new functions to this trait.
 

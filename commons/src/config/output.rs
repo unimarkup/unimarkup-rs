@@ -10,8 +10,8 @@ use super::{log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone};
 pub struct Output {
     #[arg(long = "output-file")]
     pub file: Option<PathBuf>,
-    #[arg(long, alias = "output-formats", value_parser = parse_to_hashset::<OutputFormat>)]
-    pub formats: HashSet<OutputFormat>,
+    #[arg(long, alias = "output-formats", value_parser = parse_to_hashset::<OutputFormatKind>)]
+    pub formats: HashSet<OutputFormatKind>,
     #[command(flatten)]
     #[serde(flatten)]
     pub format_specific: OutputFormatSpecific,
@@ -69,26 +69,26 @@ impl ConfigFns for Output {
     Serialize,
     Deserialize,
 )]
-pub enum OutputFormat {
+pub enum OutputFormatKind {
     #[default]
     Html,
 }
 
-impl OutputFormat {
+impl OutputFormatKind {
     /// Returns the associated file extension for an output format.
     pub fn extension(&self) -> &str {
         match self {
-            OutputFormat::Html => "html",
+            OutputFormatKind::Html => "html",
         }
     }
 }
 
-impl FromStr for OutputFormat {
+impl FromStr for OutputFormatKind {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "html" => Ok(OutputFormat::Html),
+            "html" => Ok(OutputFormatKind::Html),
             o => Err(format!("Bad output format: {}", o)),
         }
     }

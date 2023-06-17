@@ -4,8 +4,8 @@ use unimarkup_commons::config::{Config, ConfigFns};
 
 use crate::log_id::{GeneralError, GeneralInfo};
 
+mod compile;
 mod log_id;
-mod unimarkup;
 
 fn main() {
     let log_handler = LogEventHandlerBuilder::new()
@@ -17,7 +17,7 @@ fn main() {
         Ok(cfg) => {
             cfg.validate().unwrap();
 
-            match unimarkup::compile(cfg) {
+            match compile::compile(cfg) {
                 Ok(_) => {
                     log!(GeneralInfo::FinishedCompiling);
                 }

@@ -1,10 +1,11 @@
 [workspace]
 members = [
-    "render",
     "cli",
     "commons",
     "core",
     "inline",
+    "parser",
+    "render",
 ]
 
 # Compile snapshot testing library "insta" with "release" flag so that it runs

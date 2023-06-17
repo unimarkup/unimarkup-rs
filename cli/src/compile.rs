@@ -6,9 +6,8 @@ use std::{
 };
 
 use logid::{log, logging::event_entry::AddonKind, pipe};
-use unimarkup_commons::config::{output::OutputFormat, Config};
-use unimarkup_core::document::Document;
-use unimarkup_render::html::render::HtmlRenderer;
+use unimarkup_commons::config::Config;
+use unimarkup_core::Unimarkup;
 
 use crate::log_id::{GeneralError, GeneralInfo};
 
@@ -41,34 +40,32 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
         }
     };
 
-    let document = unimarkup_core::unimarkup::compile(&source, config);
-
-    // for format in document.output_formats() {
-    // match format {
-    // OutputFormat::Html => write_html(&document, &out_path)?,
-    // }
-    // }
-    write_html(&document, &out_path)?;
+    let um = Unimarkup::parse(&source, config);
+    let outputs = um.render_formats().map_err(|_| GeneralError::Render)?;
+    for output in outputs {
+        write_file(&output.content, &out_path, output.kind.extension())?;
+    }
 
     Ok(())
 }
 
-fn write_html(document: &Document, out_path: impl AsRef<Path>) -> Result<(), GeneralError> {
-    let html = unimarkup_render::render::render(document, HtmlRenderer::default())
-        .map_err(|_| pipe!(GeneralError::Render))?;
-
-    let mut out_path_html: PathBuf = out_path.as_ref().into();
-    out_path_html.set_extension("html");
+fn write_file(
+    content: &str,
+    out_path: impl AsRef<Path>,
+    extension: &str,
+) -> Result<(), GeneralError> {
+    let mut full_out_path: PathBuf = out_path.as_ref().into();
+    full_out_path.set_extension(extension);
 
     log!(
         GeneralInfo::WritingToFile,
-        &format!("Writing to file: {:?}", out_path_html),
+        &format!("Writing to file: {:?}", full_out_path),
     );
 
-    std::fs::write(&out_path_html, html.to_string()).map_err(|error| {
+    std::fs::write(&full_out_path, content.to_string()).map_err(|error| {
         pipe!(
             GeneralError::FileWrite,
-            &format!("Could not write to file: {:?}", out_path_html),
+            &format!("Could not write to file: {:?}", full_out_path),
             add: AddonKind::Info(format!("Cause: {}", error))
         )
     })

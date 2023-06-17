@@ -15,6 +15,6 @@ license.workspace = true
 logid.workspace = true
 thiserror.workspace = true
 once_cell.workspace = true
-unimarkup-core = { path = "../core/", version = "0" }
 unimarkup-inline = { path = "../inline/", version = "0" }
+unimarkup-parser = { path = "../parser/", version = "0" }
 syntect = "4.6"

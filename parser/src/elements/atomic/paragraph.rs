@@ -3,13 +3,10 @@ use std::fmt::Debug;
 use unimarkup_inline::{Inline, ParseInlines};
 // use unimarkup_render::{html::Html, render::Render};
 
+use crate::{elements::Blocks, parser::ElementParser};
 use crate::{
     elements::{blocks::Block, types},
-    parser::{self, TokenizeOutput},
-};
-use crate::{
-    elements::{inlines, Blocks},
-    parser::ElementParser,
+    parser::TokenizeOutput,
 };
 use unimarkup_commons::scanner::{Symbol, SymbolKind};
 
@@ -37,7 +34,7 @@ impl From<&[Symbol<'_>]> for Paragraph {
         let content = value.parse_inlines().collect();
         let line_nr = value.get(0).map(|symbol| symbol.start.line).unwrap_or(0);
 
-        let id = parser::generate_id::generate_id(&format!(
+        let id = crate::generate_id::generate_id(&format!(
             "paragraph{delim}{}",
             line_nr,
             delim = types::ELEMENT_TYPE_DELIMITER
