@@ -21,6 +21,10 @@ pub enum GeneralError {
     /// Log-id denoting that compilation failed
     #[error("Failed compiling given input.")]
     Compile,
+
+    /// Log-id denoting that rendering failed
+    #[error("Failed rendering given input.")]
+    Render,
 }
 
 #[derive(Debug, Clone, InfoLogId)]

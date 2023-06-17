@@ -3,6 +3,6 @@
 //!
 //! It also provides syntax highlighting functionality.
 
-pub mod highlight;
 pub mod html;
+pub mod log_id;
 pub mod render;

@@ -14,7 +14,6 @@ license.workspace = true
 [dependencies]
 logid.workspace = true
 thiserror.workspace = true
-unimarkup-render = { path = "../render/", version = "0" }
 unimarkup-inline = { path = "../inline/", version = "0" }
 unimarkup-commons = { path ="../commons/", version = "0" }
 serde.workspace = true

@@ -8,6 +8,7 @@ use std::{
 use logid::{log, logging::event_entry::AddonKind, pipe};
 use unimarkup_commons::config::{output::OutputFormat, Config};
 use unimarkup_core::document::Document;
+use unimarkup_render::html::render::HtmlRenderer;
 
 use crate::log_id::{GeneralError, GeneralInfo};
 
@@ -42,17 +43,19 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
 
     let document = unimarkup_core::unimarkup::compile(&source, config);
 
-    for format in document.output_formats() {
-        match format {
-            OutputFormat::Html => write_html(&document, &out_path)?,
-        }
-    }
+    // for format in document.output_formats() {
+    // match format {
+    // OutputFormat::Html => write_html(&document, &out_path)?,
+    // }
+    // }
+    write_html(&document, &out_path)?;
 
     Ok(())
 }
 
 fn write_html(document: &Document, out_path: impl AsRef<Path>) -> Result<(), GeneralError> {
-    let html = document.html();
+    let html = unimarkup_render::render::render(document, HtmlRenderer::default())
+        .map_err(|_| pipe!(GeneralError::Render))?;
 
     let mut out_path_html: PathBuf = out_path.as_ref().into();
     out_path_html.set_extension("html");
@@ -62,7 +65,7 @@ fn write_html(document: &Document, out_path: impl AsRef<Path>) -> Result<(), Gen
         &format!("Writing to file: {:?}", out_path_html),
     );
 
-    std::fs::write(&out_path_html, html.body).map_err(|error| {
+    std::fs::write(&out_path_html, html.to_string()).map_err(|error| {
         pipe!(
             GeneralError::FileWrite,
             &format!("Could not write to file: {:?}", out_path_html),

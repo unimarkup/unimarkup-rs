@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use unimarkup_inline::{Inline, ParseInlines};
-use unimarkup_render::{html::Html, render::Render};
+// use unimarkup_render::{html::Html, render::Render};
 
 use crate::{
     elements::{blocks::Block, types},
@@ -115,19 +115,19 @@ impl ElementParser for Paragraph {
     }
 }
 
-impl Render for Paragraph {
-    fn render_html(&self) -> Html {
-        let mut html = Html::default();
+// impl Render for Paragraph {
+//     fn render_html(&self) -> Html {
+//         let mut html = Html::default();
 
-        html.body.push_str("<p");
-        html.body.push_str(" id='");
-        html.body.push_str(&self.id);
-        html.body.push_str("'>");
+//         html.body.push_str("<p");
+//         html.body.push_str(" id='");
+//         html.body.push_str(&self.id);
+//         html.body.push_str("'>");
 
-        inlines::push_inlines(&mut html, &self.content);
+//         inlines::push_inlines(&mut html, &self.content);
 
-        html.body.push_str("</p>");
+//         html.body.push_str("</p>");
 
-        html
-    }
-}
+//         html
+//     }
+// }

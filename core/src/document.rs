@@ -1,6 +1,6 @@
 //! Contains the Unimarkup Document structure used to store all information of a Unimarkup document in one structure.
 
-use unimarkup_render::{html::Html, render::Render};
+// use unimarkup_render::{html::Html, render::Render};
 
 use crate::{elements::Blocks, metadata::Metadata};
 use unimarkup_commons::config::{output::OutputFormat, Config};
@@ -24,22 +24,22 @@ pub struct Document {
     pub resources: Vec<String>,
 }
 
-impl Document {
-    /// Returns the HTML representation of this Unimarkup document
-    pub fn html(&self) -> Html {
-        let mut output = Html::default();
+// impl Document {
+//     /// Returns the HTML representation of this Unimarkup document
+//     pub fn html(&self) -> Html {
+//         let mut output = Html::default();
 
-        for block in &self.blocks {
-            let html = block.render_html();
-            output.body.push_str(&html.body);
-            output.head.push_str(&html.head);
-        }
+//         for block in &self.blocks {
+//             let html = block.render_html();
+//             output.body.push_str(&html.body);
+//             output.head.push_str(&html.head);
+//         }
 
-        output
-    }
+//         output
+//     }
 
-    /// Returns the configured output formats for this Unimarkup document
-    pub fn output_formats(&self) -> impl Iterator<Item = &OutputFormat> {
-        self.config.preamble.output.formats.iter()
-    }
-}
+//     /// Returns the configured output formats for this Unimarkup document
+//     pub fn output_formats(&self) -> impl Iterator<Item = &OutputFormat> {
+//         self.config.preamble.output.formats.iter()
+//     }
+// }
