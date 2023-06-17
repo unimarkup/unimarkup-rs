@@ -70,7 +70,7 @@ macro_rules! run_snap_test {
     ($snap_test:expr $(, $path:expr)?) => {
         let snap_test: $crate::test_runner::snap_test_runner::SnapTestRunner<_> = $snap_test;
 
-        let mut settings = insta::Settings::clone_current();
+        let mut settings = $crate::test_runner::insta::Settings::clone_current();
 
         let mut path = std::path::Path::new("../spec/snapshots/");
         $(path = $path;)?
@@ -102,7 +102,7 @@ macro_rules! run_snap_test {
         settings.set_prepend_module_to_snapshot(false);
 
         settings.bind(|| {
-            insta::assert_snapshot!(snap_test.name.as_str(), snap_content);
+            $crate::test_runner::insta::assert_snapshot!(snap_test.name.as_str(), snap_content);
         })
     };
 }

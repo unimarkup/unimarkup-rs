@@ -25,6 +25,5 @@ sha3 = "0.10"
 
 [dev-dependencies]
 clap.workspace = true
-insta = {version = "1.29.0", features = ["serde"]}
 unimarkup-commons = { path ="../commons/", version = "0", features = ["test_runner"] }
 regex = "1.8.1"

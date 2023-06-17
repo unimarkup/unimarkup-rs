@@ -25,9 +25,7 @@ icu_provider = { version = "=1.2.0" }
 icu_provider_blob = "=1.2.0"
 icu_datagen = { version = "=1.2.5", features = ["networking"] }
 regex = { version = "1.8.1", optional = true }
+insta = {version = "1.29.0", features = ["serde"], optional = true}
 
 [features]
-test_runner = ["dep:regex", "dep:once_cell"]
-
-[dev-dependencies]
-insta = {version = "1.29.0", features = ["serde"]}
+test_runner = ["dep:regex", "dep:once_cell", "dep:insta"]
