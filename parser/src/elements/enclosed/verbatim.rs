@@ -1,7 +1,4 @@
 use serde::{Deserialize, Serialize};
-// use unimarkup_render::highlight::{self, DEFAULT_THEME, PLAIN_SYNTAX};
-// use unimarkup_render::html::Html;
-// use unimarkup_render::render::Render;
 
 use crate::elements::blocks::Block;
 use crate::elements::Blocks;
@@ -107,36 +104,3 @@ impl ElementParser for Verbatim {
 struct VerbatimAttributes {
     language: Option<String>,
 }
-
-// impl Render for Verbatim {
-//     fn render_html(&self) -> Html {
-//         let mut res = String::with_capacity(self.content.capacity());
-
-//         // TODO: improve handling of attributes
-//         let attributes = serde_json::from_str::<VerbatimAttributes>(
-//             &self.attributes.as_ref().cloned().unwrap_or_default(),
-//         )
-//         .ok();
-
-//         let language = match attributes.as_ref() {
-//             Some(attrs) => attrs.language.clone().unwrap_or(PLAIN_SYNTAX.to_string()),
-//             None => PLAIN_SYNTAX.to_string(),
-//         };
-
-//         res.push_str(&format!(
-//             "<div id='{}' class='code-block language-{}' >",
-//             &self.id, &language
-//         ));
-//         res.push_str(&highlight::highlight_html_lines(
-//             &self.content,
-//             &language,
-//             DEFAULT_THEME,
-//         ));
-//         res.push_str("</div>");
-
-//         Html {
-//             body: res,
-//             ..Default::default()
-//         }
-//     }
-// }

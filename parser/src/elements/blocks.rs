@@ -1,7 +1,5 @@
 //! Defines the generic Unimarkup Block that is the base for all block elements.
 
-// use unimarkup_render::{html::Html, render::Render};
-
 use super::{
     atomic::{Heading, Paragraph},
     enclosed::Verbatim,
@@ -49,13 +47,3 @@ macro_rules! impl_from {
 impl_from!(Heading from Heading);
 impl_from!(Verbatim from Verbatim);
 impl_from!(Paragraph from Paragraph);
-
-// impl Render for Block {
-//     fn render_html(&self) -> Html {
-//         match self {
-//             Block::Heading(heading) => heading.render_html(),
-//             Block::Paragraph(paragraph) => paragraph.render_html(),
-//             Block::Verbatim(verbatim) => verbatim.render_html(),
-//         }
-//     }
-// }
