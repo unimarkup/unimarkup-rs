@@ -1,7 +1,5 @@
 //! Contains the Unimarkup Document structure used to store all information of a Unimarkup document in one structure.
 
-// use unimarkup_render::{html::Html, render::Render};
-
 use crate::{elements::Blocks, metadata::Metadata};
 use unimarkup_commons::config::{output::OutputFormatKind, Config};
 
