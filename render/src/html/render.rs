@@ -57,7 +57,7 @@ impl Renderer<Html> for HtmlRenderer {
             attributes: HtmlAttributes::default(),
             content: Some(highlight::highlight_html_lines(
                 &verbatim.content,
-                &language,
+                language,
                 DEFAULT_THEME,
             )),
         });

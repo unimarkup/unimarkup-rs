@@ -122,9 +122,10 @@ impl From<Vec<HtmlElement>> for HtmlElements {
 
 impl std::fmt::Display for HtmlElements {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Ok(for elem in &self.0 {
-            write!(f, "{}", elem)?
-        })
+        for elem in &self.0 {
+            write!(f, "{}", elem)?;
+        }
+        Ok(())
     }
 }
 
@@ -160,11 +161,12 @@ impl From<Vec<HtmlAttribute>> for HtmlAttributes {
 
 impl std::fmt::Display for HtmlAttributes {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Ok(for attrb in &self.0 {
+        for attrb in &self.0 {
             // Note: *whitespace* at beginning is important, because `HtmlElement` does not set one after open tag.
             // This way no unnecessary whitespace is left at the end of the open tag.
-            write!(f, " {}", attrb)?
-        })
+            write!(f, " {}", attrb)?;
+        }
+        Ok(())
     }
 }
 

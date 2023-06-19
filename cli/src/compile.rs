@@ -69,7 +69,7 @@ fn write_file(
         &format!("Writing to file: {:?}", full_out_path),
     );
 
-    std::fs::write(&full_out_path, content.to_string()).map_err(|error| {
+    std::fs::write(&full_out_path, content).map_err(|error| {
         pipe!(
             GeneralError::FileWrite,
             &format!("Could not write to file: {:?}", full_out_path),
