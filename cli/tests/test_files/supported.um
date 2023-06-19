@@ -1,0 +1,19 @@
+# heading1
+
+Some plain text.
+
+Other **bold** text.
+
+## Subheader containing inline formatting
+
+Some paragraph text with possible inline formatting: *italic*, **bold**, __underlined text__,
+‾overlined text‾, ~~strike through text~~, ^superscripted text^, _subscripted text_, `verbatim text`,
+||highlighted text||, ""quoted text"".
+
+## Verbatim block
+
+```Rust
+fn some_function() {
+  println!("With language simply added");
+}
+```

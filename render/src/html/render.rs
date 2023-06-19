@@ -1,6 +1,9 @@
 use crate::render::{Context, Renderer};
 
-use super::{Html, HtmlAttribute, HtmlAttributes, HtmlElement};
+use super::{
+    highlight::{self, DEFAULT_THEME},
+    Html, HtmlAttribute, HtmlAttributes, HtmlElement,
+};
 
 #[derive(Debug, Default)]
 pub struct HtmlRenderer {}
@@ -34,10 +37,32 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_verbatim_block(
         &mut self,
-        _verbatim: &unimarkup_parser::elements::enclosed::Verbatim,
+        verbatim: &unimarkup_parser::elements::enclosed::Verbatim,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        Err(crate::log_id::RenderError::Unimplemented)
+        // TODO: improve handling of attributes
+        // let attributes = serde_json::from_str::<VerbatimAttributes>(
+        //     &verbatim.attributes.as_ref().cloned().unwrap_or_default(),
+        // )
+        // .ok();
+
+        // let language = match attributes.as_ref() {
+        //     Some(attrs) => attrs.language.clone().unwrap_or(PLAIN_SYNTAX.to_string()),
+        //     None => PLAIN_SYNTAX.to_string(),
+        // };
+        let language = "auto";
+
+        let html = Html::new_with_body(HtmlElement {
+            name: "div".to_string(),
+            attributes: HtmlAttributes::default(),
+            content: Some(highlight::highlight_html_lines(
+                &verbatim.content,
+                &language,
+                DEFAULT_THEME,
+            )),
+        });
+
+        Ok(html)
     }
 
     fn render_bold(
@@ -52,66 +77,111 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_italic(
         &mut self,
-        _italic: &unimarkup_inline::NestedContent,
-        _context: &Context,
+        italic: &unimarkup_inline::NestedContent,
+        context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        Err(crate::log_id::RenderError::Unimplemented)
+        let inner = self.render_nested_inline(italic, context)?;
+
+        Ok(Html::new_nested("em", HtmlAttributes::default(), inner))
     }
 
     fn render_underline(
         &mut self,
-        _underline: &unimarkup_inline::NestedContent,
-        _context: &Context,
+        underline: &unimarkup_inline::NestedContent,
+        context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        Err(crate::log_id::RenderError::Unimplemented)
+        let inner = self.render_nested_inline(underline, context)?;
+        let mut attributes = HtmlAttributes::default();
+        attributes.push(HtmlAttribute {
+            name: "style".to_string(),
+            value: Some("text-decoration: underline;".to_string()),
+        });
+
+        Ok(Html::new_nested("span", attributes, inner))
     }
 
     fn render_subscript(
         &mut self,
-        _subscript: &unimarkup_inline::NestedContent,
-        _context: &Context,
+        subscript: &unimarkup_inline::NestedContent,
+        context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        Err(crate::log_id::RenderError::Unimplemented)
+        let inner = self.render_nested_inline(subscript, context)?;
+
+        Ok(Html::new_nested("sub", HtmlAttributes::default(), inner))
     }
 
     fn render_superscript(
         &mut self,
-        _superscript: &unimarkup_inline::NestedContent,
-        _context: &Context,
+        superscript: &unimarkup_inline::NestedContent,
+        context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        Err(crate::log_id::RenderError::Unimplemented)
+        let inner = self.render_nested_inline(superscript, context)?;
+
+        Ok(Html::new_nested("sup", HtmlAttributes::default(), inner))
     }
 
     fn render_overline(
         &mut self,
-        _overline: &unimarkup_inline::NestedContent,
-        _context: &Context,
+        overline: &unimarkup_inline::NestedContent,
+        context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        Err(crate::log_id::RenderError::Unimplemented)
+        let inner = self.render_nested_inline(overline, context)?;
+        let mut attributes = HtmlAttributes::default();
+        attributes.push(HtmlAttribute {
+            name: "style".to_string(),
+            value: Some("text-decoration: overline;".to_string()),
+        });
+
+        Ok(Html::new_nested("span", attributes, inner))
     }
 
     fn render_strikethrough(
         &mut self,
-        _strikethrough: &unimarkup_inline::NestedContent,
-        _context: &Context,
+        strikethrough: &unimarkup_inline::NestedContent,
+        context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        Err(crate::log_id::RenderError::Unimplemented)
+        let inner = self.render_nested_inline(strikethrough, context)?;
+        let mut attributes = HtmlAttributes::default();
+        attributes.push(HtmlAttribute {
+            name: "style".to_string(),
+            value: Some("text-decoration: line-through;".to_string()),
+        });
+
+        Ok(Html::new_nested("span", attributes, inner))
     }
 
     fn render_highlight(
         &mut self,
-        _highlight: &unimarkup_inline::NestedContent,
-        _context: &Context,
+        highlight: &unimarkup_inline::NestedContent,
+        context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        Err(crate::log_id::RenderError::Unimplemented)
+        let inner = self.render_nested_inline(highlight, context)?;
+
+        Ok(Html::new_nested("mark", HtmlAttributes::default(), inner))
+    }
+
+    fn render_quote(
+        &mut self,
+        quote: &unimarkup_inline::NestedContent,
+        context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let inner = self.render_nested_inline(quote, context)?;
+
+        Ok(Html::new_nested("q", HtmlAttributes::default(), inner))
     }
 
     fn render_inline_verbatim(
         &mut self,
-        _verbatim: &unimarkup_inline::PlainContent,
+        verbatim: &unimarkup_inline::PlainContent,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        Err(crate::log_id::RenderError::Unimplemented)
+        let html = Html::new_with_body(HtmlElement {
+            name: "code".to_string(),
+            attributes: HtmlAttributes::default(),
+            content: Some(verbatim.as_string()),
+        });
+
+        Ok(html)
     }
 
     fn render_plain(

@@ -131,6 +131,15 @@ pub trait Renderer<T: OutputFormat> {
         Err(RenderError::Unimplemented)
     }
 
+    /// Render a [`Quote` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
+    fn render_quote(
+        &mut self,
+        _quote: &NestedContent,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
     /// Render a [`Verbatim` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_inline_verbatim(
         &mut self,
@@ -196,6 +205,7 @@ pub trait Renderer<T: OutputFormat> {
                 self.render_strikethrough(strikethrough, context)
             }
             Inline::Highlight(highlight) => self.render_highlight(highlight, context),
+            Inline::Quote(quote) => self.render_quote(quote, context),
             Inline::Verbatim(verbatim) => self.render_inline_verbatim(verbatim, context),
             Inline::Plain(plain) => self.render_plain(plain, context),
             _ => Err(RenderError::Unimplemented),

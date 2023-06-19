@@ -1,6 +1,6 @@
-# unimarkup-core
+# unimarkup-parser
 
-This crate is the core reference implementation for [Unimarkup](https://github.com/unimarkup/specification).
+This crate is the parser reference implementation for [Unimarkup](https://github.com/unimarkup/specification).
 
 # License
 

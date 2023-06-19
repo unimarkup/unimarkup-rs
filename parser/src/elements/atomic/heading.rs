@@ -1,10 +1,8 @@
 use strum_macros::*;
 use unimarkup_inline::{Inline, ParseInlines};
-// use unimarkup_render::html::Html;
-// use unimarkup_render::render::Render;
 
 use crate::elements::blocks::Block;
-use crate::elements::{inlines, Blocks};
+use crate::elements::Blocks;
 use crate::parser::{ElementParser, TokenizeOutput};
 use unimarkup_commons::scanner::{Symbol, SymbolKind};
 
@@ -189,28 +187,6 @@ impl AsRef<Self> for Heading {
         self
     }
 }
-
-// impl Render for Heading {
-//     fn render_html(&self) -> Html {
-//         let mut html = Html::default();
-
-//         let tag_level = u8::from(self.level).to_string();
-
-//         html.body.push_str("<h");
-//         html.body.push_str(&tag_level);
-//         html.body.push_str(" id='");
-//         html.body.push_str(&self.id);
-//         html.body.push_str("'>");
-
-//         inlines::push_inlines(&mut html, &self.content);
-
-//         html.body.push_str("</h");
-//         html.body.push_str(&tag_level);
-//         html.body.push('>');
-
-//         html
-//     }
-// }
 
 // #[allow(non_snake_case)]
 // #[cfg(test)]

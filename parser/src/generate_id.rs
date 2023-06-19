@@ -20,7 +20,7 @@ use crate::elements::types;
 /// # Examples
 ///
 /// ```rust
-/// use unimarkup_core::parser::generate_id;
+/// use unimarkup_parser::generate_id;
 ///
 /// let input = "This is some input string";
 /// assert_eq!(generate_id::generate_id(input).unwrap(), "This-is-some-input-string");

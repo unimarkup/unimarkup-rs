@@ -3,7 +3,6 @@
 pub mod atomic;
 pub mod blocks;
 pub mod enclosed;
-pub mod inlines;
 pub mod preamble;
 pub mod types;
 
