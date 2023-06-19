@@ -8,7 +8,7 @@ use unimarkup_commons::test_runner::test_file::{Test, TestOutputs};
 use unimarkup_parser::elements::atomic::Paragraph;
 use unimarkup_parser::elements::blocks::Block;
 use unimarkup_parser::elements::Blocks;
-use unimarkup_parser::parser::ParserGenerator;
+use unimarkup_parser::ParserGenerator;
 
 #[derive(Debug)]
 pub(crate) struct Snapshot<T>(T);

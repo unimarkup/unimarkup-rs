@@ -7,5 +7,7 @@ pub mod elements;
 pub mod generate_id;
 pub mod log_id;
 pub mod metadata;
-pub mod parser;
+mod parser;
 pub mod security;
+
+pub use parser::*;
