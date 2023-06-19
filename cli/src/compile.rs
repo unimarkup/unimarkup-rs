@@ -6,7 +6,7 @@ use std::{
 };
 
 use logid::{log, logging::event_entry::AddonKind, pipe};
-use unimarkup_commons::config::Config;
+use unimarkup_commons::config::{output::OutputFormatKind, Config};
 use unimarkup_core::Unimarkup;
 
 use crate::log_id::{GeneralError, GeneralInfo};
@@ -41,9 +41,16 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
     };
 
     let um = Unimarkup::parse(&source, config);
-    let outputs = um.render_formats().map_err(|_| GeneralError::Render)?;
-    for output in outputs {
-        write_file(&output.content, &out_path, output.kind.extension())?;
+    for format in um.get_formats() {
+        match format {
+            OutputFormatKind::Html => write_file(
+                &um.render_html()
+                    .map_err(|_| GeneralError::Render)?
+                    .to_string(),
+                &out_path,
+                OutputFormatKind::Html.extension(),
+            )?,
+        }
     }
 
     Ok(())

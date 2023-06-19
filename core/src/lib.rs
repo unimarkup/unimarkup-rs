@@ -5,6 +5,7 @@ use unimarkup_parser::parser;
 use unimarkup_render::html::render::HtmlRenderer;
 use unimarkup_render::html::Html;
 use unimarkup_render::log_id::RenderError;
+use unimarkup_render::render::{OutputFormat, Renderer};
 
 pub struct Unimarkup {
     doc: Document,
@@ -37,23 +38,12 @@ impl Unimarkup {
         &self.doc
     }
 
-    pub fn render_formats(&self) -> Result<Vec<RenderedOutput>, RenderError> {
-        let mut outputs = Vec::new();
-
-        for format in self.doc.output_formats() {
-            outputs.push(self.render_format(*format)?);
-        }
-
-        Ok(outputs)
+    pub fn get_formats(&self) -> impl Iterator<Item = &OutputFormatKind> {
+        self.doc.output_formats()
     }
 
-    pub fn render_format(&self, format: OutputFormatKind) -> Result<RenderedOutput, RenderError> {
-        match format {
-            OutputFormatKind::Html => Ok(RenderedOutput {
-                content: self.render_html()?.to_string(),
-                kind: format,
-            }),
-        }
+    pub fn render<T: OutputFormat>(&self, renderer: impl Renderer<T>) -> Result<T, RenderError> {
+        unimarkup_render::render::render(&self.doc, renderer)
     }
 
     pub fn render_html(&self) -> Result<Html, RenderError> {

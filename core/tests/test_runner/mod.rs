@@ -51,20 +51,20 @@ macro_rules! snapshot_parser {
     };
 }
 
-// macro_rules! spec_parser {
-//     () => {
-//         |test: &Test, cfg| {
-//             let input = test.input.trim_end();
+macro_rules! spec_parser {
+    () => {
+        |test: &Test, cfg| {
+            let input = test.input.trim_end();
 
-//             let doc = unimarkup::compile(input, cfg);
+            let um = unimarkup_core::Unimarkup::parse(input, cfg);
 
-//             TestOutputs {
-//                 html: Some(doc.html().body),
-//                 um: Some(test.input.clone()),
-//             }
-//         }
-//     };
-// }
+            TestOutputs {
+                html: Some(um.render_html().unwrap().to_string()),
+                um: Some(test.input.clone()),
+            }
+        }
+    };
+}
 
 pub fn gen_path(input_path: &str) -> (PathBuf, PathBuf) {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -106,7 +106,7 @@ pub fn paragraph_with_main_parser() {
     );
 }
 
-// #[test]
-// pub fn paragraph_spec() {
-//     run_spec_test!(gen_path("spec/markup/blocks/paragraph.yml"), spec_parser!());
-// }
+#[test]
+pub fn paragraph_spec() {
+    run_spec_test!(gen_path("spec/markup/blocks/paragraph.yml"), spec_parser!());
+}
