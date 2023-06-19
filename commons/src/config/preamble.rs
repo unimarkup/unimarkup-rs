@@ -12,15 +12,10 @@ use icu_provider::{BufferProvider, DataRequest};
 use logid::{err, logging::event_entry::AddonKind, pipe};
 use serde::{Deserialize, Serialize};
 
-use super::{
-    locale, log_id::ConfigErr, output::Output, parse_to_hashset, ConfigFns, ReplaceIfNone,
-};
+use super::{locale, log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone};
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Preamble {
-    #[command(flatten)]
-    #[serde(flatten)]
-    pub output: Output,
     #[command(flatten)]
     #[serde(flatten)]
     pub metadata: Metadata,
@@ -37,7 +32,6 @@ pub struct Preamble {
 
 impl ConfigFns for Preamble {
     fn merge(&mut self, other: Self) {
-        self.output.merge(other.output);
         self.metadata.merge(other.metadata);
         self.cite.merge(other.cite);
         self.render.merge(other.render);
@@ -45,7 +39,6 @@ impl ConfigFns for Preamble {
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
-        self.output.validate()?;
         self.metadata.validate()?;
         self.cite.validate()?;
         self.render.validate()?;
@@ -346,7 +339,37 @@ impl ConfigFns for Metadata {
 pub fn parse_parameter(_s: &str) -> Result<HashMap<String, String>, clap::Error> {
     //TODO: Implement once parameter parser is implemented
 
+    //TODO: Check for `HtmlSpecificParameter` in given parameters
+
     Ok(HashMap::default())
+}
+
+#[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HtmlSpecificParameter {
+    #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    pub favicons: HashSet<PathBuf>,
+    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
+    pub keywords: HashSet<String>,
+}
+
+impl ConfigFns for HtmlSpecificParameter {
+    fn merge(&mut self, other: Self) {
+        self.favicons.extend(other.favicons.into_iter());
+        self.keywords.extend(other.keywords.into_iter());
+    }
+
+    fn validate(&self) -> Result<(), ConfigErr> {
+        for fav in &self.favicons {
+            if !fav.exists() {
+                return err!(
+                    ConfigErr::InvalidFile,
+                    &format!("Favicon file not found: {:?}", fav)
+                );
+            }
+        }
+
+        Ok(())
+    }
 }
 
 pub fn parse_ignore_file(_s: &str) -> Result<HashSet<String>, clap::Error> {

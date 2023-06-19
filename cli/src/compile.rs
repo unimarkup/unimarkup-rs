@@ -30,7 +30,7 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
     })?;
 
     let out_path = {
-        if let Some(ref out_file) = config.preamble.output.file {
+        if let Some(ref out_file) = config.output.file {
             out_file.clone()
         } else {
             let mut in_file = config.input.clone();

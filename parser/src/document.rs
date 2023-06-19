@@ -27,6 +27,6 @@ pub struct Document {
 impl Document {
     /// Returns the configured output formats for this Unimarkup document
     pub fn output_formats(&self) -> impl Iterator<Item = &OutputFormatKind> {
-        self.config.preamble.output.formats.iter()
+        self.config.output.formats.iter()
     }
 }

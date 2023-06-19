@@ -5,7 +5,7 @@ use icu_provider::BufferProvider;
 use logid::{err, pipe};
 use serde::{Deserialize, Serialize};
 
-use self::{log_id::ConfigErr, preamble::Preamble};
+use self::{log_id::ConfigErr, output::Output, preamble::Preamble};
 
 pub mod locale;
 pub mod log_id;
@@ -47,6 +47,8 @@ pub struct Config {
     #[command(flatten)]
     pub preamble: Preamble,
     #[command(flatten)]
+    pub output: Output,
+    #[command(flatten)]
     pub merging: MergingConfig,
     #[arg(index = 1)]
     pub input: PathBuf,
@@ -55,6 +57,7 @@ pub struct Config {
 impl ConfigFns for Config {
     fn merge(&mut self, other: Self) {
         self.preamble.merge(other.preamble);
+        self.output.merge(other.output);
         self.merging.merge(other.merging);
 
         //Note: `input` is always taken from `self`
@@ -62,6 +65,7 @@ impl ConfigFns for Config {
 
     fn validate(&self) -> Result<(), ConfigErr> {
         self.preamble.validate()?;
+        self.output.validate()?;
         self.merging.validate()?;
 
         if !self.input.exists() {

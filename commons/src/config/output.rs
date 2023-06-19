@@ -10,11 +10,12 @@ use super::{log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone};
 pub struct Output {
     #[arg(long = "output-file")]
     pub file: Option<PathBuf>,
-    #[arg(long, alias = "output-formats", value_parser = parse_to_hashset::<OutputFormatKind>)]
+    /// Defines the output format to render to.
+    /// If this option is not set, the input is rendered to all supported formats.
+    ///
+    /// **Supported formats:** `html`
+    #[arg(long, alias = "output-formats", value_parser = parse_to_hashset::<OutputFormatKind>, required = false, default_value = "html")]
     pub formats: HashSet<OutputFormatKind>,
-    #[command(flatten)]
-    #[serde(flatten)]
-    pub format_specific: OutputFormatSpecific,
     /// `true` overwrites existing output files
     #[arg(long, alias = "overwrite-out-files")]
     pub overwrite: bool,
@@ -24,12 +25,9 @@ impl ConfigFns for Output {
     fn merge(&mut self, other: Self) {
         self.file.replace_none(other.file);
         self.formats.extend(other.formats.iter());
-        self.format_specific.merge(other.format_specific);
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
-        self.format_specific.validate()?;
-
         if self.formats.is_empty() {
             return err!(ConfigErr::InvalidConfig, "No output format was set.");
         }
@@ -91,50 +89,5 @@ impl FromStr for OutputFormatKind {
             "html" => Ok(OutputFormatKind::Html),
             o => Err(format!("Bad output format: {}", o)),
         }
-    }
-}
-
-#[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct OutputFormatSpecific {
-    #[command(flatten)]
-    #[serde(flatten)]
-    pub html: HtmlSpecific,
-}
-
-impl ConfigFns for OutputFormatSpecific {
-    fn merge(&mut self, other: Self) {
-        self.html.merge(other.html);
-    }
-
-    fn validate(&self) -> Result<(), ConfigErr> {
-        self.html.validate()
-    }
-}
-
-#[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HtmlSpecific {
-    #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
-    pub favicons: HashSet<PathBuf>,
-    #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
-    pub keywords: HashSet<String>,
-}
-
-impl ConfigFns for HtmlSpecific {
-    fn merge(&mut self, other: Self) {
-        self.favicons.extend(other.favicons.into_iter());
-        self.keywords.extend(other.keywords.into_iter());
-    }
-
-    fn validate(&self) -> Result<(), ConfigErr> {
-        for fav in &self.favicons {
-            if !fav.exists() {
-                return err!(
-                    ConfigErr::InvalidFile,
-                    &format!("Favicon file not found: {:?}", fav)
-                );
-            }
-        }
-
-        Ok(())
     }
 }

@@ -7,7 +7,7 @@ fn compile_empty_content() {
         ..Default::default()
     };
 
-    cfg.preamble.output.formats.insert(OutputFormatKind::Html);
+    cfg.output.formats.insert(OutputFormatKind::Html);
 
     let rendered_result = unimarkup_core::Unimarkup::parse("", cfg);
 
