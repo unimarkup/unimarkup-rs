@@ -50,11 +50,6 @@ impl Unimarkup {
     }
 
     pub fn render_html(&self) -> Result<Html, RenderError> {
-        unimarkup_render::render::render(&self.doc, HtmlRenderer::default())
+        self.render(HtmlRenderer::default())
     }
-}
-
-pub struct RenderedOutput {
-    pub content: String,
-    pub kind: OutputFormatKind,
 }
