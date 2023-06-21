@@ -18,8 +18,6 @@ pub struct HtmlElement {
     pub content: Option<String>,
 }
 
-// Note: Both structs below are needed to implement `Display` for `Vec`.
-
 #[derive(Debug, Default)]
 pub struct HtmlAttributes(Vec<HtmlAttribute>);
 #[derive(Debug, Default)]
