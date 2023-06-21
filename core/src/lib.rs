@@ -22,16 +22,6 @@ impl Unimarkup {
     /// * `um_content` - String containing Unimarkup elements.
     /// * `config` - Unimarkup configuration to be used on top of preambles.
     pub fn parse(um_content: &str, mut config: Config) -> Self {
-        if um_content.is_empty() {
-            return Unimarkup {
-                doc: Document {
-                    blocks: vec![],
-                    config,
-                    ..Default::default()
-                },
-            };
-        }
-
         Unimarkup {
             doc: parser::parse_unimarkup(um_content, &mut config),
         }
