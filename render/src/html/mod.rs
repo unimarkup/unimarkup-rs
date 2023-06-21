@@ -85,7 +85,7 @@ impl std::fmt::Display for Html {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "<!DOCTYPE HTML><html lang=\"{}\">{}{}</html>",
+            "<!DOCTYPE HTML><html lang=\"{}\"><head>{}</head><body>{}</body></html>",
             self.lang, self.head, self.body
         )
     }
