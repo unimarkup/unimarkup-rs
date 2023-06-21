@@ -94,8 +94,8 @@ impl std::fmt::Display for Html {
 impl std::fmt::Display for HtmlElement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // No name -> treat as plain content
-        if self.name.is_empty() && self.content.is_some() {
-            return write!(f, "{}", self.content.as_ref().unwrap());
+        if let (true, Some(content)) = (self.name.is_empty(), &self.content) {
+            return write!(f, "{}", content);
         }
 
         let mut element = format!("<{}", self.name);
@@ -104,10 +104,9 @@ impl std::fmt::Display for HtmlElement {
             element.push_str(&format!("{}", self.attributes));
         }
 
-        if let Some(content) = &self.content {
-            element.push_str(&format!(">{}</{}>", content, self.name));
-        } else {
-            element.push_str("/>");
+        match &self.content {
+            Some(content) => element.push_str(&format!(">{}</{}>", content, self.name)),
+            None => element.push_str("/>"),
         }
 
         write!(f, "{}", element)
@@ -145,10 +144,9 @@ impl std::ops::DerefMut for HtmlElements {
 
 impl std::fmt::Display for HtmlAttribute {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(value) = &self.value {
-            write!(f, "{}='{}'", self.name, value)
-        } else {
-            write!(f, "{}", self.name)
+        match &self.value {
+            Some(value) => write!(f, "{}='{}'", self.name, value),
+            None => write!(f, "{}", self.name),
         }
     }
 }
