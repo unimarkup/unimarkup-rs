@@ -4,7 +4,7 @@ use unimarkup_commons::config::{Config, ConfigFns};
 
 use crate::log_id::{GeneralError, GeneralInfo};
 
-mod compile;
+mod compiler;
 mod log_id;
 
 fn main() {
@@ -17,7 +17,7 @@ fn main() {
         Ok(cfg) => {
             cfg.validate().unwrap();
 
-            match compile::compile(cfg) {
+            match compiler::compile(cfg) {
                 Ok(_) => {
                     log!(GeneralInfo::FinishedCompiling);
                 }
