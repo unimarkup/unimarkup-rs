@@ -16,7 +16,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_inlines(&paragraph.content, context)?;
 
-        Ok(Html::new_nested("p", HtmlAttributes::default(), inner))
+        Ok(Html::nested("p", HtmlAttributes::default(), inner))
     }
 
     fn render_heading(
@@ -32,7 +32,7 @@ impl Renderer<Html> for HtmlRenderer {
             value: Some(heading.id.clone()),
         }]);
 
-        Ok(Html::new_nested(&tag, attributes, inner))
+        Ok(Html::nested(&tag, attributes, inner))
     }
 
     fn render_verbatim_block(
@@ -52,7 +52,7 @@ impl Renderer<Html> for HtmlRenderer {
         // };
         let language = "auto";
 
-        let html = Html::new_with_body(HtmlElement {
+        let html = Html::with_body(HtmlElement {
             name: "div".to_string(),
             attributes: HtmlAttributes::default(),
             content: Some(highlight::highlight_html_lines(
@@ -72,7 +72,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(bold, context)?;
 
-        Ok(Html::new_nested("strong", HtmlAttributes::default(), inner))
+        Ok(Html::nested("strong", HtmlAttributes::default(), inner))
     }
 
     fn render_italic(
@@ -82,7 +82,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(italic, context)?;
 
-        Ok(Html::new_nested("em", HtmlAttributes::default(), inner))
+        Ok(Html::nested("em", HtmlAttributes::default(), inner))
     }
 
     fn render_underline(
@@ -97,7 +97,7 @@ impl Renderer<Html> for HtmlRenderer {
             value: Some("text-decoration: underline;".to_string()),
         });
 
-        Ok(Html::new_nested("span", attributes, inner))
+        Ok(Html::nested("span", attributes, inner))
     }
 
     fn render_subscript(
@@ -107,7 +107,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(subscript, context)?;
 
-        Ok(Html::new_nested("sub", HtmlAttributes::default(), inner))
+        Ok(Html::nested("sub", HtmlAttributes::default(), inner))
     }
 
     fn render_superscript(
@@ -117,7 +117,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(superscript, context)?;
 
-        Ok(Html::new_nested("sup", HtmlAttributes::default(), inner))
+        Ok(Html::nested("sup", HtmlAttributes::default(), inner))
     }
 
     fn render_overline(
@@ -132,7 +132,7 @@ impl Renderer<Html> for HtmlRenderer {
             value: Some("text-decoration: overline;".to_string()),
         });
 
-        Ok(Html::new_nested("span", attributes, inner))
+        Ok(Html::nested("span", attributes, inner))
     }
 
     fn render_strikethrough(
@@ -147,7 +147,7 @@ impl Renderer<Html> for HtmlRenderer {
             value: Some("text-decoration: line-through;".to_string()),
         });
 
-        Ok(Html::new_nested("span", attributes, inner))
+        Ok(Html::nested("span", attributes, inner))
     }
 
     fn render_highlight(
@@ -157,7 +157,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(highlight, context)?;
 
-        Ok(Html::new_nested("mark", HtmlAttributes::default(), inner))
+        Ok(Html::nested("mark", HtmlAttributes::default(), inner))
     }
 
     fn render_quote(
@@ -167,7 +167,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(quote, context)?;
 
-        Ok(Html::new_nested("q", HtmlAttributes::default(), inner))
+        Ok(Html::nested("q", HtmlAttributes::default(), inner))
     }
 
     fn render_inline_verbatim(
@@ -175,7 +175,7 @@ impl Renderer<Html> for HtmlRenderer {
         verbatim: &unimarkup_inline::PlainContent,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let html = Html::new_with_body(HtmlElement {
+        let html = Html::with_body(HtmlElement {
             name: "code".to_string(),
             attributes: HtmlAttributes::default(),
             content: Some(verbatim.as_string()),
@@ -189,7 +189,7 @@ impl Renderer<Html> for HtmlRenderer {
         plain: &unimarkup_inline::PlainContent,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let html = Html::new_with_body(HtmlElement {
+        let html = Html::with_body(HtmlElement {
             name: String::default(),
             attributes: HtmlAttributes::default(),
             content: Some(plain.as_string()),

@@ -33,27 +33,27 @@ pub struct Html {
 }
 
 impl Html {
-    pub fn new_with_head(element: HtmlElement) -> Self {
+    pub fn with_head(element: HtmlElement) -> Self {
         let mut html = Html::default();
         html.head.push(element);
         html
     }
 
-    pub fn new_with_body(element: HtmlElement) -> Self {
+    pub fn with_body(element: HtmlElement) -> Self {
         let mut html = Html::default();
         html.body.push(element);
         html
     }
 
-    pub fn new_with(head: HtmlElement, body: HtmlElement) -> Self {
+    pub fn with(head: HtmlElement, body: HtmlElement) -> Self {
         let mut html = Html::default();
         html.head.push(head);
         html.body.push(body);
         html
     }
 
-    pub fn new_nested(outer_name: &str, outer_attributes: HtmlAttributes, mut inner: Self) -> Self {
-        let mut html = Html::new_with_body(HtmlElement {
+    pub fn nested(outer_name: &str, outer_attributes: HtmlAttributes, mut inner: Self) -> Self {
+        let mut html = Html::with_body(HtmlElement {
             name: outer_name.to_string(),
             attributes: outer_attributes,
             content: Some(inner.body.to_string()),
