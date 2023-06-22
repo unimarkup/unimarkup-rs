@@ -52,9 +52,10 @@ pub struct Html {
 
 impl Html {
     pub fn with_head(head: HtmlHead) -> Self {
-        let mut html = Html::default();
-        html.head = head;
-        html
+        Html {
+            head,
+            ..Default::default()
+        }
     }
 
     pub fn with_body(element: HtmlElement) -> Self {
@@ -64,8 +65,10 @@ impl Html {
     }
 
     pub fn with(head: HtmlHead, element: HtmlElement) -> Self {
-        let mut html = Html::default();
-        html.head = head;
+        let mut html = Html {
+            head,
+            ..Default::default()
+        };
         html.body.elements.push(element);
         html
     }
@@ -83,7 +86,7 @@ impl Html {
 }
 
 impl OutputFormat for Html {
-    fn new(_context: &crate::render::Context) -> Self {
+    fn new(context: &crate::render::Context) -> Self {
         Html {
             head: HtmlHead {
                 elements: HtmlElements(Vec::new()),
@@ -93,7 +96,7 @@ impl OutputFormat for Html {
             body: HtmlBody {
                 elements: HtmlElements(Vec::new()),
             },
-            lang: "en-US".to_string(),
+            lang: context.get_lang().to_string(),
         }
     }
 

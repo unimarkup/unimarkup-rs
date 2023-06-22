@@ -1,5 +1,6 @@
 //! Contains the [`Render`] trait definition.
 
+use unimarkup_commons::config::locid::Locale;
 use unimarkup_inline::{Inline, NestedContent, PlainContent};
 use unimarkup_parser::{
     document::Document,
@@ -12,13 +13,22 @@ use unimarkup_parser::{
 
 use crate::log_id::RenderError;
 
-pub struct Context {}
+pub struct Context<'a> {
+    doc: &'a Document,
+}
+
+impl<'a> Context<'a> {
+    /// Returns the locale for the natural language that is the main language for this rendering.
+    pub fn get_lang(&self) -> &Locale {
+        &self.doc.config.preamble.i18n.lang
+    }
+}
 
 pub fn render<T: OutputFormat>(
     doc: &Document,
     mut renderer: impl Renderer<T>,
 ) -> Result<T, RenderError> {
-    let context = Context {};
+    let context = Context { doc };
     let mut t = T::new(&context);
 
     t.append(renderer.render_blocks(&doc.blocks, &context)?)?;
