@@ -24,39 +24,59 @@ pub struct HtmlAttributes(Vec<HtmlAttribute>);
 pub struct HtmlElements(Vec<HtmlElement>);
 
 #[derive(Debug, Default)]
+pub struct HtmlHead {
+    pub elements: HtmlElements,
+    pub syntax_highlighting_used: bool,
+    pub styles: HtmlAttributes, //TODO: replace with CSS struct
+}
+
+impl HtmlHead {
+    fn merge(&mut self, mut other: Self) {
+        self.elements.append(&mut other.elements);
+        self.styles.append(&mut other.styles);
+        self.syntax_highlighting_used |= other.syntax_highlighting_used;
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct HtmlBody {
+    pub elements: HtmlElements,
+}
+
+#[derive(Debug, Default)]
 pub struct Html {
-    pub head: HtmlElements,
-    pub body: HtmlElements,
+    pub head: HtmlHead,
+    pub body: HtmlBody,
     pub lang: String,
 }
 
 impl Html {
-    pub fn with_head(element: HtmlElement) -> Self {
+    pub fn with_head(head: HtmlHead) -> Self {
         let mut html = Html::default();
-        html.head.push(element);
+        html.head = head;
         html
     }
 
     pub fn with_body(element: HtmlElement) -> Self {
         let mut html = Html::default();
-        html.body.push(element);
+        html.body.elements.push(element);
         html
     }
 
-    pub fn with(head: HtmlElement, body: HtmlElement) -> Self {
+    pub fn with(head: HtmlHead, element: HtmlElement) -> Self {
         let mut html = Html::default();
-        html.head.push(head);
-        html.body.push(body);
+        html.head = head;
+        html.body.elements.push(element);
         html
     }
 
-    pub fn nested(outer_name: &str, outer_attributes: HtmlAttributes, mut inner: Self) -> Self {
+    pub fn nested(outer_name: &str, outer_attributes: HtmlAttributes, inner: Self) -> Self {
         let mut html = Html::with_body(HtmlElement {
             name: outer_name.to_string(),
             attributes: outer_attributes,
-            content: Some(inner.body.to_string()),
+            content: Some(inner.body.elements.to_string()),
         });
-        html.head.append(&mut inner.head);
+        html.head.merge(inner.head);
 
         html
     }
@@ -65,15 +85,22 @@ impl Html {
 impl OutputFormat for Html {
     fn new(_context: &crate::render::Context) -> Self {
         Html {
-            head: HtmlElements(Vec::new()),
-            body: HtmlElements(Vec::new()),
+            head: HtmlHead {
+                elements: HtmlElements(Vec::new()),
+                syntax_highlighting_used: false,
+                styles: HtmlAttributes(Vec::new()),
+            },
+            body: HtmlBody {
+                elements: HtmlElements(Vec::new()),
+            },
             lang: "en-US".to_string(),
         }
     }
 
     fn append(&mut self, mut other: Self) -> Result<(), crate::log_id::RenderError> {
-        self.head.append(&mut other.head);
-        self.body.append(&mut other.body);
+        self.head.merge(other.head);
+
+        self.body.elements.append(&mut other.body.elements);
 
         Ok(())
     }
@@ -83,7 +110,7 @@ impl std::fmt::Display for Html {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "<!DOCTYPE HTML><html lang=\"{}\"><head>{}</head><body>{}</body></html>",
+            "<!DOCTYPE HTML><html lang=\"{}\">{}{}</html>",
             self.lang, self.head, self.body
         )
     }
@@ -137,6 +164,32 @@ impl std::ops::Deref for HtmlElements {
 impl std::ops::DerefMut for HtmlElements {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl std::fmt::Display for HtmlHead {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<head>{}", self.elements)?;
+
+        if self.syntax_highlighting_used {
+            write!(
+                f,
+                "<style>{}</style>",
+                include_str!("../../styles/syntax_highlighting.css")
+            )?;
+        }
+
+        //TODO: write other head styles (try to use LightningCss optimizations)
+
+        write!(f, "</head>")?;
+        Ok(())
+    }
+}
+
+impl std::fmt::Display for HtmlBody {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<body>{}</body>", self.elements)?;
+        Ok(())
     }
 }
 

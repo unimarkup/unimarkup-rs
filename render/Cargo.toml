@@ -17,4 +17,4 @@ thiserror.workspace = true
 once_cell.workspace = true
 unimarkup-inline = { path = "../inline/", version = "0" }
 unimarkup-parser = { path = "../parser/", version = "0" }
-syntect = "4.6"
+syntect = "5.0"

@@ -1,9 +1,6 @@
 use crate::render::{Context, Renderer};
 
-use super::{
-    highlight::{self, DEFAULT_THEME},
-    Html, HtmlAttribute, HtmlAttributes, HtmlElement,
-};
+use super::{highlight, Html, HtmlAttribute, HtmlAttributes, HtmlElement, HtmlHead};
 
 #[derive(Debug, Default)]
 pub struct HtmlRenderer {}
@@ -50,19 +47,24 @@ impl Renderer<Html> for HtmlRenderer {
         //     Some(attrs) => attrs.language.clone().unwrap_or(PLAIN_SYNTAX.to_string()),
         //     None => PLAIN_SYNTAX.to_string(),
         // };
-        let language = "auto";
+        let language = "rust";
 
-        let html = Html::with_body(HtmlElement {
-            name: "div".to_string(),
-            attributes: HtmlAttributes::default(),
-            content: Some(highlight::highlight_html_lines(
-                &verbatim.content,
-                language,
-                DEFAULT_THEME,
-            )),
-        });
+        let inner = Html::with(
+            HtmlHead {
+                syntax_highlighting_used: true,
+                ..Default::default()
+            },
+            HtmlElement {
+                name: "code".to_string(),
+                attributes: HtmlAttributes::default(),
+                content: Some(
+                    highlight::highlight_content(&verbatim.content, language)
+                        .unwrap_or(verbatim.content.clone()),
+                ),
+            },
+        );
 
-        Ok(html)
+        Ok(Html::nested("pre", HtmlAttributes::default(), inner))
     }
 
     fn render_bold(
