@@ -1,6 +1,6 @@
 use crate::render::{Context, Renderer};
 
-use super::{highlight, Html, HtmlAttribute, HtmlAttributes, HtmlElement, HtmlHead};
+use super::{highlight, Html, HtmlAttribute, HtmlAttributes, HtmlBody, HtmlElement, HtmlHead};
 
 #[derive(Debug, Default)]
 pub struct HtmlRenderer {}
@@ -54,14 +54,14 @@ impl Renderer<Html> for HtmlRenderer {
                 syntax_highlighting_used: true,
                 ..Default::default()
             },
-            HtmlElement {
+            HtmlBody::from(HtmlElement {
                 name: "code".to_string(),
                 attributes: HtmlAttributes::default(),
                 content: Some(
                     highlight::highlight_content(&verbatim.content, language)
                         .unwrap_or(verbatim.content.clone()),
                 ),
-            },
+            }),
         );
 
         Ok(Html::nested("pre", HtmlAttributes::default(), inner))
@@ -177,11 +177,11 @@ impl Renderer<Html> for HtmlRenderer {
         verbatim: &unimarkup_inline::PlainContent,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let html = Html::with_body(HtmlElement {
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
             name: "code".to_string(),
             attributes: HtmlAttributes::default(),
             content: Some(verbatim.as_string()),
-        });
+        }));
 
         Ok(html)
     }
@@ -191,11 +191,11 @@ impl Renderer<Html> for HtmlRenderer {
         plain: &unimarkup_inline::PlainContent,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let html = Html::with_body(HtmlElement {
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
             name: String::default(),
             attributes: HtmlAttributes::default(),
             content: Some(plain.as_string()),
-        });
+        }));
 
         Ok(html)
     }

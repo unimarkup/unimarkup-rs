@@ -58,27 +58,27 @@ impl Html {
         }
     }
 
-    pub fn with_body(element: HtmlElement) -> Self {
-        let mut html = Html::default();
-        html.body.elements.push(element);
-        html
+    pub fn with_body(body: HtmlBody) -> Self {
+        Html {
+            body,
+            ..Default::default()
+        }
     }
 
-    pub fn with(head: HtmlHead, element: HtmlElement) -> Self {
-        let mut html = Html {
+    pub fn with(head: HtmlHead, body: HtmlBody) -> Self {
+        Html {
             head,
+            body,
             ..Default::default()
-        };
-        html.body.elements.push(element);
-        html
+        }
     }
 
     pub fn nested(outer_name: &str, outer_attributes: HtmlAttributes, inner: Self) -> Self {
-        let mut html = Html::with_body(HtmlElement {
+        let mut html = Html::with_body(HtmlBody::from(HtmlElement {
             name: outer_name.to_string(),
             attributes: outer_attributes,
             content: Some(inner.body.elements.to_string()),
-        });
+        }));
         html.head.merge(inner.head);
 
         html
@@ -193,6 +193,22 @@ impl std::fmt::Display for HtmlBody {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "<body>{}</body>", self.elements)?;
         Ok(())
+    }
+}
+
+impl From<Vec<HtmlElement>> for HtmlBody {
+    fn from(value: Vec<HtmlElement>) -> Self {
+        HtmlBody {
+            elements: HtmlElements(value),
+        }
+    }
+}
+
+impl From<HtmlElement> for HtmlBody {
+    fn from(value: HtmlElement) -> Self {
+        HtmlBody {
+            elements: HtmlElements(vec![value]),
+        }
     }
 }
 
