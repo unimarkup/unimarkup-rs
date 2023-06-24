@@ -1,6 +1,8 @@
 use crate::render::{Context, Renderer};
 
-use super::{highlight, Html, HtmlAttribute, HtmlAttributes, HtmlBody, HtmlElement, HtmlHead};
+use super::{
+    highlight, tag::HtmlTag, Html, HtmlAttribute, HtmlAttributes, HtmlBody, HtmlElement, HtmlHead,
+};
 
 #[derive(Debug, Default)]
 pub struct HtmlRenderer {}
@@ -13,7 +15,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_inlines(&paragraph.content, context)?;
 
-        Ok(Html::nested("p", HtmlAttributes::default(), inner))
+        Ok(Html::nested(HtmlTag::P, HtmlAttributes::default(), inner))
     }
 
     fn render_heading(
@@ -22,14 +24,14 @@ impl Renderer<Html> for HtmlRenderer {
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_inlines(&heading.content, context)?;
-        let tag = format!("h{}", u8::from(heading.level));
+        let tag = HtmlTag::from(heading.level);
 
         let attributes = HtmlAttributes::from(vec![HtmlAttribute {
             name: "id".to_string(),
             value: Some(heading.id.clone()),
         }]);
 
-        Ok(Html::nested(&tag, attributes, inner))
+        Ok(Html::nested(tag, attributes, inner))
     }
 
     fn render_verbatim_block(
@@ -55,7 +57,7 @@ impl Renderer<Html> for HtmlRenderer {
                 ..Default::default()
             },
             HtmlBody::from(HtmlElement {
-                name: "code".to_string(),
+                tag: HtmlTag::Code,
                 attributes: HtmlAttributes::default(),
                 content: Some(
                     highlight::highlight_content(&verbatim.content, language)
@@ -64,7 +66,7 @@ impl Renderer<Html> for HtmlRenderer {
             }),
         );
 
-        Ok(Html::nested("pre", HtmlAttributes::default(), inner))
+        Ok(Html::nested(HtmlTag::Pre, HtmlAttributes::default(), inner))
     }
 
     fn render_bold(
@@ -74,7 +76,11 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(bold, context)?;
 
-        Ok(Html::nested("strong", HtmlAttributes::default(), inner))
+        Ok(Html::nested(
+            HtmlTag::Strong,
+            HtmlAttributes::default(),
+            inner,
+        ))
     }
 
     fn render_italic(
@@ -84,7 +90,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(italic, context)?;
 
-        Ok(Html::nested("em", HtmlAttributes::default(), inner))
+        Ok(Html::nested(HtmlTag::Em, HtmlAttributes::default(), inner))
     }
 
     fn render_underline(
@@ -99,7 +105,7 @@ impl Renderer<Html> for HtmlRenderer {
             value: Some("text-decoration: underline;".to_string()),
         });
 
-        Ok(Html::nested("span", attributes, inner))
+        Ok(Html::nested(HtmlTag::Span, attributes, inner))
     }
 
     fn render_subscript(
@@ -109,7 +115,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(subscript, context)?;
 
-        Ok(Html::nested("sub", HtmlAttributes::default(), inner))
+        Ok(Html::nested(HtmlTag::Sub, HtmlAttributes::default(), inner))
     }
 
     fn render_superscript(
@@ -119,7 +125,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(superscript, context)?;
 
-        Ok(Html::nested("sup", HtmlAttributes::default(), inner))
+        Ok(Html::nested(HtmlTag::Sup, HtmlAttributes::default(), inner))
     }
 
     fn render_overline(
@@ -134,7 +140,7 @@ impl Renderer<Html> for HtmlRenderer {
             value: Some("text-decoration: overline;".to_string()),
         });
 
-        Ok(Html::nested("span", attributes, inner))
+        Ok(Html::nested(HtmlTag::Span, attributes, inner))
     }
 
     fn render_strikethrough(
@@ -149,7 +155,7 @@ impl Renderer<Html> for HtmlRenderer {
             value: Some("text-decoration: line-through;".to_string()),
         });
 
-        Ok(Html::nested("span", attributes, inner))
+        Ok(Html::nested(HtmlTag::Span, attributes, inner))
     }
 
     fn render_highlight(
@@ -159,7 +165,11 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(highlight, context)?;
 
-        Ok(Html::nested("mark", HtmlAttributes::default(), inner))
+        Ok(Html::nested(
+            HtmlTag::Mark,
+            HtmlAttributes::default(),
+            inner,
+        ))
     }
 
     fn render_quote(
@@ -169,7 +179,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(quote, context)?;
 
-        Ok(Html::nested("q", HtmlAttributes::default(), inner))
+        Ok(Html::nested(HtmlTag::Q, HtmlAttributes::default(), inner))
     }
 
     fn render_inline_verbatim(
@@ -178,7 +188,7 @@ impl Renderer<Html> for HtmlRenderer {
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
-            name: "code".to_string(),
+            tag: HtmlTag::Code,
             attributes: HtmlAttributes::default(),
             content: Some(verbatim.as_string()),
         }));
@@ -192,7 +202,7 @@ impl Renderer<Html> for HtmlRenderer {
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
-            name: String::default(),
+            tag: HtmlTag::PlainContent,
             attributes: HtmlAttributes::default(),
             content: Some(plain.as_string()),
         }));

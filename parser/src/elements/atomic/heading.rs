@@ -35,15 +35,6 @@ pub enum HeadingLevel {
     /// Heading level 6, corresponds to `###### ` in Unimarkup.
     #[strum(serialize = "level-6")]
     Level6,
-
-    /// Invalid level to denote an invalid heading syntax
-    Invalid,
-}
-
-impl Default for HeadingLevel {
-    fn default() -> Self {
-        Self::Invalid
-    }
 }
 
 impl From<HeadingLevel> for u8 {
@@ -55,22 +46,25 @@ impl From<HeadingLevel> for u8 {
             HeadingLevel::Level4 => 4,
             HeadingLevel::Level5 => 5,
             HeadingLevel::Level6 => 6,
-            _ => 7,
         }
     }
 }
 
-impl From<&str> for HeadingLevel {
-    fn from(input: &str) -> Self {
-        match input {
+impl TryFrom<&str> for HeadingLevel {
+    type Error = AtomicError;
+
+    fn try_from(input: &str) -> Result<Self, Self::Error> {
+        let level = match input {
             "1" | "#" => HeadingLevel::Level1,
             "2" | "##" => HeadingLevel::Level2,
             "3" | "###" => HeadingLevel::Level3,
             "4" | "####" => HeadingLevel::Level4,
             "5" | "#####" => HeadingLevel::Level5,
             "6" | "######" => HeadingLevel::Level6,
-            _ => HeadingLevel::Invalid,
-        }
+            _ => return Err(AtomicError::InvalidHeadingLvl),
+        };
+
+        Ok(level)
     }
 }
 
@@ -93,7 +87,7 @@ impl TryFrom<usize> for HeadingLevel {
 }
 
 /// Structure of a Unimarkup heading element.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Heading {
     /// Unique identifier for a heading.
     pub id: String,

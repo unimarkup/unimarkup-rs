@@ -2,8 +2,11 @@
 
 use crate::render::OutputFormat;
 
+use self::tag::HtmlTag;
+
 pub mod highlight;
 pub mod render;
+pub mod tag;
 
 #[derive(Debug, Default)]
 pub struct HtmlAttribute {
@@ -11,9 +14,12 @@ pub struct HtmlAttribute {
     pub value: Option<String>,
 }
 
+/// Represents a HTML element.
+///
+/// **Note:** If `tag = Html::PlainContent`, the element is displayed without a HTML tag.
 #[derive(Debug, Default)]
 pub struct HtmlElement {
-    pub name: String,
+    pub tag: HtmlTag,
     pub attributes: HtmlAttributes,
     pub content: Option<String>,
 }
@@ -73,9 +79,9 @@ impl Html {
         }
     }
 
-    pub fn nested(outer_name: &str, outer_attributes: HtmlAttributes, inner: Self) -> Self {
+    pub fn nested(outer_tag: HtmlTag, outer_attributes: HtmlAttributes, inner: Self) -> Self {
         let mut html = Html::with_body(HtmlBody::from(HtmlElement {
-            name: outer_name.to_string(),
+            tag: outer_tag,
             attributes: outer_attributes,
             content: Some(inner.body.elements.to_string()),
         }));
@@ -122,18 +128,20 @@ impl std::fmt::Display for Html {
 impl std::fmt::Display for HtmlElement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // No name -> treat as plain content
-        if let (true, Some(content)) = (self.name.is_empty(), &self.content) {
+        if let (HtmlTag::PlainContent, Some(content)) = (&self.tag, &self.content) {
             return write!(f, "{}", content);
+        } else if self.tag == HtmlTag::PlainContent {
+            return write!(f, "");
         }
 
-        let mut element = format!("<{}", self.name);
+        let mut element = format!("<{}", self.tag.as_str());
 
         if !self.attributes.is_empty() {
             element.push_str(&format!("{}", self.attributes));
         }
 
         match &self.content {
-            Some(content) => element.push_str(&format!(">{}</{}>", content, self.name)),
+            Some(content) => element.push_str(&format!(">{}</{}>", content, self.tag.as_str())),
             None => element.push_str("/>"),
         }
 
