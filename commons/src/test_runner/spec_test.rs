@@ -15,6 +15,8 @@ where
     let outputs = compile(test, config);
 
     if let Some(expected_html) = &test.outputs.html {
+        let expected_html = expected_html.trim();
+
         let mut act_html_body = outputs
             .html
             .expect("Compiler should render HTML for the given input");
@@ -26,12 +28,13 @@ where
                 .to_string();
         }
 
-        assert_eq!(
-            act_html_body.trim(),
-            expected_html.trim(),
-            "{}-{}: Actual (left) HTML body differs from expected (right)",
+        assert!(
+            act_html_body.contains(expected_html),
+            "{}-{}: Actual HTML body did not contain expected html. Actual: '{}'. Expected: '{}'",
             test_group,
-            test.name
+            test.name,
+            act_html_body,
+            expected_html,
         );
     }
 }

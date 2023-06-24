@@ -3,14 +3,14 @@ use std::{
     process::{Command, Stdio},
 };
 
-const TEST_FILE: &str = "attrs.um";
+const TEST_FILE: &str = "supported.um";
 
 #[test]
 fn test__main_log_trace__attributes_file() {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .canonicalize()
         .unwrap();
-    path.push("tests/test_files/attrs.um");
+    path.push(format!("tests/test_files/{}", TEST_FILE));
 
     let cli_proc = Command::new("cargo")
         .stdout(Stdio::piped())

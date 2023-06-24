@@ -6,8 +6,8 @@ use std::{
 };
 
 use logid::{log, logging::event_entry::AddonKind, pipe};
-use unimarkup_commons::config::{output::OutputFormat, Config};
-use unimarkup_core::document::Document;
+use unimarkup_commons::config::{output::OutputFormatKind, Config};
+use unimarkup_core::Unimarkup;
 
 use crate::log_id::{GeneralError, GeneralInfo};
 
@@ -30,7 +30,7 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
     })?;
 
     let out_path = {
-        if let Some(ref out_file) = config.preamble.output.file {
+        if let Some(ref out_file) = config.output.file {
             out_file.clone()
         } else {
             let mut in_file = config.input.clone();
@@ -40,32 +40,39 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
         }
     };
 
-    let document = unimarkup_core::unimarkup::compile(&source, config);
-
-    for format in document.output_formats() {
+    let um = Unimarkup::parse(&source, config);
+    for format in um.get_formats() {
         match format {
-            OutputFormat::Html => write_html(&document, &out_path)?,
+            OutputFormatKind::Html => write_file(
+                &um.render_html()
+                    .map_err(|_| GeneralError::Render)?
+                    .to_string(),
+                &out_path,
+                OutputFormatKind::Html.extension(),
+            )?,
         }
     }
 
     Ok(())
 }
 
-fn write_html(document: &Document, out_path: impl AsRef<Path>) -> Result<(), GeneralError> {
-    let html = document.html();
-
-    let mut out_path_html: PathBuf = out_path.as_ref().into();
-    out_path_html.set_extension("html");
+fn write_file(
+    content: &str,
+    out_path: impl AsRef<Path>,
+    extension: &str,
+) -> Result<(), GeneralError> {
+    let mut full_out_path: PathBuf = out_path.as_ref().into();
+    full_out_path.set_extension(extension);
 
     log!(
         GeneralInfo::WritingToFile,
-        &format!("Writing to file: {:?}", out_path_html),
+        &format!("Writing to file: {:?}", full_out_path),
     );
 
-    std::fs::write(&out_path_html, html.body).map_err(|error| {
+    std::fs::write(&full_out_path, content).map_err(|error| {
         pipe!(
             GeneralError::FileWrite,
-            &format!("Could not write to file: {:?}", out_path_html),
+            &format!("Could not write to file: {:?}", full_out_path),
             add: AddonKind::Info(format!("Cause: {}", error))
         )
     })

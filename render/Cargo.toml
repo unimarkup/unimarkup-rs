@@ -13,5 +13,9 @@ license.workspace = true
 
 [dependencies]
 logid.workspace = true
+thiserror.workspace = true
 once_cell.workspace = true
-syntect = "4.6"
+unimarkup-commons = { path = "../commons/", version = "0" }
+unimarkup-inline = { path = "../inline/", version = "0" }
+unimarkup-parser = { path = "../parser/", version = "0" }
+syntect = "5.0"

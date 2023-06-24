@@ -5,11 +5,10 @@ use unimarkup_commons::run_spec_test;
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
 use unimarkup_commons::test_runner::snap_test_runner::SnapTestRunner;
 use unimarkup_commons::test_runner::test_file::{Test, TestOutputs};
-use unimarkup_core::elements::atomic::Paragraph;
-use unimarkup_core::elements::blocks::Block;
-use unimarkup_core::elements::Blocks;
-use unimarkup_core::parser::ParserGenerator;
-use unimarkup_core::unimarkup;
+use unimarkup_parser::elements::atomic::Paragraph;
+use unimarkup_parser::elements::blocks::Block;
+use unimarkup_parser::elements::Blocks;
+use unimarkup_parser::ParserGenerator;
 
 #[derive(Debug)]
 pub(crate) struct Snapshot<T>(T);
@@ -57,10 +56,10 @@ macro_rules! spec_parser {
         |test: &Test, cfg| {
             let input = test.input.trim_end();
 
-            let doc = unimarkup::compile(input, cfg);
+            let um = unimarkup_core::Unimarkup::parse(input, cfg);
 
             TestOutputs {
-                html: Some(doc.html().body),
+                html: Some(um.render_html().unwrap().to_string()),
                 um: Some(test.input.clone()),
             }
         }

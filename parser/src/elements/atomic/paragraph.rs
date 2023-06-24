@@ -1,15 +1,11 @@
 use std::fmt::Debug;
 
 use unimarkup_inline::{Inline, ParseInlines};
-use unimarkup_render::{html::Html, render::Render};
 
+use crate::{elements::Blocks, parser::ElementParser};
 use crate::{
     elements::{blocks::Block, types},
-    parser::{self, TokenizeOutput},
-};
-use crate::{
-    elements::{inlines, Blocks},
-    parser::ElementParser,
+    parser::TokenizeOutput,
 };
 use unimarkup_commons::scanner::{Symbol, SymbolKind};
 
@@ -37,7 +33,7 @@ impl From<&[Symbol<'_>]> for Paragraph {
         let content = value.parse_inlines().collect();
         let line_nr = value.get(0).map(|symbol| symbol.start.line).unwrap_or(0);
 
-        let id = parser::generate_id::generate_id(&format!(
+        let id = crate::generate_id::generate_id(&format!(
             "paragraph{delim}{}",
             line_nr,
             delim = types::ELEMENT_TYPE_DELIMITER
@@ -112,22 +108,5 @@ impl ElementParser for Paragraph {
         let block = Block::Paragraph(Paragraph::from(content));
 
         Some(vec![block])
-    }
-}
-
-impl Render for Paragraph {
-    fn render_html(&self) -> Html {
-        let mut html = Html::default();
-
-        html.body.push_str("<p");
-        html.body.push_str(" id='");
-        html.body.push_str(&self.id);
-        html.body.push_str("'>");
-
-        inlines::push_inlines(&mut html, &self.content);
-
-        html.body.push_str("</p>");
-
-        html
     }
 }

@@ -10,14 +10,11 @@ use crate::{
         enclosed::Verbatim,
         Blocks,
     },
+    log_id::MainParserInfo,
     metadata::{Metadata, MetadataKind},
-    parser::log_id::MainParserInfo,
     security,
 };
 use unimarkup_commons::config::Config;
-
-pub mod generate_id;
-pub mod log_id;
 
 /// Parser as function that can parse Unimarkup content
 pub type ParserFn = for<'i> fn(&'i [Symbol<'i>]) -> Option<(Blocks, &'i [Symbol<'i>])>;

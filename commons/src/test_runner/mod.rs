@@ -8,6 +8,8 @@ pub mod snap_test_runner;
 pub mod spec_test;
 pub mod test_file;
 
+pub use insta;
+
 /// Scans the string using Scanner with icu_provider constructed from default
 /// icu locale data.
 pub fn scan_str(input: &str) -> Vec<Symbol> {

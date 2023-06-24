@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use unimarkup_core::{
+use unimarkup_parser::{
     metadata::{Metadata, MetadataKind},
     security,
 };

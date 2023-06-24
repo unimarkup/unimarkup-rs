@@ -1,6 +1,6 @@
 use crate::test_runner::Snapshot;
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
-use unimarkup_core::elements::atomic::Paragraph;
+use unimarkup_parser::elements::atomic::Paragraph;
 
 impl AsSnapshot for Snapshot<&Paragraph> {
     fn as_snapshot(&self) -> String {

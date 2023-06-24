@@ -1,6 +1,6 @@
 [package]
-name = "unimarkup-core"
-description = "Core of the Unimarkup compiler."
+name = "unimarkup-parser"
+description = "Parser for the Unimarkup language."
 readme = "README.md"
 version.workspace = true
 edition.workspace = true
@@ -14,9 +14,16 @@ license.workspace = true
 [dependencies]
 logid.workspace = true
 thiserror.workspace = true
+unimarkup-inline = { path = "../inline/", version = "0" }
 unimarkup-commons = { path ="../commons/", version = "0" }
-unimarkup-parser = { path = "../parser/", version = "0" }
-unimarkup-render = { path = "../render/", version = "0" }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+strum = "0.22.0"
+strum_macros = "0.22.0"
+sha3 = "0.10"
 
 [dev-dependencies]
+clap.workspace = true
 unimarkup-commons = { path ="../commons/", version = "0", features = ["test_runner"] }
+regex = "1.8.1"

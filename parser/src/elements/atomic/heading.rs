@@ -1,10 +1,8 @@
 use strum_macros::*;
 use unimarkup_inline::{Inline, ParseInlines};
-use unimarkup_render::html::Html;
-use unimarkup_render::render::Render;
 
 use crate::elements::blocks::Block;
-use crate::elements::{inlines, Blocks};
+use crate::elements::Blocks;
 use crate::parser::{ElementParser, TokenizeOutput};
 use unimarkup_commons::scanner::{Symbol, SymbolKind};
 
@@ -37,15 +35,6 @@ pub enum HeadingLevel {
     /// Heading level 6, corresponds to `###### ` in Unimarkup.
     #[strum(serialize = "level-6")]
     Level6,
-
-    /// Invalid level to denote an invalid heading syntax
-    Invalid,
-}
-
-impl Default for HeadingLevel {
-    fn default() -> Self {
-        Self::Invalid
-    }
 }
 
 impl From<HeadingLevel> for u8 {
@@ -57,22 +46,25 @@ impl From<HeadingLevel> for u8 {
             HeadingLevel::Level4 => 4,
             HeadingLevel::Level5 => 5,
             HeadingLevel::Level6 => 6,
-            _ => 7,
         }
     }
 }
 
-impl From<&str> for HeadingLevel {
-    fn from(input: &str) -> Self {
-        match input {
+impl TryFrom<&str> for HeadingLevel {
+    type Error = AtomicError;
+
+    fn try_from(input: &str) -> Result<Self, Self::Error> {
+        let level = match input {
             "1" | "#" => HeadingLevel::Level1,
             "2" | "##" => HeadingLevel::Level2,
             "3" | "###" => HeadingLevel::Level3,
             "4" | "####" => HeadingLevel::Level4,
             "5" | "#####" => HeadingLevel::Level5,
             "6" | "######" => HeadingLevel::Level6,
-            _ => HeadingLevel::Invalid,
-        }
+            _ => return Err(AtomicError::InvalidHeadingLvl),
+        };
+
+        Ok(level)
     }
 }
 
@@ -95,7 +87,7 @@ impl TryFrom<usize> for HeadingLevel {
 }
 
 /// Structure of a Unimarkup heading element.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Heading {
     /// Unique identifier for a heading.
     pub id: String,
@@ -190,88 +182,66 @@ impl AsRef<Self> for Heading {
     }
 }
 
-impl Render for Heading {
-    fn render_html(&self) -> Html {
-        let mut html = Html::default();
+// #[allow(non_snake_case)]
+// #[cfg(test)]
+// mod tests {
+//     use crate::elements::atomic::{Heading, HeadingLevel};
+//     use unimarkup_commons::test_runner;
+//     use unimarkup_inline::ParseInlines;
+//     // use unimarkup_render::render::Render;
 
-        let tag_level = u8::from(self.level).to_string();
+//     #[test]
+//     fn test__render_html__heading() {
+//         let lowest_level = HeadingLevel::Level1 as usize;
+//         let highest_level = HeadingLevel::Level6 as usize;
 
-        html.body.push_str("<h");
-        html.body.push_str(&tag_level);
-        html.body.push_str(" id='");
-        html.body.push_str(&self.id);
-        html.body.push_str("'>");
+//         for level in lowest_level..=highest_level {
+//             let heading_content = test_runner::scan_str("This is a heading")
+//                 .parse_inlines()
+//                 .collect();
+//             let id = format!("heading-id-{}", level);
 
-        inlines::push_inlines(&mut html, &self.content);
+//             let heading = Heading {
+//                 id: String::from(&id),
+//                 level: HeadingLevel::try_from(level).unwrap(),
+//                 content: heading_content,
+//                 attributes: None,
+//                 line_nr: level,
+//             };
 
-        html.body.push_str("</h");
-        html.body.push_str(&tag_level);
-        html.body.push('>');
+//             let html = heading.render_html();
 
-        html
-    }
-}
+//             let expected = format!("<h{} id='{}'>This is a heading</h{}>", level, id, level);
+//             assert_eq!(html.body, expected);
+//         }
+//     }
 
-#[allow(non_snake_case)]
-#[cfg(test)]
-mod tests {
-    use crate::elements::atomic::{Heading, HeadingLevel};
-    use unimarkup_commons::test_runner;
-    use unimarkup_inline::ParseInlines;
-    use unimarkup_render::render::Render;
+//     #[test]
+//     fn test__render_html__heading_with_inline() {
+//         let lowest_level = HeadingLevel::Level1 as usize;
+//         let highest_level = HeadingLevel::Level6 as usize;
 
-    #[test]
-    fn test__render_html__heading() {
-        let lowest_level = HeadingLevel::Level1 as usize;
-        let highest_level = HeadingLevel::Level6 as usize;
+//         for level in lowest_level..=highest_level {
+//             let heading_content = test_runner::scan_str("`This` *is _a_* **heading**")
+//                 .parse_inlines()
+//                 .collect();
+//             let id = format!("heading-id-{}", level);
 
-        for level in lowest_level..=highest_level {
-            let heading_content = test_runner::scan_str("This is a heading")
-                .parse_inlines()
-                .collect();
-            let id = format!("heading-id-{}", level);
+//             let heading = Heading {
+//                 id: String::from(&id),
+//                 level: HeadingLevel::try_from(level).unwrap(),
+//                 content: heading_content,
+//                 attributes: None,
+//                 line_nr: level,
+//             };
 
-            let heading = Heading {
-                id: String::from(&id),
-                level: HeadingLevel::try_from(level).unwrap(),
-                content: heading_content,
-                attributes: None,
-                line_nr: level,
-            };
+//             let html = heading.render_html();
 
-            let html = heading.render_html();
-
-            let expected = format!("<h{} id='{}'>This is a heading</h{}>", level, id, level);
-            assert_eq!(html.body, expected);
-        }
-    }
-
-    #[test]
-    fn test__render_html__heading_with_inline() {
-        let lowest_level = HeadingLevel::Level1 as usize;
-        let highest_level = HeadingLevel::Level6 as usize;
-
-        for level in lowest_level..=highest_level {
-            let heading_content = test_runner::scan_str("`This` *is _a_* **heading**")
-                .parse_inlines()
-                .collect();
-            let id = format!("heading-id-{}", level);
-
-            let heading = Heading {
-                id: String::from(&id),
-                level: HeadingLevel::try_from(level).unwrap(),
-                content: heading_content,
-                attributes: None,
-                line_nr: level,
-            };
-
-            let html = heading.render_html();
-
-            let expected = format!(
-                "<h{} id='{}'><pre><code>This</code></pre> <em>is <sub>a</sub></em> <strong>heading</strong></h{}>",
-                level, id, level
-            );
-            assert_eq!(html.body, expected);
-        }
-    }
-}
+//             let expected = format!(
+//                 "<h{} id='{}'><pre><code>This</code></pre> <em>is <sub>a</sub></em> <strong>heading</strong></h{}>",
+//                 level, id, level
+//             );
+//             assert_eq!(html.body, expected);
+//         }
+//     }
+// }

@@ -262,17 +262,16 @@ from_block_to_type!(super::atomic::Heading, Heading);
 from_block_to_type!(super::atomic::Paragraph, Paragraph);
 from_block_to_type!(super::enclosed::Verbatim, Verbatim);
 
-#[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test__convert_types__heading() {
-        let heading = crate::elements::atomic::Heading::default();
+    fn convert_from_paragraph() {
+        let paragraph = crate::elements::atomic::Paragraph::default();
 
-        let um_type = ElementType::from(&heading);
+        let um_type = ElementType::from(&paragraph);
 
-        assert_eq!(um_type, ElementType::Heading);
+        assert_eq!(um_type, ElementType::Paragraph);
     }
 }

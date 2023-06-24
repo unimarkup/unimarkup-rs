@@ -1,11 +1,9 @@
 use crate::{TokenDelimiters, TokenKind};
 
 mod content;
-mod render;
 mod substitute;
 
 pub use content::*;
-pub use render::*;
 pub use substitute::*;
 use unimarkup_commons::scanner::span::Span;
 
