@@ -92,7 +92,28 @@ impl ConfigFns for I18n {
                 .iter()
                 .all(|langid| allowed_locales.contains(&langid.id))
             {
-                return err!(ConfigErr::BadLocaleUsed);
+                return err!(
+                    ConfigErr::BadLocaleUsed,
+                    &format!(
+                        "{} locale(s) not supported by default. Only the following locales are allowed: {}.",
+                        locales
+                            .iter()
+                            .filter(|l| !allowed_locales.contains(&l.id))
+                            .map(|langid| langid.to_string())
+                            .collect::<Vec<_>>()
+                            .join(", "),
+                        allowed_locales
+                            .iter()
+                            .map(|langid| langid.to_string())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
+                    add: AddonKind::Info(
+                        String::from(
+                            "Use --locales-file (and --download-locales) when using non-default locales."
+                        )
+                    )
+                );
             }
         }
 
@@ -120,7 +141,7 @@ impl ConfigFns for I18n {
 
             if provider.load_buffer(key, req).is_err() {
                 logid::log!(
-                    ConfigErr::LocaleMissingKeys,
+                    ConfigErr::LocaleMissingKeys(locale.id.language.to_string()),
                     add: AddonKind::Info(
                         format!(
                             "Locale {} is not contained in the provided file. Trying to use fallback locale '{}'.",

@@ -76,6 +76,7 @@ impl ConfigFns for Config {
                 &format!("Input file not found: {:?}", self.input)
             );
         }
+
         Ok(())
     }
 }
