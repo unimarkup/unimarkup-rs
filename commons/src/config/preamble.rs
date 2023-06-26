@@ -48,7 +48,7 @@ impl ConfigFns for Preamble {
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct I18n {
-    #[arg(long, value_parser = locale::clap::parse_locale, default_value = "en-US")]
+    #[arg(long, value_parser = locale::clap::parse_locale, default_value = "en")]
     #[serde(with = "locale::serde::single")]
     pub lang: Locale,
 
