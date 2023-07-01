@@ -9,7 +9,7 @@ use icu_datagen::{all_keys, Out, SourceData};
 use icu_locid::{langid, LanguageIdentifier, Locale};
 
 use icu_provider::{BufferProvider, DataRequest};
-use logid::{err, logging::event_entry::AddonKind, pipe};
+use logid::{err, log_id::LogLevel, logging::event_entry::AddonKind, pipe};
 use serde::{Deserialize, Serialize};
 
 use super::{locale, log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone};
@@ -141,10 +141,10 @@ impl ConfigFns for I18n {
 
             if provider.load_buffer(key, req).is_err() {
                 logid::log!(
-                    ConfigErr::LocaleMissingKeys(locale.id.language.to_string()),
-                    add: AddonKind::Info(
+                    logid::new_log_id!("LocaleKeyMissing", LogLevel::Debug),
+                    add: AddonKind::Debug(
                         format!(
-                            "Locale {} is not contained in the provided file. Trying to use fallback locale '{}'.",
+                            "Locale {} is not contained in the given locales file. Using fallback locale '{}'.",
                             locale,
                             locale.id.language
                         )
