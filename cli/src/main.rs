@@ -17,7 +17,10 @@ fn main() {
         match Config::try_parse() {
             Ok(cfg) => {
                 if let Err(err) = cfg.validate() {
-                    logid::log!(GeneralError::Compile, &format!("Configuration is invalid: {err}"));
+                    logid::log!(
+                        GeneralError::Compile,
+                        &format!("Configuration is invalid: {err}")
+                    );
                     break 'outer;
                 }
 
