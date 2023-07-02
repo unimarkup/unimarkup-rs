@@ -9,7 +9,7 @@ use icu_datagen::{all_keys, Out, SourceData};
 use icu_locid::{langid, LanguageIdentifier, Locale};
 
 use icu_provider::{BufferProvider, DataRequest};
-use logid::{err, logging::event_entry::AddonKind, pipe};
+use logid::{err, log_id::LogLevel, logging::event_entry::AddonKind, pipe};
 use serde::{Deserialize, Serialize};
 
 use super::{locale, log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone};
@@ -48,7 +48,7 @@ impl ConfigFns for Preamble {
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct I18n {
-    #[arg(long, value_parser = locale::clap::parse_locale, default_value = "en-US")]
+    #[arg(long, value_parser = locale::clap::parse_locale, default_value = "en")]
     #[serde(with = "locale::serde::single")]
     pub lang: Locale,
 
@@ -92,7 +92,28 @@ impl ConfigFns for I18n {
                 .iter()
                 .all(|langid| allowed_locales.contains(&langid.id))
             {
-                return err!(ConfigErr::BadLocaleUsed);
+                return err!(
+                    ConfigErr::BadLocaleUsed,
+                    &format!(
+                        "{} locale(s) not supported by default. Only the following locales are allowed: {}.",
+                        locales
+                            .iter()
+                            .filter(|l| !allowed_locales.contains(&l.id))
+                            .map(|langid| langid.to_string())
+                            .collect::<Vec<_>>()
+                            .join(", "),
+                        allowed_locales
+                            .iter()
+                            .map(|langid| langid.to_string())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
+                    add: AddonKind::Info(
+                        String::from(
+                            "Use --locales-file (and --download-locales) when using non-default locales."
+                        )
+                    )
+                );
             }
         }
 
@@ -120,10 +141,10 @@ impl ConfigFns for I18n {
 
             if provider.load_buffer(key, req).is_err() {
                 logid::log!(
-                    ConfigErr::LocaleMissingKeys,
-                    add: AddonKind::Info(
+                    logid::new_log_id!("LocaleKeyMissing", LogLevel::Debug),
+                    add: AddonKind::Debug(
                         format!(
-                            "Locale {} is not contained in the provided file. Trying to use fallback locale '{}'.",
+                            "Locale {} is not contained in the given locales file. Using fallback locale '{}'.",
                             locale,
                             locale.id.language
                         )

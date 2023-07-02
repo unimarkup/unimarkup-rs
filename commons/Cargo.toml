@@ -23,7 +23,7 @@ icu_locid = "=1.2.0"
 icu_segmenter = "=1.2.0"
 icu_provider = { version = "=1.2.0" }
 icu_provider_blob = "=1.2.0"
-icu_datagen = { version = "=1.2.5", features = ["networking"] }
+icu_datagen = { version = "=1.2.5", default-features=false, features = [ "networking" ] }
 regex = { version = "1.8.1", optional = true }
 insta = {version = "1.29.0", features = ["serde"], optional = true}
 
