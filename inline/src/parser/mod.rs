@@ -66,6 +66,9 @@ impl Parser {
                 let (next_content, next_span) = next_token.into_inner();
                 content.push_str(&next_content);
                 span.end = next_span.end;
+            } else {
+                self.token_cache = Some(next_token);
+                break;
             }
         }
 

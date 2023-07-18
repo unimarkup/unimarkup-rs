@@ -347,7 +347,7 @@ impl Inline {
 
         res.push_str(begin_delim);
         res.push_str(&String::from(self.inner()));
-        res.push_str(end_delim.unwrap_or(""));
+        res.push_str(end_delim.unwrap_or_default());
 
         res
     }
