@@ -1,9 +1,20 @@
+use std::collections::VecDeque;
+
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
-use unimarkup_inline::{Inline, InlineContent, NestedContent, PlainContent};
+use unimarkup_inline::{ContentRef, Inline};
 
 use crate::Snapshot;
 
 impl AsSnapshot for Snapshot<&[Inline]> {
+    fn as_snapshot(&self) -> String {
+        self.iter()
+            .filter(|inline| !inline.as_string().trim().is_empty())
+            .map(Snapshot::snap)
+            .collect()
+    }
+}
+
+impl AsSnapshot for Snapshot<&VecDeque<Inline>> {
     fn as_snapshot(&self) -> String {
         self.iter()
             .filter(|inline| !inline.as_string().trim().is_empty())
@@ -37,7 +48,7 @@ impl AsSnapshot for Snapshot<&Inline> {
             Inline::Multiple(_) => "Multiple",
         };
 
-        let inner = Snapshot::snap(self.as_ref());
+        let inner = Snapshot::snap(self.inner());
 
         let mut res = String::from(start);
         res.push_str(&Snapshot::snap(&self.span()));
@@ -58,23 +69,17 @@ impl AsSnapshot for Snapshot<&Inline> {
     }
 }
 
-impl AsSnapshot for Snapshot<InlineContent<&PlainContent, &NestedContent>> {
+impl AsSnapshot for Snapshot<ContentRef<'_>> {
     fn as_snapshot(&self) -> String {
         match self.0 {
-            InlineContent::Plain(plain_content) => Snapshot(plain_content).as_snapshot(),
-            InlineContent::Nested(nested_content) => Snapshot(nested_content).as_snapshot(),
+            ContentRef::Plain(plain) => Snapshot(plain).as_snapshot(),
+            ContentRef::Nested(nested) => Snapshot(nested).as_snapshot(),
         }
     }
 }
 
-impl AsSnapshot for Snapshot<&PlainContent> {
+impl AsSnapshot for Snapshot<&str> {
     fn as_snapshot(&self) -> String {
-        self.as_str().trim_end().into()
-    }
-}
-
-impl AsSnapshot for Snapshot<&NestedContent> {
-    fn as_snapshot(&self) -> String {
-        self.iter().map(Snapshot::snap).collect()
+        self.trim_end().to_string()
     }
 }

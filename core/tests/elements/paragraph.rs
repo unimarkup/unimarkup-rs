@@ -4,6 +4,8 @@ use unimarkup_parser::elements::atomic::Paragraph;
 
 impl AsSnapshot for Snapshot<&Paragraph> {
     fn as_snapshot(&self) -> String {
+        dbg!(&self.content);
+
         let content: String = self
             .content
             .iter()

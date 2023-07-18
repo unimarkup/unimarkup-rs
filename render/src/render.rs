@@ -1,7 +1,9 @@
 //! Contains the [`Render`] trait definition.
 
+use std::collections::VecDeque;
+
 use unimarkup_commons::config::locid::Locale;
-use unimarkup_inline::{Inline, NestedContent, PlainContent};
+use unimarkup_inline::{types::*, Inline};
 use unimarkup_parser::{
     document::Document,
     elements::{
@@ -74,23 +76,19 @@ pub trait Renderer<T: OutputFormat> {
     //--------------------------------- INLINES ---------------------------------
 
     /// Render a [`Bold` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
-    fn render_bold(&mut self, _bold: &NestedContent, _context: &Context) -> Result<T, RenderError> {
+    fn render_bold(&mut self, _bold: &Bold, _context: &Context) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
     }
 
     /// Render a [`Italic` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
-    fn render_italic(
-        &mut self,
-        _italic: &NestedContent,
-        _context: &Context,
-    ) -> Result<T, RenderError> {
+    fn render_italic(&mut self, _italic: &Italic, _context: &Context) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
     }
 
     /// Render a [`Underline` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_underline(
         &mut self,
-        _underline: &NestedContent,
+        _underline: &Underline,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -99,7 +97,7 @@ pub trait Renderer<T: OutputFormat> {
     /// Render a [`Subscript` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_subscript(
         &mut self,
-        _subscript: &NestedContent,
+        _subscript: &Subscript,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -108,7 +106,7 @@ pub trait Renderer<T: OutputFormat> {
     /// Render a [`Superscript` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_superscript(
         &mut self,
-        _superscript: &NestedContent,
+        _superscript: &Superscript,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -117,7 +115,7 @@ pub trait Renderer<T: OutputFormat> {
     /// Render a [`Overline` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_overline(
         &mut self,
-        _overline: &NestedContent,
+        _overline: &Overline,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -126,7 +124,7 @@ pub trait Renderer<T: OutputFormat> {
     /// Render a [`Strikethrough` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_strikethrough(
         &mut self,
-        _strikethrough: &NestedContent,
+        _strikethrough: &Strikethrough,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -135,36 +133,28 @@ pub trait Renderer<T: OutputFormat> {
     /// Render a [`Highlight` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_highlight(
         &mut self,
-        _highlight: &NestedContent,
+        _highlight: &Highlight,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
     }
 
     /// Render a [`Quote` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
-    fn render_quote(
-        &mut self,
-        _quote: &NestedContent,
-        _context: &Context,
-    ) -> Result<T, RenderError> {
+    fn render_quote(&mut self, _quote: &Quote, _context: &Context) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
     }
 
     /// Render a [`Verbatim` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_inline_verbatim(
         &mut self,
-        _verbatim: &PlainContent,
+        _verbatim: &Verbatim,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
     }
 
     /// Render [`Plain` content](unimarkup_inline::inlines::Inline) to the output format `T`.
-    fn render_plain(
-        &mut self,
-        _plain: &PlainContent,
-        _context: &Context,
-    ) -> Result<T, RenderError> {
+    fn render_plain(&mut self, _plain: &Plain, _context: &Context) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
     }
 
@@ -224,7 +214,7 @@ pub trait Renderer<T: OutputFormat> {
 
     fn render_nested_inline(
         &mut self,
-        nested: &NestedContent,
+        nested: &VecDeque<Inline>,
         context: &Context,
     ) -> Result<T, RenderError> {
         let mut t = T::default();

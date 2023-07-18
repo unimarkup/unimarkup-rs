@@ -1,7 +1,7 @@
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
 use unimarkup_inline::{Token, TokenKind, Tokens};
 
-use crate::Snapshot;
+use crate::snapshot::Snapshot;
 
 impl AsSnapshot for Snapshot<(&str, Tokens)> {
     fn as_snapshot(&self) -> String {

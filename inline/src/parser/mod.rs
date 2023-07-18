@@ -2,9 +2,7 @@ use std::{collections::VecDeque, ops::Deref};
 
 use unimarkup_commons::scanner::span::Span;
 
-use crate::{
-    Inline, InlineContent, NestedContent, PlainContent, Token, TokenKind, Tokenize, Tokens,
-};
+use crate::{types::*, Inline, Token, TokenKind, Tokenize, Tokens};
 
 /// Internal data structure used for parsing of Unimarkup [`Inline`]s.
 ///
@@ -59,49 +57,69 @@ impl Parser {
         }
     }
 
-    fn parse_inline(&mut self, token: Token) -> Inline {
-        // opening/closing of tokens is resolved at lexing stage
-        // at this point we can simply parse
-        let kind = token.kind;
-        let start = token.span.start;
-        let mut end = token.span.end;
-
-        if kind != TokenKind::Plain && !token.opens() {
-            let (content, span) = token.into_inner();
-            let content = InlineContent::Plain(PlainContent::new(content, span));
-            return Inline::as_plain_or_eol(content, kind);
-        }
-
-        let mut content: InlineContent<_, _> = NestedContent::default().into();
-
-        if kind == TokenKind::Plain {
-            content.append(InlineContent::from(token));
-        }
+    fn parse_plain(&mut self, start_token: Token) -> Inline {
+        let kind = start_token.kind;
+        let (mut content, mut span) = start_token.into_inner();
 
         while let Some(next_token) = self.next_token() {
-            end = next_token.span.end;
+            if next_token.kind == kind {
+                let (next_content, next_span) = next_token.into_inner();
+                content.push_str(&next_content);
+                span.end = next_span.end;
+            }
+        }
 
+        Inline::plain(content, kind, span)
+    }
+
+    fn parse_nested(&mut self, start_token: Token) -> Inline {
+        let start = start_token.span.start;
+        let mut end = start_token.span.end;
+        let mut content = VecDeque::new();
+
+        while let Some(next_token) = self.next_token() {
             if next_token.closes() {
+                end = next_token.span.end;
                 break;
             } else if next_token.opens() {
                 // lexer resolved tokens, if token opens, it is guaranteed that closing exists too.
                 // If not, it's bug in implementation
                 let nested = self.parse_inline(next_token);
-                content.append_inline(nested);
+                content.push_back(nested);
             } else {
-                if kind == TokenKind::Plain && next_token.kind != TokenKind::Plain {
-                    self.token_cache = Some(next_token);
-                    break;
-                }
+                // opening token not yet closed, next token does not start a new inline -> parse as
+                // plain text
 
                 end = next_token.span.end;
-                content.append(InlineContent::from(next_token));
+                let (inner, span) = next_token.into_inner();
+                let inline = Inline::Plain(Plain {
+                    content: inner,
+                    span,
+                });
+                content.push_back(inline);
             }
         }
 
         let span = Span::from((start, end));
-        content.try_flatten();
-        Inline::with_span(content, kind, span)
+        Inline::nested_with_span(content, start_token.kind, span)
+    }
+
+    fn parse_inline(&mut self, token: Token) -> Inline {
+        // opening/closing of tokens is resolved at lexing stage
+        // at this point we can simply parse
+        let kind = token.kind;
+
+        let mut inline = if token.opens() {
+            self.parse_nested(token)
+        } else if kind != TokenKind::Plain && !token.opens() {
+            let (content, span) = token.into_inner();
+            Inline::plain_or_eol(content, span, kind)
+        } else {
+            self.parse_plain(token)
+        };
+
+        inline.try_merge();
+        inline
     }
 }
 
