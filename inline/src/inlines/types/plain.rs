@@ -33,7 +33,7 @@ macro_rules! impl_plain_inline {
                 &mut self.content
             }
 
-            #[doc = concat!(r"Appends another ", stringify!($inline), " with this one.")]
+            #[doc = concat!(r"Appends another ", stringify!($inline), " inline to this one.")]
             pub fn append(&mut self, other: Self) {
                 self.content.push_str(&other.content);
                 self.span.end = other.span.end;

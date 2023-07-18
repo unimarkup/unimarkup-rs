@@ -64,7 +64,7 @@ macro_rules! impl_nested_inline {
                 self.content = res_vec;
             }
 
-            #[doc = concat!(r"Appends another ", stringify!($inline), " with this one.")]
+            #[doc = concat!(r"Appends another [`", stringify!($inline), "`] inline to this one.")]
             pub fn append(&mut self, mut other: Self) {
                 self.content.append(&mut other.content);
                 self.span.end = other.span.end;
