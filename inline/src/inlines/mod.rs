@@ -80,61 +80,6 @@ pub enum Inline {
 }
 
 impl Inline {
-    /// Create new [`Inline`] from given content depending on the given kind.
-    ///
-    /// # Arguments
-    ///
-    /// * `content` - the [`InlineContent`] put inside the created [`Inline`]
-    /// * `kind` - the [`TokenKind`] used to define the kind of [`Inline`] that should be created
-    ///
-    /// [`Inline`]: self::Inline
-    /// [`TokenKind`]: crate::TokenKind
-    /// [`InlineContent`]: self::content::InlineContent
-    // pub fn new(content: InlineContent<PlainContent, NestedContent>, kind: TokenKind) -> Self {
-    //     let consume_as_plain = |content: InlineContent<PlainContent, NestedContent>| match content {
-    //         InlineContent::Plain(plain_content) => Self::Plain(Plain {
-    //             content: plain_content.content,
-    //             span: plain_content.span,
-    //         }),
-    //         InlineContent::Nested(nested_content) => Self::Multiple(Multiple {
-    //             content: nested_content.content,
-    //             span: nested_content.span,
-    //         }),
-    //     };
-    //
-    //     match kind {
-    //         TokenKind::Bold => Self::Bold(content.into()),
-    //         TokenKind::Italic => Self::Italic(content.into()),
-    //         TokenKind::Underline => Self::Underline(content.into()),
-    //         TokenKind::Subscript => Self::Subscript(content.into()),
-    //         TokenKind::Superscript => Self::Superscript(content.into()),
-    //         TokenKind::Overline => Self::Overline(content.into()),
-    //         TokenKind::Strikethrough => Self::Strikethrough(content.into()),
-    //         TokenKind::Highlight => Self::Highlight(content.into()),
-    //         TokenKind::Quote => Self::Quote(content.into()),
-    //         TokenKind::Math => Self::Math(content.into()),
-    //         TokenKind::OpenParens => Self::Parentheses(content.into()),
-    //         TokenKind::OpenBracket => Self::TextGroup(content.into()),
-    //         TokenKind::OpenBrace => Self::Attributes(content.into()),
-    //         TokenKind::Substitution => Self::Substitution(content.into()),
-    //
-    //         TokenKind::Verbatim => Self::Verbatim(content.into()),
-    //         TokenKind::Newline => Self::Newline(content.into()),
-    //         TokenKind::EndOfLine => Self::EndOfLine(content.into()),
-    //         TokenKind::Whitespace => Self::Whitespace(content.into()),
-    //         TokenKind::Plain => consume_as_plain(content),
-    //
-    //         // These cases should never be reached
-    //         TokenKind::UnderlineSubscript
-    //         | TokenKind::ItalicBold
-    //         | TokenKind::CloseParens
-    //         | TokenKind::CloseBracket
-    //         | TokenKind::CloseBrace => unreachable!(
-    //             "Inlines parser encountered TokenKind that should have been resolved by lexer."
-    //         ),
-    //     }
-    // }
-
     /// Create new [`Inline::Plain`], [`Inline::Multiple`] [`Inline::EndOfLine`] from given content
     /// depending on the given kind.
     ///
@@ -445,12 +390,3 @@ impl Inline {
         }
     }
 }
-
-// impl From<PlainContent> for Inline {
-//     fn from(content: PlainContent) -> Self {
-//         Self::Plain(Plain {
-//             content: content.content,
-//             span: content.span,
-//         })
-//     }
-// }

@@ -57,18 +57,22 @@ impl Parser {
         }
     }
 
-    fn parse_plain(&mut self, start_token: Token) -> Inline {
+    fn parse_plain(&mut self, start_token: Token, enclosed: bool) -> Inline {
         let kind = start_token.kind;
         let (mut content, mut span) = start_token.into_inner();
 
         while let Some(next_token) = self.next_token() {
-            if next_token.kind == kind {
+            if enclosed && next_token.closes() && next_token.kind == kind
+                || !enclosed && next_token.kind != kind
+            {
+                if !enclosed {
+                    self.token_cache = Some(next_token);
+                }
+                break;
+            } else {
                 let (next_content, next_span) = next_token.into_inner();
                 content.push_str(&next_content);
                 span.end = next_span.end;
-            } else {
-                self.token_cache = Some(next_token);
-                break;
             }
         }
 
@@ -112,13 +116,14 @@ impl Parser {
         // at this point we can simply parse
         let kind = token.kind;
 
-        let mut inline = if token.opens() {
-            self.parse_nested(token)
-        } else if kind != TokenKind::Plain && !token.opens() {
-            let (content, span) = token.into_inner();
-            Inline::plain_or_eol(content, span, kind)
-        } else {
-            self.parse_plain(token)
+        let mut inline = match (kind, token.opens()) {
+            (TokenKind::Plain, _) => self.parse_plain(token, false),
+            (TokenKind::Verbatim, _) => self.parse_plain(token, true),
+            (_, true) => self.parse_nested(token),
+            _ => {
+                let (content, span) = token.into_inner();
+                Inline::plain_or_eol(content, span, kind)
+            }
         };
 
         inline.try_merge();
