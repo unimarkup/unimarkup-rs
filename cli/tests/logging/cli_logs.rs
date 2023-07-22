@@ -13,20 +13,23 @@ fn test__main_log_trace__attributes_file() {
     path.push(format!("tests/test_files/{}", TEST_FILE));
 
     let cli_proc = Command::new("cargo")
-        .stdout(Stdio::piped())
-        .args(["run", "--", "--formats=html", &path.to_string_lossy()])
+        .stderr(Stdio::piped())
+        .args([
+            "run",
+            "--",
+            "--formats=html",
+            "--lang=en",
+            &path.to_string_lossy(),
+        ])
         .spawn()
         .expect("Failed to spawn 'cargo run'");
 
     let output = cli_proc
         .wait_with_output()
         .expect("Failed to execute 'cargo run'");
-    let logs = String::from_utf8_lossy(&output.stdout);
+    let logs = String::from_utf8_lossy(&output.stderr);
 
-    assert!(logs.contains("INFO: Writing to file: "));
+    assert!(logs.contains("Writing to file: "));
     assert!(logs.contains(&TEST_FILE.replace(".um", ".html")));
-    // assert!(logs.contains("64(origin): file="));
-    assert!(logs.contains("INFO: Unimarkup finished compiling."));
-    // assert!(logs.contains(TEST_FILE));
-    // assert!(logs.contains("65(origin): file="));
+    assert!(logs.contains("Unimarkup finished compiling."));
 }
