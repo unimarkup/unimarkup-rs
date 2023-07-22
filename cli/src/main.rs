@@ -21,7 +21,7 @@ fn main() {
                 if let Err(err) = cfg.validate() {
                     logid::log!(
                         GeneralError::Compile,
-                        &format!("Configuration is invalid: {err}")
+                        format!("Configuration is invalid: {err}")
                     );
                     break 'outer;
                 }

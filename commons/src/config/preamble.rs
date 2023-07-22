@@ -94,7 +94,7 @@ impl ConfigFns for I18n {
             {
                 return err!(
                     ConfigErr::BadLocaleUsed,
-                    &format!(
+                    format!(
                         "{} locale(s) not supported by default. Only the following locales are allowed: {}.",
                         locales
                             .iter()
