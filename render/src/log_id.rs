@@ -1,4 +1,4 @@
-use logid::{evident::event::intermediary::FinalizedEvent, log_id::LogId, ErrLogId};
+use logid::{evident::event::finalized::FinalizedEvent, log_id::LogId, ErrLogId};
 use thiserror::Error;
 
 #[derive(Debug, Clone, ErrLogId, Error)]

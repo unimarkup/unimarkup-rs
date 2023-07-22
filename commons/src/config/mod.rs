@@ -73,7 +73,7 @@ impl ConfigFns for Config {
         if !self.input.exists() {
             return err!(
                 ConfigErr::InvalidFile,
-                &format!("Input file not found: {:?}", self.input)
+                format!("Input file not found: {:?}", self.input)
             );
         }
         Ok(())
@@ -89,7 +89,7 @@ impl Config {
             .map_err(|_| {
                 pipe!(
                     ConfigErr::InvalidFile,
-                    &format!(
+                    format!(
                         "Failed to read locales file: {:?}",
                         locales_file.as_ref().map(|p| p.to_string_lossy())
                     )

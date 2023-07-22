@@ -41,7 +41,7 @@ impl ConfigFns for Output {
                 if filepath.exists() {
                     return err!(
                         ConfigErr::InvalidConfig,
-                        &format!(
+                        format!(
                             "Output file '{:?}' already exists, but `overwrite` was not set.",
                             filepath
                         )
