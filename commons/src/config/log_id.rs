@@ -19,7 +19,4 @@ pub enum ConfigErr {
     /// Log-id denoting provided locales are not included in default locales data
     #[error("Given locale is not in default locales data. Please provide data or use one of supported default locales: en-US, de-AT, bs-BA")]
     BadLocaleUsed,
-    /// Log-id denoting provided locales are not included in default locales data
-    #[error("Given locale is missing keys in the used data file. Falling back to default locale for the given language.")]
-    LocaleMissingKeys,
 }

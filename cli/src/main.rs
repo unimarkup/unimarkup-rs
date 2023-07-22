@@ -15,29 +15,37 @@ fn main() {
         .all_log_events()
         .build();
 
-    match Config::try_parse() {
-        Ok(cfg) => {
-            cfg.validate().unwrap();
-
-            match compiler::compile(cfg) {
-                Ok(_) => {
-                    log!(GeneralInfo::FinishedCompiling);
-                }
-                Err(error) => {
-                    log!(
+    'outer: {
+        match Config::try_parse() {
+            Ok(cfg) => {
+                if let Err(err) = cfg.validate() {
+                    logid::log!(
                         GeneralError::Compile,
-                        add: AddonKind::Info(format!("Cause: {:?}", error))
+                        &format!("Configuration is invalid: {err}")
                     );
+                    break 'outer;
                 }
-            };
-        }
-        Err(error) => {
-            log!(
-                GeneralError::ArgParse,
-                add: AddonKind::Info(
-                    format!("Cause:\n\n{}", error.to_string().replace("error: ", "")),
-                )
-            );
+
+                match compiler::compile(cfg) {
+                    Ok(_) => {
+                        log!(GeneralInfo::FinishedCompiling);
+                    }
+                    Err(error) => {
+                        log!(
+                            GeneralError::Compile,
+                            add: AddonKind::Info(format!("Cause: {:?}", error))
+                        );
+                    }
+                };
+            }
+            Err(error) => {
+                log!(
+                    GeneralError::ArgParse,
+                    add: AddonKind::Info(
+                        format!("Cause:\n\n{}", error.to_string().replace("error: ", "")),
+                    )
+                );
+            }
         }
     }
 }
