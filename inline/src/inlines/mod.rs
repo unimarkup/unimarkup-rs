@@ -95,10 +95,16 @@ impl Inline {
     /// [`Inline::EndOfLine`]: self::Inline::EndOfLine
     /// [`TokenKind`]: crate::TokenKind
     /// [`InlineContent`]: self::content::InlineContent
-    pub fn plain_or_eol(content: String, span: Span, kind: TokenKind) -> Self {
+    pub fn plain_or_eol(content: impl Into<String>, span: Span, kind: TokenKind) -> Self {
         match kind {
-            TokenKind::EndOfLine => Self::EndOfLine(EndOfLine { content, span }),
-            _ => Self::Plain(Plain { content, span }),
+            TokenKind::EndOfLine => Self::EndOfLine(EndOfLine {
+                content: content.into(),
+                span,
+            }),
+            _ => Self::Plain(Plain {
+                content: content.into(),
+                span,
+            }),
         }
     }
 

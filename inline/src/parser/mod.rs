@@ -8,12 +8,12 @@ use crate::{types::*, Inline, Token, TokenKind, Tokenize, Tokens};
 ///
 /// [`Inline`]: crate::Inline
 #[derive(Debug, Default, Clone)]
-struct ParserStack {
-    data: Vec<Token>,
+struct ParserStack<'token> {
+    data: Vec<Token<'token>>,
 }
 
-impl Deref for ParserStack {
-    type Target = Vec<Token>;
+impl<'token> Deref for ParserStack<'token> {
+    type Target = Vec<Token<'token>>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
@@ -26,11 +26,11 @@ impl Deref for ParserStack {
 /// [`Iterator`]: Iterator
 /// [`Inline`]: crate::Inline
 #[derive(Debug, Clone)]
-pub struct Parser {
+pub struct Parser<'tokens> {
     /// Iterator over [`Token`]s found in Unimarkup input.
     ///
     /// [`Token`]: crate::Token
-    iter: Tokens,
+    iter: Tokens<'tokens>,
 
     /// Storage of [`Token`] already yielded from [`TokenIterator`] but not consumed in current
     /// iteration of parsing.
@@ -38,18 +38,18 @@ pub struct Parser {
     /// [`Token`]: crate::Token
     /// [`TokenIterator`]: crate::TokenIterator
     /// [`Inline`]: crate::Inline
-    token_cache: Option<Token>,
+    token_cache: Option<Token<'tokens>>,
 
     /// Storage of parsed [`Inline`]s that should be returned before parsing next [`Inline`].
     inline_cache: VecDeque<Inline>,
 }
 
-impl Parser {
+impl<'tokens> Parser<'tokens> {
     /// Returns the next [`Token`] either from [`Lexer`] directly or from internal token cache.
     ///
     /// [`Token`]: crate::Token
     /// [`Lexer`]: crate::Lexer
-    fn next_token(&mut self) -> Option<Token> {
+    fn next_token(&mut self) -> Option<Token<'tokens>> {
         if self.token_cache.is_some() {
             self.token_cache.take()
         } else {
@@ -59,19 +59,24 @@ impl Parser {
 
     fn parse_plain(&mut self, start_token: Token, enclosed: bool) -> Inline {
         let kind = start_token.kind;
-        let (mut content, mut span) = start_token.into_inner();
+        let (tkn_str, mut span) = start_token.parts();
+
+        // dbg!(&start_token);
+
+        let mut content = String::from(tkn_str);
 
         while let Some(next_token) = self.next_token() {
-            if enclosed && next_token.closes() && next_token.kind == kind
-                || !enclosed && next_token.kind != kind
-            {
+            let enclosed_and_closes = enclosed && next_token.closes(Some(&start_token));
+            let not_enclosed_and_interrupted = !enclosed && next_token.kind != kind;
+
+            if enclosed_and_closes || not_enclosed_and_interrupted {
                 if !enclosed {
                     self.token_cache = Some(next_token);
                 }
                 break;
             } else {
-                let (next_content, next_span) = next_token.into_inner();
-                content.push_str(&next_content);
+                let (next_content, next_span) = next_token.parts();
+                content.push_str(next_content);
                 span.end = next_span.end;
             }
         }
@@ -85,7 +90,7 @@ impl Parser {
         let mut content = VecDeque::new();
 
         while let Some(next_token) = self.next_token() {
-            if next_token.closes() {
+            if next_token.closes(Some(&start_token)) {
                 end = next_token.span.end;
                 break;
             } else if next_token.opens() {
@@ -98,9 +103,9 @@ impl Parser {
                 // plain text
 
                 end = next_token.span.end;
-                let (inner, span) = next_token.into_inner();
+                let (inner, span) = next_token.parts();
                 let inline = Inline::Plain(Plain {
-                    content: inner,
+                    content: String::from(inner),
                     span,
                 });
                 content.push_back(inline);
@@ -121,7 +126,7 @@ impl Parser {
             (TokenKind::Verbatim, _) => self.parse_plain(token, true),
             (_, true) => self.parse_nested(token),
             _ => {
-                let (content, span) = token.into_inner();
+                let (content, span) = token.parts();
                 Inline::plain_or_eol(content, span, kind)
             }
         };
@@ -131,7 +136,7 @@ impl Parser {
     }
 }
 
-impl Iterator for Parser {
+impl Iterator for Parser<'_> {
     type Item = Inline;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -162,16 +167,16 @@ impl Iterator for Parser {
 ///
 /// [`Parser`]: self::Parser
 /// [`Tokenize`]: crate::Tokenize
-pub trait ParseInlines {
+pub trait ParseInlines<'input> {
     /// Returns a parser over this type.
-    fn parse_inlines(&self) -> Parser;
+    fn parse_inlines(&'input self) -> Parser<'input>;
 }
 
-impl<T> ParseInlines for T
+impl<'input, T> ParseInlines<'input> for T
 where
-    T: Tokenize,
+    T: Tokenize<'input>,
 {
-    fn parse_inlines(&self) -> Parser {
+    fn parse_inlines(&'input self) -> Parser<'input> {
         let iter = self.tokens();
 
         Parser {

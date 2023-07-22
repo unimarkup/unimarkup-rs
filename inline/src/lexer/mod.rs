@@ -17,16 +17,16 @@ use self::resolver::{RawToken, TokenResolver};
 ///
 /// [`Lexer`]: self::Lexer
 /// [`&str`]: &str
-pub trait Tokenize {
+pub trait Tokenize<'input> {
     /// Returns tokens found in self.
-    fn tokens(&self) -> Tokens;
+    fn tokens(&'input self) -> Tokens<'input>;
 }
 
-impl<'s, T> Tokenize for T
+impl<'symbol, T> Tokenize<'symbol> for T
 where
-    T: AsRef<[Symbol<'s>]>,
+    T: AsRef<[Symbol<'symbol>]>,
 {
-    fn tokens(&self) -> Tokens {
+    fn tokens(&'symbol self) -> Tokens<'symbol> {
         let lexer = Lexer {
             input: self.as_ref(),
         };
@@ -38,8 +38,8 @@ where
 /// Lexer of Unimarkup inline formatted text. Generates a stream of [`Token`]s from input.
 ///
 /// [`Token`]: self::token::Token
-pub struct Lexer<'a> {
-    input: &'a [Symbol<'a>],
+pub struct Lexer<'input> {
+    input: &'input [Symbol<'input>],
 }
 
 pub(crate) trait SymbolExt {
@@ -159,12 +159,12 @@ impl SymbolExt for Symbol<'_> {
     }
 }
 
-impl<'a> Lexer<'a> {
+impl<'token> Lexer<'token> {
     /// Creates a [`TokenIterator`] from [`Lexer`].
     ///
     /// [`TokenIterator`]: self::TokenIterator
     /// [`Lexer`]: self::Lexer
-    fn iter(&self) -> TokenIterator<'a> {
+    fn iter(&self) -> TokenIterator<'token> {
         let symbols = self.input;
 
         TokenIterator {
@@ -174,15 +174,15 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    fn resolved(self) -> TokenResolver {
+    fn resolved(self) -> TokenResolver<'token> {
         TokenResolver::new(self.iter())
     }
 }
 
-impl<'a> IntoIterator for &'a Lexer<'a> {
-    type Item = Token;
+impl<'input> IntoIterator for &'input Lexer<'input> {
+    type Item = Token<'input>;
 
-    type IntoIter = TokenIterator<'a>;
+    type IntoIter = TokenIterator<'input>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -235,8 +235,8 @@ pub struct TokenIterator<'a> {
     substitutor: Substitutor<'a>,
 }
 
-impl TokenIterator<'_> {
-    fn get_symbol(&self, index: usize) -> Option<&Symbol> {
+impl<'token> TokenIterator<'token> {
+    fn get_symbol<'once>(&'once self, index: usize) -> Option<&'token Symbol<'token>> {
         self.symbols.get(index)
     }
 
@@ -244,7 +244,7 @@ impl TokenIterator<'_> {
     ///
     /// [`Token`]: self::token::Token
     /// [`Symbol`]: self::Symbol
-    fn lex_keyword(&mut self) -> Option<Token> {
+    fn lex_keyword(&mut self) -> Option<Token<'token>> {
         // NOTE: General invariant of lexing:
         // If some contiguous symbol occurrence exceeds the maximal symbol length, the contiguous
         // sequence is lexed as plain (e.g. ****).
@@ -280,7 +280,7 @@ impl TokenIterator<'_> {
         );
 
         let curr_index = self.index + symbol_len;
-        let content = subst.as_ref().map_or_else(
+        let content = subst.map_or_else(
             || Symbol::flatten(&self.symbols[self.index..curr_index]).unwrap(),
             |subst| subst.as_str(),
         );
@@ -402,9 +402,10 @@ impl TokenIterator<'_> {
     ///
     /// [`Token`]: self::token::Token
     /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
-    fn lex_plain(&mut self) -> Option<Token> {
-        let start_pos: position::Position = self.get_symbol(self.index)?.start;
-        let mut content = String::with_capacity(self.symbols.len());
+    fn lex_plain(&mut self) -> Option<Token<'token>> {
+        // let mut content = String::with_capacity(self.symbols.len());
+        let mut first = self.index;
+        let mut last = first;
 
         // multiple cases:
         // 1. got to end of line -> interpret as end of token
@@ -418,25 +419,34 @@ impl TokenIterator<'_> {
                 break;
             } else if symbol.is_esc() {
                 match self.get_symbol(self.index + 1) {
-                    // character can be consumed if not significant in escape sequence
-                    Some(symbol) if symbol.is_significant_esc() => break,
-                    Some(symbol) => {
-                        content.push_str(symbol.as_str());
+                    Some(sym) if !sym.is_significant_esc() && first == self.index => {
+                        // escape should be read as plain we're at the start of next token so skip
+                        // the first symbol ('\') and continue
                         self.index += 2;
+                        first += 1;
+                        last = first;
+                        continue;
                     }
-                    None => break,
+                    // either:
+                    // 1. Escape is important, so stop at '\' for this token
+                    // 2. Escape is not important, but we're not at the start, so we cannot
+                    //    concatenate symbols, so stop at '\' for this token
+                    // 3. There is no next symbol, so stop at '\' for this token
+                    _ => break,
                 }
             } else {
-                content.push_str(symbol.as_str());
+                last = self.index;
                 self.index += 1;
             }
         }
 
         // NOTE: index points to the NEXT character, token Span is UP TO that character
-        let end_pos = self.get_symbol(self.index - 1)?.end;
+        let start_pos = self.get_symbol(first)?.start;
+        let end_pos = self.get_symbol(last)?.end;
 
         let span = Span::from((start_pos, end_pos));
         let len = span.len_grapheme()?;
+        let content = Symbol::flatten(&self.symbols[first..=last])?;
 
         let token = Token {
             kind: TokenKind::Plain,
@@ -454,8 +464,9 @@ impl TokenIterator<'_> {
     /// [`Symbol`]: self::Symbol
     /// [`Token`]: self::token::Token
     /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
-    fn lex_escape_seq(&mut self) -> Option<Token> {
-        let symbol = self.get_symbol(self.index)?;
+    fn lex_escape_seq(&mut self) -> Option<Token<'token>> {
+        let i = self.index;
+        let symbol = self.get_symbol(i)?;
 
         // NOTE: index here is pointing to the current grapheme
         let start_pos = self.get_symbol(self.index)?.start; // escape character
@@ -471,14 +482,14 @@ impl TokenIterator<'_> {
             kind: token_kind,
             span: Span::from((start_pos, end_pos)),
             spacing: Spacing::None,
-            content: Some(symbol.as_str().into()),
+            content: Some(symbol.as_str()),
         };
 
         self.index += 1;
         Some(token)
     }
 
-    fn try_lex_substitution(&self, symbol: &Symbol<'_>) -> Option<Substitute> {
+    fn try_lex_substitution(&self, symbol: &Symbol<'token>) -> Option<Substitute<'token>> {
         if !self.substitutor.is_start_of_subst(symbol) {
             return None;
         }
@@ -498,8 +509,8 @@ impl TokenIterator<'_> {
     }
 }
 
-impl<'a> Iterator for TokenIterator<'a> {
-    type Item = Token;
+impl<'token> Iterator for TokenIterator<'token> {
+    type Item = Token<'token>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // three cases:
@@ -507,7 +518,7 @@ impl<'a> Iterator for TokenIterator<'a> {
         // 2. next grapheme is '\' -> handle escape sequence
         // 3. next grapheme is not a keyword -> it is plain text
 
-        let token = match self.get_symbol(self.index) {
+        match self.get_symbol(self.index) {
             Some(symbol) if symbol.is_keyword() || symbol.is_start_of_subst(&self.substitutor) => {
                 self.lex_keyword()
             }
@@ -526,21 +537,21 @@ impl<'a> Iterator for TokenIterator<'a> {
                 }
             }
             _ => self.lex_plain(),
-        };
-
-        token
+        }
     }
 }
 
-/// TODO: write docs
+/// Iterator over the Unimarkup Inline [`Token`]s found in the given input. This iterator is
+/// available for any type that implements [`Tokenize`] trait. The [`Tokenize`] trait can be
+/// implemented directly, or automatically if type implements [`AsRef<Symbol>`] trait.
 #[derive(Debug, Clone)]
-pub struct Tokens {
-    iter: resolver::IntoIter,
-    cache: Option<RawToken>,
+pub struct Tokens<'token> {
+    iter: resolver::IntoIter<'token>,
+    cache: Option<RawToken<'token>>,
 }
 
-impl Tokens {
-    pub(crate) fn new(resolver: TokenResolver) -> Self {
+impl<'token> Tokens<'token> {
+    pub(crate) fn new(resolver: TokenResolver<'token>) -> Self {
         Self {
             iter: resolver.into_iter(),
             cache: None,
@@ -548,8 +559,8 @@ impl Tokens {
     }
 }
 
-impl Iterator for Tokens {
-    type Item = Token;
+impl<'token> Iterator for Tokens<'token> {
+    type Item = Token<'token>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut unr_token = if let Some(unr_token) = self.cache.take() {
@@ -558,7 +569,9 @@ impl Iterator for Tokens {
             self.iter.next()?
         };
 
-        match unr_token.pop() {
+        let part = unr_token.pop();
+
+        match part {
             Some(first_part) => {
                 // save remaining part
                 self.cache = Some(unr_token);

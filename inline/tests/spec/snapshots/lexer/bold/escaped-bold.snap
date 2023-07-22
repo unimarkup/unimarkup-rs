@@ -1,10 +1,16 @@
 ---
 source: inline/tests/lexer/mod.rs
-info: "Test 'escaped-bold' from: 'bold.yml'"
+info: "Test 'escaped-bold' from 'bold.yml'"
 ---
 \*\*not bold\*\*
-**not bold**
-^^^^^^^^^^^^^^^^ -> Plain @ (1:1)->(1:17)
+ *
+ ^ -> Plain @ (1:2)->(1:3)
+   *not bold
+   ^^^^^^^^^ -> Plain @ (1:4)->(1:13)
+             *
+             ^ -> Plain @ (1:14)->(1:15)
+               *
+               ^ -> Plain @ (1:16)->(1:17)
                 ⏎
                 ^ -> Newline @ (1:17)->(2:1)
 

@@ -8,15 +8,15 @@ use super::ContentOption;
 use crate::Inline;
 
 /// Token lexed from Unimarkup text.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Token {
+#[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Token<'input> {
     pub(crate) kind: TokenKind,
     pub(crate) span: Span,
     pub(crate) spacing: Spacing,
-    pub(crate) content: Option<String>,
+    pub(crate) content: Option<&'input str>,
 }
 
-impl Token {
+impl<'input> Token<'input> {
     /// Creates a new [`Token`] with the given [`TokenKind`], [`Span`] that the [`Token`] occupies
     /// and [`Spacing`] that surrounds the [`Token`].
     ///
@@ -42,13 +42,13 @@ impl Token {
         kind: TokenKind,
         span: Span,
         spacing: Spacing,
-        content: impl Into<String>,
+        content: &'input str,
     ) -> Self {
         Self {
             kind,
             span,
             spacing,
-            content: Some(content.into()),
+            content: Some(content),
         }
     }
 
@@ -61,11 +61,11 @@ impl Token {
         kind: TokenKind,
         span: Span,
         spacing: Spacing,
-        content: impl Into<String>,
+        content: &'input str,
         content_option: ContentOption,
     ) -> Self {
         let content = match content_option {
-            ContentOption::Store => Some(content.into()),
+            ContentOption::Store => Some(content),
             ContentOption::Discard => None,
         };
 
@@ -81,9 +81,9 @@ impl Token {
     ///
     /// [`Token`]: self::Token
     /// [`&str`]: &str
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &'input str {
         match self.content {
-            Some(ref content) => content,
+            Some(content) => content,
             None => self.kind.as_str(),
         }
     }
@@ -91,14 +91,8 @@ impl Token {
     /// Consumes this [`Token`] and returns it's content and the span it occupies.
     ///
     /// [`Token`]: self::Token
-    pub fn into_inner(self) -> (String, Span) {
-        let content = if let Some(text) = self.content {
-            text
-        } else {
-            String::from(self.as_str())
-        };
-
-        (content, self.span)
+    pub fn parts(&self) -> (&str, Span) {
+        (self.as_str(), self.span)
     }
 
     /// Returns the [`TokenKind`] of this [`Token`].
@@ -174,7 +168,11 @@ impl Token {
     /// Checks whether this [`Token`] is an ending/closing token of some Unimarkup inline format.
     ///
     /// [`Token`]: self::Token
-    pub fn closes(&self) -> bool {
+    pub fn closes(&self, start_token: Option<&Token>) -> bool {
+        if start_token.map_or(false, |token| token.kind != self.kind) {
+            return false;
+        }
+
         match self.kind() {
             some_kind if some_kind.is_close_bracket() => true,
             _ => {
@@ -325,14 +323,14 @@ impl Token {
     }
 }
 
-impl std::fmt::Display for Token {
+impl std::fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.as_str())
     }
 }
 
 /// The kind of the token found in Unimarkup document.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenKind {
     /// Bold delimiter token (`**`).
     Bold,
@@ -404,12 +402,13 @@ pub enum TokenKind {
     Whitespace,
 
     /// Simple textual token.
+    #[default]
     Plain,
 }
 
 impl TokenKind {
     /// Returns the textual representation of the kind.
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &'static str {
         match *self {
             TokenKind::Bold => "**",
             TokenKind::ItalicBold => "***",
@@ -613,7 +612,7 @@ impl From<&TokenKind> for TokenDelimiters {
     }
 }
 
-impl From<&Token> for TokenDelimiters {
+impl From<&Token<'_>> for TokenDelimiters {
     fn from(token: &Token) -> Self {
         Self::from(&token.kind)
     }

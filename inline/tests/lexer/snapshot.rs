@@ -3,7 +3,7 @@ use unimarkup_inline::{Token, TokenKind, Tokens};
 
 use crate::snapshot::Snapshot;
 
-impl AsSnapshot for Snapshot<(&str, Tokens)> {
+impl AsSnapshot for Snapshot<(&str, Tokens<'_>)> {
     fn as_snapshot(&self) -> String {
         let input = (self.0).0;
         let mut lines = input.lines();
@@ -34,7 +34,7 @@ impl AsSnapshot for Snapshot<(&str, Tokens)> {
     }
 }
 
-impl AsSnapshot for Snapshot<Token> {
+impl AsSnapshot for Snapshot<Token<'_>> {
     fn as_snapshot(&self) -> String {
         let span = self.0.span();
 

@@ -81,7 +81,7 @@ pub(crate) struct Substitutor<'a> {
     first_grapheme: HashSet<&'a str>,
 }
 
-impl Substitutor<'_> {
+impl<'sub> Substitutor<'sub> {
     pub(crate) fn new() -> Self {
         let direct: HashMap<_, _> = EMOJIS.into_iter().chain(ARROWS.into_iter()).collect();
         let aliased = ALIASES.into_iter().collect();
@@ -96,18 +96,15 @@ impl Substitutor<'_> {
         }
     }
 
-    pub(crate) fn try_subst(&self, slice: &str, span: Span) -> Option<Substitute> {
-        let val = self.direct.get(slice)?;
+    pub(crate) fn try_subst(&self, slice: &'sub str, span: Span) -> Option<Substitute<'sub>> {
+        let content = *self.direct.get(slice)?;
 
-        Some(Substitute {
-            content: String::from(*val),
-            span,
-        })
+        Some(Substitute { content, span })
     }
 
-    pub(crate) fn try_subst_iter<'a, I>(&self, iter: I) -> Option<Substitute>
+    pub(crate) fn try_subst_iter<'input, I>(&'input self, iter: I) -> Option<Substitute<'sub>>
     where
-        I: Iterator<Item = &'a scanner::Symbol<'a>> + Clone,
+        I: Iterator<Item = &'input scanner::Symbol<'sub>> + Clone,
     {
         let slice = scanner::Symbol::flatten_iter(iter.clone())?;
         let mut tmp_iter = iter;
@@ -135,15 +132,15 @@ impl Substitutor<'_> {
 /// If there’s no defined substitution for given input in Unimarkup specification, a Substitute with
 /// original input as its content is generated.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub(crate) struct Substitute {
-    content: String,
+pub(crate) struct Substitute<'sub> {
+    content: &'sub str,
     span: Span,
 }
 
-impl Substitute {
+impl<'sub> Substitute<'sub> {
     /// Returns the content of this Substitute as &str.
-    pub fn as_str(&self) -> &str {
-        &self.content
+    pub fn as_str(&self) -> &'sub str {
+        self.content
     }
 
     /// Returns the length of the content of this Substitute before substitutions have taken place.
