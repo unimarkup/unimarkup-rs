@@ -403,7 +403,6 @@ impl<'token> TokenIterator<'token> {
     /// [`Token`]: self::token::Token
     /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
     fn lex_plain(&mut self) -> Option<Token<'token>> {
-        // let mut content = String::with_capacity(self.symbols.len());
         let mut first = self.index;
         let mut last = first;
 

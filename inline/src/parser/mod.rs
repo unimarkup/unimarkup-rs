@@ -61,8 +61,6 @@ impl<'tokens> Parser<'tokens> {
         let kind = start_token.kind;
         let (tkn_str, mut span) = start_token.parts();
 
-        // dbg!(&start_token);
-
         let mut content = String::from(tkn_str);
 
         while let Some(next_token) = self.next_token() {
