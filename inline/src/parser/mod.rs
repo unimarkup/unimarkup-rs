@@ -61,7 +61,12 @@ impl<'tokens> Parser<'tokens> {
         let kind = start_token.kind;
         let (tkn_str, mut span) = start_token.parts();
 
-        let mut content = String::from(tkn_str);
+        let mut content = if enclosed {
+            // skip first (the enclosing) token
+            String::new()
+        } else {
+            String::from(tkn_str)
+        };
 
         while let Some(next_token) = self.next_token() {
             let enclosed_and_closes = enclosed && next_token.closes(Some(&start_token));
@@ -70,7 +75,10 @@ impl<'tokens> Parser<'tokens> {
             if enclosed_and_closes || not_enclosed_and_interrupted {
                 if !enclosed {
                     self.token_cache = Some(next_token);
+                } else {
+                    span.end = next_token.span.end;
                 }
+
                 break;
             } else {
                 let (next_content, next_span) = next_token.parts();

@@ -85,7 +85,7 @@ impl Inline {
     ///
     /// # Arguments
     ///
-    /// * `content` - the [`InlineContent`] put inside the created [`Inline`]
+    /// * `content` - the content to put inside the created [`Inline`]
     /// * `span` - [`Span`] that is occupied by the given content
     /// * `kind` - the [`TokenKind`] used to choose one of the three options
     ///
@@ -96,15 +96,16 @@ impl Inline {
     /// [`TokenKind`]: crate::TokenKind
     /// [`InlineContent`]: self::content::InlineContent
     pub fn plain_or_eol(content: impl Into<String>, span: Span, kind: TokenKind) -> Self {
+        let content = content.into();
         match kind {
-            TokenKind::EndOfLine => Self::EndOfLine(EndOfLine {
-                content: content.into(),
-                span,
-            }),
-            _ => Self::Plain(Plain {
-                content: content.into(),
-                span,
-            }),
+            TokenKind::EndOfLine => Self::EndOfLine(EndOfLine { content, span }),
+            TokenKind::Verbatim => Self::Verbatim(Verbatim { content, span }),
+            TokenKind::OpenParens | TokenKind::CloseParens => {
+                Self::Parentheses(Parentheses { content, span })
+            }
+            TokenKind::Newline => Self::Newline(Newline { content, span }),
+            TokenKind::Whitespace => Self::Whitespace(Whitespace { content, span }),
+            _ => Self::Plain(Plain { content, span }),
         }
     }
 
