@@ -568,9 +568,7 @@ impl<'token> Iterator for Tokens<'token> {
             self.iter.next()?
         };
 
-        let part = unr_token.pop();
-
-        match part {
+        match unr_token.pop() {
             Some(first_part) => {
                 // save remaining part
                 self.cache = Some(unr_token);
