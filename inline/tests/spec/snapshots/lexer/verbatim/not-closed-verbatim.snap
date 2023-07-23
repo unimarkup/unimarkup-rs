@@ -1,0 +1,20 @@
+---
+source: inline/tests/lexer/mod.rs
+info: "Test 'not-closed-verbatim' from 'verbatim.yml'"
+---
+`not verbatim `
+`
+^ -> Plain @ (1:1)->(1:2)
+ not verbatim 
+ ^^^^^^^^^^^^^ -> Plain @ (1:2)->(1:15)
+              `
+              ^ -> Plain @ (1:15)->(1:16)
+               ⏎
+               ^ -> Newline @ (1:16)->(2:1)
+
+---
+With input:
+
+`not verbatim `
+
+

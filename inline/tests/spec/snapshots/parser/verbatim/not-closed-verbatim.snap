@@ -1,0 +1,14 @@
+---
+source: inline/tests/parser/mod.rs
+info: "Test 'not-closed-verbatim' from 'verbatim.yml'"
+---
+Plain @ (1:1)->(1:16) (
+    `not verbatim `
+)
+
+---
+With input:
+
+`not verbatim `
+
+

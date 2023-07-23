@@ -1,0 +1,18 @@
+---
+source: inline/tests/lexer/mod.rs
+info: "Test 'escaped-verbatim' from 'verbatim.yml'"
+---
+\`not verbatim\`
+ `not verbatim
+ ^^^^^^^^^^^^^ -> Plain @ (1:2)->(1:15)
+               `
+               ^ -> Plain @ (1:16)->(1:17)
+                ⏎
+                ^ -> Newline @ (1:17)->(2:1)
+
+---
+With input:
+
+\`not verbatim\`
+
+

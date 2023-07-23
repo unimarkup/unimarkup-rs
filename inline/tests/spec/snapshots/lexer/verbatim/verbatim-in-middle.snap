@@ -1,0 +1,24 @@
+---
+source: inline/tests/lexer/mod.rs
+info: "Test 'verbatim-in-middle' from 'verbatim.yml'"
+---
+The next `word` is verbatim.
+The next 
+^^^^^^^^^ -> Plain @ (1:1)->(1:10)
+         `
+         ^ -> Verbatim @ (1:10)->(1:11)
+          word
+          ^^^^ -> Plain @ (1:11)->(1:15)
+              `
+              ^ -> Verbatim @ (1:15)->(1:16)
+                is verbatim.
+               ^^^^^^^^^^^^^ -> Plain @ (1:16)->(1:29)
+                            ⏎
+                            ^ -> Newline @ (1:29)->(2:1)
+
+---
+With input:
+
+The next `word` is verbatim.
+
+
