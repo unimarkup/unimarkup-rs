@@ -108,12 +108,6 @@ impl Inline {
         }
     }
 
-    /// Creates a new [`Inline::Plain`] from the given content with the given [`Span`].
-    pub fn plain(content: String, _kind: TokenKind, span: Span) -> Self {
-        // TODO: Do we need to check the kind here?
-        Self::Plain(Plain { content, span })
-    }
-
     /// Creates a nested [`Inline`]. The [`Inline`] variant is chosen based on the [`TokenKind`]
     /// that's passed.
     pub fn nested(content: VecDeque<Inline>, kind: TokenKind) -> Self {

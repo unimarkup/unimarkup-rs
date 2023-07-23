@@ -81,7 +81,7 @@ impl<'tokens> Parser<'tokens> {
             }
         }
 
-        Inline::plain(content, kind, span)
+        Inline::plain_or_eol(content, span, kind)
     }
 
     fn parse_nested(&mut self, start_token: Token) -> Inline {
