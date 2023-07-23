@@ -15,7 +15,7 @@ macro_rules! impl_nested_inline {
     ) => {
     $(
         $(#[$($attrss)*])*
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Default, Clone, PartialEq, Eq)]
         pub struct $inline {
             pub(crate) content: VecDeque<Inline>,
             pub(crate) span: Span,

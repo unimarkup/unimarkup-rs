@@ -11,7 +11,7 @@ macro_rules! impl_plain_inline {
     ) => {
     $(
         $(#[$($attrss)*])*
-        #[derive(Debug, Clone, PartialEq, Eq)]
+        #[derive(Debug, Default, Clone, PartialEq, Eq)]
         pub struct $inline {
             pub(crate) content: String,
             pub(crate) span: Span,

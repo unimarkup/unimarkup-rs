@@ -17,6 +17,34 @@ pub enum Block {
     Verbatim(Verbatim),
 }
 
+impl Block {
+    /// Returns the variant of [`Block`] as string.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// # use unimarkup_parser::elements::{blocks::Block, atomic::Paragraph};
+    /// # fn get_paragraph() -> Paragraph {
+    /// #     Paragraph {
+    /// #         id: String::new(),
+    /// #         content: vec![],
+    /// #         attributes: None,
+    /// #         line_nr: 0,
+    /// #     }
+    /// # }
+    /// let block = Block::Paragraph(get_paragraph());
+    ///
+    /// assert_eq!(block.variant_str(), "Paragraph");
+    /// ```
+    pub fn variant_str(&self) -> &'static str {
+        match self {
+            Block::Heading(_) => "Heading",
+            Block::Paragraph(_) => "Paragraph",
+            Block::Verbatim(_) => "Verbatim",
+        }
+    }
+}
+
 /// Generate implementation of From<Block> trait for Block for a unimarkup block struct
 ///
 /// ## Usage

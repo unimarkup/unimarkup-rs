@@ -165,7 +165,21 @@ pub trait Renderer<T: OutputFormat> {
         let mut t = T::default();
 
         for block in blocks {
-            t.append(self.render_block(block, context)?)?;
+            let rendered_block = match self.render_block(block, context) {
+                Err(err) if err == RenderError::Unimplemented => {
+                    logid::log!(
+                        err,
+                        &format!(
+                            "Rendering of block '{}' is not implemented",
+                            block.variant_str()
+                        ),
+                    );
+                    continue;
+                }
+                res => res,
+            }?;
+
+            t.append(rendered_block)?;
         }
 
         Ok(t)
@@ -186,7 +200,21 @@ pub trait Renderer<T: OutputFormat> {
         let mut t = T::default();
 
         for inline in inlines {
-            t.append(self.render_inline(inline, context)?)?;
+            let render_res = match self.render_inline(inline, context) {
+                Err(err) if err == RenderError::Unimplemented => {
+                    logid::log!(
+                        err,
+                        &format!(
+                            "Rendering of inline '{}' is not implemented",
+                            inline.variant_str()
+                        ),
+                    );
+                    continue;
+                }
+                res => res,
+            }?;
+
+            t.append(render_res)?;
         }
 
         Ok(t)

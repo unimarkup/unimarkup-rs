@@ -390,4 +390,40 @@ impl Inline {
             Inline::Plain(inline) => inline.span,
         }
     }
+
+    /// Returns the variant of [`Inline`] as string.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// # use unimarkup_inline::types::Plain;
+    /// # use unimarkup_inline::Inline;
+    /// let inline = Inline::Plain(Plain::default());
+    ///
+    /// assert_eq!(inline.variant_str(), "Plain");
+    /// ```
+    pub fn variant_str(&self) -> &'static str {
+        match self {
+            Inline::Bold(_) => "Bold",
+            Inline::Italic(_) => "Italic",
+            Inline::Underline(_) => "Underline",
+            Inline::Subscript(_) => "Subscript",
+            Inline::Superscript(_) => "Superscript",
+            Inline::Overline(_) => "Overline",
+            Inline::Strikethrough(_) => "Strikethrough",
+            Inline::Highlight(_) => "Highlight",
+            Inline::Quote(_) => "Quote",
+            Inline::Math(_) => "Math",
+            Inline::TextGroup(_) => "TextGroup",
+            Inline::Attributes(_) => "Attributes",
+            Inline::Substitution(_) => "Substitution",
+            Inline::Multiple(_) => "Multiple",
+            Inline::Parentheses(_) => "Parentheses",
+            Inline::Verbatim(_) => "Verbatim",
+            Inline::Newline(_) => "Newline",
+            Inline::Whitespace(_) => "Whitespace",
+            Inline::EndOfLine(_) => "EndOfLine",
+            Inline::Plain(_) => "Plain",
+        }
+    }
 }

@@ -1,7 +1,7 @@
 use logid::{evident::event::finalized::FinalizedEvent, log_id::LogId, ErrLogId};
 use thiserror::Error;
 
-#[derive(Debug, Clone, ErrLogId, Error)]
+#[derive(Debug, Clone, ErrLogId, Error, PartialEq, Eq)]
 pub enum RenderError {
     #[error("Rendering for this type is not implemented by the used renderer.")]
     Unimplemented,
