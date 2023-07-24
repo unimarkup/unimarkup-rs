@@ -86,9 +86,9 @@ impl AsSnapshot for Snapshot<TokenKind> {
             TokenKind::OpenBrace => "OpenBrace",
             TokenKind::CloseBrace => "CloseBrace",
             TokenKind::Substitution => "Substitution",
-            TokenKind::Newline => "Newline",
-            TokenKind::EndOfLine => "EndOfLine",
-            TokenKind::Whitespace => "Whitespace",
+            TokenKind::ExplicitNewline => "Newline",
+            TokenKind::Newline => "EndOfLine",
+            TokenKind::ExplicitWhitespace => "Whitespace",
             TokenKind::Plain => "Plain",
         };
 

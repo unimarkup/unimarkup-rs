@@ -144,7 +144,10 @@ impl<'input> Token<'input> {
     pub fn is_nesting_token(&self) -> bool {
         !matches!(
             self.kind,
-            TokenKind::Plain | TokenKind::Newline | TokenKind::Whitespace | TokenKind::EndOfLine
+            TokenKind::Plain
+                | TokenKind::ExplicitNewline
+                | TokenKind::ExplicitWhitespace
+                | TokenKind::Newline
         )
     }
 
@@ -392,14 +395,17 @@ pub enum TokenKind {
     /// Double colon for substitution (`::`).
     Substitution,
 
-    /// Escaped newline token (`\\n`).
+    /// End of line - regular newline token ('\n').
     Newline,
 
-    /// End of line - regular newline token ('\n').
-    EndOfLine,
+    /// Escaped newline token (`\\n`).
+    ExplicitNewline,
+
+    /// A single whitespace token (` `).
+    Whitespace,
 
     /// Escaped whitespace token (``\ ``).
-    Whitespace,
+    ExplicitWhitespace,
 
     /// Simple textual token.
     #[default]
@@ -413,8 +419,8 @@ impl TokenKind {
             TokenKind::Bold => "**",
             TokenKind::ItalicBold => "***",
             TokenKind::Italic => "*",
-            TokenKind::Newline | TokenKind::EndOfLine => "\n",
-            TokenKind::Whitespace => " ",
+            TokenKind::Newline | TokenKind::ExplicitNewline => "\n",
+            TokenKind::Whitespace | TokenKind::ExplicitWhitespace => " ",
             TokenKind::Underline => "__",
             TokenKind::Subscript => "_",
             TokenKind::Superscript => "^",
@@ -508,9 +514,9 @@ impl From<&Inline> for TokenKind {
             Inline::Parentheses(_) => Self::OpenParens,
             Inline::TextGroup(_) => Self::OpenBracket,
             Inline::Attributes(_) => Self::OpenBrace,
-            Inline::Newline(_) => Self::Newline,
-            Inline::Whitespace(_) => Self::Whitespace,
-            Inline::EndOfLine(_) => Self::EndOfLine,
+            Inline::Newline(_) => Self::ExplicitNewline,
+            Inline::Whitespace(_) => Self::ExplicitWhitespace,
+            Inline::EndOfLine(_) => Self::Newline,
             Inline::Plain(_) => Self::Plain,
             Inline::Multiple(_) => Self::Plain,
             Inline::Substitution(_) => Self::Substitution,
@@ -602,8 +608,9 @@ impl From<&TokenKind> for TokenDelimiters {
                 close: Some(TokenKind::CloseBrace),
             },
             TokenKind::Newline
-            | TokenKind::EndOfLine
+            | TokenKind::ExplicitNewline
             | TokenKind::Whitespace
+            | TokenKind::ExplicitWhitespace
             | TokenKind::Plain => Self {
                 open: TokenKind::Plain,
                 close: Some(TokenKind::Plain),

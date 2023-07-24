@@ -98,13 +98,13 @@ impl Inline {
     pub fn plain_or_eol(content: impl Into<String>, span: Span, kind: TokenKind) -> Self {
         let content = content.into();
         match kind {
-            TokenKind::EndOfLine => Self::EndOfLine(EndOfLine { content, span }),
+            TokenKind::Newline => Self::EndOfLine(EndOfLine { content, span }),
             TokenKind::Verbatim => Self::Verbatim(Verbatim { content, span }),
             TokenKind::OpenParens | TokenKind::CloseParens => {
                 Self::Parentheses(Parentheses { content, span })
             }
-            TokenKind::Newline => Self::Newline(Newline { content, span }),
-            TokenKind::Whitespace => Self::Whitespace(Whitespace { content, span }),
+            TokenKind::ExplicitNewline => Self::Newline(Newline { content, span }),
+            TokenKind::ExplicitWhitespace => Self::Whitespace(Whitespace { content, span }),
             _ => Self::Plain(Plain { content, span }),
         }
     }
@@ -137,9 +137,10 @@ impl Inline {
             // These cases should never be reached
             TokenKind::OpenParens
             | TokenKind::Verbatim
+            | TokenKind::ExplicitNewline
             | TokenKind::Newline
-            | TokenKind::EndOfLine
             | TokenKind::Whitespace
+            | TokenKind::ExplicitWhitespace
             | TokenKind::Plain
             | TokenKind::UnderlineSubscript
             | TokenKind::ItalicBold

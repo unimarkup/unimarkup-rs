@@ -257,7 +257,7 @@ impl<'token> TokenIterator<'token> {
             let end = symbol.end;
             self.index += 1;
             return Some(Token::new(
-                TokenKind::Newline,
+                TokenKind::ExplicitNewline,
                 Span::from((start, end)),
                 spacing,
             ));
@@ -472,9 +472,9 @@ impl<'token> TokenIterator<'token> {
         let end_pos = start_pos + SpanLen::from(symbol.len());
 
         let token_kind = if symbol.is_whitespace() {
-            TokenKind::Whitespace
+            TokenKind::ExplicitWhitespace
         } else {
-            TokenKind::Newline
+            TokenKind::ExplicitNewline
         };
 
         let token = Token {
