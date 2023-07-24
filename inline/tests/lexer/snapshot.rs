@@ -86,10 +86,11 @@ impl AsSnapshot for Snapshot<TokenKind> {
             TokenKind::OpenBrace => "OpenBrace",
             TokenKind::CloseBrace => "CloseBrace",
             TokenKind::Substitution => "Substitution",
-            TokenKind::ExplicitNewline => "Newline",
-            TokenKind::Newline => "EndOfLine",
-            TokenKind::ExplicitWhitespace => "Whitespace",
+            TokenKind::ExplicitNewline => "ExplicitNewline",
+            TokenKind::Newline => "Newline",
+            TokenKind::ExplicitWhitespace => "ExplicitWhitespace",
             TokenKind::Plain => "Plain",
+            TokenKind::Whitespace => "Whitespace",
         };
 
         string.into()

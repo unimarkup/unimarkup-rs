@@ -128,8 +128,6 @@ impl SymbolExt for Symbol<'_> {
                 | SymbolKind::CloseBracket
                 | SymbolKind::OpenBrace
                 | SymbolKind::CloseBrace
-                | SymbolKind::Newline
-                | SymbolKind::Blankline
         )
     }
 
@@ -250,18 +248,6 @@ impl<'token> TokenIterator<'token> {
         // sequence is lexed as plain (e.g. ****).
 
         let symbol = self.get_symbol(self.index)?;
-
-        if symbol.is_newline() {
-            let spacing = self.spacing_around(1);
-            let start = symbol.start;
-            let end = symbol.end;
-            self.index += 1;
-            return Some(Token::new(
-                TokenKind::ExplicitNewline,
-                Span::from((start, end)),
-                spacing,
-            ));
-        }
 
         let subst = self.try_lex_substitution(symbol);
 
@@ -398,60 +384,60 @@ impl<'token> TokenIterator<'token> {
         self.get_symbol(pos).map_or(true, |ch| ch.is_whitespace())
     }
 
-    /// Lexes a [`Token`] with [`TokenKind::Plain`], so a [`Token`] containing just regular text.
+    /// Lexes a [`Token`] with [`TokenKind::Plain`], [`TokenKind::Whitespace`] or
+    /// [`TokenKind::Newline`], with content being original Unimarkup input for the given token.
     ///
     /// [`Token`]: self::token::Token
     /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
     fn lex_plain(&mut self) -> Option<Token<'token>> {
-        let mut first = self.index;
+        // Token is not a keyword, but can be one of multiple plain tokens:
+        // 1. Newline found -> Newline token
+        // 2. Whitespace found -> Whitespace token
+        // 3. any other grapheme -> Plain token
+
+        let sym = self.get_symbol(self.index)?;
+
+        let kind = match sym.kind {
+            SymbolKind::Plain => TokenKind::Plain,
+            SymbolKind::Whitespace => TokenKind::Whitespace,
+            SymbolKind::Newline | SymbolKind::Blankline => TokenKind::Newline,
+            _ => unreachable!(
+                "Unexpected symbol {} while lexing plain tokens in inline.",
+                sym.as_str()
+            ),
+        };
+
+        let first_sym = sym;
+        let first = self.index;
         let mut last = first;
+        self.index += 1;
 
-        // multiple cases:
-        // 1. got to end of line -> interpret as end of token
-        // 2. some keyword found -> end interpretation
-        // 3. escape grapheme found -> end interpretation if grapheme is whitespace | newline;
-        //    otherwise continue from next character
-        // 4. any other grapheme -> consume into plain
-
-        while let Some(symbol) = self.get_symbol(self.index) {
-            if symbol.is_keyword() || symbol.is_start_of_subst(&self.substitutor) {
-                break;
-            } else if symbol.is_esc() {
-                match self.get_symbol(self.index + 1) {
-                    Some(sym) if !sym.is_significant_esc() && first == self.index => {
-                        // escape should be read as plain we're at the start of next token so skip
-                        // the first symbol ('\') and continue
-                        self.index += 2;
-                        first += 1;
-                        last = first;
-                        continue;
-                    }
-                    // either:
-                    // 1. Escape is important, so stop at '\' for this token
-                    // 2. Escape is not important, but we're not at the start, so we cannot
-                    //    concatenate symbols, so stop at '\' for this token
-                    // 3. There is no next symbol, so stop at '\' for this token
-                    _ => break,
+        if kind == TokenKind::Plain {
+            while let Some(sym) = self.get_symbol(self.index) {
+                if sym.kind == first_sym.kind {
+                    last = self.index;
+                    self.index += 1;
+                } else {
+                    break;
                 }
-            } else {
-                last = self.index;
-                self.index += 1;
             }
         }
 
         // NOTE: index points to the NEXT character, token Span is UP TO that character
-        let start_pos = self.get_symbol(first)?.start;
+        let start_pos = first_sym.start;
         let end_pos = self.get_symbol(last)?.end;
 
         let span = Span::from((start_pos, end_pos));
-        let len = span.len_grapheme()?;
-        let content = Symbol::flatten(&self.symbols[first..=last])?;
+        let content = Symbol::flatten(&self.symbols[first..=last]);
+
+        let len = span.len_grapheme().unwrap_or(1);
+        let spacing = self.spacing_around(len);
 
         let token = Token {
-            kind: TokenKind::Plain,
-            span: Span::from((start_pos, end_pos)),
-            spacing: self.spacing_around(len),
-            content: Some(content),
+            kind,
+            span,
+            spacing,
+            content,
         };
 
         Some(token)

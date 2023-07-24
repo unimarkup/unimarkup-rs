@@ -145,9 +145,10 @@ impl<'input> Token<'input> {
         !matches!(
             self.kind,
             TokenKind::Plain
-                | TokenKind::ExplicitNewline
-                | TokenKind::ExplicitWhitespace
                 | TokenKind::Newline
+                | TokenKind::ExplicitNewline
+                | TokenKind::Whitespace
+                | TokenKind::ExplicitWhitespace
         )
     }
 
