@@ -20,6 +20,11 @@ impl<'token> Deref for ParserStack<'token> {
     }
 }
 
+struct PlainContext {
+    enclosed: bool,
+    merge_whitespace: bool,
+}
+
 /// Parser of Unimarkup inline formatting. Implemented as an [`Iterator`], yields one
 /// self-contained Unimarkup [`Inline`] with every iteration.
 ///
@@ -57,11 +62,16 @@ impl<'tokens> Parser<'tokens> {
         }
     }
 
-    fn parse_plain(&mut self, start_token: Token, enclosed: bool) -> Inline {
-        let kind = start_token.kind;
+    fn parse_plain(&mut self, start_token: Token, cxt: PlainContext) -> Inline {
+        let kind = if start_token.is_plain_whitespace() {
+            TokenKind::Plain
+        } else {
+            start_token.kind
+        };
+
         let (tkn_str, mut span) = start_token.parts();
 
-        let mut content = if enclosed {
+        let mut content = if cxt.enclosed {
             // skip first (the enclosing) token
             String::new()
         } else {
@@ -69,17 +79,33 @@ impl<'tokens> Parser<'tokens> {
         };
 
         while let Some(next_token) = self.next_token() {
-            let enclosed_and_closes = enclosed && next_token.closes(Some(&start_token));
-            let not_enclosed_and_interrupted = !enclosed && next_token.kind != kind;
+            let enclosed_and_closes = cxt.enclosed && next_token.closes(Some(&start_token));
+            let not_enclosed_and_interrupted = !cxt.enclosed && next_token.kind != kind;
 
-            if enclosed_and_closes || not_enclosed_and_interrupted {
-                if !enclosed {
-                    self.token_cache = Some(next_token);
-                } else {
-                    span.end = next_token.span.end;
-                }
-
+            if enclosed_and_closes {
+                span.end = next_token.span.end;
                 break;
+            } else if not_enclosed_and_interrupted {
+                if next_token.is_plain_whitespace() {
+                    // consume whitespace
+                    let (next_content, next_span) = next_token.parts();
+                    content.push_str(next_content);
+                    span.end = next_span.end;
+
+                    if cxt.merge_whitespace {
+                        // skip other whitespace
+                        while let Some(tkn) = self.next_token() {
+                            if !tkn.is_plain_whitespace() {
+                                self.token_cache = Some(tkn);
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    // cache popped token and break
+                    self.token_cache = Some(next_token);
+                    break;
+                }
             } else {
                 let (next_content, next_span) = next_token.parts();
                 content.push_str(next_content);
@@ -128,13 +154,21 @@ impl<'tokens> Parser<'tokens> {
         let kind = token.kind;
 
         let mut inline = match (kind, token.opens()) {
-            (TokenKind::Plain, _) => self.parse_plain(token, false),
-            (TokenKind::Verbatim, _) => self.parse_plain(token, true),
+            (TokenKind::Verbatim, _) => self.parse_plain(
+                token,
+                PlainContext {
+                    enclosed: true,
+                    merge_whitespace: false,
+                },
+            ),
             (_, true) => self.parse_nested(token),
-            _ => {
-                let (content, span) = token.parts();
-                Inline::plain_or_eol(content, span, kind)
-            }
+            _ => self.parse_plain(
+                token,
+                PlainContext {
+                    enclosed: false,
+                    merge_whitespace: true,
+                },
+            ),
         };
 
         inline.try_merge();

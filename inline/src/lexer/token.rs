@@ -152,6 +152,13 @@ impl<'input> Token<'input> {
         )
     }
 
+    /// Checks whether this [`Token`] represents plain whitespace content (i.e. space or tab).
+    ///
+    /// [`Token`]: self::Token
+    pub fn is_plain_whitespace(&self) -> bool {
+        matches!(self.kind, TokenKind::Whitespace)
+    }
+
     /// Checks whether this [`Token`] is a starting/opening token of some Unimarkup inline format.
     ///
     /// [`Token`]: self::Token
@@ -771,12 +778,10 @@ pub trait SpanExt {
     /// # use unimarkup_commons::scanner::span::Span;
     /// # use unimarkup_commons::scanner::position::Position;
     /// # use unimarkup_inline::SpanExt;
-    ///
     /// let span1 = Span::from((Position::new(0, 0), Position::new(0, 2)));
     /// let span2 = Span::from((Position::new(0, 2), Position::new(0, 3)));
     ///
     /// let (first, second) = span1.swap(&span2);
-    /// dbg!(second);
     ///
     /// assert!(first.start.col_grapheme == 0 && first.end.col_grapheme == 1);
     /// assert!(second.start.col_grapheme == 1 && second.end.col_grapheme == 3);
