@@ -1,10 +1,30 @@
 ---
 source: inline/tests/lexer/mod.rs
-info: "Test 'breaking-unicode' from: 'plain.yml'"
+info: "Test 'breaking-unicode' from 'plain.yml'"
 ---
 The character 𝛂 broke some stuff.
-The character 𝛂 broke some stuff.
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ -> Plain @ (1:1)->(1:34)
+The
+^^^ -> Plain @ (1:1)->(1:4)
+    
+   ^ -> Whitespace @ (1:4)->(1:5)
+    character
+    ^^^^^^^^^ -> Plain @ (1:5)->(1:14)
+              
+             ^ -> Whitespace @ (1:14)->(1:15)
+              𝛂
+              ^ -> Plain @ (1:15)->(1:16)
+                
+               ^ -> Whitespace @ (1:16)->(1:17)
+                broke
+                ^^^^^ -> Plain @ (1:17)->(1:22)
+                      
+                     ^ -> Whitespace @ (1:22)->(1:23)
+                      some
+                      ^^^^ -> Plain @ (1:23)->(1:27)
+                           
+                          ^ -> Whitespace @ (1:27)->(1:28)
+                           stuff.
+                           ^^^^^^ -> Plain @ (1:28)->(1:34)
                                  ⏎
                                  ^ -> Newline @ (1:34)->(2:1)
 

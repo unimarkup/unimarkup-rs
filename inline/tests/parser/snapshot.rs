@@ -25,29 +25,7 @@ impl AsSnapshot for Snapshot<&VecDeque<Inline>> {
 
 impl AsSnapshot for Snapshot<&Inline> {
     fn as_snapshot(&self) -> String {
-        let start = match self.0 {
-            Inline::Bold(_) => "Bold",
-            Inline::Italic(_) => "Italic",
-            Inline::Underline(_) => "Underline",
-            Inline::Subscript(_) => "Subscript",
-            Inline::Superscript(_) => "Superscript",
-            Inline::Overline(_) => "Overline",
-            Inline::Strikethrough(_) => "Strikethrough",
-            Inline::Highlight(_) => "Highlight",
-            Inline::Verbatim(_) => "Verbatim",
-            Inline::Quote(_) => "Quote",
-            Inline::Math(_) => "Math",
-            Inline::Parentheses(_) => "Parentheses",
-            Inline::TextGroup(_) => "TextGroup",
-            Inline::Attributes(_) => "Attributes",
-            Inline::Substitution(_) => "Substitution",
-            Inline::Newline(_) => "Newline",
-            Inline::Whitespace(_) => "Whitespace",
-            Inline::EndOfLine(_) => "EndOfLine",
-            Inline::Plain(_) => "Plain",
-            Inline::Multiple(_) => "Multiple",
-        };
-
+        let start = self.variant_str();
         let inner = Snapshot::snap(self.inner());
 
         let mut res = String::from(start);
@@ -62,6 +40,20 @@ impl AsSnapshot for Snapshot<&Inline> {
             res.push_str("    ");
             res.push_str(content);
             res.push('\n');
+
+            if matches!(
+                self.0,
+                Inline::Plain(_)
+                    | Inline::Verbatim(_)
+                    | Inline::Parentheses(_)
+                    | Inline::Newline(_)
+                    | Inline::Whitespace(_)
+                    | Inline::EndOfLine(_)
+            ) {
+                res.push_str("    ");
+                res.push_str(&"^".repeat(self.span().len_grapheme().unwrap_or(1)));
+                res.push('\n');
+            }
         }
 
         res.push_str(")\n");
