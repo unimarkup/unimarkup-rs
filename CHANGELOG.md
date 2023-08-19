@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.5.0](https://www.github.com/unimarkup/unimarkup-rs/compare/v0.4.0...v0.5.0) (2023-08-19)
+
+
+### Features
+
+* add log filter ([#98](https://www.github.com/unimarkup/unimarkup-rs/issues/98)) ([987d1af](https://www.github.com/unimarkup/unimarkup-rs/commit/987d1affb49178e8da1c851829bc58cb4ec8702b))
+* add spec_test macro ([6065aab](https://www.github.com/unimarkup/unimarkup-rs/commit/6065aab8a33da3c058791ac5ea5753d8c44ae5f6))
+* impl visitor pattern for rendering ([#90](https://www.github.com/unimarkup/unimarkup-rs/issues/90)) ([c75a841](https://www.github.com/unimarkup/unimarkup-rs/commit/c75a841750e334a319d518ec7e952f7f2cbc0bf3))
+* move to new logid approach ([#88](https://www.github.com/unimarkup/unimarkup-rs/issues/88)) ([e86d9b5](https://www.github.com/unimarkup/unimarkup-rs/commit/e86d9b58e302b2823720a0a989230b7ee100449c))
+
+
+### Bug Fixes
+
+* abstract scanning of symbols with a scanner  ([#89](https://www.github.com/unimarkup/unimarkup-rs/issues/89)) ([e330a56](https://www.github.com/unimarkup/unimarkup-rs/commit/e330a5630e76e80c1b45ebb294ff98e107f0e1a0))
+* do not panic when config validation fails ([#96](https://www.github.com/unimarkup/unimarkup-rs/issues/96)) ([d247922](https://www.github.com/unimarkup/unimarkup-rs/commit/d247922f5cd12c795e0fa73016fc3acda841a680))
+* make test_runner macros filepath independent ([d4b4091](https://www.github.com/unimarkup/unimarkup-rs/commit/d4b4091793bbfd7edcb06e3a9a78126535784270))
+* use commons Symbol in inlines crate ([#86](https://www.github.com/unimarkup/unimarkup-rs/issues/86)) ([e1b2a53](https://www.github.com/unimarkup/unimarkup-rs/commit/e1b2a53b1f6e6a4b8c2c7f2ea0704dbf009cf962))
+
+
+### Testing
+
+* add main parser snap test for paragraph ([0ba376d](https://www.github.com/unimarkup/unimarkup-rs/commit/0ba376d1f183d211083c6a60769ae65dd1070f0a))
+* setup snapshot testing framework ([b1d7ee5](https://www.github.com/unimarkup/unimarkup-rs/commit/b1d7ee5fef34776c528ca38f39150b8bb3fb2685))
+
 ## [0.4.0](https://www.github.com/unimarkup/unimarkup-rs/compare/v0.3.0...v0.4.0) (2023-04-23)
 
 
