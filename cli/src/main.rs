@@ -1,5 +1,13 @@
 use clap::Parser;
-use logid::{event_handler::builder::LogEventHandlerBuilder, log, logging::event_entry::AddonKind};
+use logid::{
+    event_handler::builder::LogEventHandlerBuilder,
+    log,
+    log_id::LogLevel,
+    logging::{
+        event_entry::AddonKind,
+        filter::{AddonFilter, FilterConfigBuilder},
+    },
+};
 use unimarkup_commons::config::{Config, ConfigFns};
 
 use crate::log_id::{GeneralError, GeneralInfo};
@@ -8,7 +16,11 @@ mod compiler;
 mod log_id;
 
 fn main() {
-    let _ = logid::set_filter!("info(infos)");
+    let _ = logid::logging::filter::set_filter(
+        FilterConfigBuilder::new(LogLevel::Info)
+            .allowed_addons(AddonFilter::Infos)
+            .build(),
+    );
 
     let _handler = LogEventHandlerBuilder::new()
         .to_stderr()
