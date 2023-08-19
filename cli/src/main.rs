@@ -1,5 +1,13 @@
 use clap::Parser;
-use logid::{event_handler::LogEventHandlerBuilder, log, logging::event_entry::AddonKind};
+use logid::{
+    event_handler::builder::LogEventHandlerBuilder,
+    log,
+    log_id::LogLevel,
+    logging::{
+        event_entry::AddonKind,
+        filter::{AddonFilter, FilterConfigBuilder},
+    },
+};
 use unimarkup_commons::config::{Config, ConfigFns};
 
 use crate::log_id::{GeneralError, GeneralInfo};
@@ -8,8 +16,14 @@ mod compiler;
 mod log_id;
 
 fn main() {
-    let log_handler = LogEventHandlerBuilder::new()
-        .write_to_console()
+    let _ = logid::logging::filter::set_filter(
+        FilterConfigBuilder::new(LogLevel::Info)
+            .allowed_addons(AddonFilter::Infos)
+            .build(),
+    );
+
+    let _handler = LogEventHandlerBuilder::new()
+        .to_stderr()
         .all_log_events()
         .build();
 
@@ -19,7 +33,7 @@ fn main() {
                 if let Err(err) = cfg.validate() {
                     logid::log!(
                         GeneralError::Compile,
-                        &format!("Configuration is invalid: {err}")
+                        format!("Configuration is invalid: {err}")
                     );
                     break 'outer;
                 }
@@ -46,6 +60,4 @@ fn main() {
             }
         }
     }
-
-    log_handler.shutdown();
 }

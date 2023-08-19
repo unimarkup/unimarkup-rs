@@ -13,7 +13,7 @@ pub fn get_filehash(file: &Path) -> Result<Vec<u8>, HashingError> {
     let source = fs::read_to_string(file).map_err(|err| {
         pipe!(
             HashingError::FailedReadingFile,
-            &format!("Could not read file: '{:?}'", file),
+            format!("Could not read file: '{:?}'", file),
             add: AddonKind::Info(format!("Cause: {}", err))
         )
     })?;

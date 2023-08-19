@@ -94,7 +94,7 @@ impl ConfigFns for I18n {
             {
                 return err!(
                     ConfigErr::BadLocaleUsed,
-                    &format!(
+                    format!(
                         "{} locale(s) not supported by default. Only the following locales are allowed: {}.",
                         locales
                             .iter()
@@ -125,7 +125,7 @@ impl ConfigFns for I18n {
                 .map_err(|_| {
                     pipe!(
                         ConfigErr::InvalidFile,
-                        &format!(
+                        format!(
                             "Failed to read locales file: {}",
                             self.locales_file.as_ref().unwrap().to_string_lossy()
                         )
@@ -159,7 +159,7 @@ impl ConfigFns for I18n {
                 provider.load_buffer(key, req).map_err(|err| {
                     pipe!(
                         ConfigErr::BadLocaleUsed,
-                        &format!(
+                        format!(
                             "Could not find locale '{}' in data file. Cause: {}",
                             locale, err
                         )
@@ -204,7 +204,7 @@ impl I18n {
                     Err(err) => {
                         logid::log!(
                             ConfigErr::InvalidFile,
-                            &format!(
+                            format!(
                                 "Locales file not found: {}. Cause: {}. Using default locales file.",
                                 file_path.to_string_lossy(),
                                 err
@@ -229,7 +229,7 @@ impl I18n {
         let f = File::create(&file_path).map_err(|_| {
             pipe!(
                 ConfigErr::FileCreate,
-                &format!(
+                format!(
                     "Failed to create locales file: {}",
                     file_path.as_ref().to_string_lossy()
                 )
@@ -246,7 +246,7 @@ impl I18n {
         .map_err(|err| {
             pipe!(
                 ConfigErr::LocaleDownload,
-                &format!(
+                format!(
                     "Failed to download locales file: {}. Cause: {}",
                     file_path.as_ref().to_string_lossy(),
                     err,
@@ -302,7 +302,7 @@ impl ConfigFns for Citedata {
             if !file.exists() {
                 return err!(
                     ConfigErr::InvalidFile,
-                    &format!("Citation Style Language file not found: {:?}", file)
+                    format!("Citation Style Language file not found: {:?}", file)
                 );
             }
         }
@@ -311,7 +311,7 @@ impl ConfigFns for Citedata {
             if !reference.exists() {
                 return err!(
                     ConfigErr::InvalidFile,
-                    &format!("Bibliography references file not found: {:?}", reference)
+                    format!("Bibliography references file not found: {:?}", reference)
                 );
             }
         }
@@ -348,7 +348,7 @@ impl ConfigFns for Metadata {
             if !font.exists() {
                 return err!(
                     ConfigErr::InvalidFile,
-                    &format!("Font file not found: {:?}", font)
+                    format!("Font file not found: {:?}", font)
                 );
             }
         }
@@ -384,7 +384,7 @@ impl ConfigFns for HtmlSpecificParameter {
             if !fav.exists() {
                 return err!(
                     ConfigErr::InvalidFile,
-                    &format!("Favicon file not found: {:?}", fav)
+                    format!("Favicon file not found: {:?}", fav)
                 );
             }
         }

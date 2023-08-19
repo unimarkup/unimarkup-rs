@@ -24,7 +24,7 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
     let source = fs::read_to_string(&config.input).map_err(|error| {
         pipe!(
             GeneralError::FileRead,
-            &format!("Could not read file: '{:?}'", &config.input),
+            format!("Could not read file: '{:?}'", &config.input),
             add: AddonKind::Info(format!("Cause: {}", error))
         )
     })?;
@@ -66,13 +66,13 @@ fn write_file(
 
     log!(
         GeneralInfo::WritingToFile,
-        &format!("Writing to file: {:?}", full_out_path),
+        format!("Writing to file: {:?}", full_out_path),
     );
 
     std::fs::write(&full_out_path, content).map_err(|error| {
         pipe!(
             GeneralError::FileWrite,
-            &format!("Could not write to file: {:?}", full_out_path),
+            format!("Could not write to file: {:?}", full_out_path),
             add: AddonKind::Info(format!("Cause: {}", error))
         )
     })
