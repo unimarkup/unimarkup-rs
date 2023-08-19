@@ -169,7 +169,7 @@ pub trait Renderer<T: OutputFormat> {
                 Err(err) if err == RenderError::Unimplemented => {
                     logid::log!(
                         err,
-                        &format!(
+                        format!(
                             "Rendering of block '{}' is not implemented",
                             block.variant_str()
                         ),
@@ -204,7 +204,7 @@ pub trait Renderer<T: OutputFormat> {
                 Err(err) if err == RenderError::Unimplemented => {
                     logid::log!(
                         err,
-                        &format!(
+                        format!(
                             "Rendering of inline '{}' is not implemented",
                             inline.variant_str()
                         ),
