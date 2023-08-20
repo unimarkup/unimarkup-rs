@@ -14,8 +14,15 @@ pub fn test_parser_snapshots() -> Vec<Trial> {
     for case in test_cases {
         let test_name = format!("parser:{}", case.name.as_str());
 
-        let test_run =
-            move || panic::catch_unwind(|| run_test_case(case)).map_err(|_| "Test panicked".into());
+        let test_run = move || {
+            panic::catch_unwind(|| run_test_case(case)).map_err(|err| {
+                let panic_msg = err
+                    .downcast_ref::<&str>()
+                    .unwrap_or(&"Panic message not available");
+
+                format!("Test case panicked: {}", panic_msg).into()
+            })
+        };
 
         test_runs.push(Trial::test(test_name, test_run));
     }

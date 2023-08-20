@@ -21,9 +21,7 @@ fn main() {
     let mut tests = lexer_tests;
     tests.append(&mut parser_tests);
 
-    let concl = libtest_mimic::run(&args, tests);
-
-    concl.exit_if_failed()
+    libtest_mimic::run(&args, tests).exit();
 }
 
 pub struct TestCase {
