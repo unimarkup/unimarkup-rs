@@ -4,12 +4,15 @@ info: "Test 'verbatim-in-middle' from 'verbatim.yml'"
 ---
 Plain @ (1:1)->(1:10) (
     The next
+    ^^^^^^^^^
 )
 Verbatim @ (1:10)->(1:16) (
-    word
+     word
+    ^^^^^^
 )
 Plain @ (1:16)->(1:29) (
      is verbatim.
+    ^^^^^^^^^^^^^
 )
 
 ---

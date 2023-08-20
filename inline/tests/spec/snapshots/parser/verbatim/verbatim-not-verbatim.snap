@@ -3,10 +3,12 @@ source: inline/tests/parser/mod.rs
 info: "Test 'verbatim-not-verbatim' from 'verbatim.yml'"
 ---
 Verbatim @ (1:1)->(1:11) (
-    Verbatim
+     Verbatim
+    ^^^^^^^^^^
 )
 Plain @ (1:11)->(1:25) (
      not verbatim.
+    ^^^^^^^^^^^^^^
 )
 
 ---

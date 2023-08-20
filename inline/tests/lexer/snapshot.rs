@@ -46,6 +46,14 @@ impl AsSnapshot for Snapshot<Token<'_>> {
             "\n" => "\u{23CE}",
             other => other,
         };
+
+        if span.len_utf8().unwrap_or(1).saturating_sub(inner.len()) == 1 {
+            // escaped token's occupy two characters in text (the backslash and symbol). In such
+            // cases, span is longer than the actual content by a single character.
+            // Push content to the right "\*" will be rendered as " *"
+            content.push(' ');
+        }
+
         content.push_str(inner);
         content.push('\n');
         content.push_str(&indent);

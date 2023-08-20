@@ -4,6 +4,7 @@ info: "Test 'not-opened-verbatim' from 'verbatim.yml'"
 ---
 Plain @ (1:1)->(1:16) (
     ` not verbatim`
+    ^^^^^^^^^^^^^^^
 )
 
 ---

@@ -4,14 +4,17 @@ info: "Test 'bold-in-middle' from 'bold.yml'"
 ---
 Plain @ (1:1)->(1:10) (
     The next
+    ^^^^^^^^^
 )
 Bold @ (1:10)->(1:18) (
     Plain @ (1:12)->(1:16) (
         word
+        ^^^^
     )
 )
 Plain @ (1:18)->(1:27) (
      is bold.
+    ^^^^^^^^^
 )
 
 ---

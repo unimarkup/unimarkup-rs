@@ -395,20 +395,23 @@ impl<'token> TokenIterator<'token> {
         // 2. Whitespace found -> Whitespace token
         // 3. any other grapheme -> Plain token
 
-        let sym = self.get_symbol(self.index)?;
+        let start_sym = self.get_symbol(self.index)?;
+        let mut first = self.index;
+
+        let sym = if start_sym.is_esc() {
+            first += 1;
+            self.get_symbol(first)?
+        } else {
+            start_sym
+        };
 
         let kind = match sym.kind {
-            SymbolKind::Plain => TokenKind::Plain,
             SymbolKind::Whitespace => TokenKind::Whitespace,
             SymbolKind::Newline | SymbolKind::Blankline => TokenKind::Newline,
-            _ => unreachable!(
-                "Unexpected symbol {} while lexing plain tokens in inline.",
-                sym.as_str()
-            ),
+            _ => TokenKind::Plain,
         };
 
         let first_sym = sym;
-        let first = self.index;
         let mut last = first;
         self.index += 1;
 
@@ -424,7 +427,7 @@ impl<'token> TokenIterator<'token> {
         }
 
         // NOTE: index points to the NEXT character, token Span is UP TO that character
-        let start_pos = first_sym.start;
+        let start_pos = start_sym.start;
         let end_pos = self.get_symbol(last)?.end;
 
         let span = Span::from((start_pos, end_pos));
@@ -513,7 +516,7 @@ impl<'token> Iterator for TokenIterator<'token> {
                 // 2. next character has no significance -> lex as plain text
                 // 3. there is no next character. That implies that we've got to end of input.
 
-                let sym = self.get_symbol(self.index + 1)?;
+                let sym = self.get_symbol(self.index)?;
                 if sym.is_significant_esc() {
                     self.index += 1;
                     self.lex_escape_seq()

@@ -37,6 +37,15 @@ impl AsSnapshot for Snapshot<&Inline> {
                 other => other,
             };
 
+            if matches!(self.inner(), ContentRef::Plain(_))
+                && self.span().len_utf8().unwrap_or(1) > content.len()
+            {
+                // Escaped tokens cause the span to be longer than the rendered content. Distribute
+                // the _excess_ length as prefix/suffix
+                let prefix_len = (self.span().len_utf8().unwrap_or(1) - content.len()) / 2;
+                res.push_str(&" ".repeat(prefix_len));
+            }
+
             res.push_str("    ");
             res.push_str(content);
             res.push('\n');

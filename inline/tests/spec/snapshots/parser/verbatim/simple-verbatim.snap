@@ -3,7 +3,8 @@ source: inline/tests/parser/mod.rs
 info: "Test 'simple-verbatim' from 'verbatim.yml'"
 ---
 Verbatim @ (1:1)->(1:11) (
-    Verbatim
+     Verbatim
+    ^^^^^^^^^^
 )
 
 ---

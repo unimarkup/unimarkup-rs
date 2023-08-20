@@ -2,8 +2,9 @@
 source: inline/tests/parser/mod.rs
 info: "Test 'escaped-verbatim' from 'verbatim.yml'"
 ---
-Plain @ (1:2)->(1:17) (
-    `not verbatim`
+Plain @ (1:1)->(1:17) (
+     `not verbatim`
+    ^^^^^^^^^^^^^^^^
 )
 
 ---
