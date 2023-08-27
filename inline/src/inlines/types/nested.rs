@@ -99,7 +99,7 @@ impl_nested_inline!(
     Highlight,
     /// Quoted content.
     Quote,
-    /// LaTeX-like math content.
+    /// Mathematical content.
     Math,
     /// Content of a TextGroup `[]`.
     TextGroup,

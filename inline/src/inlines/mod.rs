@@ -43,7 +43,7 @@ pub enum Inline {
     /// Quoted content.
     Quote(Quote),
 
-    /// LaTeX-like math content.
+    /// Mathematical content.
     Math(Math),
 
     /// Content of a TextGroup `[]`.
