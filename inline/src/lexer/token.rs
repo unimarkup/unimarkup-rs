@@ -430,7 +430,8 @@ pub enum TokenKind {
     /// Escaped newline token (`\\n`).
     EscapedNewline,
 
-    /// A single whitespace token (` `).
+    /// Any single whitespace token representing a Unicode code point with `WSpace=Y` or `WS`
+    /// (e.g. SPACE U+0020: ` `).
     Whitespace,
 
     /// Escaped whitespace token (``\ ``).
