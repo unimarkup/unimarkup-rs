@@ -2,7 +2,7 @@ use std::{collections::VecDeque, ops::Deref};
 
 use unimarkup_commons::scanner::span::Span;
 
-use crate::{types::*, Inline, Token, TokenKind, Tokenize, Tokens};
+use crate::{Inline, Token, TokenKind, Tokenize, Tokens};
 
 /// Internal data structure used for parsing of Unimarkup [`Inline`]s.
 ///
@@ -171,22 +171,9 @@ impl<'input> Parser<'input> {
             if next_token.closes(Some(&start_token)) {
                 end = next_token.span.end;
                 break;
-            } else if next_token.opens() {
-                // lexer resolved tokens, if token opens, it is guaranteed that closing exists too.
-                // If not, it's bug in implementation
-                let nested = self.parse_inline(next_token);
-                content.push_back(nested);
             } else {
-                // opening token not yet closed, next token does not start a new inline -> parse as
-                // plain text
-
-                end = next_token.span.end;
-                let (inner, span) = next_token.parts();
-                let inline = Inline::Plain(Plain {
-                    content: String::from(inner),
-                    span,
-                });
-                content.push_back(inline);
+                let inner = self.parse_inline(next_token);
+                content.push_back(inner);
             }
         }
 
