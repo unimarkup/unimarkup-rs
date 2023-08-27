@@ -8,6 +8,10 @@ use super::ContentOption;
 use crate::Inline;
 
 /// Token lexed from Unimarkup text.
+///
+/// # Lifetimes
+///
+/// * `'input` - lifetime of input the [`Token`] was lexed from.
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Token<'input> {
     pub(crate) kind: TokenKind,

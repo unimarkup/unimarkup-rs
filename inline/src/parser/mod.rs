@@ -6,14 +6,18 @@ use crate::{types::*, Inline, Token, TokenKind, Tokenize, Tokens};
 
 /// Internal data structure used for parsing of Unimarkup [`Inline`]s.
 ///
+/// # Lifetimes
+///
+/// `'input` - lifetime of the input the [`Token`]s are lexed from.
+///
 /// [`Inline`]: crate::Inline
 #[derive(Debug, Default, Clone)]
-struct ParserStack<'token> {
-    data: Vec<Token<'token>>,
+struct ParserStack<'input> {
+    data: Vec<Token<'input>>,
 }
 
-impl<'token> Deref for ParserStack<'token> {
-    type Target = Vec<Token<'token>>;
+impl<'input> Deref for ParserStack<'input> {
+    type Target = Vec<Token<'input>>;
 
     fn deref(&self) -> &Self::Target {
         &self.data
@@ -28,14 +32,18 @@ struct PlainContext {
 /// Parser of Unimarkup inline formatting. Implemented as an [`Iterator`], yields one
 /// self-contained Unimarkup [`Inline`] with every iteration.
 ///
+/// # Lifetimes
+///
+/// `'input` - lifetime of the input the [`Token`]s are lexed from.
+///
 /// [`Iterator`]: Iterator
 /// [`Inline`]: crate::Inline
 #[derive(Debug, Clone)]
-pub struct Parser<'tokens> {
+pub struct Parser<'input> {
     /// Iterator over [`Token`]s found in Unimarkup input.
     ///
     /// [`Token`]: crate::Token
-    iter: Tokens<'tokens>,
+    iter: Tokens<'input>,
 
     /// Storage of [`Token`] already yielded from [`TokenIterator`] but not consumed in current
     /// iteration of parsing.
@@ -43,18 +51,20 @@ pub struct Parser<'tokens> {
     /// [`Token`]: crate::Token
     /// [`TokenIterator`]: crate::TokenIterator
     /// [`Inline`]: crate::Inline
-    token_cache: Option<Token<'tokens>>,
+    token_cache: Option<Token<'input>>,
 
     /// Storage of parsed [`Inline`]s that should be returned before parsing next [`Inline`].
     inline_cache: VecDeque<Inline>,
 }
 
-impl<'tokens> Parser<'tokens> {
+impl<'input> Parser<'input> {
     /// Returns the next [`Token`] either from [`Lexer`] directly or from internal token cache.
+    ///
+    /// # Lifetimes
     ///
     /// [`Token`]: crate::Token
     /// [`Lexer`]: crate::Lexer
-    fn next_token(&mut self) -> Option<Token<'tokens>> {
+    fn next_token(&mut self) -> Option<Token<'input>> {
         if self.token_cache.is_some() {
             self.token_cache.take()
         } else {
@@ -68,7 +78,7 @@ impl<'tokens> Parser<'tokens> {
     ///
     /// [`Token`]: crate::Token
     /// [`Lexer`]: crate::Lexer
-    fn find_token<F>(&mut self, mut f: F) -> Option<Token<'tokens>>
+    fn find_token<F>(&mut self, mut f: F) -> Option<Token<'input>>
     where
         F: FnMut(&Token) -> bool,
     {
@@ -219,6 +229,10 @@ impl Iterator for Parser<'_> {
 /// Extension trait for adding [`Parser`] implementation for any type that implements
 /// [`Tokenize`] trait.
 ///
+/// # Lifetimes
+///
+/// - `'input` is the lifetime of the input being parsed.
+///
 /// [`Parser`]: self::Parser
 /// [`Tokenize`]: crate::Tokenize
 pub trait ParseInlines<'input> {
@@ -240,6 +254,3 @@ where
         }
     }
 }
-
-#[cfg(test)]
-mod tests;

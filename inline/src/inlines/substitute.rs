@@ -96,15 +96,15 @@ impl<'sub> Substitutor<'sub> {
         }
     }
 
-    pub(crate) fn try_subst(&self, slice: &'sub str, span: Span) -> Option<Substitute<'sub>> {
+    pub(crate) fn get_subst(&self, slice: &'sub str, span: Span) -> Option<Substitute<'sub>> {
         let content = *self.direct.get(slice)?;
 
         Some(Substitute { content, span })
     }
 
-    pub(crate) fn try_subst_iter<'input, I>(&'input self, iter: I) -> Option<Substitute<'sub>>
+    pub(crate) fn get_subst_iter<I>(&self, iter: I) -> Option<Substitute<'sub>>
     where
-        I: Iterator<Item = &'input scanner::Symbol<'sub>> + Clone,
+        I: Iterator<Item = &'sub scanner::Symbol<'sub>> + Clone,
     {
         let slice = scanner::Symbol::flatten_iter(iter.clone())?;
         let mut tmp_iter = iter;
@@ -114,10 +114,10 @@ impl<'sub> Substitutor<'sub> {
 
         let span = Span::from((start, end));
 
-        self.try_subst(slice, span)
+        self.get_subst(slice, span)
     }
 
-    pub(crate) fn is_start_of_subst(&self, symbol: &scanner::Symbol) -> bool {
+    pub(crate) fn is_start_of_substitute(&self, symbol: &scanner::Symbol) -> bool {
         self.first_grapheme.contains(symbol.as_str())
     }
 

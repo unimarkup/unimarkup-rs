@@ -19,14 +19,14 @@ impl Not for Resolved {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct RawToken<'token> {
-    pub(crate) token: Token<'token>,
+pub(crate) struct RawToken<'input> {
+    pub(crate) token: Token<'input>,
     pub(crate) state: Resolved,
-    pub(crate) tail: Option<Box<RawToken<'token>>>,
+    pub(crate) tail: Option<Box<RawToken<'input>>>,
 }
 
-impl<'token> RawToken<'token> {
-    pub(crate) fn new(token: Token<'token>) -> Self {
+impl<'input> RawToken<'input> {
+    pub(crate) fn new(token: Token<'input>) -> Self {
         Self {
             token,
             state: Resolved::Neither,
@@ -45,7 +45,7 @@ impl<'token> RawToken<'token> {
         }
     }
 
-    pub(crate) fn pop(&mut self) -> Option<RawToken<'token>> {
+    pub(crate) fn pop(&mut self) -> Option<RawToken<'input>> {
         // moves the next token to `tail` so it can be taken
         self.order();
 

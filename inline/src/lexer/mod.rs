@@ -19,6 +19,10 @@ use self::resolver::{RawToken, TokenResolver};
 /// [`&str`]: &str
 pub trait Tokenize<'input> {
     /// Returns tokens found in self.
+    ///
+    /// # Lifetimes
+    ///
+    /// - `'input` - Lifetime of the input instance.
     fn tokens(&'input self) -> Tokens<'input>;
 }
 
@@ -37,6 +41,10 @@ where
 
 /// Lexer of Unimarkup inline formatted text. Generates a stream of [`Token`]s from input.
 ///
+/// # Lifetimes
+///
+/// - `'input` - Lifetime of the input instance the lexer is lexing over.
+///
 /// [`Token`]: self::token::Token
 pub struct Lexer<'input> {
     input: &'input [Symbol<'input>],
@@ -48,12 +56,14 @@ pub(crate) trait SymbolExt {
     /// [`LexLength`]: self::LexLength
     fn allowed_len(&self) -> LexLength;
 
+    /// Returns the (UTF-8) length of symbol.
     fn len(&self) -> usize;
 
     /// Checks whether the grapheme is some Unimarkup Inline symbol.
     /// e.g. "*" can be start of Unimarkup Italic or Bold.
     fn is_keyword(&self) -> bool;
 
+    /// Checks whether the given grapheme could be a start of an inline substitution.
     fn is_start_of_subst(&self, substitutor: &Substitutor) -> bool;
 
     /// Checks whether the grapheme is "\".
@@ -71,9 +81,6 @@ pub(crate) trait SymbolExt {
 }
 
 impl SymbolExt for Symbol<'_> {
-    /// Returns the [`LexLength`] a given symbol may have.
-    ///
-    /// [`LexLength`]: self::LexLength
     fn allowed_len(&self) -> LexLength {
         match self.kind {
             SymbolKind::Star | SymbolKind::Underline => LexLength::Limited(3),
@@ -108,8 +115,6 @@ impl SymbolExt for Symbol<'_> {
         self.as_str().len()
     }
 
-    /// Checks whether the grapheme is some Unimarkup Inline symbol.
-    /// e.g. "*" can be start of Unimarkup Italic or Bold.
     fn is_keyword(&self) -> bool {
         matches!(
             self.kind,
@@ -132,26 +137,21 @@ impl SymbolExt for Symbol<'_> {
     }
 
     fn is_start_of_subst(&self, substitutor: &Substitutor) -> bool {
-        substitutor.is_start_of_subst(self)
+        substitutor.is_start_of_substitute(self)
     }
 
-    /// Checks whether the grapheme is "\".
     fn is_esc(&self) -> bool {
         matches!(self.kind, SymbolKind::Backslash)
     }
 
-    /// Checks whether the grapheme is any of the whitespace characters.
     fn is_whitespace(&self) -> bool {
         matches!(self.kind, SymbolKind::Whitespace)
     }
 
-    /// Checks whether the grapheme is a valid newline symbol.
     fn is_newline(&self) -> bool {
         matches!(self.kind, SymbolKind::Newline | SymbolKind::Blankline)
     }
 
-    /// Checks whether the grapheme has any significance in escape sequence.
-    /// e.g. The lexer interprets "\ " as a Whitespace `Token`
     fn is_significant_esc(&self) -> bool {
         self.is_whitespace() || self.is_newline()
     }
@@ -172,6 +172,10 @@ impl<'token> Lexer<'token> {
         }
     }
 
+    /// Creates a [`TokenResolver`] from [`Lexer`].
+    ///
+    /// [`TokenResolver`]: self::resolver::TokenResolver
+    /// [`Lexer`]: self::Lexer
     fn resolved(self) -> TokenResolver<'token> {
         TokenResolver::new(self.iter())
     }
@@ -225,31 +229,55 @@ impl From<usize> for LexLength {
 
 /// Iterator over Unimarkup [`Token`]s, performs the actual lexing.
 ///
+/// # Lifetimes
+///
+/// * `'input` - Lifetime of the input string, lives at least as long as this instance of
+/// `TokenIterator`.
+///
 /// [`Token`]: self::token::Token
 #[derive(Debug, Clone)]
-pub struct TokenIterator<'a> {
-    symbols: &'a [Symbol<'a>],
+pub struct TokenIterator<'input> {
+    /// Pool of available symbols found in the input.
+    symbols: &'input [Symbol<'input>],
+
+    /// Index used as a cursor to the symbol we are currently interpreting.
     index: usize,
-    substitutor: Substitutor<'a>,
+
+    /// [`Substitutor`] used for resolving inline substitutions. Right now, substitutor uses only
+    /// built-in substitutions and has 'static lifetime per default, and can be shortened to any
+    /// other lifetime.
+    substitutor: Substitutor<'input>,
 }
 
-impl<'token> TokenIterator<'token> {
-    fn get_symbol<'once>(&'once self, index: usize) -> Option<&'token Symbol<'token>> {
+impl<'input> TokenIterator<'input> {
+    /// Returns the [`Symbol`] at the given index, from the underlying pool of symbols.
+    ///
+    /// # Lifetimes
+    ///
+    /// - `'input` - Lifetime of the [`Symbol`]s, tied to the input symbol is found in and lives at
+    /// least as long as this instance of `TokenIterator`.
+    fn get_symbol(&self, index: usize) -> Option<&'input Symbol<'input>> {
         self.symbols.get(index)
     }
 
-    /// Lexes a given [`Symbol`] with significance, i.e. `**` and produces a [`Token`] out of it, if possible.
+    /// Lexes given [`Symbol`]s with significance, i.e. `**` and produces a [`Token`] out of it,
+    /// if possible.
+    ///
+    /// # Lifetimes
+    ///
+    /// - `'input` - Lifetime of the input the token is found in and lives at least as long as
+    /// this instance of `TokenIterator`.
     ///
     /// [`Token`]: self::token::Token
     /// [`Symbol`]: self::Symbol
-    fn lex_keyword(&mut self) -> Option<Token<'token>> {
+    fn lex_keyword(&mut self) -> Option<Token<'input>> {
         // NOTE: General invariant of lexing:
         // If some contiguous symbol occurrence exceeds the maximal symbol length, the contiguous
         // sequence is lexed as plain (e.g. ****).
 
         let symbol = self.get_symbol(self.index)?;
 
-        let subst = self.try_lex_substitution(symbol);
+        let subst = self.get_substitute(symbol);
 
         let start_pos = symbol.start;
         let end_pos = subst
@@ -330,11 +358,11 @@ impl<'token> TokenIterator<'token> {
             .end
     }
 
-    /// Finds the furthest grapheme in line where, starting from the current cursor position, each grapheme
-    /// matches the one provided as the `symbol`.
+    /// Finds the furthest grapheme in line where, starting from the current cursor position,
+    /// each grapheme matches the one provided as the `symbol`.
     ///
-    /// Note that the current cursor position will be returned if the grapheme under cursor doesn't match the
-    /// `symbol` grapheme provided as the function parameter.
+    /// Note that the current cursor position will be returned if the grapheme under cursor doesn't
+    /// match the `symbol` grapheme provided as the function parameter.
     fn literal_end_index(&self, symbol: &Symbol) -> usize {
         let mut pos = self.index;
 
@@ -346,7 +374,8 @@ impl<'token> TokenIterator<'token> {
         }
     }
 
-    /// Calculates the [`Spacing`] just before the cursor position and after cursor position and the given len.
+    /// Calculates the [`Spacing`] just before the cursor position and after cursor position and
+    /// the given len.
     ///
     /// [`Spacing`]: self::token::Spacing
     fn spacing_around(&self, len: usize) -> Spacing {
@@ -387,9 +416,16 @@ impl<'token> TokenIterator<'token> {
     /// Lexes a [`Token`] with [`TokenKind::Plain`], [`TokenKind::Whitespace`] or
     /// [`TokenKind::Newline`], with content being original Unimarkup input for the given token.
     ///
+    /// # Lifetimes
+    ///
+    /// - `'input` - Lifetime of the input the token is found in and lives at least as long as
+    /// this instance of `TokenIterator`.
+    ///
     /// [`Token`]: self::token::Token
     /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
-    fn lex_plain(&mut self) -> Option<Token<'token>> {
+    /// [`TokenKind::Whitespace`]: self::token::TokenKind::Whitespace
+    /// [`TokenKind::Newline`]: self::token::TokenKind::Newline
+    fn lex_plain(&mut self) -> Option<Token<'input>> {
         // Token is not a keyword, but can be one of multiple plain tokens:
         // 1. Newline found -> Newline token
         // 2. Whitespace found -> Whitespace token
@@ -449,10 +485,15 @@ impl<'token> TokenIterator<'token> {
     /// Lexes an escaped [`Symbol`], creating [`Token`] with either [`TokenKind::Plain`] or some
     /// kind of significant escape, such es escaped newline.
     ///
+    /// # Lifetimes
+    ///
+    /// - `'input` - Lifetime of the input the token is found in and lives at least as long as
+    /// this instance of `TokenIterator`.
+    ///
     /// [`Symbol`]: self::Symbol
     /// [`Token`]: self::token::Token
     /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
-    fn lex_escape_seq(&mut self) -> Option<Token<'token>> {
+    fn lex_escape_seq(&mut self) -> Option<Token<'input>> {
         let i = self.index;
         let symbol = self.get_symbol(i)?;
 
@@ -477,8 +518,19 @@ impl<'token> TokenIterator<'token> {
         Some(token)
     }
 
-    fn try_lex_substitution(&self, symbol: &Symbol<'token>) -> Option<Substitute<'token>> {
-        if !self.substitutor.is_start_of_subst(symbol) {
+    /// Returns a [`Substitute`] if a builtin or registered [`Substitute`] is found for a given
+    /// [`Symbol`] or list of [`Symbol`]s.
+    ///
+    /// # Lifetimes
+    ///
+    /// - `'input` - Lifetime of the input the [`Symbol`] is found in and lives at least as long as
+    /// this instance of `TokenIterator`.
+    ///
+    /// [`Symbol`]: self::Symbol
+    /// [`Token`]: self::token::Token
+    /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
+    fn get_substitute(&self, symbol: &Symbol<'input>) -> Option<Substitute<'input>> {
+        if !self.substitutor.is_start_of_substitute(symbol) {
             return None;
         }
 
@@ -490,15 +542,15 @@ impl<'token> TokenIterator<'token> {
         };
 
         if let Spacing::Both = self.spacing_around(iter.clone().count()) {
-            self.substitutor.try_subst_iter(iter)
+            self.substitutor.get_subst_iter(iter)
         } else {
             None
         }
     }
 }
 
-impl<'token> Iterator for TokenIterator<'token> {
-    type Item = Token<'token>;
+impl<'input> Iterator for TokenIterator<'input> {
+    type Item = Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // three cases:
@@ -532,14 +584,22 @@ impl<'token> Iterator for TokenIterator<'token> {
 /// Iterator over the Unimarkup Inline [`Token`]s found in the given input. This iterator is
 /// available for any type that implements [`Tokenize`] trait. The [`Tokenize`] trait can be
 /// implemented directly, or automatically if type implements [`AsRef<Symbol>`] trait.
+///
+/// Iterator returns resolved [`Token`]s, meaning that if [`Token`] is marked as an opening
+/// [`Token`] for some inline, it is guaranteed that the closing [`Token`] will be returned at a
+/// later point (and vice versa).
+///
+/// # Lifetimes
+///
+/// * `'input` - Lifetime of the input the [`Token`]s are lexed from.
 #[derive(Debug, Clone)]
-pub struct Tokens<'token> {
-    iter: resolver::IntoIter<'token>,
-    cache: Option<RawToken<'token>>,
+pub struct Tokens<'input> {
+    iter: resolver::IntoIter<'input>,
+    cache: Option<RawToken<'input>>,
 }
 
-impl<'token> Tokens<'token> {
-    pub(crate) fn new(resolver: TokenResolver<'token>) -> Self {
+impl<'input> Tokens<'input> {
+    pub(crate) fn new(resolver: TokenResolver<'input>) -> Self {
         Self {
             iter: resolver.into_iter(),
             cache: None,
@@ -547,8 +607,8 @@ impl<'token> Tokens<'token> {
     }
 }
 
-impl<'token> Iterator for Tokens<'token> {
-    type Item = Token<'token>;
+impl<'input> Iterator for Tokens<'input> {
+    type Item = Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut unr_token = if let Some(unr_token) = self.cache.take() {

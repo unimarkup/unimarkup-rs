@@ -176,10 +176,7 @@ impl Symbol<'_> {
     /// It is assumed (and checked in debug release) that the symbols are in contiguous order.
     ///
     /// Returns `None` if the referenced input is not same in all symbols.
-    pub fn flatten_iter<'o, 's>(mut iter: impl Iterator<Item = &'o Symbol<'s>>) -> Option<&'s str>
-    where
-        's: 'o,
-    {
+    pub fn flatten_iter<'s>(mut iter: impl Iterator<Item = &'s Symbol<'s>>) -> Option<&'s str> {
         let first = iter.next()?;
 
         #[cfg(debug_assertions)]
