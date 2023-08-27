@@ -24,8 +24,15 @@ impl<'input> Deref for ParserStack<'input> {
     }
 }
 
+/// Context passed to [`Parser::parse_inline`] function. This context is used to provide more
+/// information for the parser, so that the content can be parsed and stored correctly.
 struct PlainContext {
+    /// Whether the currently parsed plain inline is enclosed by some symbols. One such inline is
+    /// [`Inline::Verbatim`]
     enclosed: bool,
+
+    /// Whether the currently parsed plain inline merges tokens that can be merged (such as
+    /// whitespace tokens) or preserves them as is.
     merge_tokens: bool,
 }
 
