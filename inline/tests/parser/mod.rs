@@ -12,7 +12,7 @@ pub fn test_parser_snapshots() -> Vec<Trial> {
     let mut test_runs = Vec::with_capacity(test_cases.len());
 
     for case in test_cases {
-        let test_name = format!("parser:{}", case.name.as_str());
+        let test_name = format!("{}::{}", module_path!(), case.name.as_str());
 
         let test_run = move || {
             panic::catch_unwind(|| run_test_case(case)).map_err(|err| {

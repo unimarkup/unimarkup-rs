@@ -12,7 +12,7 @@ license.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[test]]
-name="inline"
+name="unimarkup-inline"
 path="tests/mod.rs"
 harness=false
 
