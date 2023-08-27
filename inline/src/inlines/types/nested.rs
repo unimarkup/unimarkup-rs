@@ -38,7 +38,7 @@ macro_rules! impl_nested_inline {
             }
 
             /// Merges consecutive inlines of same kind contained in this inline.
-            pub fn try_merge(&mut self) {
+            pub fn merge(&mut self) {
                 if self.content.is_empty() {
                     return;
                 }

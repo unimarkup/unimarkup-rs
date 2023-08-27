@@ -195,7 +195,7 @@ impl<'input> Parser<'input> {
             ),
         };
 
-        inline.try_merge();
+        inline.merge();
         inline
     }
 }

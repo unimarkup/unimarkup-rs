@@ -221,23 +221,23 @@ impl Inline {
     }
 
     /// Merges consecutive Inlines of same kind in a nested Inline.
-    pub fn try_merge(&mut self) {
+    pub fn merge(&mut self) {
         match self {
             // Inlines containing list of inlines as contetn can merge.
-            Inline::Bold(inline) => inline.try_merge(),
-            Inline::Italic(inline) => inline.try_merge(),
-            Inline::Underline(inline) => inline.try_merge(),
-            Inline::Subscript(inline) => inline.try_merge(),
-            Inline::Superscript(inline) => inline.try_merge(),
-            Inline::Overline(inline) => inline.try_merge(),
-            Inline::Strikethrough(inline) => inline.try_merge(),
-            Inline::Highlight(inline) => inline.try_merge(),
-            Inline::Quote(inline) => inline.try_merge(),
-            Inline::Math(inline) => inline.try_merge(),
-            Inline::TextGroup(inline) => inline.try_merge(),
-            Inline::Attributes(inline) => inline.try_merge(),
-            Inline::Substitution(inline) => inline.try_merge(),
-            Inline::Multiple(inline) => inline.try_merge(),
+            Inline::Bold(inline) => inline.merge(),
+            Inline::Italic(inline) => inline.merge(),
+            Inline::Underline(inline) => inline.merge(),
+            Inline::Subscript(inline) => inline.merge(),
+            Inline::Superscript(inline) => inline.merge(),
+            Inline::Overline(inline) => inline.merge(),
+            Inline::Strikethrough(inline) => inline.merge(),
+            Inline::Highlight(inline) => inline.merge(),
+            Inline::Quote(inline) => inline.merge(),
+            Inline::Math(inline) => inline.merge(),
+            Inline::TextGroup(inline) => inline.merge(),
+            Inline::Attributes(inline) => inline.merge(),
+            Inline::Substitution(inline) => inline.merge(),
+            Inline::Multiple(inline) => inline.merge(),
 
             // String inlines can't merge.
             Inline::Parentheses(_)
