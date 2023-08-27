@@ -26,7 +26,7 @@ impl<'input> Deref for ParserStack<'input> {
 
 struct PlainContext {
     enclosed: bool,
-    merge_whitespace: bool,
+    merge_tokens: bool,
 }
 
 /// Parser of Unimarkup inline formatting. Implemented as an [`Iterator`], yields one
@@ -92,7 +92,9 @@ impl<'input> Parser<'input> {
     }
 
     fn parse_plain(&mut self, start_token: Token, cxt: PlainContext) -> Inline {
-        let kind = if start_token.is_plain_whitespace() {
+        // convert kind into plain, if first token is neither plain nor plain-enclosed
+        // (e.g. Whitespace)
+        let kind = if start_token.consumable_by_plain() {
             TokenKind::Plain
         } else {
             start_token.kind
@@ -115,15 +117,16 @@ impl<'input> Parser<'input> {
                 span.end = next_token.span.end;
                 break;
             } else if not_enclosed_and_interrupted {
-                if next_token.is_plain_whitespace() {
-                    // consume whitespace
+                if next_token.consumable_by_plain() {
+                    // consume the token
                     let (next_content, next_span) = next_token.parts();
                     content.push_str(next_content);
                     span.end = next_span.end;
 
-                    if cxt.merge_whitespace {
-                        // skip other whitespace
-                        self.token_cache = self.find_token(|token| !token.is_plain_whitespace());
+                    if cxt.merge_tokens {
+                        // skip other tokens so that only one token is consumed, effectively
+                        // "merging" them into one.
+                        self.token_cache = self.find_token(|tkn| !next_token.can_merge_with(tkn));
                     }
                 } else {
                     // cache popped token and break
@@ -182,7 +185,7 @@ impl<'input> Parser<'input> {
                 token,
                 PlainContext {
                     enclosed: true,
-                    merge_whitespace: false,
+                    merge_tokens: false,
                 },
             ),
             (_, true) => self.parse_nested(token),
@@ -190,7 +193,7 @@ impl<'input> Parser<'input> {
                 token,
                 PlainContext {
                     enclosed: false,
-                    merge_whitespace: true,
+                    merge_tokens: true,
                 },
             ),
         };

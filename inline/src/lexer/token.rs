@@ -92,9 +92,12 @@ impl<'input> Token<'input> {
         }
     }
 
-    /// Consumes this [`Token`] and returns it's content and the span it occupies.
+    /// Returns the content of this [`Token`] as [`&str`], and the [`Span`] that the content
+    /// occupies in original input.
     ///
+    /// [`&str`]: &str
     /// [`Token`]: self::Token
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     pub fn parts(&self) -> (&str, Span) {
         (self.as_str(), self.span)
     }
@@ -156,11 +159,25 @@ impl<'input> Token<'input> {
         )
     }
 
-    /// Checks whether this [`Token`] represents plain whitespace content (i.e. space or tab).
+    /// Checks whether this [`Token`] can be consumed by a [`Inline::Plain`].
     ///
     /// [`Token`]: self::Token
-    pub fn is_plain_whitespace(&self) -> bool {
-        matches!(self.kind, TokenKind::Whitespace)
+    /// [`Inline::Plain`]: crate::Inline::Plain
+    pub fn consumable_by_plain(&self) -> bool {
+        matches!(self.kind, TokenKind::Plain | TokenKind::Whitespace)
+    }
+
+    /// Checks whether this [`Token`] can be merged with the other one, should that be necessary.
+    /// For example, this is useful when consuming multiple consecutive whitespace tokens in an
+    /// [`Inline::Plain`].
+    ///
+    /// [`Token`]: self::Token
+    /// [`Inline::Plain`]: crate::Inline::Plain
+    pub fn can_merge_with(&self, other: &Self) -> bool {
+        matches!(
+            (self.kind, other.kind),
+            (TokenKind::Whitespace, TokenKind::Whitespace)
+        )
     }
 
     /// Checks whether this [`Token`] is a starting/opening token of some Unimarkup inline format.
