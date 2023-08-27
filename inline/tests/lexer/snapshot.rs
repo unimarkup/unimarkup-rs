@@ -43,7 +43,7 @@ impl AsSnapshot for Snapshot<Token<'_>> {
         // only newline token spans 2 lines, should not be the case for others!
 
         let inner = match self.as_str() {
-            "\n" => "\u{23CE}",
+            "\n" => Self::NEWLINE_SYBMOL,
             other => other,
         };
 
@@ -51,7 +51,7 @@ impl AsSnapshot for Snapshot<Token<'_>> {
             // escaped token's occupy two characters in text (the backslash and symbol). In such
             // cases, span is longer than the actual content by a single character.
             // Push content to the right "\*" will be rendered as " *"
-            content.push(' ');
+            content.push_str(Self::BLANK_SYMBOL);
         }
 
         content.push_str(inner);

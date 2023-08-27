@@ -28,26 +28,40 @@ impl AsSnapshot for Snapshot<&Inline> {
         let start = self.variant_str();
         let inner = Snapshot::snap(self.inner());
 
+        let indent = "    ";
+
         let mut res = String::from(start);
         res.push_str(&Snapshot::snap(&self.span()));
         res.push_str(" (\n");
         for line in inner.lines() {
             let content = match line {
-                "\n" => "    \u{23CE}",
+                "\n" => Self::NEWLINE_SYBMOL,
                 other => other,
             };
 
-            if matches!(self.inner(), ContentRef::Plain(_))
-                && self.span().len_utf8().unwrap_or(1) > content.len()
-            {
-                // Escaped tokens cause the span to be longer than the rendered content. Distribute
-                // the _excess_ length as prefix/suffix
-                let prefix_len = (self.span().len_utf8().unwrap_or(1) - content.len()) / 2;
-                res.push_str(&" ".repeat(prefix_len));
+            res.push_str(indent);
+
+            // Escaped tokens cause the span to be longer than the rendered content. Distribute
+            // the _excess_ length as prefix/suffix
+            let has_prefix_suffix = matches!(self.inner(), ContentRef::Plain(_))
+                && self.span().len_utf8().unwrap_or(1) > content.len();
+
+            let prefix_sufix_len = if has_prefix_suffix {
+                (self.span().len_utf8().unwrap_or(1) - content.len()) / 2
+            } else {
+                0
+            };
+
+            if has_prefix_suffix {
+                res.push_str(&Self::BLANK_SYMBOL.repeat(prefix_sufix_len));
             }
 
-            res.push_str("    ");
             res.push_str(content);
+
+            if has_prefix_suffix {
+                res.push_str(&Self::BLANK_SYMBOL.repeat(prefix_sufix_len));
+            }
+
             res.push('\n');
 
             if matches!(
@@ -59,7 +73,7 @@ impl AsSnapshot for Snapshot<&Inline> {
                     | Inline::EscapedWhitespace(_)
                     | Inline::Newline(_)
             ) {
-                res.push_str("    ");
+                res.push_str(indent);
                 res.push_str(&"^".repeat(self.span().len_grapheme().unwrap_or(1)));
                 res.push('\n');
             }
