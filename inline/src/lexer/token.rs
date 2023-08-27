@@ -444,7 +444,7 @@ pub enum TokenKind {
 
 impl TokenKind {
     /// Returns the textual representation of the kind.
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match *self {
             TokenKind::Bold => "**",
             TokenKind::ItalicBold => "***",

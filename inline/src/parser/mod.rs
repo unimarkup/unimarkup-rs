@@ -99,10 +99,6 @@ impl<'input> Parser<'input> {
     }
 
     fn parse_plain(&mut self, start_token: Token, ctxt: PlainContext) -> Inline {
-        // store in data segment to prevent multiple initialization (this function is expected to
-        // be called a lot of times)
-        const WHITESPACE: &str = " ";
-
         // convert kind into plain, if first token is neither plain nor plain-enclosed
         // (e.g. Whitespace)
         let kind = if start_token.consumable_by_plain() {
@@ -118,7 +114,7 @@ impl<'input> Parser<'input> {
             String::new()
         } else if start_token.kind == TokenKind::Whitespace {
             // edge case: plain can start with a whitespace
-            String::from(WHITESPACE)
+            String::from(TokenKind::Whitespace.as_str())
         } else {
             String::from(tkn_str)
         };
@@ -136,7 +132,7 @@ impl<'input> Parser<'input> {
                     let (next_content, next_span) = next_token.parts();
 
                     match next_token.kind {
-                        TokenKind::Whitespace => content.push_str(WHITESPACE),
+                        TokenKind::Whitespace => content.push_str(TokenKind::Whitespace.as_str()),
                         _ => content.push_str(next_content),
                     };
 
