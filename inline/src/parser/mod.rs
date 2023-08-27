@@ -98,7 +98,7 @@ impl<'input> Parser<'input> {
         self.iter.find(f)
     }
 
-    fn parse_plain(&mut self, start_token: Token, cxt: PlainContext) -> Inline {
+    fn parse_plain(&mut self, start_token: Token, ctxt: PlainContext) -> Inline {
         // convert kind into plain, if first token is neither plain nor plain-enclosed
         // (e.g. Whitespace)
         let kind = if start_token.consumable_by_plain() {
@@ -109,7 +109,7 @@ impl<'input> Parser<'input> {
 
         let (tkn_str, mut span) = start_token.parts();
 
-        let mut content = if cxt.enclosed {
+        let mut content = if ctxt.enclosed {
             // skip first (the enclosing) token
             String::new()
         } else {
@@ -117,8 +117,8 @@ impl<'input> Parser<'input> {
         };
 
         while let Some(next_token) = self.next_token() {
-            let enclosed_and_closes = cxt.enclosed && next_token.closes(Some(&start_token));
-            let not_enclosed_and_interrupted = !cxt.enclosed && next_token.kind != kind;
+            let enclosed_and_closes = ctxt.enclosed && next_token.closes(Some(&start_token));
+            let not_enclosed_and_interrupted = !ctxt.enclosed && next_token.kind != kind;
 
             if enclosed_and_closes {
                 span.end = next_token.span.end;
@@ -130,7 +130,7 @@ impl<'input> Parser<'input> {
                     content.push_str(next_content);
                     span.end = next_span.end;
 
-                    if cxt.merge_tokens {
+                    if ctxt.merge_tokens {
                         // skip other tokens so that only one token is consumed, effectively
                         // "merging" them into one.
                         self.token_cache = self.find_token(|tkn| !next_token.can_merge_with(tkn));
