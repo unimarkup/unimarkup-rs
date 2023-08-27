@@ -62,6 +62,25 @@ impl<'tokens> Parser<'tokens> {
         }
     }
 
+    /// Returns the next [`Token`] for which the passed function evaluates to true either from
+    /// [`Lexer`] directly or from internal token cache. This function progresses the tokens, so if
+    /// used it is no longer possible to access tokens skiped by this function.
+    ///
+    /// [`Token`]: crate::Token
+    /// [`Lexer`]: crate::Lexer
+    fn find_token<F>(&mut self, mut f: F) -> Option<Token<'tokens>>
+    where
+        F: FnMut(&Token) -> bool,
+    {
+        if let Some(token) = self.token_cache.take() {
+            if f(&token) {
+                return Some(token);
+            }
+        }
+
+        self.iter.find(f)
+    }
+
     fn parse_plain(&mut self, start_token: Token, cxt: PlainContext) -> Inline {
         let kind = if start_token.is_plain_whitespace() {
             TokenKind::Plain
@@ -94,12 +113,7 @@ impl<'tokens> Parser<'tokens> {
 
                     if cxt.merge_whitespace {
                         // skip other whitespace
-                        while let Some(tkn) = self.next_token() {
-                            if !tkn.is_plain_whitespace() {
-                                self.token_cache = Some(tkn);
-                                break;
-                            }
-                        }
+                        self.token_cache = self.find_token(|token| !token.is_plain_whitespace());
                     }
                 } else {
                     // cache popped token and break
