@@ -461,9 +461,9 @@ impl<'token> TokenIterator<'token> {
         let end_pos = start_pos + SpanLen::from(symbol.len());
 
         let token_kind = if symbol.is_whitespace() {
-            TokenKind::ExplicitWhitespace
+            TokenKind::EscapedWhitespace
         } else {
-            TokenKind::ExplicitNewline
+            TokenKind::EscapedNewline
         };
 
         let token = Token {

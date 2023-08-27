@@ -55,9 +55,9 @@ impl AsSnapshot for Snapshot<&Inline> {
                 Inline::Plain(_)
                     | Inline::Verbatim(_)
                     | Inline::Parentheses(_)
+                    | Inline::EscapedNewline(_)
+                    | Inline::EscapedWhitespace(_)
                     | Inline::Newline(_)
-                    | Inline::Whitespace(_)
-                    | Inline::EndOfLine(_)
             ) {
                 res.push_str("    ");
                 res.push_str(&"^".repeat(self.span().len_grapheme().unwrap_or(1)));

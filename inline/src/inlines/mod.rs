@@ -66,22 +66,22 @@ pub enum Inline {
     /// Verbatim (monospaced) content.
     Verbatim(Verbatim),
 
-    /// Explicit newline.
-    Newline(Newline),
+    /// Escaped newline.
+    EscapedNewline(EscapedNewline),
 
-    /// Explicit whitespace.
-    Whitespace(Whitespace),
+    /// Escaped whitespace.
+    EscapedWhitespace(EscapedWhitespace),
 
     /// End of line (regular newline)
-    EndOfLine(EndOfLine),
+    Newline(Newline),
 
     /// Plain text without any formatting.
     Plain(Plain),
 }
 
 impl Inline {
-    /// Create new [`Inline::Plain`], [`Inline::Multiple`] [`Inline::EndOfLine`] from given content
-    /// depending on the given kind.
+    /// Create new [`Inline::Plain`], [`Inline::Multiple`] or [`Inline::EndOfLine`] from given
+    /// content depending on the given kind.
     ///
     /// # Arguments
     ///
@@ -98,13 +98,15 @@ impl Inline {
     pub fn plain_or_eol(content: impl Into<String>, span: Span, kind: TokenKind) -> Self {
         let content = content.into();
         match kind {
-            TokenKind::Newline => Self::EndOfLine(EndOfLine { content, span }),
+            TokenKind::Newline => Self::Newline(Newline { content, span }),
             TokenKind::Verbatim => Self::Verbatim(Verbatim { content, span }),
             TokenKind::OpenParens | TokenKind::CloseParens => {
                 Self::Parentheses(Parentheses { content, span })
             }
-            TokenKind::ExplicitNewline => Self::Newline(Newline { content, span }),
-            TokenKind::ExplicitWhitespace => Self::Whitespace(Whitespace { content, span }),
+            TokenKind::EscapedNewline => Self::EscapedNewline(EscapedNewline { content, span }),
+            TokenKind::EscapedWhitespace => {
+                Self::EscapedWhitespace(EscapedWhitespace { content, span })
+            }
             _ => Self::Plain(Plain { content, span }),
         }
     }
@@ -137,10 +139,10 @@ impl Inline {
             // These cases should never be reached
             TokenKind::OpenParens
             | TokenKind::Verbatim
-            | TokenKind::ExplicitNewline
+            | TokenKind::EscapedNewline
             | TokenKind::Newline
             | TokenKind::Whitespace
-            | TokenKind::ExplicitWhitespace
+            | TokenKind::EscapedWhitespace
             | TokenKind::Plain
             | TokenKind::UnderlineSubscript
             | TokenKind::ItalicBold
@@ -180,9 +182,9 @@ impl Inline {
             Inline::Multiple(inline) => inline.span = span,
             Inline::Parentheses(inline) => inline.span = span,
             Inline::Verbatim(inline) => inline.span = span,
+            Inline::EscapedNewline(inline) => inline.span = span,
+            Inline::EscapedWhitespace(inline) => inline.span = span,
             Inline::Newline(inline) => inline.span = span,
-            Inline::Whitespace(inline) => inline.span = span,
-            Inline::EndOfLine(inline) => inline.span = span,
             Inline::Plain(inline) => inline.span = span,
         }
     }
@@ -210,9 +212,9 @@ impl Inline {
                 | (TextGroup(_), TextGroup(_))
                 | (Attributes(_), Attributes(_))
                 | (Substitution(_), Substitution(_))
+                | (EscapedNewline(_), EscapedNewline(_))
+                | (EscapedWhitespace(_), EscapedWhitespace(_))
                 | (Newline(_), Newline(_))
-                | (Whitespace(_), Whitespace(_))
-                | (EndOfLine(_), EndOfLine(_))
                 | (Plain(_), Plain(_))
                 | (Multiple(_), Multiple(_))
         )
@@ -240,9 +242,9 @@ impl Inline {
             // String inlines can't merge.
             Inline::Parentheses(_)
             | Inline::Verbatim(_)
+            | Inline::EscapedNewline(_)
+            | Inline::EscapedWhitespace(_)
             | Inline::Newline(_)
-            | Inline::Whitespace(_)
-            | Inline::EndOfLine(_)
             | Inline::Plain(_) => {}
         }
     }
@@ -270,9 +272,9 @@ impl Inline {
             (TextGroup(inline), TextGroup(other)) => inline.append(other),
             (Attributes(inline), Attributes(other)) => inline.append(other),
             (Substitution(inline), Substitution(other)) => inline.append(other),
+            (EscapedNewline(inline), EscapedNewline(other)) => inline.append(other),
+            (EscapedWhitespace(inline), EscapedWhitespace(other)) => inline.append(other),
             (Newline(inline), Newline(other)) => inline.append(other),
-            (Whitespace(inline), Whitespace(other)) => inline.append(other),
-            (EndOfLine(inline), EndOfLine(other)) => inline.append(other),
             (Plain(inline), Plain(other)) => inline.append(other),
             (Multiple(inline), Multiple(other)) => inline.append(other),
             _ => panic!("Cannot merge inlines with different kinds."),
@@ -319,9 +321,9 @@ impl Inline {
 
             Inline::Parentheses(inline) => ContentRef::Plain(inline.inner()),
             Inline::Verbatim(inline) => ContentRef::Plain(inline.inner()),
+            Inline::EscapedNewline(inline) => ContentRef::Plain(inline.inner()),
+            Inline::EscapedWhitespace(inline) => ContentRef::Plain(inline.inner()),
             Inline::Newline(inline) => ContentRef::Plain(inline.inner()),
-            Inline::Whitespace(inline) => ContentRef::Plain(inline.inner()),
-            Inline::EndOfLine(inline) => ContentRef::Plain(inline.inner()),
             Inline::Plain(inline) => ContentRef::Plain(inline.inner()),
         }
     }
@@ -356,9 +358,9 @@ impl Inline {
             Inline::Multiple(inline) => inline.content.len(),
             Inline::Parentheses(inline) => inline.content.len(),
             Inline::Verbatim(inline) => inline.content.len(),
+            Inline::EscapedNewline(inline) => inline.content.len(),
+            Inline::EscapedWhitespace(inline) => inline.content.len(),
             Inline::Newline(inline) => inline.content.len(),
-            Inline::Whitespace(inline) => inline.content.len(),
-            Inline::EndOfLine(inline) => inline.content.len(),
             Inline::Plain(inline) => inline.content.len(),
         }
     }
@@ -385,9 +387,9 @@ impl Inline {
             Inline::Multiple(inline) => inline.span,
             Inline::Parentheses(inline) => inline.span,
             Inline::Verbatim(inline) => inline.span,
+            Inline::EscapedNewline(inline) => inline.span,
+            Inline::EscapedWhitespace(inline) => inline.span,
             Inline::Newline(inline) => inline.span,
-            Inline::Whitespace(inline) => inline.span,
-            Inline::EndOfLine(inline) => inline.span,
             Inline::Plain(inline) => inline.span,
         }
     }
@@ -421,9 +423,9 @@ impl Inline {
             Inline::Multiple(_) => "Multiple",
             Inline::Parentheses(_) => "Parentheses",
             Inline::Verbatim(_) => "Verbatim",
+            Inline::EscapedNewline(_) => "EscapedNewline",
+            Inline::EscapedWhitespace(_) => "EscapedWhitespace",
             Inline::Newline(_) => "Newline",
-            Inline::Whitespace(_) => "Whitespace",
-            Inline::EndOfLine(_) => "EndOfLine",
             Inline::Plain(_) => "Plain",
         }
     }

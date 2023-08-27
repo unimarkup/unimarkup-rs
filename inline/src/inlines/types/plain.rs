@@ -51,9 +51,9 @@ impl_plain_inline!(
     /// Content inside of pair of parentheses.
     Parentheses,
     /// Newline literal.
-    Newline,
+    EscapedNewline,
     /// Any whitespace literal except newline.
-    Whitespace,
+    EscapedWhitespace,
     /// Inline explicitly marking end of line.
-    EndOfLine
+    Newline
 );

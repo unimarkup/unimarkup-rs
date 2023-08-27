@@ -146,9 +146,9 @@ impl<'input> Token<'input> {
             self.kind,
             TokenKind::Plain
                 | TokenKind::Newline
-                | TokenKind::ExplicitNewline
+                | TokenKind::EscapedNewline
                 | TokenKind::Whitespace
-                | TokenKind::ExplicitWhitespace
+                | TokenKind::EscapedWhitespace
         )
     }
 
@@ -407,13 +407,13 @@ pub enum TokenKind {
     Newline,
 
     /// Escaped newline token (`\\n`).
-    ExplicitNewline,
+    EscapedNewline,
 
     /// A single whitespace token (` `).
     Whitespace,
 
     /// Escaped whitespace token (``\ ``).
-    ExplicitWhitespace,
+    EscapedWhitespace,
 
     /// Simple textual token.
     #[default]
@@ -427,8 +427,8 @@ impl TokenKind {
             TokenKind::Bold => "**",
             TokenKind::ItalicBold => "***",
             TokenKind::Italic => "*",
-            TokenKind::Newline | TokenKind::ExplicitNewline => "\n",
-            TokenKind::Whitespace | TokenKind::ExplicitWhitespace => " ",
+            TokenKind::Newline | TokenKind::EscapedNewline => "\n",
+            TokenKind::Whitespace | TokenKind::EscapedWhitespace => " ",
             TokenKind::Underline => "__",
             TokenKind::Subscript => "_",
             TokenKind::Superscript => "^",
@@ -522,9 +522,9 @@ impl From<&Inline> for TokenKind {
             Inline::Parentheses(_) => Self::OpenParens,
             Inline::TextGroup(_) => Self::OpenBracket,
             Inline::Attributes(_) => Self::OpenBrace,
-            Inline::Newline(_) => Self::ExplicitNewline,
-            Inline::Whitespace(_) => Self::ExplicitWhitespace,
-            Inline::EndOfLine(_) => Self::Newline,
+            Inline::EscapedNewline(_) => Self::EscapedNewline,
+            Inline::EscapedWhitespace(_) => Self::EscapedWhitespace,
+            Inline::Newline(_) => Self::Newline,
             Inline::Plain(_) => Self::Plain,
             Inline::Multiple(_) => Self::Plain,
             Inline::Substitution(_) => Self::Substitution,
@@ -616,9 +616,9 @@ impl From<&TokenKind> for TokenDelimiters {
                 close: Some(TokenKind::CloseBrace),
             },
             TokenKind::Newline
-            | TokenKind::ExplicitNewline
+            | TokenKind::EscapedNewline
             | TokenKind::Whitespace
-            | TokenKind::ExplicitWhitespace
+            | TokenKind::EscapedWhitespace
             | TokenKind::Plain => Self {
                 open: TokenKind::Plain,
                 close: Some(TokenKind::Plain),
