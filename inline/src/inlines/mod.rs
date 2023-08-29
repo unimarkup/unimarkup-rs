@@ -80,7 +80,7 @@ pub enum Inline {
 }
 
 impl Inline {
-    /// Create new [`Inline::Plain`], [`Inline::Multiple`] or [`Inline::EndOfLine`] from given
+    /// Create new [`Inline::Plain`], [`Inline::Multiple`] or [`Inline::Newline`] from given
     /// content depending on the given kind.
     ///
     /// # Arguments
@@ -92,9 +92,9 @@ impl Inline {
     /// [`Inline`]: self::Inline
     /// [`Inline::Plain`]: self::Inline::Plain
     /// [`Inline::Multiple`]: self::Inline::Multiple
-    /// [`Inline::EndOfLine`]: self::Inline::EndOfLine
+    /// [`Inline::Newline`]: self::Inline::Newline
     /// [`TokenKind`]: crate::TokenKind
-    /// [`InlineContent`]: self::content::InlineContent
+    /// [`Span`]: unimarkup_commons::scanner::span::Span
     pub fn plain_or_eol(content: impl Into<String>, span: Span, kind: TokenKind) -> Self {
         let content = content.into();
         match kind {

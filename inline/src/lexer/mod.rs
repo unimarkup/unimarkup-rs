@@ -527,8 +527,7 @@ impl<'input> TokenIterator<'input> {
     /// this instance of `TokenIterator`.
     ///
     /// [`Symbol`]: self::Symbol
-    /// [`Token`]: self::token::Token
-    /// [`TokenKind::Plain`]: self::token::TokenKind::Plain
+    /// [`Substitute`]: crate::inlines::Substitute
     fn get_substitute(&self, symbol: &Symbol<'input>) -> Option<Substitute<'input>> {
         if !self.substitutor.is_start_of_substitute(symbol) {
             return None;
