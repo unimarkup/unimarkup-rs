@@ -19,11 +19,10 @@ serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
 once_cell = { workspace = true, optional = true }
-icu_locid = "=1.2.0"
-icu_segmenter = "=1.2.0"
-icu_provider = { version = "=1.2.0" }
-icu_provider_blob = "=1.2.0"
-icu_datagen = { version = "=1.2.5", default-features=false, features = [ "networking" ] }
+icu = "=1.2.0"
+zerovec = "0.9.4"
+icu_provider = "=1.2.0"
+icu_provider_adapters = "=1.2.0"
 regex = { version = "1.8.1", optional = true }
 insta = {version = "1.29.0", features = ["serde"], optional = true}
 

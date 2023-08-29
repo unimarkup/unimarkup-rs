@@ -1,5 +1,5 @@
 pub mod serde {
-    use icu_locid::Locale;
+    use icu::locid::Locale;
     use serde::{Deserialize, Deserializer, Serializer};
 
     pub mod single {
@@ -70,7 +70,7 @@ pub mod serde {
 }
 
 pub mod clap {
-    pub fn parse_locale(input: &str) -> Result<icu_locid::Locale, clap::Error> {
+    pub fn parse_locale(input: &str) -> Result<icu::locid::Locale, clap::Error> {
         input.parse().map_err(|err| {
             clap::Error::raw(
                 clap::error::ErrorKind::InvalidValue,

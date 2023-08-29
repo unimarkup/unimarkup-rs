@@ -1,15 +1,11 @@
 use std::{
     collections::{HashMap, HashSet},
-    fs::File,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use clap::Args;
-use icu_datagen::{all_keys, Out, SourceData};
-use icu_locid::{langid, LanguageIdentifier, Locale};
-
-use icu_provider::{BufferProvider, DataRequest};
-use logid::{err, log_id::LogLevel, logging::event_entry::AddonKind, pipe};
+use icu::locid::Locale;
+use logid::err;
 use serde::{Deserialize, Serialize};
 
 use super::{locale, log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone};
@@ -69,190 +65,9 @@ impl ConfigFns for I18n {
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
-        let mut locales: Vec<_> = std::iter::once(&self.lang)
-            .chain(self.langs.iter())
-            .collect();
-
-        locales.sort_by_key(|locale| locale.to_string());
-        locales.dedup();
-
-        if self.locales_file.is_none() {
-            let allowed_locales = [
-                langid!("en"),
-                langid!("en-US"),
-                langid!("en-UK"),
-                langid!("de"),
-                langid!("de-DE"),
-                langid!("de-AT"),
-                langid!("bs"),
-                langid!("bs-BA"),
-            ];
-
-            if !locales
-                .iter()
-                .all(|langid| allowed_locales.contains(&langid.id))
-            {
-                return err!(
-                    ConfigErr::BadLocaleUsed,
-                    format!(
-                        "{} locale(s) not supported by default. Only the following locales are allowed: {}.",
-                        locales
-                            .iter()
-                            .filter(|l| !allowed_locales.contains(&l.id))
-                            .map(|langid| langid.to_string())
-                            .collect::<Vec<_>>()
-                            .join(", "),
-                        allowed_locales
-                            .iter()
-                            .map(|langid| langid.to_string())
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    ),
-                    add: AddonKind::Info(
-                        String::from(
-                            "Use --locales-file (and --download-locales) when using non-default locales."
-                        )
-                    )
-                );
-            }
-        }
-
-        let blob = self.get_blob();
-
-        // check if it loads
-        let provider =
-            icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice())
-                .map_err(|_| {
-                    pipe!(
-                        ConfigErr::InvalidFile,
-                        format!(
-                            "Failed to read locales file: {}",
-                            self.locales_file.as_ref().unwrap().to_string_lossy()
-                        )
-                    )
-                })?;
-
-        let key = icu_datagen::key("decimal/symbols@1").expect("decimal/symbols@1 is a valid key.");
-        for locale in locales {
-            let req = DataRequest {
-                locale: &(locale).into(),
-                metadata: Default::default(),
-            };
-
-            if provider.load_buffer(key, req).is_err() {
-                logid::log!(
-                    logid::new_log_id!("LocaleKeyMissing", LogLevel::Debug),
-                    add: AddonKind::Debug(
-                        format!(
-                            "Locale {} is not contained in the given locales file. Using fallback locale '{}'.",
-                            locale,
-                            locale.id.language
-                        )
-                    )
-                );
-
-                let locale = &Locale::from(locale.id.language).into();
-                let req = DataRequest {
-                    locale,
-                    metadata: Default::default(),
-                };
-                provider.load_buffer(key, req).map_err(|err| {
-                    pipe!(
-                        ConfigErr::BadLocaleUsed,
-                        format!(
-                            "Could not find locale '{}' in data file. Cause: {}",
-                            locale, err
-                        )
-                    )
-                })?;
-            }
-        }
+        // Note: Validity of locales is already ensured by `parse_locale`.
 
         Ok(())
-    }
-}
-
-impl I18n {
-    pub(crate) fn get_blob(&self) -> Vec<u8> {
-        let mut locales: Vec<_> = std::iter::once(&self.lang)
-            .chain(self.langs.iter())
-            .map(|lang| lang.id.clone())
-            .collect();
-
-        // extend with languages without region. Example: bs-BA -> bs
-        locales.extend(
-            locales
-                .clone()
-                .iter()
-                .map(|locale| LanguageIdentifier::from(locale.language)),
-        );
-
-        locales.sort_by_key(LanguageIdentifier::to_string);
-        locales.dedup();
-
-        let blob = 'find_file: {
-            if let Some(file_path) = &self.locales_file {
-                if !file_path.exists()
-                    && self.download
-                    && self.try_download_icu_file(file_path, &locales).is_err()
-                {
-                    break 'find_file None;
-                }
-
-                match std::fs::read(file_path) {
-                    Ok(file) => break 'find_file Some(file),
-                    Err(err) => {
-                        logid::log!(
-                            ConfigErr::InvalidFile,
-                            format!(
-                                "Locales file not found: {}. Cause: {}. Using default locales file.",
-                                file_path.to_string_lossy(),
-                                err
-                            )
-                        );
-                        break 'find_file None;
-                    }
-                }
-            }
-
-            None
-        };
-
-        blob.unwrap_or_else(|| Vec::from(include_bytes!("../../locale/data.postcard").as_slice()))
-    }
-
-    fn try_download_icu_file(
-        &self,
-        file_path: impl AsRef<Path>,
-        locales: &[LanguageIdentifier],
-    ) -> Result<(), ConfigErr> {
-        let f = File::create(&file_path).map_err(|_| {
-            pipe!(
-                ConfigErr::FileCreate,
-                format!(
-                    "Failed to create locales file: {}",
-                    file_path.as_ref().to_string_lossy()
-                )
-            )
-        })?;
-
-        let out = vec![Out::Blob(Box::new(f))];
-        icu_datagen::datagen(
-            Some(locales),
-            &all_keys(),
-            &SourceData::latest_tested(),
-            out,
-        )
-        .map_err(|err| {
-            pipe!(
-                ConfigErr::LocaleDownload,
-                format!(
-                    "Failed to download locales file: {}. Cause: {}",
-                    file_path.as_ref().to_string_lossy(),
-                    err,
-                )
-            )
-        })
     }
 }
 
