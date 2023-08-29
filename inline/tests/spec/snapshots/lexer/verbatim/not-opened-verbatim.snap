@@ -1,0 +1,26 @@
+---
+source: inline/tests/lexer/mod.rs
+info: "Test 'not-opened-verbatim' from 'verbatim.yml'"
+---
+` not verbatim`
+`
+^ -> Plain @ (1:1)->(1:2)
+  
+ ^ -> Whitespace @ (1:2)->(1:3)
+  not
+  ^^^ -> Plain @ (1:3)->(1:6)
+      
+     ^ -> Whitespace @ (1:6)->(1:7)
+      verbatim
+      ^^^^^^^^ -> Plain @ (1:7)->(1:15)
+              `
+              ^ -> Plain @ (1:15)->(1:16)
+               ⏎
+               ^ -> Newline @ (1:16)->(2:1)
+
+---
+With input:
+
+` not verbatim`
+
+

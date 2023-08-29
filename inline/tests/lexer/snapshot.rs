@@ -1,9 +1,9 @@
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
 use unimarkup_inline::{Token, TokenKind, Tokens};
 
-use crate::Snapshot;
+use crate::snapshot::Snapshot;
 
-impl AsSnapshot for Snapshot<(&str, Tokens)> {
+impl AsSnapshot for Snapshot<(&str, Tokens<'_>)> {
     fn as_snapshot(&self) -> String {
         let input = (self.0).0;
         let mut lines = input.lines();
@@ -34,7 +34,7 @@ impl AsSnapshot for Snapshot<(&str, Tokens)> {
     }
 }
 
-impl AsSnapshot for Snapshot<Token> {
+impl AsSnapshot for Snapshot<Token<'_>> {
     fn as_snapshot(&self) -> String {
         let span = self.0.span();
 
@@ -43,9 +43,19 @@ impl AsSnapshot for Snapshot<Token> {
         // only newline token spans 2 lines, should not be the case for others!
 
         let inner = match self.as_str() {
-            "\n" => "\u{23CE}",
+            "\n" => Self::NEWLINE_SYBMOL,
             other => other,
         };
+
+        if span.len_utf8().unwrap_or(1).saturating_sub(inner.len()) == 1 {
+            // Some tokens occupy more characters in text (e.g.the backslash and symbol) than what's
+            // being rendered in the output. In such cases, span is longer than the actual content
+            // by a single character.
+            // e.g. content like "\*" will be rendered as "␢*" in snapshots to indicate the
+            // backslash escape.
+            content.push_str(Self::BLANK_SYMBOL);
+        }
+
         content.push_str(inner);
         content.push('\n');
         content.push_str(&indent);
@@ -86,10 +96,11 @@ impl AsSnapshot for Snapshot<TokenKind> {
             TokenKind::OpenBrace => "OpenBrace",
             TokenKind::CloseBrace => "CloseBrace",
             TokenKind::Substitution => "Substitution",
+            TokenKind::EscapedNewline => "EscapedNewline",
             TokenKind::Newline => "Newline",
-            TokenKind::EndOfLine => "EndOfLine",
-            TokenKind::Whitespace => "Whitespace",
+            TokenKind::EscapedWhitespace => "EscapedWhitespace",
             TokenKind::Plain => "Plain",
+            TokenKind::Whitespace => "Whitespace",
         };
 
         string.into()

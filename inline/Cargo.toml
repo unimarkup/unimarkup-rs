@@ -11,6 +11,11 @@ license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[test]]
+name="unimarkup-inline"
+path="tests/mod.rs"
+harness=false
+
 [dependencies]
 logid.workspace = true
 unimarkup-commons = { path = "../commons/", version = "0" }
@@ -20,3 +25,4 @@ unicode-segmentation = "1.8.0"
 unimarkup-commons = { path ="../commons/", version = "0", features = ["test_runner"] }
 serde.workspace = true
 serde_yaml.workspace = true
+libtest-mimic = "0.6.1"

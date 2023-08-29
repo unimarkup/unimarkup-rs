@@ -39,6 +39,9 @@ impl AsSnapshot for Snapshot<&Position> {
 }
 
 impl<T> Snapshot<T> {
+    pub const NEWLINE_SYBMOL: &'static str = "\u{23CE}";
+    pub const BLANK_SYMBOL: &'static str = "\u{2422}";
+
     pub fn snap(inner: T) -> String
     where
         Snapshot<T>: AsSnapshot,

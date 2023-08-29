@@ -1,0 +1,28 @@
+---
+source: inline/tests/lexer/mod.rs
+info: "Test 'verbatim-not-verbatim' from 'verbatim.yml'"
+---
+`Verbatim` not verbatim.
+`
+^ -> Verbatim @ (1:1)->(1:2)
+ Verbatim
+ ^^^^^^^^ -> Plain @ (1:2)->(1:10)
+         `
+         ^ -> Verbatim @ (1:10)->(1:11)
+           
+          ^ -> Whitespace @ (1:11)->(1:12)
+           not
+           ^^^ -> Plain @ (1:12)->(1:15)
+               
+              ^ -> Whitespace @ (1:15)->(1:16)
+               verbatim.
+               ^^^^^^^^^ -> Plain @ (1:16)->(1:25)
+                        ⏎
+                        ^ -> Newline @ (1:25)->(2:1)
+
+---
+With input:
+
+`Verbatim` not verbatim.
+
+

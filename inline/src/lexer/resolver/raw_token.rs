@@ -1,7 +1,5 @@
 use std::ops::Not;
 
-use unimarkup_commons::scanner::span::Span;
-
 use crate::{Spacing, SpanExt, Token, TokenKind};
 
 // Token can either be opening one, closing one, or neither
@@ -21,14 +19,14 @@ impl Not for Resolved {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct RawToken {
-    pub(crate) token: Token,
+pub(crate) struct RawToken<'input> {
+    pub(crate) token: Token<'input>,
     pub(crate) state: Resolved,
-    pub(crate) tail: Option<Box<RawToken>>,
+    pub(crate) tail: Option<Box<RawToken<'input>>>,
 }
 
-impl RawToken {
-    pub(crate) fn new(token: Token) -> Self {
+impl<'input> RawToken<'input> {
+    pub(crate) fn new(token: Token<'input>) -> Self {
         Self {
             token,
             state: Resolved::Neither,
@@ -47,7 +45,7 @@ impl RawToken {
         }
     }
 
-    pub(crate) fn pop(&mut self) -> Option<RawToken> {
+    pub(crate) fn pop(&mut self) -> Option<RawToken<'input>> {
         // moves the next token to `tail` so it can be taken
         self.order();
 
@@ -70,14 +68,7 @@ impl RawToken {
     }
 
     pub(crate) fn split_ambiguous(&mut self) {
-        let mut token = Token {
-            kind: TokenKind::Plain,
-            span: Span::default(),
-            spacing: Spacing::default(),
-            content: None,
-        };
-
-        std::mem::swap(&mut self.token, &mut token);
+        let token = std::mem::take(&mut self.token);
 
         let (first, second) = token.split_ambiguous();
         self.token = first;
@@ -104,13 +95,14 @@ impl RawToken {
     }
 }
 
-impl From<RawToken> for Token {
-    fn from(unr_token: RawToken) -> Self {
+impl<'token> From<RawToken<'token>> for Token<'token> {
+    fn from(unr_token: RawToken<'token>) -> Self {
         let mut token = unr_token.token;
 
         token.spacing = Spacing::from(unr_token.state);
         if !token.kind.is_parenthesis() && token.is_nesting_token() && !unr_token.state {
-            token.content = Some(token.as_str().to_string());
+            let content_str = token.as_str();
+            token.content = Some(content_str);
             token.kind = TokenKind::Plain;
         }
 

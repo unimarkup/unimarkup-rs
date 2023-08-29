@@ -1,9 +1,10 @@
 ---
 source: inline/tests/parser/mod.rs
-info: "Test 'simple-plain' from: 'plain.yml'"
+info: "Test 'simple-plain' from 'plain.yml'"
 ---
 Plain @ (1:1)->(1:13) (
     Simple text.
+    ^^^^^^^^^^^^
 )
 
 ---

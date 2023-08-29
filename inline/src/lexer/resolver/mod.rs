@@ -65,14 +65,14 @@ impl TokenMap {
 /// stored into token's tail.
 /// - Every time a token pair is matched, all non-resolved tokens between them are marked as plain
 #[derive(Debug, Clone)]
-pub(crate) struct TokenResolver {
+pub(crate) struct TokenResolver<'token> {
     curr_scope: usize,
     interrupted: Vec<Range<usize>>,
-    pub(crate) tokens: Vec<RawToken>,
+    pub(crate) tokens: Vec<RawToken<'token>>,
 }
 
-impl TokenResolver {
-    pub(crate) fn new(iter: TokenIterator<'_>) -> Self {
+impl<'token> TokenResolver<'token> {
+    pub(crate) fn new(iter: TokenIterator<'token>) -> Self {
         let mut new = Self {
             curr_scope: 0,
             interrupted: Vec::default(),
@@ -120,7 +120,7 @@ impl TokenResolver {
         // 3. current NOT ambiguous, there is unresolved one that IS NOT ambiguous: (simple, simple)
         // 4. current NOT ambiguous, there is unresolved one that IS ambiguous (ambiguous, simple)
 
-        if self.tokens[index].token.closes() {
+        if self.tokens[index].token.closes(None) {
             if self.tokens[index].token.is_ambiguous() {
                 return self.resolve_compound_token(token_map, index);
             } else {
@@ -235,7 +235,7 @@ impl TokenResolver {
         &mut self,
         indices: &Indices,
         curr_idx: usize,
-    ) -> Option<(&mut RawToken, usize, usize)> {
+    ) -> Option<(&mut RawToken<'token>, usize, usize)> {
         // find first unresolved token
         for (i, idx) in indices.iter().enumerate() {
             let curr_token = &self.tokens[curr_idx];
@@ -253,7 +253,7 @@ impl TokenResolver {
         None
     }
 
-    pub(crate) fn into_iter(self) -> IntoIter {
+    pub(crate) fn into_iter(self) -> IntoIter<'token> {
         IntoIter {
             iter: self.tokens.into_iter(),
         }
@@ -261,12 +261,12 @@ impl TokenResolver {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct IntoIter {
-    iter: vec::IntoIter<RawToken>,
+pub(crate) struct IntoIter<'token> {
+    iter: vec::IntoIter<RawToken<'token>>,
 }
 
-impl Iterator for IntoIter {
-    type Item = RawToken;
+impl<'token> Iterator for IntoIter<'token> {
+    type Item = RawToken<'token>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()

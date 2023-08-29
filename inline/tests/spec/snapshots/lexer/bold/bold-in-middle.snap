@@ -1,0 +1,36 @@
+---
+source: inline/tests/lexer/mod.rs
+info: "Test 'bold-in-middle' from 'bold.yml'"
+---
+The next **word** is bold.
+The
+^^^ -> Plain @ (1:1)->(1:4)
+    
+   ^ -> Whitespace @ (1:4)->(1:5)
+    next
+    ^^^^ -> Plain @ (1:5)->(1:9)
+         
+        ^ -> Whitespace @ (1:9)->(1:10)
+         **
+         ^^ -> Bold @ (1:10)->(1:12)
+           word
+           ^^^^ -> Plain @ (1:12)->(1:16)
+               **
+               ^^ -> Bold @ (1:16)->(1:18)
+                  
+                 ^ -> Whitespace @ (1:18)->(1:19)
+                  is
+                  ^^ -> Plain @ (1:19)->(1:21)
+                     
+                    ^ -> Whitespace @ (1:21)->(1:22)
+                     bold.
+                     ^^^^^ -> Plain @ (1:22)->(1:27)
+                          ⏎
+                          ^ -> Newline @ (1:27)->(2:1)
+
+---
+With input:
+
+The next **word** is bold.
+
+

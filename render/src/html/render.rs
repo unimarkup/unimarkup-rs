@@ -1,3 +1,5 @@
+use unimarkup_inline::types::*;
+
 use crate::render::{Context, Renderer};
 
 use super::{
@@ -71,10 +73,10 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_bold(
         &mut self,
-        bold: &unimarkup_inline::NestedContent,
+        bold: &Bold,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let inner = self.render_nested_inline(bold, context)?;
+        let inner = self.render_nested_inline(bold.inner(), context)?;
 
         Ok(Html::nested(
             HtmlTag::Strong,
@@ -85,20 +87,20 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_italic(
         &mut self,
-        italic: &unimarkup_inline::NestedContent,
+        italic: &Italic,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let inner = self.render_nested_inline(italic, context)?;
+        let inner = self.render_nested_inline(italic.inner(), context)?;
 
         Ok(Html::nested(HtmlTag::Em, HtmlAttributes::default(), inner))
     }
 
     fn render_underline(
         &mut self,
-        underline: &unimarkup_inline::NestedContent,
+        underline: &Underline,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let inner = self.render_nested_inline(underline, context)?;
+        let inner = self.render_nested_inline(underline.inner(), context)?;
         let mut attributes = HtmlAttributes::default();
         attributes.push(HtmlAttribute {
             name: "style".to_string(),
@@ -110,30 +112,30 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_subscript(
         &mut self,
-        subscript: &unimarkup_inline::NestedContent,
+        subscript: &Subscript,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let inner = self.render_nested_inline(subscript, context)?;
+        let inner = self.render_nested_inline(subscript.inner(), context)?;
 
         Ok(Html::nested(HtmlTag::Sub, HtmlAttributes::default(), inner))
     }
 
     fn render_superscript(
         &mut self,
-        superscript: &unimarkup_inline::NestedContent,
+        superscript: &Superscript,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let inner = self.render_nested_inline(superscript, context)?;
+        let inner = self.render_nested_inline(superscript.inner(), context)?;
 
         Ok(Html::nested(HtmlTag::Sup, HtmlAttributes::default(), inner))
     }
 
     fn render_overline(
         &mut self,
-        overline: &unimarkup_inline::NestedContent,
+        overline: &Overline,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let inner = self.render_nested_inline(overline, context)?;
+        let inner = self.render_nested_inline(overline.inner(), context)?;
         let mut attributes = HtmlAttributes::default();
         attributes.push(HtmlAttribute {
             name: "style".to_string(),
@@ -145,10 +147,10 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_strikethrough(
         &mut self,
-        strikethrough: &unimarkup_inline::NestedContent,
+        strikethrough: &Strikethrough,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let inner = self.render_nested_inline(strikethrough, context)?;
+        let inner = self.render_nested_inline(strikethrough.inner(), context)?;
         let mut attributes = HtmlAttributes::default();
         attributes.push(HtmlAttribute {
             name: "style".to_string(),
@@ -160,10 +162,10 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_highlight(
         &mut self,
-        highlight: &unimarkup_inline::NestedContent,
+        highlight: &Highlight,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let inner = self.render_nested_inline(highlight, context)?;
+        let inner = self.render_nested_inline(highlight.inner(), context)?;
 
         Ok(Html::nested(
             HtmlTag::Mark,
@@ -174,23 +176,23 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_quote(
         &mut self,
-        quote: &unimarkup_inline::NestedContent,
+        quote: &Quote,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let inner = self.render_nested_inline(quote, context)?;
+        let inner = self.render_nested_inline(quote.inner(), context)?;
 
         Ok(Html::nested(HtmlTag::Q, HtmlAttributes::default(), inner))
     }
 
     fn render_inline_verbatim(
         &mut self,
-        verbatim: &unimarkup_inline::PlainContent,
+        verbatim: &Verbatim,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::Code,
             attributes: HtmlAttributes::default(),
-            content: Some(verbatim.as_string()),
+            content: Some(verbatim.inner().to_string()),
         }));
 
         Ok(html)
@@ -198,13 +200,13 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_plain(
         &mut self,
-        plain: &unimarkup_inline::PlainContent,
+        plain: &Plain,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::PlainContent,
             attributes: HtmlAttributes::default(),
-            content: Some(plain.as_string()),
+            content: Some(plain.inner().to_string()),
         }));
 
         Ok(html)
