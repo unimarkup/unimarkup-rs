@@ -48,9 +48,11 @@ impl AsSnapshot for Snapshot<Token<'_>> {
         };
 
         if span.len_utf8().unwrap_or(1).saturating_sub(inner.len()) == 1 {
-            // escaped token's occupy two characters in text (the backslash and symbol). In such
-            // cases, span is longer than the actual content by a single character.
-            // Push content to the right "\*" will be rendered as " *"
+            // Some tokens occupy more characters in text (e.g.the backslash and symbol) than what's
+            // being rendered in the output. In such cases, span is longer than the actual content
+            // by a single character.
+            // e.g. content like "\*" will be rendered as "␢*" in snapshots to indicate the
+            // backslash escape.
             content.push_str(Self::BLANK_SYMBOL);
         }
 
