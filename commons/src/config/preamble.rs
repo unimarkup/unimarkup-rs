@@ -50,18 +50,12 @@ pub struct I18n {
 
     #[arg(long, value_parser = parse_to_hashset::<Locale>, required = false, default_value = "")]
     #[serde(with = "locale::serde::multiple")]
-    pub langs: HashSet<Locale>,
-
-    #[arg(long = "locales-file")]
-    pub locales_file: Option<PathBuf>,
-
-    #[arg(long = "download-locales")]
-    pub download: bool,
+    pub output_langs: HashSet<Locale>,
 }
 
 impl ConfigFns for I18n {
     fn merge(&mut self, other: Self) {
-        self.langs.extend(other.langs.into_iter());
+        self.output_langs.extend(other.output_langs.into_iter());
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
