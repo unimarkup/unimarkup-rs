@@ -161,7 +161,7 @@ impl MainParser {
 pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let parser = MainParser::default();
 
-    let symbols = Scanner::try_new(config.icu_provider())
+    let symbols = Scanner::try_new()
         .expect("Must be valid provider.")
         .scan_str(um_content);
 

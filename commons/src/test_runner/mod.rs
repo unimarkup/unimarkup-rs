@@ -1,7 +1,4 @@
-use crate::{
-    config::Config,
-    scanner::{Scanner, Symbol},
-};
+use crate::scanner::{Scanner, Symbol};
 
 pub mod as_snapshot;
 pub mod snap_test_runner;
@@ -10,11 +7,8 @@ pub mod test_file;
 
 pub use insta;
 
-/// Scans the string using Scanner with icu_provider constructed from default
-/// icu locale data.
+/// Scans the string using the [`Scanner`] struct.
 pub fn scan_str(input: &str) -> Vec<Symbol> {
-    let cfg = Config::default();
-
-    let scanner = Scanner::try_new(cfg.icu_provider()).unwrap();
+    let scanner = Scanner::try_new().unwrap();
     scanner.scan_str(input)
 }

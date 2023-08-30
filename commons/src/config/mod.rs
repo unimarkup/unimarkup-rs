@@ -1,13 +1,12 @@
 use std::{collections::HashSet, path::PathBuf};
 
 use clap::{crate_authors, Args, Parser};
-use icu_provider::BufferProvider;
-use logid::{err, pipe};
+use logid::err;
 use serde::{Deserialize, Serialize};
 
 use self::{log_id::ConfigErr, output::Output, preamble::Preamble};
 
-pub use icu_locid as locid;
+pub use icu::locid;
 
 pub mod locale;
 pub mod log_id;
@@ -78,25 +77,6 @@ impl ConfigFns for Config {
         }
 
         Ok(())
-    }
-}
-
-impl Config {
-    pub fn icu_provider(&self) -> impl BufferProvider {
-        let blob = self.preamble.i18n.get_blob();
-        let locales_file = &self.preamble.i18n.locales_file;
-
-        icu_provider_blob::BlobDataProvider::try_new_from_blob(blob.into_boxed_slice())
-            .map_err(|_| {
-                pipe!(
-                    ConfigErr::InvalidFile,
-                    format!(
-                        "Failed to read locales file: {:?}",
-                        locales_file.as_ref().map(|p| p.to_string_lossy())
-                    )
-                )
-            })
-            .expect("There must exist fallback icu data compatible with provider.")
     }
 }
 

@@ -4,49 +4,27 @@ pub mod position;
 pub mod span;
 mod symbol;
 
-use icu_provider::{AnyProvider, BufferProvider};
-use icu_segmenter::{GraphemeClusterSegmenter, SegmenterError};
+use icu::segmenter::{GraphemeClusterSegmenter, SegmenterError};
+use icu_provider_adapters::fallback::LocaleFallbackProvider;
 use position::{Offset, Position};
 pub use symbol::{Symbol, SymbolKind};
 
+#[derive(Debug, Clone)]
+struct IcuDataProvider;
+// Generated using: `icu4x-datagen --keys-for-bin .\target\debug\unimarkup.exe --locales full --format mod --out .\commons\src\scanner\icu_data`
+// Note: Run `cargo build` before re-generating the data to ensure the newest binary is inspected by icu4x-datagen.
+include!("./icu_data/mod.rs");
+impl_data_provider!(IcuDataProvider);
+
 #[derive(Debug)]
-pub struct Scanner<P> {
-    provider: P,
+pub struct Scanner {
+    provider: LocaleFallbackProvider<IcuDataProvider>,
     segmenter: GraphemeClusterSegmenter,
 }
 
-impl<P> Scanner<P> {
-    pub fn try_new(provider: P) -> Result<Self, SegmenterError>
-    where
-        P: BufferProvider,
-    {
-        let segmenter = GraphemeClusterSegmenter::try_new_with_buffer_provider(&provider)?;
-
-        Ok(Self {
-            provider,
-            segmenter,
-        })
-    }
-
-    pub fn try_new_with_any(provider: P) -> Result<Self, SegmenterError>
-    where
-        P: AnyProvider,
-    {
-        let segmenter = GraphemeClusterSegmenter::try_new_with_any_provider(&provider)?;
-
-        Ok(Self {
-            provider,
-            segmenter,
-        })
-    }
-}
-
-impl<P> Clone for Scanner<P>
-where
-    P: Clone + BufferProvider,
-{
+impl Clone for Scanner {
     fn clone(&self) -> Self {
-        let segmenter = GraphemeClusterSegmenter::try_new_with_buffer_provider(&self.provider)
+        let segmenter = GraphemeClusterSegmenter::try_new_unstable(&self.provider)
             .expect("Provider is valid at this point.");
 
         Self {
@@ -56,7 +34,18 @@ where
     }
 }
 
-impl<P> Scanner<P> {
+impl Scanner {
+    pub fn try_new() -> Result<Self, SegmenterError> {
+        let icu_data_provider = IcuDataProvider;
+        let fallback_provider = LocaleFallbackProvider::try_new_unstable(icu_data_provider)?;
+        let segmenter = GraphemeClusterSegmenter::try_new_unstable(&fallback_provider)?;
+
+        Ok(Self {
+            provider: fallback_provider,
+            segmenter,
+        })
+    }
+
     pub fn scan_str<'s>(&self, input: &'s str) -> Vec<Symbol<'s>> {
         let mut symbols: Vec<Symbol> = Vec::new();
         let mut curr_pos: Position = Position::default();
