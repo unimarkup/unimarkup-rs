@@ -85,8 +85,12 @@ impl ElementParser for Verbatim {
     }
 
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
-        let Token::Delimiter { line } = input.get(0)? else {return None};
-        let Token::Content(symbols) = input.get(1)? else { return None };
+        let Token::Delimiter { line } = input.get(0)? else {
+            return None;
+        };
+        let Token::Content(symbols) = input.get(1)? else {
+            return None;
+        };
         let content = Symbol::flatten(symbols)?;
 
         let block = Self {

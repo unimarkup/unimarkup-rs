@@ -158,8 +158,12 @@ impl ElementParser for Heading {
     }
 
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
-        let HeadingToken::Level(level) = input[0] else {return None};
-        let HeadingToken::Content(symbols) = input[1] else {return None};
+        let HeadingToken::Level(level) = input[0] else {
+            return None;
+        };
+        let HeadingToken::Content(symbols) = input[1] else {
+            return None;
+        };
         let inline_start = symbols.get(0)?.start;
 
         let content = symbols.parse_inlines().collect();

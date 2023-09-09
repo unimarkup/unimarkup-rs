@@ -11,15 +11,13 @@ mod snapshot;
 
 macro_rules! test_fn {
     ($fn: path) => {{
-        let try_run = 
-        ::std::panic::catch_unwind($fn)
-            .map_err(|err| {
-                let panic_msg = err
-                    .downcast_ref::<&str>()
-                    .unwrap_or(&"Panic message not available");
+        let try_run = ::std::panic::catch_unwind($fn).map_err(|err| {
+            let panic_msg = err
+                .downcast_ref::<&str>()
+                .unwrap_or(&"Panic message not available");
 
-                format!("Test case panicked: {}", panic_msg).into()
-            });
+            format!("Test case panicked: {}", panic_msg).into()
+        });
 
         libtest_mimic::Trial::test(stringify!($fn), || try_run)
     }};
