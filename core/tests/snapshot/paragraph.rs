@@ -1,4 +1,4 @@
-use crate::test_runner::Snapshot;
+use super::Snapshot;
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
 use unimarkup_parser::elements::atomic::Paragraph;
 

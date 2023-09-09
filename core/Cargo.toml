@@ -11,6 +11,11 @@ license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[test]]
+name="unimarkup-core"
+path="tests/mod.rs"
+harness=false
+
 [dependencies]
 logid.workspace = true
 thiserror.workspace = true
@@ -20,3 +25,4 @@ unimarkup-render = { path = "../render/", version = "0" }
 
 [dev-dependencies]
 unimarkup-commons = { path ="../commons/", version = "0", features = ["test_runner"] }
+libtest-mimic = "0.6.1"
