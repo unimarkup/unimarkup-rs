@@ -49,11 +49,9 @@ pub fn collect_entries(path: impl AsRef<Path>, ext: &str) -> std::io::Result<Vec
 ///
 /// # Arguments
 ///
-/// * `out_folder` - The folder to write the snapshots to, relative to the `tests` folder.
-/// * `test_file` - The path to the input test file relative to the `tests` folder. Path will be
-///    generated with the help of `test_file`'s name.
-/// * `subfolder` - The subfolder of the `parent_folder` which contains all test files. Path
-///    following this subfolder will be included in the generated output path.
+/// * `out_folder` - The folder to write the snapshots to.
+/// * `test_file` - The path to the input test file. Path will be generated with the help of
+///   `test_file`'s name.
 /// * `separator` - component of the `test_file` [`Path`], after which all the components of that
 ///    path will be included in the generated output path.
 ///
