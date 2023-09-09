@@ -25,16 +25,15 @@ macro_rules! test_fn {
 
 fn main() {
     let args = libtest_mimic::Arguments::from_args();
-    let snap_tests = blocks::test_block_snapshots();
 
-    let mut tests = snap_tests;
-    tests.append(&mut collect_tests());
+    let mut tests = blocks::test_block_snapshots();
+    tests.extend(collect_tests());
 
     libtest_mimic::run(&args, tests).exit();
 }
 
-fn collect_tests() -> Vec<libtest_mimic::Trial> {
-    vec![
+fn collect_tests() -> impl IntoIterator<Item = libtest_mimic::Trial> {
+    [
         test_fn!(general::metadata::test__metadata__create_from_memory),
         test_fn!(general::unimarkup::compile_empty_content),
     ]
