@@ -112,7 +112,7 @@ where
             format!("HashSet conversion failed with: {:?}", err),
         )
     });
-    Ok(HashSet::from_iter(entries?.into_iter()))
+    Ok(HashSet::from_iter(entries?))
 }
 
 // Define extension trait
