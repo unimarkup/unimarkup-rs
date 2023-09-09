@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 mod lexer;
 mod parser;
 mod snapshot;
@@ -18,14 +16,4 @@ fn main() {
     tests.append(&mut parser_tests);
 
     libtest_mimic::run(&args, tests).exit();
-}
-
-/// Returns the absolute path to the integration `tests` folder.
-pub fn tests_path() -> PathBuf {
-    let curr = std::env!("CARGO_MANIFEST_DIR");
-
-    let mut buf = PathBuf::from(curr);
-    buf.push("tests");
-
-    buf
 }

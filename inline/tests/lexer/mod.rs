@@ -9,7 +9,7 @@ use crate::snapshot::Snapshot;
 mod snapshot;
 
 pub fn test_lexer_snapshots() -> Vec<Trial> {
-    let tests_path = crate::tests_path();
+    let tests_path = unimarkup_commons::crate_tests_path!();
     let test_cases = test_runner::collect_tests(
         tests_path.join("spec/markup"),
         tests_path.join("spec/snapshots/lexer"),

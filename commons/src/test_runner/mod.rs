@@ -130,3 +130,16 @@ pub fn collect_tests(
 
     cases.collect()
 }
+
+/// Returns the absolute path to the integration `tests` folder of the crate it's called from.
+#[macro_export]
+macro_rules! crate_tests_path {
+    () => {{
+        let curr = ::std::env!("CARGO_MANIFEST_DIR");
+
+        let mut buf = std::path::PathBuf::from(curr);
+        buf.push("tests");
+
+        buf
+    }};
+}
