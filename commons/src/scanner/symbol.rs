@@ -21,8 +21,12 @@ pub enum SymbolKind {
     EOI,
     /// The backslash (`\`) is used for escaping other symbols.
     Backslash,
-    /// The star (`*`) literal is used for bold and/or italic formatting.
+    /// The star (`*`) literal is used for various elements.
     Star,
+    /// The minus (`-`) literal is used for various elements.
+    Minus,
+    /// The plus (`+`) literal is used for various elements.
+    Plus,
     /// The underline (`_`) literal is used for underline and/or subscript formatting.
     Underline,
     /// The caret (`^`) literal is used for superscript formatting.
@@ -125,6 +129,8 @@ impl Symbol<'_> {
             SymbolKind::EOI => "",
             SymbolKind::Backslash => "\\",
             SymbolKind::Star => "*",
+            SymbolKind::Minus => "-",
+            SymbolKind::Plus => "+",
             SymbolKind::Underline => "_",
             SymbolKind::Caret => "^",
             SymbolKind::Overline => "‾",
@@ -205,6 +211,8 @@ impl From<&str> for SymbolKind {
             "`" => SymbolKind::Tick,
             "\\" => SymbolKind::Backslash,
             "*" => SymbolKind::Star,
+            "-" => SymbolKind::Minus,
+            "+" => SymbolKind::Plus,
             "_" => SymbolKind::Underline,
             "^" => SymbolKind::Caret,
             "‾" => SymbolKind::Overline,
