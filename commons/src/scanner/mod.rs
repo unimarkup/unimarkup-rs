@@ -7,7 +7,7 @@ mod symbol;
 use icu::segmenter::{GraphemeClusterSegmenter, SegmenterError};
 use icu_provider_adapters::fallback::LocaleFallbackProvider;
 use position::{Offset, Position};
-pub use symbol::{Symbol, SymbolKind};
+pub use symbol::{iterator::*, Symbol, SymbolKind};
 
 #[derive(Debug, Clone)]
 struct IcuDataProvider;

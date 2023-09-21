@@ -4,7 +4,7 @@ use unimarkup_inline::{Inline, ParseInlines};
 use crate::elements::blocks::Block;
 use crate::elements::Blocks;
 use crate::parser::{ElementParser, TokenizeOutput};
-use unimarkup_commons::scanner::{Symbol, SymbolKind};
+use unimarkup_commons::scanner::{Symbol, SymbolIterator, SymbolKind};
 
 use super::log_id::AtomicError;
 
@@ -112,7 +112,7 @@ pub enum HeadingToken<'a> {
     Level(HeadingLevel),
 
     /// Content of the heading
-    Content(&'a [Symbol<'a>]),
+    Content(Vec<&'a Symbol<'a>>),
 
     /// Marks the end of the heading
     End,
@@ -121,37 +121,55 @@ pub enum HeadingToken<'a> {
 impl ElementParser for Heading {
     type Token<'a> = self::HeadingToken<'a>;
 
-    fn tokenize<'i>(input: &'i [Symbol<'i>]) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
-        let mut level_depth = input
-            .iter()
+    fn tokenize<'i>(
+        mut input: SymbolIterator<'i, '_>,
+    ) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
+        let mut heading_start: Vec<SymbolKind> = input
+            .by_ref()
             .take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
-            .count();
+            .map(|s| s.kind)
+            .collect();
+
+        let level_depth = heading_start.len();
 
         let level: HeadingLevel = HeadingLevel::try_from(level_depth).ok()?;
-        if input.get(level_depth)?.kind != SymbolKind::Whitespace {
+        if input.next()?.kind != SymbolKind::Whitespace {
             return None;
         }
-        level_depth += 1; // +1 space offset
 
-        let content_symbols = input
-            .iter()
-            .skip(level_depth)
-            .take_while(|symbol| !matches!(symbol.kind, SymbolKind::Blankline | SymbolKind::EOI))
-            .count();
+        heading_start.push(SymbolKind::Whitespace);
+        let whitespace_indents = std::iter::repeat(SymbolKind::Whitespace)
+            .take(heading_start.len())
+            .collect();
 
-        let content_start = level_depth;
-        let content_end = content_start + content_symbols;
+        let mut sub_heading_start: Vec<SymbolKind> = std::iter::repeat(SymbolKind::Hash)
+            .take(heading_start.len())
+            .collect();
+        sub_heading_start.push(SymbolKind::Whitespace);
 
-        let content = &input[content_start..content_end];
-        let rest = &input[content_end..];
+        let heading_end = |sequence: &[Symbol<'_>]| match sequence.first() {
+            Some(symbol) => matches!(symbol.kind, SymbolKind::Blankline | SymbolKind::EOI),
+            None => false,
+        } || sequence[..sub_heading_start.len()].iter().map(|s| s.kind).collect::<Vec<_>>().starts_with(&sub_heading_start);
+
+        let mut content_iter = input.nest_prefixes(
+            &[heading_start, whitespace_indents],
+            Some(Box::new(heading_end)),
+        );
+        let content_symbols = content_iter.take_to_end();
+
+        // Line prefixes violated => invalid heading syntax
+        if !content_iter.end_reached() {
+            return None;
+        }
 
         let output = TokenizeOutput {
             tokens: vec![
                 HeadingToken::Level(level),
-                HeadingToken::Content(content),
+                HeadingToken::Content(content_symbols),
                 HeadingToken::End,
             ],
-            rest_of_input: rest,
+            rest_of_input: content_iter.remaining_symbols(),
         };
 
         Some(output)
@@ -159,10 +177,17 @@ impl ElementParser for Heading {
 
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
         let HeadingToken::Level(level) = input[0] else {return None};
-        let HeadingToken::Content(symbols) = input[1] else {return None};
+        let HeadingToken::Content(ref symbols) = input[1] else {return None};
         let inline_start = symbols.get(0)?.start;
 
-        let content = symbols.parse_inlines().collect();
+        // TODO: Adapt inline lexer to also work with Vec<&'input Symbol>
+        let content = symbols
+            .iter()
+            .map(|&s| *s)
+            .collect::<Vec<Symbol<'_>>>()
+            .parse_inlines()
+            .collect();
+
         let line_nr = inline_start.line;
         let block = Self {
             id: String::default(),

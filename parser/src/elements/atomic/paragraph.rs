@@ -7,7 +7,7 @@ use crate::{
     elements::{blocks::Block, types},
     parser::TokenizeOutput,
 };
-use unimarkup_commons::scanner::{Symbol, SymbolKind};
+use unimarkup_commons::scanner::{Symbol, SymbolIterator, SymbolKind};
 
 /// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -28,9 +28,14 @@ pub struct Paragraph {
 
 impl Paragraph {}
 
-impl From<&[Symbol<'_>]> for Paragraph {
-    fn from(value: &[Symbol<'_>]) -> Self {
-        let content = value.parse_inlines().collect();
+impl From<&Vec<&'_ Symbol<'_>>> for Paragraph {
+    fn from(value: &Vec<&'_ Symbol<'_>>) -> Self {
+        let content = value
+            .iter()
+            .map(|&s| *s)
+            .collect::<Vec<Symbol<'_>>>()
+            .parse_inlines()
+            .collect();
         let line_nr = value.get(0).map(|symbol| symbol.start.line).unwrap_or(0);
 
         let id = crate::generate_id::generate_id(&format!(
@@ -55,57 +60,24 @@ fn not_closing_symbol(symbol: &&Symbol) -> bool {
         .all(|closing| *closing != symbol.kind)
 }
 
-enum TokenKind<'a> {
-    Start,
-    End,
-    Text(&'a [Symbol<'a>]),
-}
-
-pub(crate) struct ParagraphToken<'a> {
-    kind: TokenKind<'a>,
-}
-
 impl ElementParser for Paragraph {
-    type Token<'a> = self::ParagraphToken<'a>;
+    type Token<'a> = &'a Symbol<'a>;
 
-    fn tokenize<'input>(
-        input: &'input [Symbol<'input>],
-    ) -> Option<TokenizeOutput<Self::Token<'input>>> {
-        let iter = input.iter();
-
-        let taken = iter.take_while(not_closing_symbol).count();
-        let end_of_input = taken.min(input.len());
-
-        let tokens = vec![
-            ParagraphToken {
-                kind: TokenKind::Start,
-            },
-            ParagraphToken {
-                kind: TokenKind::Text(&input[..end_of_input]),
-            },
-            ParagraphToken {
-                kind: TokenKind::End,
-            },
-        ];
-
-        let input = &input[end_of_input..];
+    fn tokenize<'i>(
+        mut input: SymbolIterator<'i, '_>,
+    ) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
+        let content = input.by_ref().take_while(not_closing_symbol).collect();
 
         let output = TokenizeOutput {
-            tokens,
-            rest_of_input: input,
+            tokens: content,
+            rest_of_input: input.remaining_symbols(),
         };
 
         Some(output)
     }
 
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
-        let content = match input[1].kind {
-            TokenKind::Start => &[],
-            TokenKind::End => &[],
-            TokenKind::Text(symbols) => symbols,
-        };
-
-        let block = Block::Paragraph(Paragraph::from(content));
+        let block = Block::Paragraph(Paragraph::from(&input));
 
         Some(vec![block])
     }

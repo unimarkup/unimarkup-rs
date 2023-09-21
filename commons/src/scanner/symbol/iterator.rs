@@ -8,10 +8,35 @@ pub struct SymbolIterator<'input, 'end_fn> {
     curr_index: usize,
     start_index: usize,
     line_prefixes: Vec<Vec<SymbolKind>>,
-    end: Vec<Arc<dyn IteratorEndFn<'input> + 'end_fn>>,
+    end: Vec<Arc<IteratorEndFn<'input, 'end_fn>>>,
 }
 
-pub trait IteratorEndFn<'input>: Fn(&'input [Symbol<'input>]) -> bool + Send + Sync {}
+pub type IteratorEndFn<'input, 'end_fn> =
+    Box<dyn Fn(&'input [Symbol<'input>]) -> bool + Send + Sync + 'end_fn>;
+
+impl<'input, 'end_fn> From<&'input [Symbol<'input>]> for SymbolIterator<'input, 'end_fn> {
+    fn from(value: &'input [Symbol<'input>]) -> Self {
+        SymbolIterator {
+            symbols: value,
+            curr_index: 0,
+            start_index: 0,
+            line_prefixes: vec![],
+            end: vec![],
+        }
+    }
+}
+
+impl<'input, 'end_fn> From<&'input Vec<Symbol<'input>>> for SymbolIterator<'input, 'end_fn> {
+    fn from(value: &'input Vec<Symbol<'input>>) -> Self {
+        SymbolIterator {
+            symbols: value,
+            curr_index: 0,
+            start_index: 0,
+            line_prefixes: vec![],
+            end: vec![],
+        }
+    }
+}
 
 impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
     pub fn new(symbols: &'input [Symbol<'input>], start_index: usize) -> Self {
@@ -28,7 +53,7 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
         symbols: &'input [Symbol<'input>],
         start_index: usize,
         line_prefix: impl Into<Vec<Vec<SymbolKind>>>,
-        end: impl IteratorEndFn<'input> + 'end_fn,
+        end: IteratorEndFn<'input, 'end_fn>,
     ) -> Self {
         SymbolIterator {
             symbols,
@@ -37,6 +62,14 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
             line_prefixes: line_prefix.into(),
             end: vec![Arc::new(end)],
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.symbols.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.symbols.is_empty()
     }
 
     pub fn start_index(&self) -> usize {
@@ -57,10 +90,22 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
         self.curr_index == self.symbols.len()
     }
 
+    pub fn remaining_symbols(&self) -> &'input [Symbol<'input>] {
+        &self.symbols[self.curr_index..]
+    }
+
+    pub fn peek(&self) -> Option<&'input Symbol<'input>> {
+        self.symbols.get(self.curr_index + 1)
+    }
+
+    pub fn peek_kind(&self) -> Option<SymbolKind> {
+        self.symbols.get(self.curr_index + 1).map(|s| s.kind)
+    }
+
     pub fn nest<'inner_end>(
         &self,
         line_prefix: &[SymbolKind],
-        end: Option<impl IteratorEndFn<'input> + 'inner_end>,
+        end: Option<IteratorEndFn<'input, 'inner_end>>,
     ) -> SymbolIterator<'input, 'inner_end>
     where
         'end_fn: 'inner_end,
@@ -94,56 +139,105 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
         }
     }
 
-    pub fn next(&mut self) -> Result<&Symbol<'input>, SymbolIteratorError> {
-        if self.eoi() {
-            return Err(SymbolIteratorError::Eoi);
-        }
+    pub fn nest_prefixes<'inner_end>(
+        &self,
+        line_prefixes: &[Vec<SymbolKind>],
+        end: Option<IteratorEndFn<'input, 'inner_end>>,
+    ) -> SymbolIterator<'input, 'inner_end>
+    where
+        'end_fn: 'inner_end,
+    {
+        let prefixes = if self.line_prefixes.is_empty() {
+            let mut nested_prefixes = self.line_prefixes.clone();
+            nested_prefixes.extend_from_slice(line_prefixes);
+            nested_prefixes
+        } else {
+            // create cartesian prefix
+            self.line_prefixes
+                .iter()
+                .flat_map(|outer_prefixes| {
+                    line_prefixes.iter().map(|inner_prefixes| {
+                        let mut prefix = outer_prefixes.clone();
 
-        let mut curr_symbolkind = match self.symbols.get(self.curr_index) {
-            Some(curr_symbol) => curr_symbol.kind,
-            None => return Err(SymbolIteratorError::Eoi),
+                        if !inner_prefixes.contains(&SymbolKind::Blankline) {
+                            prefix.extend(inner_prefixes);
+                        }
+
+                        prefix
+                    })
+                })
+                .collect()
         };
 
-        if curr_symbolkind == SymbolKind::Newline && !self.line_prefixes.is_empty() {
-            let curr_prefix_symbolkinds: Vec<_> = self.symbols[self.curr_index + 1..]
-                .iter()
-                .map(|s| s.kind)
-                .collect();
-
-            let mut prefix_matched = false;
-
-            for prefix in &self.line_prefixes {
-                if prefix == &curr_prefix_symbolkinds {
-                    prefix_matched = true;
-                    self.curr_index += prefix.len();
-                    curr_symbolkind = match self.symbols.get(self.curr_index) {
-                        Some(curr_symbol) => curr_symbol.kind,
-                        None => return Err(SymbolIteratorError::Eoi),
-                    };
-                    break;
-                }
+        let mut outer_end = self.end.clone();
+        let merged_end = match end {
+            Some(inner_end) => {
+                outer_end.push(Arc::new(inner_end));
+                outer_end
             }
+            None => outer_end,
+        };
 
-            if !prefix_matched {
-                return Err(SymbolIteratorError::PrefixMismatch);
-            }
-        } else if curr_symbolkind == SymbolKind::Blankline
-            && contains_only_non_whitespace_sequences(&self.line_prefixes)
-        {
-            return Err(SymbolIteratorError::PrefixMismatch);
+        SymbolIterator {
+            symbols: self.symbols,
+            curr_index: self.curr_index,
+            start_index: self.curr_index,
+            line_prefixes: prefixes,
+            end: merged_end,
         }
-
-        for f in &self.end {
-            if f(&self.symbols[self.curr_index..]) {
-                return Err(SymbolIteratorError::EndReached);
-            }
-        }
-
-        let symbol_opt = self.symbols.get(self.curr_index);
-        self.curr_index += 1;
-
-        symbol_opt.ok_or(SymbolIteratorError::Eoi)
     }
+
+    // #[allow(clippy::should_implement_trait)]
+    // pub fn next(&mut self) -> Result<&Symbol<'input>, SymbolIteratorError> {
+    //     if self.eoi() {
+    //         return Err(SymbolIteratorError::Eoi);
+    //     }
+
+    //     let mut curr_symbolkind = match self.symbols.get(self.curr_index) {
+    //         Some(curr_symbol) => curr_symbol.kind,
+    //         None => return Err(SymbolIteratorError::Eoi),
+    //     };
+
+    //     if curr_symbolkind == SymbolKind::Newline && !self.line_prefixes.is_empty() {
+    //         let curr_prefix_symbolkinds: Vec<_> = self.symbols[self.curr_index + 1..]
+    //             .iter()
+    //             .map(|s| s.kind)
+    //             .collect();
+
+    //         let mut prefix_matched = false;
+
+    //         for prefix in &self.line_prefixes {
+    //             if prefix == &curr_prefix_symbolkinds {
+    //                 prefix_matched = true;
+    //                 self.curr_index += prefix.len();
+    //                 curr_symbolkind = match self.symbols.get(self.curr_index) {
+    //                     Some(curr_symbol) => curr_symbol.kind,
+    //                     None => return Err(SymbolIteratorError::Eoi),
+    //                 };
+    //                 break;
+    //             }
+    //         }
+
+    //         if !prefix_matched {
+    //             return Err(SymbolIteratorError::PrefixMismatch);
+    //         }
+    //     } else if curr_symbolkind == SymbolKind::Blankline
+    //         && contains_only_non_whitespace_sequences(&self.line_prefixes)
+    //     {
+    //         return Err(SymbolIteratorError::PrefixMismatch);
+    //     }
+
+    //     for f in &self.end {
+    //         if f(&self.symbols[self.curr_index..]) {
+    //             return Err(SymbolIteratorError::EndReached);
+    //         }
+    //     }
+
+    //     let symbol_opt = self.symbols.get(self.curr_index);
+    //     self.curr_index += 1;
+
+    //     symbol_opt.ok_or(SymbolIteratorError::Eoi)
+    // }
 
     pub fn skip_to_end(mut self) -> Self {
         let mut end_reached = false;
@@ -161,6 +255,77 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
         }
 
         self
+    }
+
+    /// Collects and returns all symbols until one of the end functions signals the end,
+    /// or until no line prefix is matched after a new line.
+    pub fn take_to_end(&mut self) -> Vec<&'input Symbol<'input>> {
+        let mut symbols = Vec::new();
+
+        for symbol in self.by_ref() {
+            symbols.push(symbol);
+        }
+
+        symbols
+    }
+
+    pub fn end_reached(&self) -> bool {
+        for f in &self.end {
+            if f(&self.symbols[self.curr_index..]) {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
+impl<'input, 'end_fn> Iterator for SymbolIterator<'input, 'end_fn> {
+    type Item = &'input Symbol<'input>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.eoi() {
+            return None;
+        }
+
+        let curr_symbolkind = match self.symbols.get(self.curr_index) {
+            Some(curr_symbol) => curr_symbol.kind,
+            None => return None,
+        };
+
+        if curr_symbolkind == SymbolKind::Newline && !self.line_prefixes.is_empty() {
+            let curr_prefix_symbolkinds: Vec<_> = self.symbols[self.curr_index + 1..]
+                .iter()
+                .map(|s| s.kind)
+                .collect();
+
+            let mut prefix_matched = false;
+
+            for prefix in &self.line_prefixes {
+                if prefix == &curr_prefix_symbolkinds {
+                    prefix_matched = true;
+                    self.curr_index += prefix.len();
+                    break;
+                }
+            }
+
+            if !prefix_matched {
+                return None;
+            }
+        } else if curr_symbolkind == SymbolKind::Blankline
+            && contains_only_non_whitespace_sequences(&self.line_prefixes)
+        {
+            return None;
+        }
+
+        if self.end_reached() {
+            return None;
+        }
+
+        let symbol_opt = self.symbols.get(self.curr_index);
+        self.curr_index += 1;
+
+        symbol_opt
     }
 }
 
