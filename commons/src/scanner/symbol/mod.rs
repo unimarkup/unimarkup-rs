@@ -4,6 +4,8 @@ use core::fmt;
 
 use super::position::{Offset, Position};
 
+pub mod iterator;
+
 /// Possible kinds of Symbol found in Unimarkup document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SymbolKind {
