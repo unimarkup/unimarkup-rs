@@ -63,9 +63,7 @@ fn not_closing_symbol(symbol: &&Symbol) -> bool {
 impl ElementParser for Paragraph {
     type Token<'a> = &'a Symbol<'a>;
 
-    fn tokenize<'i>(
-        mut input: SymbolIterator<'i, '_, '_>,
-    ) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
+    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
         let content = input.by_ref().take_while(not_closing_symbol).collect();
 
         let output = TokenizeOutput {

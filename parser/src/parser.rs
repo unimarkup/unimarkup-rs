@@ -17,8 +17,7 @@ use crate::{
 use unimarkup_commons::config::Config;
 
 /// Parser as function that can parse Unimarkup content
-pub type ParserFn =
-    for<'i, 'p, 'f> fn(SymbolIterator<'i, 'p, 'f>) -> Option<(Blocks, &'i [Symbol<'i>])>;
+pub type ParserFn = for<'i> fn(&mut SymbolIterator<'i>) -> Option<(Blocks, &'i [Symbol<'i>])>;
 
 /// Output of symbol tokenization by a parser of a block.
 pub(crate) struct TokenizeOutput<'i, T>
@@ -35,9 +34,7 @@ pub(crate) trait ElementParser {
     type Token<'a>;
 
     /// Function that converts input symbols into tokens specific for the given element.
-    fn tokenize<'i>(
-        input: SymbolIterator<'i, '_, '_>,
-    ) -> Option<TokenizeOutput<'i, Self::Token<'i>>>;
+    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<'i, Self::Token<'i>>>;
 
     /// Function that parses tokenization output and produces one or more Unimarkup elements.
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks>;
@@ -106,12 +103,11 @@ impl MainParser {
     }
 
     /// Parses Unimarkup content and produces Unimarkup blocks.
-    pub fn parse<'i, 'p, 'f>(&self, input: impl Into<SymbolIterator<'i, 'p, 'f>>) -> Blocks {
-        let mut input: SymbolIterator<'i, 'p, 'f> = input.into();
+    pub fn parse(&self, input: &mut SymbolIterator) -> Blocks {
         let mut blocks = Vec::default();
 
         #[cfg(debug_assertions)]
-        let mut input_len = input.len();
+        let mut curr_idx = input.len();
 
         'outer: while let Some(kind) = input.peek_kind() {
             match kind {
@@ -123,36 +119,39 @@ impl MainParser {
 
                 // no parser will match, parse with default parser
                 _ if kind.is_not_keyword() => {
-                    let (mut res_blocks, rest_of_input) = (self.default_parser)(input)
+                    let (mut res_blocks, _) = (self.default_parser)(input)
                         .expect("Default parser could not parse content!");
 
                     blocks.append(&mut res_blocks);
-                    input = SymbolIterator::from(rest_of_input);
                 }
 
                 // symbol is start of a block, some parser should match
                 _ => {
                     for parser_fn in &self.parsers {
-                        if let Some((mut res_blocks, rest_of_input)) = parser_fn(input.clone()) {
+                        let mut iter = input.clone();
+                        if let Some((mut res_blocks, _)) = parser_fn(&mut iter) {
                             blocks.append(&mut res_blocks);
-                            input = SymbolIterator::from(rest_of_input);
+                            // TODO: clarify if this is ok? Wouldn't we lose sequences this way?
+                            // input = SymbolIterator::from(rest_of_input);
+
+                            // Maybe this is better? Continue where parser left of
+                            *input = iter;
                             continue 'outer; // start from first parser on next input
                         }
                     }
 
                     // no registered parser matched -> use default parser
-                    let (mut res_blocks, rest_of_input) = (self.default_parser)(input)
+                    let (mut res_blocks, _) = (self.default_parser)(input)
                         .expect("Default parser could not parse content!");
 
                     blocks.append(&mut res_blocks);
-                    input = SymbolIterator::from(rest_of_input);
                 }
             }
 
             #[cfg(debug_assertions)]
             {
-                assert_ne!(input.len(), input_len);
-                input_len = input.len();
+                assert_ne!(input.curr_index(), curr_idx);
+                curr_idx = input.curr_index();
             }
         }
 
@@ -167,8 +166,9 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let symbols = Scanner::try_new()
         .expect("Must be valid provider.")
         .scan_str(um_content);
-    println!("{:?}", &symbols.iter().map(|s| s.kind).collect::<Vec<_>>());
-    let blocks = parser.parse(&symbols);
+    let mut symbols_iter = SymbolIterator::from(&symbols);
+    // println!("{:?}", &symbols.iter().map(|s| s.kind).collect::<Vec<_>>());
+    let blocks = parser.parse(&mut symbols_iter);
 
     let mut unimarkup = Document {
         config: config.clone(),

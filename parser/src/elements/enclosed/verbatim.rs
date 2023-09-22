@@ -31,9 +31,7 @@ pub(crate) enum Token<'a> {
 impl ElementParser for Verbatim {
     type Token<'a> = self::Token<'a>;
 
-    fn tokenize<'i>(
-        mut input: SymbolIterator<'i, '_, '_>,
-    ) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
+    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
         let start_delim: Vec<_> = input
             .by_ref()
             .take_while(|symbol| matches!(symbol.kind, SymbolKind::Tick))
@@ -47,7 +45,7 @@ impl ElementParser for Verbatim {
         let end_sequence = std::iter::repeat(SymbolKind::Tick)
             .take(start_delim_len)
             .collect::<Vec<_>>();
-        let end_fn = Box::new(|sequence: &[Symbol<'i>]| {
+        let _end_fn = Box::new(|sequence: &[Symbol<'i>]| {
             sequence[..start_delim_len]
                 .iter()
                 .map(|s| s.kind)
@@ -88,10 +86,14 @@ impl ElementParser for Verbatim {
     }
 
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
-        let Token::StartDelim(start) = input.get(0)? else { return None };
+        let Token::StartDelim(start) = input.get(0)? else {
+            return None;
+        };
         let line_nr = start.get(0)?.start.line;
 
-        let Token::Content(symbols) = input.get(1)? else { return None };
+        let Token::Content(symbols) = input.get(1)? else {
+            return None;
+        };
         let content = Symbol::flatten_iter(symbols.iter().copied())?;
 
         let block = Self {
