@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use strum_macros::*;
 use unimarkup_inline::{Inline, ParseInlines};
 
@@ -121,9 +123,7 @@ pub enum HeadingToken<'a> {
 impl ElementParser for Heading {
     type Token<'a> = self::HeadingToken<'a>;
 
-    fn tokenize<'i>(
-        mut input: SymbolIterator<'i, '_, '_>,
-    ) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
+    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
         let mut heading_start: Vec<SymbolKind> = input
             .peeking_take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
             .map(|s| s.kind)
@@ -141,25 +141,36 @@ impl ElementParser for Heading {
             .take(heading_start.len())
             .collect();
 
-        let mut sub_heading_start: Vec<SymbolKind> = std::iter::repeat(SymbolKind::Hash)
+        let sub_heading_start: Vec<SymbolKind> = std::iter::repeat(SymbolKind::Hash)
             .take(heading_start.len())
+            .chain([SymbolKind::Whitespace])
             .collect();
-        sub_heading_start.push(SymbolKind::Whitespace);
 
-        let heading_end = |sequence: &[Symbol<'_>]| match sequence.first() {
-            Some(symbol) => matches!(symbol.kind, SymbolKind::Blankline | SymbolKind::EOI),
-            None => false,
-        } || (level != HeadingLevel::Level6 && sequence[..sub_heading_start.len()].iter().map(|s| s.kind).collect::<Vec<_>>().starts_with(&sub_heading_start));
+        let heading_end = move |sequence: &[Symbol<'_>]| {
+            let is_eoi = match sequence.first() {
+                Some(symbol) => matches!(symbol.kind, SymbolKind::Blankline | SymbolKind::EOI),
+                None => false,
+            };
+
+            let sequence_matched = level != HeadingLevel::Level6
+                && sequence[..sub_heading_start.len()]
+                    .iter()
+                    .map(|s| s.kind)
+                    .zip(&sub_heading_start)
+                    .all(|(seq, sub)| seq == *sub);
+
+            is_eoi || sequence_matched
+        };
 
         let mut content_iter = input.nest_prefixes(
             [heading_start, whitespace_indents],
-            Some(Box::new(heading_end)),
+            Some(Rc::new(heading_end)),
         );
         let content_symbols = content_iter.take_to_end();
 
         // Line prefixes violated => invalid heading syntax
         if !content_iter.end_reached() {
-            println!("heading end not reached. {:?}", &content_symbols);
+            // println!("heading end not reached. {:?}", &content_symbols);
             return None;
         }
 
@@ -176,8 +187,12 @@ impl ElementParser for Heading {
     }
 
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
-        let HeadingToken::Level(level) = input[0] else {return None};
-        let HeadingToken::Content(ref symbols) = input[1] else {return None};
+        let HeadingToken::Level(level) = input[0] else {
+            return None;
+        };
+        let HeadingToken::Content(ref symbols) = input[1] else {
+            return None;
+        };
         let inline_start = symbols.get(0)?.start;
 
         // TODO: Adapt inline lexer to also work with Vec<&'input Symbol>

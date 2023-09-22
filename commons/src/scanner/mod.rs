@@ -6,7 +6,7 @@ mod symbol;
 
 use icu::segmenter::{GraphemeClusterSegmenter, SegmenterError};
 use icu_provider_adapters::fallback::LocaleFallbackProvider;
-use position::{Offset, Position};
+use position::{Offset, Position as SymPos};
 pub use symbol::{iterator::*, Symbol, SymbolKind};
 
 #[derive(Debug, Clone)]
@@ -48,7 +48,7 @@ impl Scanner {
 
     pub fn scan_str<'s>(&self, input: &'s str) -> Vec<Symbol<'s>> {
         let mut symbols: Vec<Symbol> = Vec::new();
-        let mut curr_pos: Position = Position::default();
+        let mut curr_pos: SymPos = SymPos::default();
         let mut prev_offset = 0;
 
         // skip(1) to ignore break at start of input
@@ -57,12 +57,12 @@ impl Scanner {
                 let mut kind = SymbolKind::from(grapheme);
 
                 let end_pos = if kind == SymbolKind::Newline {
-                    Position {
+                    SymPos {
                         line: (curr_pos.line + 1),
                         ..Default::default()
                     }
                 } else {
-                    Position {
+                    SymPos {
                         line: curr_pos.line,
                         col_utf8: (curr_pos.col_utf8 + grapheme.len()),
                         col_utf16: (curr_pos.col_utf16 + grapheme.encode_utf16().count()),

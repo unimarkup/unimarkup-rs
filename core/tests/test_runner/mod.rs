@@ -44,7 +44,7 @@ macro_rules! snapshot_parser {
         |input| {
             let parse = <$ty>::generate_parser();
 
-            parse(input.into())
+            parse(&mut input.into())
                 .map(|(block, rest)| (Snapshot(block).as_snapshot(), rest))
                 .expect("Could not parse content!")
         }

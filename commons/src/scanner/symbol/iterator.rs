@@ -1,17 +1,15 @@
 use std::{borrow::BorrowMut, rc::Rc};
 
-use itertools::PeekingNext;
-
 use super::{Symbol, SymbolKind};
 
 pub use itertools::*;
 
 #[derive(Clone)]
-pub struct SymbolIterator<'input, 'parent, 'end_fn> {
-    kind: SymbolIteratorKind<'input, 'parent>,
+pub struct SymbolIterator<'input> {
+    kind: SymbolIteratorKind<'input>,
     start_index: usize,
     line_prefixes: Vec<Vec<SymbolKind>>,
-    end: Option<Rc<IteratorEndFn<'input, 'end_fn>>>,
+    end: Option<IteratorEndFn<'input>>,
     iter_end: bool,
 }
 
@@ -52,16 +50,14 @@ impl<'input> SymbolIteratorRoot<'input> {
 }
 
 #[derive(Clone)]
-pub enum SymbolIteratorKind<'input, 'parent> {
-    Nested(Rc<SymbolIterator<'input, 'parent, 'parent>>),
+pub enum SymbolIteratorKind<'input> {
+    Nested(Box<SymbolIterator<'input>>),
     Root(SymbolIteratorRoot<'input>),
 }
 
-pub type IteratorEndFn<'input, 'end_fn> = Box<dyn Fn(&'input [Symbol<'input>]) -> bool + 'end_fn>;
+pub type IteratorEndFn<'input> = Rc<dyn (Fn(&'input [Symbol<'input>]) -> bool)>;
 
-impl<'input, 'parent, 'end_fn> From<&'input [Symbol<'input>]>
-    for SymbolIterator<'input, 'parent, 'end_fn>
-{
+impl<'input> From<&'input [Symbol<'input>]> for SymbolIterator<'input> {
     fn from(value: &'input [Symbol<'input>]) -> Self {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
@@ -73,9 +69,7 @@ impl<'input, 'parent, 'end_fn> From<&'input [Symbol<'input>]>
     }
 }
 
-impl<'input, 'parent, 'end_fn> From<&'input Vec<Symbol<'input>>>
-    for SymbolIterator<'input, 'parent, 'end_fn>
-{
+impl<'input> From<&'input Vec<Symbol<'input>>> for SymbolIterator<'input> {
     fn from(value: &'input Vec<Symbol<'input>>) -> Self {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
@@ -87,7 +81,7 @@ impl<'input, 'parent, 'end_fn> From<&'input Vec<Symbol<'input>>>
     }
 }
 
-impl<'input, 'parent, 'end_fn> SymbolIterator<'input, 'parent, 'end_fn> {
+impl<'input> SymbolIterator<'input> {
     pub fn new(symbols: &'input [Symbol<'input>], start_index: usize) -> Self {
         let mut iter = SymbolIterator::from(symbols);
         iter.start_index = start_index;
@@ -98,13 +92,13 @@ impl<'input, 'parent, 'end_fn> SymbolIterator<'input, 'parent, 'end_fn> {
         symbols: &'input [Symbol<'input>],
         start_index: usize,
         line_prefix: impl Into<Vec<Vec<SymbolKind>>>,
-        end: IteratorEndFn<'input, 'end_fn>,
+        end: IteratorEndFn<'input>,
     ) -> Self {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(symbols)),
             start_index,
             line_prefixes: line_prefix.into(),
-            end: Some(Rc::new(end)),
+            end: Some(end),
             iter_end: false,
         }
     }
@@ -137,11 +131,7 @@ impl<'input, 'parent, 'end_fn> SymbolIterator<'input, 'parent, 'end_fn> {
     pub fn set_curr_index(&mut self, index: usize) {
         if index >= self.start_index {
             match self.kind.borrow_mut() {
-                SymbolIteratorKind::Nested(parent) => {
-                    if let Some(p) = Rc::get_mut(parent) {
-                        p.set_curr_index(index)
-                    }
-                }
+                SymbolIteratorKind::Nested(parent) => parent.set_curr_index(index),
                 SymbolIteratorKind::Root(root) => {
                     root.curr_index = index;
                     root.peek_index = index;
@@ -179,44 +169,36 @@ impl<'input, 'parent, 'end_fn> SymbolIterator<'input, 'parent, 'end_fn> {
         self.peek().map(|s| s.kind)
     }
 
-    pub fn nest<'inner_end>(
+    pub fn nest(
         self,
         line_prefix: &[SymbolKind],
-        end: Option<IteratorEndFn<'input, 'inner_end>>,
-    ) -> SymbolIterator<'input, 'parent, 'inner_end>
-    where
-        'end_fn: 'inner_end,
-        'end_fn: 'parent,
-    {
+        end: Option<IteratorEndFn<'input>>,
+    ) -> SymbolIterator<'input> {
         let curr_index = self.curr_index();
         let iter_end = self.iter_end;
 
         SymbolIterator {
-            kind: SymbolIteratorKind::Nested(Rc::new(self)),
+            kind: SymbolIteratorKind::Nested(Box::new(self)),
             start_index: curr_index,
             line_prefixes: vec![line_prefix.to_vec()],
-            end: end.map(Rc::new),
+            end,
             iter_end,
         }
     }
 
-    pub fn nest_prefixes<'inner_end>(
-        self,
+    pub fn nest_prefixes(
+        &self,
         line_prefixes: impl Into<Vec<Vec<SymbolKind>>>,
-        end: Option<IteratorEndFn<'input, 'inner_end>>,
-    ) -> SymbolIterator<'input, 'parent, 'inner_end>
-    where
-        'end_fn: 'inner_end,
-        'end_fn: 'parent,
-    {
+        end: Option<IteratorEndFn<'input>>,
+    ) -> SymbolIterator<'input> {
         let curr_index = self.curr_index();
         let iter_end = self.iter_end;
 
         SymbolIterator {
-            kind: SymbolIteratorKind::Nested(Rc::new(self)),
+            kind: SymbolIteratorKind::Nested(Box::new(self.clone())),
             start_index: curr_index,
             line_prefixes: line_prefixes.into(),
-            end: end.map(Rc::new),
+            end,
             iter_end,
         }
     }
@@ -243,9 +225,9 @@ impl<'input, 'parent, 'end_fn> SymbolIterator<'input, 'parent, 'end_fn> {
         self.iter_end
     }
 
-    pub fn parent(self) -> Option<SymbolIterator<'input, 'parent, 'parent>> {
+    pub fn parent(self) -> Option<SymbolIterator<'input>> {
         match self.kind {
-            SymbolIteratorKind::Nested(parent) => Rc::into_inner(parent),
+            SymbolIteratorKind::Nested(parent) => Some(*parent),
             SymbolIteratorKind::Root(_) => None,
         }
     }
@@ -255,15 +237,16 @@ impl<'input> Iterator for SymbolIteratorRoot<'input> {
     type Item = &'input Symbol<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let sym = self.symbols.get(self.curr_index);
+        match self.symbols.get(self.curr_index) {
+            Some(symbol) => {
+                self.curr_index += 1;
+                self.peek_index = self.curr_index;
+                self.new_line = symbol.kind == SymbolKind::Newline;
 
-        if let Some(symbol) = sym {
-            self.curr_index += 1;
-            self.peek_index = self.curr_index;
-            self.new_line = symbol.kind == SymbolKind::Newline;
+                Some(symbol)
+            }
+            None => None,
         }
-
-        sym
     }
 }
 
@@ -293,7 +276,7 @@ impl<'input> PeekingNext for SymbolIteratorRoot<'input> {
     }
 }
 
-impl<'input, 'parent, 'end_fn> Iterator for SymbolIterator<'input, 'parent, 'end_fn> {
+impl<'input> Iterator for SymbolIterator<'input> {
     type Item = &'input Symbol<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -326,8 +309,8 @@ impl<'input, 'parent, 'end_fn> Iterator for SymbolIterator<'input, 'parent, 'end
             }
         }
 
-        let curr_symbol_opt = match self.kind.borrow_mut() {
-            SymbolIteratorKind::Nested(parent) => Rc::get_mut(parent)?.next(),
+        let curr_symbol_opt = match &mut self.kind {
+            SymbolIteratorKind::Nested(parent) => parent.next(),
             SymbolIteratorKind::Root(root) => root.next(),
         };
 
@@ -358,14 +341,14 @@ impl<'input, 'parent, 'end_fn> Iterator for SymbolIterator<'input, 'parent, 'end
     }
 }
 
-impl<'input, 'parent, 'end_fn> PeekingNext for SymbolIterator<'input, 'parent, 'end_fn> {
+impl<'input> PeekingNext for SymbolIterator<'input> {
     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
         match self.kind.borrow_mut() {
-            SymbolIteratorKind::Nested(parent) => Rc::get_mut(parent)?.peeking_next(accept),
+            SymbolIteratorKind::Nested(parent) => parent.peeking_next(accept),
             SymbolIteratorKind::Root(root) => root.peeking_next(accept),
         }
     }
@@ -404,6 +387,8 @@ fn contains_non_whitespace(sequence: &[SymbolKind]) -> bool {
 
 #[cfg(test)]
 mod test {
+    use std::rc::Rc;
+
     use itertools::{Itertools, PeekingNext};
 
     use crate::scanner::{Scanner, SymbolKind};
@@ -481,7 +466,7 @@ mod test {
 
         let mut iterator = SymbolIterator::from(&symbols).nest(
             &[],
-            Some(Box::new(|sequence| {
+            Some(Rc::new(|sequence| {
                 sequence
                     .get(0)
                     .map(|s| s.kind == SymbolKind::Star)
