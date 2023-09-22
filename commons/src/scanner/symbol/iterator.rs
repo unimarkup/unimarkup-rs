@@ -92,13 +92,13 @@ impl<'input> SymbolIterator<'input> {
         symbols: &'input [Symbol<'input>],
         start_index: usize,
         line_prefix: impl Into<Vec<Vec<SymbolKind>>>,
-        end: IteratorEndFn<'input>,
+        end: Option<IteratorEndFn<'input>>,
     ) -> Self {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(symbols)),
             start_index,
             line_prefixes: line_prefix.into(),
-            end: Some(end),
+            end,
             iter_end: false,
         }
     }
@@ -170,7 +170,7 @@ impl<'input> SymbolIterator<'input> {
     }
 
     pub fn nest(
-        self,
+        &self,
         line_prefix: &[SymbolKind],
         end: Option<IteratorEndFn<'input>>,
     ) -> SymbolIterator<'input> {
@@ -178,7 +178,7 @@ impl<'input> SymbolIterator<'input> {
         let iter_end = self.iter_end;
 
         SymbolIterator {
-            kind: SymbolIteratorKind::Nested(Box::new(self)),
+            kind: SymbolIteratorKind::Nested(Box::new(self.clone())),
             start_index: curr_index,
             line_prefixes: vec![line_prefix.to_vec()],
             end,
@@ -502,7 +502,7 @@ mod test {
             &symbols,
             0,
             vec![vec![SymbolKind::Star, SymbolKind::Whitespace]],
-            Rc::new(|_| false),
+            None,
         );
 
         let mut inner = iterator.nest(&[SymbolKind::Star], None);
