@@ -1,12 +1,17 @@
 use std::sync::Arc;
 
+use itertools::PeekingNext;
+
 use super::{Symbol, SymbolKind};
+
+pub use itertools::*;
 
 #[derive(Default, Clone)]
 pub struct SymbolIterator<'input, 'end_fn> {
     symbols: &'input [Symbol<'input>],
     curr_index: usize,
     start_index: usize,
+    peek_index: usize,
     line_prefixes: Vec<Vec<SymbolKind>>,
     end: Vec<Arc<IteratorEndFn<'input, 'end_fn>>>,
 }
@@ -20,6 +25,7 @@ impl<'input, 'end_fn> From<&'input [Symbol<'input>]> for SymbolIterator<'input, 
             symbols: value,
             curr_index: 0,
             start_index: 0,
+            peek_index: 0,
             line_prefixes: vec![],
             end: vec![],
         }
@@ -32,6 +38,7 @@ impl<'input, 'end_fn> From<&'input Vec<Symbol<'input>>> for SymbolIterator<'inpu
             symbols: value,
             curr_index: 0,
             start_index: 0,
+            peek_index: 0,
             line_prefixes: vec![],
             end: vec![],
         }
@@ -44,6 +51,7 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
             symbols,
             curr_index: start_index,
             start_index,
+            peek_index: start_index,
             line_prefixes: vec![],
             end: vec![],
         }
@@ -59,17 +67,18 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
             symbols,
             curr_index: start_index,
             start_index,
+            peek_index: start_index,
             line_prefixes: line_prefix.into(),
             end: vec![Arc::new(end)],
         }
     }
 
     pub fn len(&self) -> usize {
-        self.symbols.len()
+        self.symbols[self.start_index..].len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.symbols.is_empty()
+        self.symbols[self.start_index..].is_empty()
     }
 
     pub fn start_index(&self) -> usize {
@@ -83,6 +92,7 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
     pub fn set_curr_index(&mut self, index: usize) {
         if index >= self.start_index {
             self.curr_index = index;
+            self.peek_index = self.curr_index;
         }
     }
 
@@ -95,11 +105,11 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
     }
 
     pub fn peek(&self) -> Option<&'input Symbol<'input>> {
-        self.symbols.get(self.curr_index + 1)
+        self.symbols.get(self.curr_index)
     }
 
     pub fn peek_kind(&self) -> Option<SymbolKind> {
-        self.symbols.get(self.curr_index + 1).map(|s| s.kind)
+        self.symbols.get(self.curr_index).map(|s| s.kind)
     }
 
     pub fn nest<'inner_end>(
@@ -134,6 +144,7 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
             symbols: self.symbols,
             curr_index: self.curr_index,
             start_index: self.curr_index,
+            peek_index: self.curr_index,
             line_prefixes: nested_prefixes,
             end: merged_end,
         }
@@ -182,6 +193,7 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
             symbols: self.symbols,
             curr_index: self.curr_index,
             start_index: self.curr_index,
+            peek_index: self.curr_index,
             line_prefixes: prefixes,
             end: merged_end,
         }
@@ -240,19 +252,7 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
     // }
 
     pub fn skip_to_end(mut self) -> Self {
-        let mut end_reached = false;
-
-        while !end_reached || !self.eoi() {
-            for f in &self.end {
-                if f(&self.symbols[self.curr_index..]) {
-                    end_reached = true;
-                }
-            }
-
-            if !end_reached {
-                self.curr_index += 1;
-            }
-        }
+        while self.next().is_some() {}
 
         self
     }
@@ -288,23 +288,26 @@ impl<'input, 'end_fn> Iterator for SymbolIterator<'input, 'end_fn> {
             return None;
         }
 
-        let curr_symbolkind = match self.symbols.get(self.curr_index) {
+        let curr_symbol_opt = self.symbols.get(self.curr_index);
+        let curr_symbolkind = match curr_symbol_opt {
             Some(curr_symbol) => curr_symbol.kind,
             None => return None,
         };
 
         if curr_symbolkind == SymbolKind::Newline && !self.line_prefixes.is_empty() {
-            let curr_prefix_symbolkinds: Vec<_> = self.symbols[self.curr_index + 1..]
-                .iter()
-                .map(|s| s.kind)
-                .collect();
-
             let mut prefix_matched = false;
 
             for prefix in &self.line_prefixes {
+                let curr_prefix_symbolkinds: Vec<_> = self.symbols
+                    [self.curr_index + 1..self.curr_index + prefix.len()]
+                    .iter()
+                    .map(|s| s.kind)
+                    .collect();
+
                 if prefix == &curr_prefix_symbolkinds {
                     prefix_matched = true;
                     self.curr_index += prefix.len();
+                    self.peek_index = self.curr_index;
                     break;
                 }
             }
@@ -322,10 +325,35 @@ impl<'input, 'end_fn> Iterator for SymbolIterator<'input, 'end_fn> {
             return None;
         }
 
-        let symbol_opt = self.symbols.get(self.curr_index);
         self.curr_index += 1;
+        self.peek_index = self.curr_index;
+        curr_symbol_opt
+    }
+}
 
-        symbol_opt
+impl<'input, 'end_fn> PeekingNext for SymbolIterator<'input, 'end_fn> {
+    fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
+    where
+        Self: Sized,
+        F: FnOnce(&Self::Item) -> bool,
+    {
+        let curr_index = self.curr_index;
+        self.curr_index = self.peek_index; // Note: peek_index increases until `next()` is called directly
+        let next_item = self.next();
+
+        // revert index to simulate lookahead
+        self.curr_index = curr_index;
+
+        match next_item {
+            Some(symbol) => {
+                if (accept)(&symbol) {
+                    next_item
+                } else {
+                    None
+                }
+            }
+            None => None,
+        }
     }
 }
 
@@ -358,4 +386,111 @@ fn contains_non_whitespace(sequence: &[SymbolKind]) -> bool {
     }
 
     false
+}
+
+#[cfg(test)]
+mod test {
+    use itertools::{Itertools, PeekingNext};
+
+    use crate::scanner::{Scanner, SymbolKind};
+
+    use super::SymbolIterator;
+
+    #[test]
+    fn peek_while_index() {
+        let symbols = Scanner::try_new()
+            .expect("Must be valid provider.")
+            .scan_str("## ");
+
+        let mut iterator = SymbolIterator::from(&symbols);
+        let hash_cnt = iterator
+            .peeking_take_while(|symbol| symbol.kind == SymbolKind::Hash)
+            .count();
+
+        let next_symbol = iterator.nth(hash_cnt);
+        let curr_index = iterator.curr_index();
+
+        assert_eq!(hash_cnt, 2, "Hash symbols in input not correctly detected.");
+        assert_eq!(curr_index, 3, "Current index was not updated correctly.");
+        assert_eq!(
+            next_symbol.map(|s| s.kind),
+            Some(SymbolKind::Whitespace),
+            "Whitespace after hash symbols was not detected."
+        );
+        assert!(
+            iterator.next().is_none(),
+            "Input end reached, but new symbol was returned."
+        );
+    }
+
+    #[test]
+    fn peek_next() {
+        let symbols = Scanner::try_new()
+            .expect("Must be valid provider.")
+            .scan_str("#*");
+
+        let mut iterator = SymbolIterator::from(&symbols);
+
+        let peeked_symbol = iterator.peeking_next(|_| true);
+        let next_symbol = iterator.next();
+        let next_peeked_symbol = iterator.peeking_next(|_| true);
+        let curr_index = iterator.curr_index();
+
+        assert_eq!(curr_index, 1, "Current index was not updated correctly.");
+        assert_eq!(
+            peeked_symbol.map(|s| s.kind),
+            Some(SymbolKind::Hash),
+            "peek_next() did not return hash symbol."
+        );
+        assert_eq!(
+            next_symbol.map(|s| s.kind),
+            Some(SymbolKind::Hash),
+            "next() did not return hash symbol."
+        );
+        assert_eq!(
+            next_peeked_symbol.map(|s| s.kind),
+            Some(SymbolKind::Star),
+            "Star symbol not peeked next."
+        );
+        assert_eq!(
+            iterator.next().map(|s| s.kind),
+            Some(SymbolKind::Star),
+            "Star symbol not returned."
+        );
+    }
+
+    #[test]
+    fn reach_end() {
+        let symbols = Scanner::try_new()
+            .expect("Must be valid provider.")
+            .scan_str("text*");
+
+        let mut iterator = SymbolIterator::from(&symbols).nest(
+            &[],
+            Some(Box::new(|sequence| {
+                sequence
+                    .get(0)
+                    .map(|s| s.kind == SymbolKind::Star)
+                    .unwrap_or(false)
+            })),
+        );
+
+        let taken_symkinds = iterator
+            .take_to_end()
+            .iter()
+            .map(|s| s.kind)
+            .collect::<Vec<_>>();
+
+        assert!(iterator.end_reached(), "Iterator end was not reached.");
+        assert_eq!(
+            taken_symkinds,
+            vec![
+                SymbolKind::Plain,
+                SymbolKind::Plain,
+                SymbolKind::Plain,
+                SymbolKind::Plain
+            ],
+            "Symbols till end was reached are incorrect."
+        );
+    }
 }

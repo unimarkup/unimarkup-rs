@@ -4,7 +4,7 @@ use unimarkup_inline::{Inline, ParseInlines};
 use crate::elements::blocks::Block;
 use crate::elements::Blocks;
 use crate::parser::{ElementParser, TokenizeOutput};
-use unimarkup_commons::scanner::{Symbol, SymbolIterator, SymbolKind};
+use unimarkup_commons::scanner::{Itertools, Symbol, SymbolIterator, SymbolKind};
 
 use super::log_id::AtomicError;
 
@@ -125,15 +125,14 @@ impl ElementParser for Heading {
         mut input: SymbolIterator<'i, '_>,
     ) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
         let mut heading_start: Vec<SymbolKind> = input
-            .by_ref()
-            .take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
+            .peeking_take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
             .map(|s| s.kind)
             .collect();
 
         let level_depth = heading_start.len();
 
         let level: HeadingLevel = HeadingLevel::try_from(level_depth).ok()?;
-        if input.next()?.kind != SymbolKind::Whitespace {
+        if input.by_ref().nth(level_depth)?.kind != SymbolKind::Whitespace {
             return None;
         }
 
@@ -150,7 +149,7 @@ impl ElementParser for Heading {
         let heading_end = |sequence: &[Symbol<'_>]| match sequence.first() {
             Some(symbol) => matches!(symbol.kind, SymbolKind::Blankline | SymbolKind::EOI),
             None => false,
-        } || sequence[..sub_heading_start.len()].iter().map(|s| s.kind).collect::<Vec<_>>().starts_with(&sub_heading_start);
+        } || (level != HeadingLevel::Level6 && sequence[..sub_heading_start.len()].iter().map(|s| s.kind).collect::<Vec<_>>().starts_with(&sub_heading_start));
 
         let mut content_iter = input.nest_prefixes(
             &[heading_start, whitespace_indents],
@@ -160,6 +159,7 @@ impl ElementParser for Heading {
 
         // Line prefixes violated => invalid heading syntax
         if !content_iter.end_reached() {
+            println!("heading end not reached. {:?}", &content_symbols);
             return None;
         }
 

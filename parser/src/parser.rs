@@ -104,14 +104,14 @@ impl MainParser {
 
     /// Parses Unimarkup content and produces Unimarkup blocks.
     pub fn parse<'i, 'f>(&self, input: impl Into<SymbolIterator<'i, 'f>>) -> Blocks {
-        let mut input = input.into();
+        let mut input: SymbolIterator<'i, 'f> = input.into();
         let mut blocks = Vec::default();
 
         #[cfg(debug_assertions)]
         let mut input_len = input.len();
 
-        'outer: while let Some(sym) = input.next() {
-            match sym.kind {
+        'outer: while let Some(kind) = input.peek_kind() {
+            match kind {
                 // skip blanklines
                 SymbolKind::Blankline => {}
 
@@ -119,7 +119,7 @@ impl MainParser {
                 SymbolKind::EOI => break,
 
                 // no parser will match, parse with default parser
-                _ if sym.is_not_keyword() => {
+                _ if kind.is_not_keyword() => {
                     let (mut res_blocks, rest_of_input) = (self.default_parser)(input)
                         .expect("Default parser could not parse content!");
 
@@ -164,7 +164,7 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let symbols = Scanner::try_new()
         .expect("Must be valid provider.")
         .scan_str(um_content);
-
+    println!("{:?}", &symbols.iter().map(|s| s.kind).collect::<Vec<_>>());
     let blocks = parser.parse(&symbols);
 
     let mut unimarkup = Document {
