@@ -18,7 +18,6 @@ pub struct SymbolIteratorRoot<'input> {
     symbols: &'input [Symbol<'input>],
     curr_index: usize,
     peek_index: usize,
-    new_line: bool,
 }
 
 impl<'input> From<&'input [Symbol<'input>]> for SymbolIteratorRoot<'input> {
@@ -27,7 +26,6 @@ impl<'input> From<&'input [Symbol<'input>]> for SymbolIteratorRoot<'input> {
             symbols: value,
             curr_index: 0,
             peek_index: 0,
-            new_line: false,
         }
     }
 }
@@ -38,7 +36,6 @@ impl<'input> From<&'input Vec<Symbol<'input>>> for SymbolIteratorRoot<'input> {
             symbols: value,
             curr_index: 0,
             peek_index: 0,
-            new_line: false,
         }
     }
 }
@@ -99,7 +96,6 @@ impl<'input> SymbolIterMatcher for SymbolIterator<'input> {
 
             if end.is_some() {
                 let _ = self.skip(whitespaces + 2); // +2 for starting newline + (blankline | newline)
-                dbg!("consume");
                 return true;
             }
         } else if Some(SymbolKind::Blankline) == next {
@@ -244,13 +240,6 @@ impl<'input> SymbolIterator<'input> {
         }
     }
 
-    pub fn new_line(&self) -> bool {
-        match &self.kind {
-            SymbolIteratorKind::Nested(parent) => parent.new_line(),
-            SymbolIteratorKind::Root(root) => root.new_line,
-        }
-    }
-
     pub fn peek(&self) -> Option<&'input Symbol<'input>> {
         match &self.kind {
             SymbolIteratorKind::Nested(parent) => parent.peek(),
@@ -333,7 +322,6 @@ impl<'input> Iterator for SymbolIteratorRoot<'input> {
             Some(symbol) => {
                 self.curr_index += 1;
                 self.peek_index = self.curr_index;
-                self.new_line = symbol.kind == SymbolKind::Newline;
 
                 Some(symbol)
             }
@@ -394,7 +382,7 @@ impl<'input> Iterator for SymbolIterator<'input> {
             SymbolIteratorKind::Root(root) => root.next(),
         };
 
-        if self.new_line() && !self.line_prefixes.is_empty() {
+        if curr_symbol_opt?.kind == SymbolKind::Newline && !self.line_prefixes.is_empty() {
             let mut prefix_matched = false;
 
             for prefix in &self.line_prefixes {
@@ -413,7 +401,6 @@ impl<'input> Iterator for SymbolIterator<'input> {
 
             // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
             if !prefix_matched {
-                dbg!("bad prefix");
                 return None;
             }
         }
