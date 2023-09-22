@@ -6,7 +6,9 @@ use unimarkup_inline::{Inline, ParseInlines};
 use crate::elements::blocks::Block;
 use crate::elements::Blocks;
 use crate::parser::{ElementParser, TokenizeOutput};
-use unimarkup_commons::scanner::{Itertools, Symbol, SymbolIterator, SymbolKind};
+use unimarkup_commons::scanner::{
+    Itertools, Symbol, SymbolIterMatcher, SymbolIterator, SymbolKind,
+};
 
 use super::log_id::AtomicError;
 
@@ -130,7 +132,6 @@ impl ElementParser for Heading {
             .collect();
 
         let level_depth = heading_start.len();
-
         let level: HeadingLevel = HeadingLevel::try_from(level_depth).ok()?;
         if input.by_ref().nth(level_depth)?.kind != SymbolKind::Whitespace {
             return None;
@@ -146,32 +147,10 @@ impl ElementParser for Heading {
             .chain([SymbolKind::Whitespace])
             .collect();
 
-        let heading_end = move |sequence: &[Symbol<'_>]| {
-            if match sequence.get(..2) {
-                Some(slice) => matches!(
-                    [slice[0].kind, slice[1].kind],
-                    [SymbolKind::Newline, SymbolKind::Blankline]
-                ),
-                None => false,
-            } {
-                return true;
-            }
-
-            if match sequence.first() {
-                Some(symbol) => matches!(symbol.kind, SymbolKind::EOI),
-                None => false,
-            } {
-                return true;
-            }
-
-            let sequence_matched = level != HeadingLevel::Level6
-                && sequence[..sub_heading_start.len()]
-                    .iter()
-                    .map(|s| s.kind)
-                    .zip(&sub_heading_start)
-                    .all(|(seq, sub)| seq == *sub);
-
-            sequence_matched
+        let heading_end = move |matcher: &mut dyn SymbolIterMatcher| {
+            matcher.consumed_is_empty_line()
+                || matcher.matches(&[SymbolKind::EOI])
+                || level != HeadingLevel::Level6 && matcher.matches(&sub_heading_start)
         };
 
         let mut content_iter = input.nest_prefixes(
@@ -182,7 +161,6 @@ impl ElementParser for Heading {
 
         // Line prefixes violated => invalid heading syntax
         if !content_iter.end_reached() {
-            // println!("heading end not reached. {:?}", &content_symbols);
             return None;
         }
 
