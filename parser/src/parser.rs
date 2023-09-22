@@ -111,8 +111,10 @@ impl MainParser {
 
         'outer: while let Some(kind) = input.peek_kind() {
             match kind {
-                // skip blanklines
-                SymbolKind::Blankline => {}
+                // skip newlines between elements
+                SymbolKind::Blankline | SymbolKind::Newline => {
+                    input.next();
+                }
 
                 // stop parsing when end of input is reached
                 SymbolKind::EOI => break,
