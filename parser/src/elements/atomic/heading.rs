@@ -122,7 +122,7 @@ impl ElementParser for Heading {
     type Token<'a> = self::HeadingToken<'a>;
 
     fn tokenize<'i>(
-        mut input: SymbolIterator<'i, '_>,
+        mut input: SymbolIterator<'i, '_, '_>,
     ) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
         let mut heading_start: Vec<SymbolKind> = input
             .peeking_take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
@@ -152,7 +152,7 @@ impl ElementParser for Heading {
         } || (level != HeadingLevel::Level6 && sequence[..sub_heading_start.len()].iter().map(|s| s.kind).collect::<Vec<_>>().starts_with(&sub_heading_start));
 
         let mut content_iter = input.nest_prefixes(
-            &[heading_start, whitespace_indents],
+            [heading_start, whitespace_indents],
             Some(Box::new(heading_end)),
         );
         let content_symbols = content_iter.take_to_end();

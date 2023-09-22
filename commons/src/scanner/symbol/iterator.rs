@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{borrow::BorrowMut, rc::Rc};
 
 use itertools::PeekingNext;
 
@@ -6,55 +6,92 @@ use super::{Symbol, SymbolKind};
 
 pub use itertools::*;
 
-#[derive(Default, Clone)]
-pub struct SymbolIterator<'input, 'end_fn> {
+#[derive(Clone)]
+pub struct SymbolIterator<'input, 'parent, 'end_fn> {
+    kind: SymbolIteratorKind<'input, 'parent>,
+    start_index: usize,
+    line_prefixes: Vec<Vec<SymbolKind>>,
+    end: Option<Rc<IteratorEndFn<'input, 'end_fn>>>,
+    iter_end: bool,
+}
+
+#[derive(Clone)]
+pub struct SymbolIteratorRoot<'input> {
     symbols: &'input [Symbol<'input>],
     curr_index: usize,
-    start_index: usize,
     peek_index: usize,
-    line_prefixes: Vec<Vec<SymbolKind>>,
-    end: Vec<Arc<IteratorEndFn<'input, 'end_fn>>>,
+    new_line: bool,
 }
 
-pub type IteratorEndFn<'input, 'end_fn> =
-    Box<dyn Fn(&'input [Symbol<'input>]) -> bool + Send + Sync + 'end_fn>;
+impl<'input> From<&'input [Symbol<'input>]> for SymbolIteratorRoot<'input> {
+    fn from(value: &'input [Symbol<'input>]) -> Self {
+        SymbolIteratorRoot {
+            symbols: value,
+            curr_index: 0,
+            peek_index: 0,
+            new_line: false,
+        }
+    }
+}
 
-impl<'input, 'end_fn> From<&'input [Symbol<'input>]> for SymbolIterator<'input, 'end_fn> {
+impl<'input> From<&'input Vec<Symbol<'input>>> for SymbolIteratorRoot<'input> {
+    fn from(value: &'input Vec<Symbol<'input>>) -> Self {
+        SymbolIteratorRoot {
+            symbols: value,
+            curr_index: 0,
+            peek_index: 0,
+            new_line: false,
+        }
+    }
+}
+
+impl<'input> SymbolIteratorRoot<'input> {
+    fn remaining_symbols(&self) -> &'input [Symbol<'input>] {
+        &self.symbols[self.curr_index..]
+    }
+}
+
+#[derive(Clone)]
+pub enum SymbolIteratorKind<'input, 'parent> {
+    Nested(Rc<SymbolIterator<'input, 'parent, 'parent>>),
+    Root(SymbolIteratorRoot<'input>),
+}
+
+pub type IteratorEndFn<'input, 'end_fn> = Box<dyn Fn(&'input [Symbol<'input>]) -> bool + 'end_fn>;
+
+impl<'input, 'parent, 'end_fn> From<&'input [Symbol<'input>]>
+    for SymbolIterator<'input, 'parent, 'end_fn>
+{
     fn from(value: &'input [Symbol<'input>]) -> Self {
         SymbolIterator {
-            symbols: value,
-            curr_index: 0,
+            kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
             start_index: 0,
-            peek_index: 0,
             line_prefixes: vec![],
-            end: vec![],
+            end: None,
+            iter_end: false,
         }
     }
 }
 
-impl<'input, 'end_fn> From<&'input Vec<Symbol<'input>>> for SymbolIterator<'input, 'end_fn> {
+impl<'input, 'parent, 'end_fn> From<&'input Vec<Symbol<'input>>>
+    for SymbolIterator<'input, 'parent, 'end_fn>
+{
     fn from(value: &'input Vec<Symbol<'input>>) -> Self {
         SymbolIterator {
-            symbols: value,
-            curr_index: 0,
+            kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
             start_index: 0,
-            peek_index: 0,
             line_prefixes: vec![],
-            end: vec![],
+            end: None,
+            iter_end: false,
         }
     }
 }
 
-impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
+impl<'input, 'parent, 'end_fn> SymbolIterator<'input, 'parent, 'end_fn> {
     pub fn new(symbols: &'input [Symbol<'input>], start_index: usize) -> Self {
-        SymbolIterator {
-            symbols,
-            curr_index: start_index,
-            start_index,
-            peek_index: start_index,
-            line_prefixes: vec![],
-            end: vec![],
-        }
+        let mut iter = SymbolIterator::from(symbols);
+        iter.start_index = start_index;
+        iter
     }
 
     pub fn with(
@@ -64,21 +101,26 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
         end: IteratorEndFn<'input, 'end_fn>,
     ) -> Self {
         SymbolIterator {
-            symbols,
-            curr_index: start_index,
+            kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(symbols)),
             start_index,
-            peek_index: start_index,
             line_prefixes: line_prefix.into(),
-            end: vec![Arc::new(end)],
+            end: Some(Rc::new(end)),
+            iter_end: false,
         }
     }
 
     pub fn len(&self) -> usize {
-        self.symbols[self.start_index..].len()
+        match &self.kind {
+            SymbolIteratorKind::Nested(parent) => parent.len(),
+            SymbolIteratorKind::Root(root) => root.symbols[self.start_index..].len(),
+        }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.symbols[self.start_index..].is_empty()
+        match &self.kind {
+            SymbolIteratorKind::Nested(parent) => parent.is_empty(),
+            SymbolIteratorKind::Root(root) => root.symbols[self.start_index..].is_empty(),
+        }
     }
 
     pub fn start_index(&self) -> usize {
@@ -86,170 +128,98 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
     }
 
     pub fn curr_index(&self) -> usize {
-        self.curr_index
+        match &self.kind {
+            SymbolIteratorKind::Nested(parent) => parent.curr_index(),
+            SymbolIteratorKind::Root(root) => root.curr_index,
+        }
     }
 
     pub fn set_curr_index(&mut self, index: usize) {
         if index >= self.start_index {
-            self.curr_index = index;
-            self.peek_index = self.curr_index;
+            match self.kind.borrow_mut() {
+                SymbolIteratorKind::Nested(parent) => {
+                    if let Some(p) = Rc::get_mut(parent) {
+                        p.set_curr_index(index)
+                    }
+                }
+                SymbolIteratorKind::Root(root) => {
+                    root.curr_index = index;
+                    root.peek_index = index;
+                }
+            }
         }
     }
 
     pub fn eoi(&self) -> bool {
-        self.curr_index == self.symbols.len()
+        self.curr_index() == self.len()
     }
 
     pub fn remaining_symbols(&self) -> &'input [Symbol<'input>] {
-        &self.symbols[self.curr_index..]
+        match &self.kind {
+            SymbolIteratorKind::Nested(parent) => parent.remaining_symbols(),
+            SymbolIteratorKind::Root(root) => root.remaining_symbols(),
+        }
+    }
+
+    pub fn new_line(&self) -> bool {
+        match &self.kind {
+            SymbolIteratorKind::Nested(parent) => parent.new_line(),
+            SymbolIteratorKind::Root(root) => root.new_line,
+        }
     }
 
     pub fn peek(&self) -> Option<&'input Symbol<'input>> {
-        self.symbols.get(self.curr_index)
+        match &self.kind {
+            SymbolIteratorKind::Nested(parent) => parent.peek(),
+            SymbolIteratorKind::Root(root) => root.symbols.get(root.curr_index),
+        }
     }
 
     pub fn peek_kind(&self) -> Option<SymbolKind> {
-        self.symbols.get(self.curr_index).map(|s| s.kind)
+        self.peek().map(|s| s.kind)
     }
 
     pub fn nest<'inner_end>(
-        &self,
+        self,
         line_prefix: &[SymbolKind],
         end: Option<IteratorEndFn<'input, 'inner_end>>,
-    ) -> SymbolIterator<'input, 'inner_end>
+    ) -> SymbolIterator<'input, 'parent, 'inner_end>
     where
         'end_fn: 'inner_end,
+        'end_fn: 'parent,
     {
-        let mut nested_prefixes = self.line_prefixes.clone();
-        if nested_prefixes.is_empty() {
-            nested_prefixes.push(vec![]);
-        }
-
-        if !line_prefix.contains(&SymbolKind::Blankline) {
-            nested_prefixes
-                .iter_mut()
-                .for_each(|p| p.extend_from_slice(line_prefix));
-        }
-
-        let mut outer_end = self.end.clone();
-        let merged_end = match end {
-            Some(inner_end) => {
-                outer_end.push(Arc::new(inner_end));
-                outer_end
-            }
-            None => outer_end,
-        };
+        let curr_index = self.curr_index();
+        let iter_end = self.iter_end;
 
         SymbolIterator {
-            symbols: self.symbols,
-            curr_index: self.curr_index,
-            start_index: self.curr_index,
-            peek_index: self.curr_index,
-            line_prefixes: nested_prefixes,
-            end: merged_end,
+            kind: SymbolIteratorKind::Nested(Rc::new(self)),
+            start_index: curr_index,
+            line_prefixes: vec![line_prefix.to_vec()],
+            end: end.map(Rc::new),
+            iter_end,
         }
     }
 
     pub fn nest_prefixes<'inner_end>(
-        &self,
-        line_prefixes: &[Vec<SymbolKind>],
+        self,
+        line_prefixes: impl Into<Vec<Vec<SymbolKind>>>,
         end: Option<IteratorEndFn<'input, 'inner_end>>,
-    ) -> SymbolIterator<'input, 'inner_end>
+    ) -> SymbolIterator<'input, 'parent, 'inner_end>
     where
         'end_fn: 'inner_end,
+        'end_fn: 'parent,
     {
-        let prefixes = if self.line_prefixes.is_empty() {
-            let mut nested_prefixes = self.line_prefixes.clone();
-            nested_prefixes.extend_from_slice(line_prefixes);
-            nested_prefixes
-        } else {
-            // create cartesian prefix
-            self.line_prefixes
-                .iter()
-                .flat_map(|outer_prefixes| {
-                    line_prefixes.iter().map(|inner_prefixes| {
-                        let mut prefix = outer_prefixes.clone();
-
-                        if !inner_prefixes.contains(&SymbolKind::Blankline) {
-                            prefix.extend(inner_prefixes);
-                        }
-
-                        prefix
-                    })
-                })
-                .collect()
-        };
-
-        let mut outer_end = self.end.clone();
-        let merged_end = match end {
-            Some(inner_end) => {
-                outer_end.push(Arc::new(inner_end));
-                outer_end
-            }
-            None => outer_end,
-        };
+        let curr_index = self.curr_index();
+        let iter_end = self.iter_end;
 
         SymbolIterator {
-            symbols: self.symbols,
-            curr_index: self.curr_index,
-            start_index: self.curr_index,
-            peek_index: self.curr_index,
-            line_prefixes: prefixes,
-            end: merged_end,
+            kind: SymbolIteratorKind::Nested(Rc::new(self)),
+            start_index: curr_index,
+            line_prefixes: line_prefixes.into(),
+            end: end.map(Rc::new),
+            iter_end,
         }
     }
-
-    // #[allow(clippy::should_implement_trait)]
-    // pub fn next(&mut self) -> Result<&Symbol<'input>, SymbolIteratorError> {
-    //     if self.eoi() {
-    //         return Err(SymbolIteratorError::Eoi);
-    //     }
-
-    //     let mut curr_symbolkind = match self.symbols.get(self.curr_index) {
-    //         Some(curr_symbol) => curr_symbol.kind,
-    //         None => return Err(SymbolIteratorError::Eoi),
-    //     };
-
-    //     if curr_symbolkind == SymbolKind::Newline && !self.line_prefixes.is_empty() {
-    //         let curr_prefix_symbolkinds: Vec<_> = self.symbols[self.curr_index + 1..]
-    //             .iter()
-    //             .map(|s| s.kind)
-    //             .collect();
-
-    //         let mut prefix_matched = false;
-
-    //         for prefix in &self.line_prefixes {
-    //             if prefix == &curr_prefix_symbolkinds {
-    //                 prefix_matched = true;
-    //                 self.curr_index += prefix.len();
-    //                 curr_symbolkind = match self.symbols.get(self.curr_index) {
-    //                     Some(curr_symbol) => curr_symbol.kind,
-    //                     None => return Err(SymbolIteratorError::Eoi),
-    //                 };
-    //                 break;
-    //             }
-    //         }
-
-    //         if !prefix_matched {
-    //             return Err(SymbolIteratorError::PrefixMismatch);
-    //         }
-    //     } else if curr_symbolkind == SymbolKind::Blankline
-    //         && contains_only_non_whitespace_sequences(&self.line_prefixes)
-    //     {
-    //         return Err(SymbolIteratorError::PrefixMismatch);
-    //     }
-
-    //     for f in &self.end {
-    //         if f(&self.symbols[self.curr_index..]) {
-    //             return Err(SymbolIteratorError::EndReached);
-    //         }
-    //     }
-
-    //     let symbol_opt = self.symbols.get(self.curr_index);
-    //     self.curr_index += 1;
-
-    //     symbol_opt.ok_or(SymbolIteratorError::Eoi)
-    // }
 
     pub fn skip_to_end(mut self) -> Self {
         while self.next().is_some() {}
@@ -270,68 +240,34 @@ impl<'input, 'end_fn> SymbolIterator<'input, 'end_fn> {
     }
 
     pub fn end_reached(&self) -> bool {
-        for f in &self.end {
-            if f(&self.symbols[self.curr_index..]) {
-                return true;
-            }
-        }
+        self.iter_end
+    }
 
-        false
+    pub fn parent(self) -> Option<SymbolIterator<'input, 'parent, 'parent>> {
+        match self.kind {
+            SymbolIteratorKind::Nested(parent) => Rc::into_inner(parent),
+            SymbolIteratorKind::Root(_) => None,
+        }
     }
 }
 
-impl<'input, 'end_fn> Iterator for SymbolIterator<'input, 'end_fn> {
+impl<'input> Iterator for SymbolIteratorRoot<'input> {
     type Item = &'input Symbol<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.eoi() {
-            return None;
+        let sym = self.symbols.get(self.curr_index);
+
+        if let Some(symbol) = sym {
+            self.curr_index += 1;
+            self.peek_index = self.curr_index;
+            self.new_line = symbol.kind == SymbolKind::Newline;
         }
 
-        let curr_symbol_opt = self.symbols.get(self.curr_index);
-        let curr_symbolkind = match curr_symbol_opt {
-            Some(curr_symbol) => curr_symbol.kind,
-            None => return None,
-        };
-
-        if curr_symbolkind == SymbolKind::Newline && !self.line_prefixes.is_empty() {
-            let mut prefix_matched = false;
-
-            for prefix in &self.line_prefixes {
-                let curr_prefix_symbolkinds: Vec<_> = self.symbols
-                    [self.curr_index + 1..self.curr_index + prefix.len()]
-                    .iter()
-                    .map(|s| s.kind)
-                    .collect();
-
-                if prefix == &curr_prefix_symbolkinds {
-                    prefix_matched = true;
-                    self.curr_index += prefix.len();
-                    self.peek_index = self.curr_index;
-                    break;
-                }
-            }
-
-            if !prefix_matched {
-                return None;
-            }
-        } else if curr_symbolkind == SymbolKind::Blankline
-            && contains_only_non_whitespace_sequences(&self.line_prefixes)
-        {
-            return None;
-        }
-
-        if self.end_reached() {
-            return None;
-        }
-
-        self.curr_index += 1;
-        self.peek_index = self.curr_index;
-        curr_symbol_opt
+        sym
     }
 }
 
-impl<'input, 'end_fn> PeekingNext for SymbolIterator<'input, 'end_fn> {
+impl<'input> PeekingNext for SymbolIteratorRoot<'input> {
     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,
@@ -353,6 +289,84 @@ impl<'input, 'end_fn> PeekingNext for SymbolIterator<'input, 'end_fn> {
                 }
             }
             None => None,
+        }
+    }
+}
+
+impl<'input, 'parent, 'end_fn> Iterator for SymbolIterator<'input, 'parent, 'end_fn> {
+    type Item = &'input Symbol<'input>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.eoi() || self.end_reached() {
+            return None;
+        }
+
+        if self.peek_kind()? == SymbolKind::Blankline
+            && contains_only_non_whitespace_sequences(&self.line_prefixes)
+        {
+            return None;
+        }
+
+        let symbols = match &self.kind {
+            SymbolIteratorKind::Nested(parent) => {
+                if parent.end_reached() {
+                    self.iter_end = true;
+                    return None;
+                } else {
+                    parent.remaining_symbols()
+                }
+            }
+            SymbolIteratorKind::Root(root) => root.remaining_symbols(),
+        };
+
+        if let Some(end_fn) = &self.end {
+            if (end_fn)(symbols) {
+                self.iter_end = true;
+                return None;
+            }
+        }
+
+        let curr_symbol_opt = match self.kind.borrow_mut() {
+            SymbolIteratorKind::Nested(parent) => Rc::get_mut(parent)?.next(),
+            SymbolIteratorKind::Root(root) => root.next(),
+        };
+
+        if self.new_line() && !self.line_prefixes.is_empty() {
+            let mut prefix_matched = false;
+
+            for prefix in &self.line_prefixes {
+                let curr_prefix_symbolkinds: Vec<_> = self.remaining_symbols()[..prefix.len()]
+                    .iter()
+                    .map(|s| s.kind)
+                    .collect();
+
+                if prefix == &curr_prefix_symbolkinds {
+                    prefix_matched = true;
+                    // Note: Only update index. Prevents `new_line()` from being changed by possible parent
+                    self.set_curr_index(self.curr_index() + prefix.len());
+                    break;
+                }
+            }
+
+            // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
+            if !prefix_matched {
+                return None;
+            }
+        }
+
+        curr_symbol_opt
+    }
+}
+
+impl<'input, 'parent, 'end_fn> PeekingNext for SymbolIterator<'input, 'parent, 'end_fn> {
+    fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
+    where
+        Self: Sized,
+        F: FnOnce(&Self::Item) -> bool,
+    {
+        match self.kind.borrow_mut() {
+            SymbolIteratorKind::Nested(parent) => Rc::get_mut(parent)?.peeking_next(accept),
+            SymbolIteratorKind::Root(root) => root.peeking_next(accept),
         }
     }
 }

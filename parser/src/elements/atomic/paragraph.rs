@@ -64,7 +64,7 @@ impl ElementParser for Paragraph {
     type Token<'a> = &'a Symbol<'a>;
 
     fn tokenize<'i>(
-        mut input: SymbolIterator<'i, '_>,
+        mut input: SymbolIterator<'i, '_, '_>,
     ) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
         let content = input.by_ref().take_while(not_closing_symbol).collect();
 

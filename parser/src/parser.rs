@@ -17,7 +17,8 @@ use crate::{
 use unimarkup_commons::config::Config;
 
 /// Parser as function that can parse Unimarkup content
-pub type ParserFn = for<'i, 'f> fn(SymbolIterator<'i, 'f>) -> Option<(Blocks, &'i [Symbol<'i>])>;
+pub type ParserFn =
+    for<'i, 'p, 'f> fn(SymbolIterator<'i, 'p, 'f>) -> Option<(Blocks, &'i [Symbol<'i>])>;
 
 /// Output of symbol tokenization by a parser of a block.
 pub(crate) struct TokenizeOutput<'i, T>
@@ -34,7 +35,9 @@ pub(crate) trait ElementParser {
     type Token<'a>;
 
     /// Function that converts input symbols into tokens specific for the given element.
-    fn tokenize<'i>(input: SymbolIterator<'i, '_>) -> Option<TokenizeOutput<'i, Self::Token<'i>>>;
+    fn tokenize<'i>(
+        input: SymbolIterator<'i, '_, '_>,
+    ) -> Option<TokenizeOutput<'i, Self::Token<'i>>>;
 
     /// Function that parses tokenization output and produces one or more Unimarkup elements.
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks>;
@@ -103,8 +106,8 @@ impl MainParser {
     }
 
     /// Parses Unimarkup content and produces Unimarkup blocks.
-    pub fn parse<'i, 'f>(&self, input: impl Into<SymbolIterator<'i, 'f>>) -> Blocks {
-        let mut input: SymbolIterator<'i, 'f> = input.into();
+    pub fn parse<'i, 'p, 'f>(&self, input: impl Into<SymbolIterator<'i, 'p, 'f>>) -> Blocks {
+        let mut input: SymbolIterator<'i, 'p, 'f> = input.into();
         let mut blocks = Vec::default();
 
         #[cfg(debug_assertions)]

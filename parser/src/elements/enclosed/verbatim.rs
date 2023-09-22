@@ -32,7 +32,7 @@ impl ElementParser for Verbatim {
     type Token<'a> = self::Token<'a>;
 
     fn tokenize<'i>(
-        mut input: SymbolIterator<'i, '_>,
+        mut input: SymbolIterator<'i, '_, '_>,
     ) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
         let start_delim: Vec<_> = input
             .by_ref()
@@ -47,24 +47,22 @@ impl ElementParser for Verbatim {
         let end_sequence = std::iter::repeat(SymbolKind::Tick)
             .take(start_delim_len)
             .collect::<Vec<_>>();
-        let mut content_iter = input.nest(
-            &[],
-            Some(Box::new(|sequence| {
-                sequence[..start_delim_len]
-                    .iter()
-                    .map(|s| s.kind)
-                    .collect::<Vec<_>>()
-                    .starts_with(&end_sequence)
-            })),
-        );
+        let end_fn = Box::new(|sequence: &[Symbol<'i>]| {
+            sequence[..start_delim_len]
+                .iter()
+                .map(|s| s.kind)
+                .collect::<Vec<_>>()
+                .starts_with(&end_sequence)
+        });
 
-        let content = content_iter.take_to_end();
-        if !content_iter.end_reached() {
-            return None;
-        }
+        // let mut content_iter = input.nest(&[], Some(end_fn));
 
-        input.set_curr_index(content_iter.curr_index());
+        // let content = content_iter.take_to_end();
+        // if !content_iter.end_reached() {
+        //     return None;
+        // }
 
+        // input = content_iter.parent()?;
         match input
             .by_ref()
             .take(start_delim_len)
@@ -82,7 +80,7 @@ impl ElementParser for Verbatim {
         // TODO: handle language attribute
 
         let output = TokenizeOutput {
-            tokens: vec![Token::StartDelim(start_delim), Token::Content(content)],
+            tokens: vec![Token::StartDelim(start_delim), Token::Content(vec![])], //content)],
             rest_of_input: input.remaining_symbols(),
         };
 
