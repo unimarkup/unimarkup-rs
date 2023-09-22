@@ -507,4 +507,40 @@ mod test {
             "Symbols till end was reached are incorrect."
         );
     }
+
+    #[test]
+    fn with_nested_and_parent_prefix() {
+        let symbols = Scanner::try_new()
+            .expect("Must be valid provider.")
+            .scan_str("a\n* *b");
+
+        let iterator = SymbolIterator::with(
+            &symbols,
+            0,
+            vec![vec![SymbolKind::Star, SymbolKind::Whitespace]],
+            Box::new(|_| false),
+        );
+
+        let mut inner = iterator.nest(
+            &[SymbolKind::Star],
+            Some(Box::new(|sequence| {
+                sequence
+                    .get(0)
+                    .map(|s| s.kind == SymbolKind::Star)
+                    .unwrap_or(false)
+            })),
+        );
+
+        let sym_kinds = inner
+            .take_to_end()
+            .iter()
+            .map(|s| s.kind)
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            sym_kinds,
+            vec![SymbolKind::Plain, SymbolKind::Newline, SymbolKind::Plain],
+            "Prefix symbols not correctly skipped"
+        );
+    }
 }
