@@ -147,10 +147,22 @@ impl ElementParser for Heading {
             .collect();
 
         let heading_end = move |sequence: &[Symbol<'_>]| {
-            let is_eoi = match sequence.first() {
-                Some(symbol) => matches!(symbol.kind, SymbolKind::Blankline | SymbolKind::EOI),
+            if match sequence.get(..2) {
+                Some(slice) => matches!(
+                    [slice[0].kind, slice[1].kind],
+                    [SymbolKind::Newline, SymbolKind::Blankline]
+                ),
                 None => false,
-            };
+            } {
+                return true;
+            }
+
+            if match sequence.first() {
+                Some(symbol) => matches!(symbol.kind, SymbolKind::EOI),
+                None => false,
+            } {
+                return true;
+            }
 
             let sequence_matched = level != HeadingLevel::Level6
                 && sequence[..sub_heading_start.len()]
@@ -159,7 +171,7 @@ impl ElementParser for Heading {
                     .zip(&sub_heading_start)
                     .all(|(seq, sub)| seq == *sub);
 
-            is_eoi || sequence_matched
+            sequence_matched
         };
 
         let mut content_iter = input.nest_prefixes(
@@ -174,13 +186,16 @@ impl ElementParser for Heading {
             return None;
         }
 
+        let rest_of_input = content_iter.remaining_symbols();
+        content_iter.update(input);
+
         let output = TokenizeOutput {
             tokens: vec![
                 HeadingToken::Level(level),
                 HeadingToken::Content(content_symbols),
                 HeadingToken::End,
             ],
-            rest_of_input: content_iter.remaining_symbols(),
+            rest_of_input,
         };
 
         Some(output)

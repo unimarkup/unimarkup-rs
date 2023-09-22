@@ -203,6 +203,12 @@ impl<'input> SymbolIterator<'input> {
         }
     }
 
+    pub fn update(self, parent: &mut Self) {
+        if let SymbolIteratorKind::Nested(self_parent) = self.kind {
+            *parent = *self_parent;
+        }
+    }
+
     pub fn skip_to_end(mut self) -> Self {
         while self.next().is_some() {}
 
@@ -223,13 +229,6 @@ impl<'input> SymbolIterator<'input> {
 
     pub fn end_reached(&self) -> bool {
         self.iter_end
-    }
-
-    pub fn parent(self) -> Option<SymbolIterator<'input>> {
-        match self.kind {
-            SymbolIteratorKind::Nested(parent) => Some(*parent),
-            SymbolIteratorKind::Root(_) => None,
-        }
     }
 }
 
@@ -503,18 +502,10 @@ mod test {
             &symbols,
             0,
             vec![vec![SymbolKind::Star, SymbolKind::Whitespace]],
-            Box::new(|_| false),
+            Rc::new(|_| false),
         );
 
-        let mut inner = iterator.nest(
-            &[SymbolKind::Star],
-            Some(Box::new(|sequence| {
-                sequence
-                    .get(0)
-                    .map(|s| s.kind == SymbolKind::Star)
-                    .unwrap_or(false)
-            })),
-        );
+        let mut inner = iterator.nest(&[SymbolKind::Star], None);
 
         let sym_kinds = inner
             .take_to_end()
