@@ -68,6 +68,7 @@ pub trait PrefixMatcher {
 
 impl<'input> EndMatcher for SymbolIterator<'input> {
     fn is_empty_line(&mut self) -> bool {
+        // Note: Multiple matches may be set in the match closure, so we need to ensure that all start at the same index
         self.reset_peek();
 
         let next = self
@@ -78,7 +79,6 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
             let _whitespaces = self
                 .peeking_take_while(|s| s.kind == SymbolKind::Whitespace)
                 .count();
-            // self.set_peek_index(self.peek_index().saturating_sub(1)); // Note: To compensate last "peeking_next()" in "peeking_take_while()"
 
             let new_line = self
                 .peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline));
@@ -101,6 +101,7 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
     }
 
     fn matches(&mut self, sequence: &[SymbolKind]) -> bool {
+        // Note: Multiple matches may be set in the match closure, so we need to ensure that all start at the same index
         self.reset_peek();
 
         for kind in sequence {
