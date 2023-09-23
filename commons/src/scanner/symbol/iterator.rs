@@ -8,8 +8,8 @@ pub use itertools::*;
 pub struct SymbolIterator<'input> {
     kind: SymbolIteratorKind<'input>,
     start_index: usize,
-    line_prefixes: Vec<Vec<SymbolKind>>,
-    end: Option<IteratorEndFn>,
+    prefix_match: Option<IteratorPrefixFn>,
+    end_match: Option<IteratorEndFn>,
     iter_end: bool,
 }
 
@@ -52,60 +52,56 @@ pub enum SymbolIteratorKind<'input> {
     Root(SymbolIteratorRoot<'input>),
 }
 
-pub type IteratorEndFn = Rc<dyn (Fn(&mut dyn SymbolIterMatcher) -> bool)>;
+pub type IteratorEndFn = Rc<dyn (Fn(&mut dyn EndMatcher) -> bool)>;
+pub type IteratorPrefixFn = Rc<dyn (Fn(&mut dyn PrefixMatcher) -> bool)>;
 
-pub trait SymbolIterMatcher {
+pub trait EndMatcher {
     fn is_empty_line(&mut self) -> bool;
     fn consumed_is_empty_line(&mut self) -> bool;
     fn matches(&mut self, sequence: &[SymbolKind]) -> bool;
     fn consumed_matches(&mut self, sequence: &[SymbolKind]) -> bool;
 }
 
-impl<'input> SymbolIterMatcher for SymbolIterator<'input> {
+pub trait PrefixMatcher {
+    fn consumed_prefix(&mut self, sequence: &[SymbolKind]) -> bool;
+}
+
+impl<'input> EndMatcher for SymbolIterator<'input> {
     fn is_empty_line(&mut self) -> bool {
+        self.reset_peek();
+
         let next = self
             .peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline))
             .map(|s| s.kind);
 
-        if Some(SymbolKind::Newline) == next {
-            let _ = self.peeking_take_while(|s| s.kind == SymbolKind::Whitespace);
-            self.set_peek_index(self.peek_index().saturating_sub(1)); // Note: To compensate last "peeking_next()" in "peeking_take_whil()"
-
-            return self
-                .peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline))
-                .is_some();
-        }
-
-        Some(SymbolKind::Blankline) == next
-    }
-
-    fn consumed_is_empty_line(&mut self) -> bool {
-        let next = self
-            .peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline))
-            .map(|s| s.kind);
-
-        if Some(SymbolKind::Newline) == next {
-            let whitespaces = self
+        let is_empty_line = if Some(SymbolKind::Newline) == next {
+            let _whitespaces = self
                 .peeking_take_while(|s| s.kind == SymbolKind::Whitespace)
                 .count();
             self.set_peek_index(self.peek_index().saturating_sub(1)); // Note: To compensate last "peeking_next()" in "peeking_take_whil()"
 
-            let end = self
-                .peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline))
-                .map(|s| s.kind);
+            self.peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline))
+                .is_some()
+        } else {
+            Some(SymbolKind::Blankline) == next
+        };
 
-            if end.is_some() {
-                let _ = self.skip(whitespaces + 2); // +2 for starting newline + (blankline | newline)
-                return true;
-            }
-        } else if Some(SymbolKind::Blankline) == next {
-            let _ = self.skip(1);
+        is_empty_line
+    }
+
+    fn consumed_is_empty_line(&mut self) -> bool {
+        let is_empty_line = self.is_empty_line();
+
+        if is_empty_line {
+            self.set_curr_index(self.peek_index()); // To consume peeked symbols
         }
 
-        Some(SymbolKind::Blankline) == next
+        is_empty_line
     }
 
     fn matches(&mut self, sequence: &[SymbolKind]) -> bool {
+        self.reset_peek();
+
         for kind in sequence {
             if self.peeking_next(|s| s.kind == *kind).is_none() {
                 return false;
@@ -116,15 +112,25 @@ impl<'input> SymbolIterMatcher for SymbolIterator<'input> {
     }
 
     fn consumed_matches(&mut self, sequence: &[SymbolKind]) -> bool {
-        for kind in sequence {
-            if self.peeking_next(|s| s.kind == *kind).is_none() {
-                return false;
-            }
+        let matched = self.matches(sequence);
+
+        if matched {
+            self.set_curr_index(self.peek_index()); // To consume peeked symbols
         }
 
-        let _ = self.skip(sequence.len());
+        matched
+    }
+}
 
-        true
+impl<'input> PrefixMatcher for SymbolIterator<'input> {
+    fn consumed_prefix(&mut self, sequence: &[SymbolKind]) -> bool {
+        #[cfg(debug_assertions)]
+        assert!(
+            !sequence.contains(&SymbolKind::Newline),
+            "Newline symbol in prefix match is not allowed."
+        );
+
+        self.consumed_matches(sequence)
     }
 }
 
@@ -133,8 +139,8 @@ impl<'input> From<&'input [Symbol<'input>]> for SymbolIterator<'input> {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
             start_index: 0,
-            line_prefixes: vec![],
-            end: None,
+            prefix_match: None,
+            end_match: None,
             iter_end: false,
         }
     }
@@ -145,8 +151,8 @@ impl<'input> From<&'input Vec<Symbol<'input>>> for SymbolIterator<'input> {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
             start_index: 0,
-            line_prefixes: vec![],
-            end: None,
+            prefix_match: None,
+            end_match: None,
             iter_end: false,
         }
     }
@@ -162,14 +168,14 @@ impl<'input> SymbolIterator<'input> {
     pub fn with(
         symbols: &'input [Symbol<'input>],
         start_index: usize,
-        line_prefix: impl Into<Vec<Vec<SymbolKind>>>,
+        prefix_match: Option<IteratorPrefixFn>,
         end: Option<IteratorEndFn>,
     ) -> Self {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(symbols)),
             start_index,
-            line_prefixes: line_prefix.into(),
-            end,
+            prefix_match,
+            end_match: end,
             iter_end: false,
         }
     }
@@ -229,8 +235,8 @@ impl<'input> SymbolIterator<'input> {
         }
     }
 
-    pub fn eoi(&self) -> bool {
-        self.curr_index() == self.len()
+    pub fn reset_peek(&mut self) {
+        self.set_peek_index(self.curr_index());
     }
 
     pub fn remaining_symbols(&self) -> Option<&'input [Symbol<'input>]> {
@@ -240,48 +246,27 @@ impl<'input> SymbolIterator<'input> {
         }
     }
 
-    pub fn peek(&self) -> Option<&'input Symbol<'input>> {
-        match &self.kind {
-            SymbolIteratorKind::Nested(parent) => parent.peek(),
-            SymbolIteratorKind::Root(root) => root.symbols.get(root.curr_index),
-        }
+    pub fn peek(&mut self) -> Option<&'input Symbol<'input>> {
+        let symbol = self.peeking_next(|_| true);
+        self.reset_peek(); // Note: Resetting index, because peek() must be idempotent
+        symbol
     }
 
-    pub fn peek_kind(&self) -> Option<SymbolKind> {
+    pub fn peek_kind(&mut self) -> Option<SymbolKind> {
         self.peek().map(|s| s.kind)
     }
 
     pub fn nest(
         &self,
-        line_prefix: &[SymbolKind],
+        prefix_match: Option<IteratorPrefixFn>,
         end: Option<IteratorEndFn>,
     ) -> SymbolIterator<'input> {
-        let curr_index = self.curr_index();
-        let iter_end = self.iter_end;
-
         SymbolIterator {
             kind: SymbolIteratorKind::Nested(Box::new(self.clone())),
-            start_index: curr_index,
-            line_prefixes: vec![line_prefix.to_vec()],
-            end,
-            iter_end,
-        }
-    }
-
-    pub fn nest_prefixes(
-        &self,
-        line_prefixes: impl Into<Vec<Vec<SymbolKind>>>,
-        end: Option<IteratorEndFn>,
-    ) -> SymbolIterator<'input> {
-        let curr_index = self.curr_index();
-        let iter_end = self.iter_end;
-
-        SymbolIterator {
-            kind: SymbolIteratorKind::Nested(Box::new(self.clone())),
-            start_index: curr_index,
-            line_prefixes: line_prefixes.into(),
-            end,
-            iter_end,
+            start_index: self.curr_index(),
+            prefix_match,
+            end_match: end,
+            iter_end: self.iter_end,
         }
     }
 
@@ -291,8 +276,13 @@ impl<'input> SymbolIterator<'input> {
         }
     }
 
+    /// Tries to skip symbols until one of the end functions signals the end.
+    ///
+    /// **Note:** This function might not reach the iterator end.
+    /// If no symbols are left, or no given line prefix is matched, the iterator may stop before an end is reached.
+    /// Use `end_reached()` to check if the end was actually reached.
     pub fn skip_to_end(mut self) -> Self {
-        while self.next().is_some() {}
+        let _last_symbol = self.by_ref().last();
 
         self
     }
@@ -318,15 +308,12 @@ impl<'input> Iterator for SymbolIteratorRoot<'input> {
     type Item = &'input Symbol<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.symbols.get(self.curr_index) {
-            Some(symbol) => {
-                self.curr_index += 1;
-                self.peek_index = self.curr_index;
+        let symbol = self.symbols.get(self.curr_index)?;
 
-                Some(symbol)
-            }
-            None => None,
-        }
+        self.curr_index += 1;
+        self.peek_index = self.curr_index;
+
+        Some(symbol)
     }
 }
 
@@ -336,23 +323,15 @@ impl<'input> PeekingNext for SymbolIteratorRoot<'input> {
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
-        let curr_index = self.curr_index;
-        self.curr_index = self.peek_index; // Note: peek_index increases until `next()` is called directly
-        let next_item = self.next();
+        let symbol = self.symbols.get(self.peek_index)?;
 
-        // revert index to simulate lookahead
-        self.curr_index = curr_index;
-
-        match next_item {
-            Some(symbol) => {
-                if (accept)(&symbol) {
-                    next_item
-                } else {
-                    None
-                }
-            }
-            None => None,
+        if !(accept)(&symbol) {
+            return None;
         }
+
+        self.peek_index += 1;
+
+        Some(symbol)
     }
 }
 
@@ -360,55 +339,48 @@ impl<'input> Iterator for SymbolIterator<'input> {
     type Item = &'input Symbol<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.eoi() || self.end_reached() {
-            return None;
-        }
-
-        if self.peek_kind()? == SymbolKind::Blankline
-            && contains_only_non_whitespace_sequences(&self.line_prefixes)
-        {
-            return None;
-        }
-
-        if let Some(end_fn) = self.end.clone() {
-            if (end_fn)(self) {
-                self.iter_end = true;
-                return None;
-            }
-        }
-
-        let curr_symbol_opt = match &mut self.kind {
+        let next_fn = |kind: &mut SymbolIteratorKind<'input>| match kind {
             SymbolIteratorKind::Nested(parent) => parent.next(),
             SymbolIteratorKind::Root(root) => root.next(),
         };
 
-        if curr_symbol_opt?.kind == SymbolKind::Newline && !self.line_prefixes.is_empty() {
-            let mut prefix_matched = false;
-
-            for prefix in &self.line_prefixes {
-                let curr_prefix_symbolkinds: Vec<_> = self
-                    .remaining_symbols()?
-                    .get(..prefix.len())?
-                    .iter()
-                    .map(|s| s.kind)
-                    .collect();
-
-                if prefix == &curr_prefix_symbolkinds {
-                    prefix_matched = true;
-                    // Note: Only update index to pass `SymbolKind::Newline` to all nested iterators
-                    self.set_curr_index(self.curr_index() + prefix.len());
-                    break;
-                }
-            }
-
-            // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
-            if !prefix_matched {
-                return None;
-            }
-        }
-
-        curr_symbol_opt
+        next_symbol(self, next_fn)
     }
+}
+
+fn next_symbol<'input, F>(
+    iter: &mut SymbolIterator<'input>,
+    next_fn: F,
+) -> Option<&'input Symbol<'input>>
+where
+    F: FnOnce(&mut SymbolIteratorKind<'input>) -> Option<&'input Symbol<'input>>,
+{
+    if iter.end_reached() {
+        return None;
+    }
+
+    if let Some(end_fn) = iter.end_match.clone() {
+        if (end_fn)(iter) {
+            iter.iter_end = true;
+            return None;
+        }
+    }
+
+    let curr_symbol_opt = next_fn(&mut iter.kind);
+
+    if curr_symbol_opt?.kind == SymbolKind::Newline && iter.prefix_match.is_some() {
+        let prefix_match = iter
+            .prefix_match
+            .clone()
+            .expect("Prefix match checked above to be some.");
+
+        // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
+        if !prefix_match(iter) {
+            return None;
+        }
+    }
+
+    curr_symbol_opt
 }
 
 impl<'input> PeekingNext for SymbolIterator<'input> {
@@ -417,42 +389,13 @@ impl<'input> PeekingNext for SymbolIterator<'input> {
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
-        match self.kind.borrow_mut() {
+        let next_fn = |kind: &mut SymbolIteratorKind<'input>| match kind {
             SymbolIteratorKind::Nested(parent) => parent.peeking_next(accept),
             SymbolIteratorKind::Root(root) => root.peeking_next(accept),
-        }
+        };
+
+        next_symbol(self, next_fn)
     }
-}
-
-pub enum SymbolIteratorError {
-    /// At least one end-function returned `true`.
-    EndReached,
-    /// A new line did not start with the expected prefix.
-    PrefixMismatch,
-    /// Reached end of input.
-    Eoi,
-}
-
-fn contains_only_non_whitespace_sequences(sequences: &[Vec<SymbolKind>]) -> bool {
-    let mut whitespace_sequence_found = false;
-
-    for sequence in sequences {
-        whitespace_sequence_found = whitespace_sequence_found || !contains_non_whitespace(sequence);
-    }
-    whitespace_sequence_found
-}
-
-fn contains_non_whitespace(sequence: &[SymbolKind]) -> bool {
-    for kind in sequence {
-        if !matches!(
-            kind,
-            SymbolKind::Whitespace | SymbolKind::Newline | SymbolKind::Blankline
-        ) {
-            return true;
-        }
-    }
-
-    false
 }
 
 #[cfg(test)]
@@ -461,7 +404,7 @@ mod test {
 
     use itertools::{Itertools, PeekingNext};
 
-    use crate::scanner::{Scanner, SymbolKind};
+    use crate::scanner::{PrefixMatcher, Scanner, SymbolKind};
 
     use super::SymbolIterator;
 
@@ -535,7 +478,7 @@ mod test {
             .scan_str("text*");
 
         let mut iterator = SymbolIterator::from(&symbols).nest(
-            &[],
+            None,
             Some(Rc::new(|matcher| matcher.matches(&[SymbolKind::Star]))),
         );
 
@@ -567,11 +510,18 @@ mod test {
         let iterator = SymbolIterator::with(
             &symbols,
             0,
-            vec![vec![SymbolKind::Star, SymbolKind::Whitespace]],
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[SymbolKind::Star, SymbolKind::Whitespace])
+            })),
             None,
         );
 
-        let mut inner = iterator.nest(&[SymbolKind::Star], None);
+        let mut inner = iterator.nest(
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[SymbolKind::Star])
+            })),
+            None,
+        );
 
         let sym_kinds = inner
             .take_to_end()

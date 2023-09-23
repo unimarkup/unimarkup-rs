@@ -7,7 +7,7 @@ use crate::elements::blocks::Block;
 use crate::elements::Blocks;
 use crate::parser::{ElementParser, TokenizeOutput};
 use unimarkup_commons::scanner::{
-    Itertools, Symbol, SymbolIterMatcher, SymbolIterator, SymbolKind,
+    EndMatcher, Itertools, PrefixMatcher, Symbol, SymbolIterator, SymbolKind,
 };
 
 use super::log_id::AtomicError;
@@ -138,26 +138,29 @@ impl ElementParser for Heading {
         }
 
         heading_start.push(SymbolKind::Whitespace);
-        let whitespace_indents = std::iter::repeat(SymbolKind::Whitespace)
-            .take(heading_start.len())
-            .collect();
 
         let sub_heading_start: Vec<SymbolKind> = std::iter::repeat(SymbolKind::Hash)
             .take(heading_start.len())
             .chain([SymbolKind::Whitespace])
             .collect();
-
-        let heading_end = move |matcher: &mut dyn SymbolIterMatcher| {
+        let heading_end = move |matcher: &mut dyn EndMatcher| {
             matcher.consumed_is_empty_line()
                 || matcher.matches(&[SymbolKind::EOI])
                 || level != HeadingLevel::Level6 && matcher.matches(&sub_heading_start)
         };
 
-        let mut content_iter = input.nest_prefixes(
-            [heading_start, whitespace_indents],
-            Some(Rc::new(heading_end)),
-        );
+        let whitespace_indents: Vec<SymbolKind> = std::iter::repeat(SymbolKind::Whitespace)
+            .take(heading_start.len())
+            .collect();
+        let heading_prefix = move |matcher: &mut dyn PrefixMatcher| {
+            matcher.consumed_prefix(&heading_start) || matcher.consumed_prefix(&whitespace_indents)
+        };
+
+        let mut content_iter =
+            input.nest(Some(Rc::new(heading_prefix)), Some(Rc::new(heading_end)));
         let content_symbols = content_iter.take_to_end();
+
+        dbg!(&content_symbols.iter().map(|s| s.kind).collect::<Vec<_>>());
 
         // Line prefixes violated => invalid heading syntax
         if !content_iter.end_reached() {
