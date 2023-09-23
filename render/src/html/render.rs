@@ -41,18 +41,6 @@ impl Renderer<Html> for HtmlRenderer {
         verbatim: &unimarkup_parser::elements::enclosed::Verbatim,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        // TODO: improve handling of attributes
-        // let attributes = serde_json::from_str::<VerbatimAttributes>(
-        //     &verbatim.attributes.as_ref().cloned().unwrap_or_default(),
-        // )
-        // .ok();
-
-        // let language = match attributes.as_ref() {
-        //     Some(attrs) => attrs.language.clone().unwrap_or(PLAIN_SYNTAX.to_string()),
-        //     None => PLAIN_SYNTAX.to_string(),
-        // };
-        let language = "rust";
-
         let inner = Html::with(
             HtmlHead {
                 syntax_highlighting_used: true,
@@ -62,8 +50,14 @@ impl Renderer<Html> for HtmlRenderer {
                 tag: HtmlTag::Code,
                 attributes: HtmlAttributes::default(),
                 content: Some(
-                    highlight::highlight_content(&verbatim.content, language)
-                        .unwrap_or(verbatim.content.clone()),
+                    highlight::highlight_content(
+                        &verbatim.content,
+                        verbatim
+                            .data_lang
+                            .as_ref()
+                            .unwrap_or(&highlight::PLAIN_SYNTAX.to_string()),
+                    )
+                    .unwrap_or(verbatim.content.clone()),
                 ),
             }),
         );

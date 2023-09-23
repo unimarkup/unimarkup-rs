@@ -1,9 +1,11 @@
+use std::rc::Rc;
+
 use serde::{Deserialize, Serialize};
 
 use crate::elements::blocks::Block;
 use crate::elements::Blocks;
 use crate::parser::{ElementParser, TokenizeOutput};
-use unimarkup_commons::scanner::{Symbol, SymbolIterator, SymbolKind};
+use unimarkup_commons::scanner::{EndMatcher, Itertools, Symbol, SymbolIterator, SymbolKind};
 
 /// Structure of a Unimarkup verbatim block element.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -13,6 +15,9 @@ pub struct Verbatim {
 
     /// The content of the verbatim block.
     pub content: String,
+
+    /// The language used to highlight the content.
+    pub data_lang: Option<String>,
 
     /// Attributes of the verbatim block.
     // TODO: make attributes data structure
@@ -25,6 +30,7 @@ pub struct Verbatim {
 
 pub(crate) enum Token<'a> {
     StartDelim(Vec<&'a Symbol<'a>>),
+    DataLang(Vec<&'a Symbol<'a>>),
     Content(Vec<&'a Symbol<'a>>),
 }
 
@@ -32,53 +38,47 @@ impl ElementParser for Verbatim {
     type Token<'a> = self::Token<'a>;
 
     fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<Self::Token<'i>>> {
-        let start_delim: Vec<_> = input
+        let start_delim_len = input
             .by_ref()
-            .take_while(|symbol| matches!(symbol.kind, SymbolKind::Tick))
-            .collect();
-        let start_delim_len = start_delim.len();
+            .peeking_take_while(|symbol| matches!(symbol.kind, SymbolKind::Tick))
+            .count();
 
         if start_delim_len < 3 {
             return None;
         };
 
-        let end_sequence = std::iter::repeat(SymbolKind::Tick)
-            .take(start_delim_len)
+        let start_delim = input.by_ref().take(start_delim_len).collect();
+        // Note: Consuming `Newline` is intended, because it is not part of the content, but also not of data-lang
+        let data_lang = input
+            .take_while(|s| s.kind != SymbolKind::Newline)
             .collect::<Vec<_>>();
-        let _end_fn = Box::new(|sequence: &[Symbol<'i>]| {
-            sequence[..start_delim_len]
-                .iter()
-                .map(|s| s.kind)
-                .collect::<Vec<_>>()
-                .starts_with(&end_sequence)
-        });
 
-        // let mut content_iter = input.nest(&[], Some(end_fn));
+        let end_sequence = [SymbolKind::Newline]
+            .into_iter()
+            .chain(std::iter::repeat(SymbolKind::Tick).take(start_delim_len))
+            .collect::<Vec<SymbolKind>>();
+        let end_sequence_len = end_sequence.len();
+        let end_fn = Rc::new(move |matcher: &mut dyn EndMatcher| matcher.matches(&end_sequence));
 
-        // let content = content_iter.take_to_end();
-        // if !content_iter.end_reached() {
-        //     return None;
-        // }
+        let mut content_iter = input.nest(None, Some(end_fn));
+        let content = content_iter.take_to_end();
 
-        // input = content_iter.parent()?;
-        match input
-            .by_ref()
-            .take(start_delim_len)
-            .map(|s| s.kind)
-            .collect::<Vec<_>>()
-        {
-            end if end == end_sequence => {
-                if input.peek_kind() == Some(SymbolKind::Tick) {
-                    return None;
-                }
-            }
-            _ => return None,
+        if !content_iter.end_reached() {
+            return None;
         }
+
+        content_iter.update(input);
+
+        input.dropping(end_sequence_len);
 
         // TODO: handle language attribute
 
         let output = TokenizeOutput {
-            tokens: vec![Token::StartDelim(start_delim), Token::Content(vec![])], //content)],
+            tokens: vec![
+                Token::StartDelim(start_delim),
+                Token::DataLang(data_lang),
+                Token::Content(content),
+            ],
         };
 
         Some(output)
@@ -90,7 +90,16 @@ impl ElementParser for Verbatim {
         };
         let line_nr = start.get(0)?.start.line;
 
-        let Token::Content(symbols) = input.get(1)? else {
+        let Token::DataLang(lang_symbols) = input.get(1)? else {
+            return None;
+        };
+        let data_lang = if lang_symbols.is_empty() {
+            None
+        } else {
+            Some(Symbol::flatten_iter(lang_symbols.iter().copied())?.to_string())
+        };
+
+        let Token::Content(symbols) = input.get(2)? else {
             return None;
         };
         let content = Symbol::flatten_iter(symbols.iter().copied())?;
@@ -98,6 +107,7 @@ impl ElementParser for Verbatim {
         let block = Self {
             id: String::default(),
             content: String::from(content),
+            data_lang,
             attributes: None,
             line_nr,
         };
