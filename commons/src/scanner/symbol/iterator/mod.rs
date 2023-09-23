@@ -1,8 +1,13 @@
-use std::{borrow::BorrowMut, rc::Rc};
+use std::borrow::BorrowMut;
 
 use super::{Symbol, SymbolKind};
 
+mod matcher;
+mod root;
+
 pub use itertools::*;
+pub use matcher::*;
+pub use root::*;
 
 #[derive(Clone)]
 pub struct SymbolIterator<'input> {
@@ -14,168 +19,24 @@ pub struct SymbolIterator<'input> {
 }
 
 #[derive(Clone)]
-pub struct SymbolIteratorRoot<'input> {
-    symbols: &'input [Symbol<'input>],
-    curr_index: usize,
-    peek_index: usize,
-}
-
-impl<'input> From<&'input [Symbol<'input>]> for SymbolIteratorRoot<'input> {
-    fn from(value: &'input [Symbol<'input>]) -> Self {
-        SymbolIteratorRoot {
-            symbols: value,
-            curr_index: 0,
-            peek_index: 0,
-        }
-    }
-}
-
-impl<'input> From<&'input Vec<Symbol<'input>>> for SymbolIteratorRoot<'input> {
-    fn from(value: &'input Vec<Symbol<'input>>) -> Self {
-        SymbolIteratorRoot {
-            symbols: value,
-            curr_index: 0,
-            peek_index: 0,
-        }
-    }
-}
-
-impl<'input> SymbolIteratorRoot<'input> {
-    fn remaining_symbols(&self) -> Option<&'input [Symbol<'input>]> {
-        self.symbols.get(self.curr_index..)
-    }
-}
-
-#[derive(Clone)]
 pub enum SymbolIteratorKind<'input> {
     Nested(Box<SymbolIterator<'input>>),
     Root(SymbolIteratorRoot<'input>),
 }
 
-pub type IteratorEndFn = Rc<dyn (Fn(&mut dyn EndMatcher) -> bool)>;
-pub type IteratorPrefixFn = Rc<dyn (Fn(&mut dyn PrefixMatcher) -> bool)>;
-
-pub trait EndMatcher {
-    fn is_empty_line(&mut self) -> bool;
-    fn consumed_is_empty_line(&mut self) -> bool;
-    fn matches(&mut self, sequence: &[SymbolKind]) -> bool;
-    fn consumed_matches(&mut self, sequence: &[SymbolKind]) -> bool;
-}
-
-pub trait PrefixMatcher {
-    fn consumed_prefix(&mut self, sequence: &[SymbolKind]) -> bool;
-}
-
-impl<'input> EndMatcher for SymbolIterator<'input> {
-    fn is_empty_line(&mut self) -> bool {
-        // Note: Multiple matches may be set in the match closure, so we need to ensure that all start at the same index
-        self.reset_peek();
-
-        let next = self
-            .peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline))
-            .map(|s| s.kind);
-
-        let is_empty_line = if Some(SymbolKind::Newline) == next {
-            let _whitespaces = self
-                .peeking_take_while(|s| s.kind == SymbolKind::Whitespace)
-                .count();
-
-            let new_line = self
-                .peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline));
-            new_line.is_some()
-        } else {
-            Some(SymbolKind::Blankline) == next
-        };
-
-        is_empty_line
-    }
-
-    fn consumed_is_empty_line(&mut self) -> bool {
-        let is_empty_line = self.is_empty_line();
-
-        if is_empty_line {
-            self.set_curr_index(self.peek_index()); // To consume peeked symbols
-        }
-
-        is_empty_line
-    }
-
-    fn matches(&mut self, sequence: &[SymbolKind]) -> bool {
-        // Note: Multiple matches may be set in the match closure, so we need to ensure that all start at the same index
-        self.reset_peek();
-
-        for kind in sequence {
-            if self.peeking_next(|s| s.kind == *kind).is_none() {
-                return false;
-            }
-        }
-
-        true
-    }
-
-    fn consumed_matches(&mut self, sequence: &[SymbolKind]) -> bool {
-        let matched = self.matches(sequence);
-
-        if matched {
-            self.set_curr_index(self.peek_index()); // To consume peeked symbols
-        }
-
-        matched
-    }
-}
-
-impl<'input> PrefixMatcher for SymbolIterator<'input> {
-    fn consumed_prefix(&mut self, sequence: &[SymbolKind]) -> bool {
-        #[cfg(debug_assertions)]
-        assert!(
-            !sequence.contains(&SymbolKind::Newline),
-            "Newline symbol in prefix match is not allowed."
-        );
-
-        self.consumed_matches(sequence)
-    }
-}
-
-impl<'input> From<&'input [Symbol<'input>]> for SymbolIterator<'input> {
-    fn from(value: &'input [Symbol<'input>]) -> Self {
-        SymbolIterator {
-            kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
-            start_index: 0,
-            prefix_match: None,
-            end_match: None,
-            iter_end: false,
-        }
-    }
-}
-
-impl<'input> From<&'input Vec<Symbol<'input>>> for SymbolIterator<'input> {
-    fn from(value: &'input Vec<Symbol<'input>>) -> Self {
-        SymbolIterator {
-            kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
-            start_index: 0,
-            prefix_match: None,
-            end_match: None,
-            iter_end: false,
-        }
-    }
-}
-
 impl<'input> SymbolIterator<'input> {
-    pub fn new(symbols: &'input [Symbol<'input>], start_index: usize) -> Self {
-        let mut iter = SymbolIterator::from(symbols);
-        iter.start_index = start_index;
-        iter
+    pub fn new(symbols: &'input [Symbol<'input>]) -> Self {
+        SymbolIterator::from(symbols)
     }
 
     pub fn with(
         symbols: &'input [Symbol<'input>],
-        start_index: usize,
         prefix_match: Option<IteratorPrefixFn>,
         end: Option<IteratorEndFn>,
     ) -> Self {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(symbols)),
-            start_index,
+            start_index: 0,
             prefix_match,
             end_match: end,
             iter_end: false,
@@ -300,34 +161,27 @@ impl<'input> SymbolIterator<'input> {
     }
 }
 
-impl<'input> Iterator for SymbolIteratorRoot<'input> {
-    type Item = &'input Symbol<'input>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let symbol = self.symbols.get(self.curr_index)?;
-
-        self.curr_index += 1;
-        self.peek_index = self.curr_index;
-
-        Some(symbol)
+impl<'input> From<&'input [Symbol<'input>]> for SymbolIterator<'input> {
+    fn from(value: &'input [Symbol<'input>]) -> Self {
+        SymbolIterator {
+            kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
+            start_index: 0,
+            prefix_match: None,
+            end_match: None,
+            iter_end: false,
+        }
     }
 }
 
-impl<'input> PeekingNext for SymbolIteratorRoot<'input> {
-    fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
-    where
-        Self: Sized,
-        F: FnOnce(&Self::Item) -> bool,
-    {
-        let symbol = self.symbols.get(self.peek_index)?;
-
-        if !(accept)(&symbol) {
-            return None;
+impl<'input> From<&'input Vec<Symbol<'input>>> for SymbolIterator<'input> {
+    fn from(value: &'input Vec<Symbol<'input>>) -> Self {
+        SymbolIterator {
+            kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
+            start_index: 0,
+            prefix_match: None,
+            end_match: None,
+            iter_end: false,
         }
-
-        self.peek_index += 1;
-
-        Some(symbol)
     }
 }
 
@@ -495,7 +349,6 @@ mod test {
 
         let iterator = SymbolIterator::with(
             &symbols,
-            0,
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(&[SymbolKind::Star, SymbolKind::Whitespace])
             })),
