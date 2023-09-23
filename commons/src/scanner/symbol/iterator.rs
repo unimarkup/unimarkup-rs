@@ -339,48 +339,36 @@ impl<'input> Iterator for SymbolIterator<'input> {
     type Item = &'input Symbol<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next_fn = |kind: &mut SymbolIteratorKind<'input>| match kind {
+        if self.end_reached() {
+            return None;
+        }
+
+        if let Some(end_fn) = self.end_match.clone() {
+            if (end_fn)(self) {
+                self.iter_end = true;
+                return None;
+            }
+        }
+
+        let curr_symbol_opt = match &mut self.kind {
             SymbolIteratorKind::Nested(parent) => parent.next(),
             SymbolIteratorKind::Root(root) => root.next(),
         };
 
-        next_symbol(self, next_fn)
-    }
-}
+        if curr_symbol_opt?.kind == SymbolKind::Newline && self.prefix_match.is_some() {
+            let prefix_match = self
+                .prefix_match
+                .clone()
+                .expect("Prefix match checked above to be some.");
 
-fn next_symbol<'input, F>(
-    iter: &mut SymbolIterator<'input>,
-    next_fn: F,
-) -> Option<&'input Symbol<'input>>
-where
-    F: FnOnce(&mut SymbolIteratorKind<'input>) -> Option<&'input Symbol<'input>>,
-{
-    if iter.end_reached() {
-        return None;
-    }
-
-    if let Some(end_fn) = iter.end_match.clone() {
-        if (end_fn)(iter) {
-            iter.iter_end = true;
-            return None;
+            // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
+            if !prefix_match(self) {
+                return None;
+            }
         }
+
+        curr_symbol_opt
     }
-
-    let curr_symbol_opt = next_fn(&mut iter.kind);
-
-    if curr_symbol_opt?.kind == SymbolKind::Newline && iter.prefix_match.is_some() {
-        let prefix_match = iter
-            .prefix_match
-            .clone()
-            .expect("Prefix match checked above to be some.");
-
-        // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
-        if !prefix_match(iter) {
-            return None;
-        }
-    }
-
-    curr_symbol_opt
 }
 
 impl<'input> PeekingNext for SymbolIterator<'input> {
@@ -389,12 +377,14 @@ impl<'input> PeekingNext for SymbolIterator<'input> {
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
-        let next_fn = |kind: &mut SymbolIteratorKind<'input>| match kind {
+        // Note: Not possible to restrict peek to return only symbols `next()` would return,
+        // because `peeking_next()` is needed in End- and PrefixMatcher.
+        // Using the same logic as in `next()` would result in endless loop inside `peeking_next()` => StackOverflow
+
+        match &mut self.kind {
             SymbolIteratorKind::Nested(parent) => parent.peeking_next(accept),
             SymbolIteratorKind::Root(root) => root.peeking_next(accept),
-        };
-
-        next_symbol(self, next_fn)
+        }
     }
 }
 
