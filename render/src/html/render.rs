@@ -211,4 +211,49 @@ impl Renderer<Html> for HtmlRenderer {
 
         Ok(html)
     }
+
+    fn render_newline(
+        &mut self,
+        _newline: &Newline,
+        _context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
+            tag: HtmlTag::PlainContent,
+            attributes: HtmlAttributes::default(),
+            content: Some(unimarkup_inline::TokenKind::Whitespace.as_str().to_string()),
+        }));
+
+        Ok(html)
+    }
+
+    fn render_escaped_newline(
+        &mut self,
+        _escaped_newline: &EscapedNewline,
+        _context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
+            tag: HtmlTag::Br,
+            attributes: HtmlAttributes::default(),
+            content: None,
+        }));
+
+        Ok(html)
+    }
+
+    fn render_escaped_whitespace(
+        &mut self,
+        escaped_whitespace: &EscapedWhitespace,
+        _context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
+            tag: HtmlTag::Span,
+            attributes: HtmlAttributes(vec![HtmlAttribute {
+                name: "style".to_string(),
+                value: Some("white-space: pre-wrap;".to_string()),
+            }]),
+            content: Some(escaped_whitespace.inner().to_string()),
+        }));
+
+        Ok(html)
+    }
 }
