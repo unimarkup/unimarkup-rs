@@ -1,7 +1,7 @@
 //! Module for parsing of Unimarkup elements.
 
 use logid::log;
-use unimarkup_commons::scanner::{Scanner, Symbol, SymbolIterator, SymbolKind};
+use unimarkup_commons::scanner::{Scanner, SymbolIterator, SymbolKind};
 
 use crate::{
     document::Document,
@@ -17,15 +17,11 @@ use crate::{
 use unimarkup_commons::config::Config;
 
 /// Parser as function that can parse Unimarkup content
-pub type ParserFn = for<'i> fn(&mut SymbolIterator<'i>) -> Option<(Blocks, &'i [Symbol<'i>])>;
+pub type ParserFn = for<'i> fn(&mut SymbolIterator<'i>) -> Option<Blocks>;
 
 /// Output of symbol tokenization by a parser of a block.
-pub(crate) struct TokenizeOutput<'i, T>
-where
-    T: 'i,
-{
+pub(crate) struct TokenizeOutput<T> {
     pub(crate) tokens: Vec<T>,
-    pub(crate) rest_of_input: &'i [Symbol<'i>],
 }
 
 /// Trait implemented by a parser for each Unimarkup element.
@@ -34,7 +30,7 @@ pub(crate) trait ElementParser {
     type Token<'a>;
 
     /// Function that converts input symbols into tokens specific for the given element.
-    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<'i, Self::Token<'i>>>;
+    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<Self::Token<'i>>>;
 
     /// Function that parses tokenization output and produces one or more Unimarkup elements.
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks>;
@@ -65,7 +61,7 @@ where
             let tokenize_output = T::tokenize(input)?;
             let blocks = T::parse(tokenize_output.tokens)?;
 
-            Some((blocks, tokenize_output.rest_of_input))
+            Some(blocks)
         }
     }
 }
@@ -121,7 +117,7 @@ impl MainParser {
 
                 // no parser will match, parse with default parser
                 _ if kind.is_not_keyword() => {
-                    let (mut res_blocks, _) = (self.default_parser)(input)
+                    let mut res_blocks = (self.default_parser)(input)
                         .expect("Default parser could not parse content!");
 
                     blocks.append(&mut res_blocks);
@@ -131,7 +127,7 @@ impl MainParser {
                 _ => {
                     for parser_fn in &self.parsers {
                         let mut iter = input.clone();
-                        if let Some((mut res_blocks, _)) = parser_fn(&mut iter) {
+                        if let Some(mut res_blocks) = parser_fn(&mut iter) {
                             blocks.append(&mut res_blocks);
                             // TODO: clarify if this is ok? Wouldn't we lose sequences this way?
                             // input = SymbolIterator::from(rest_of_input);
@@ -143,7 +139,7 @@ impl MainParser {
                     }
 
                     // no registered parser matched -> use default parser
-                    let (mut res_blocks, _) = (self.default_parser)(input)
+                    let mut res_blocks = (self.default_parser)(input)
                         .expect("Default parser could not parse content!");
 
                     blocks.append(&mut res_blocks);

@@ -41,8 +41,8 @@ impl<'input> From<&'input Vec<Symbol<'input>>> for SymbolIteratorRoot<'input> {
 }
 
 impl<'input> SymbolIteratorRoot<'input> {
-    fn remaining_symbols(&self) -> &'input [Symbol<'input>] {
-        &self.symbols[self.curr_index..]
+    fn remaining_symbols(&self) -> Option<&'input [Symbol<'input>]> {
+        self.symbols.get(self.curr_index..)
     }
 }
 
@@ -233,7 +233,7 @@ impl<'input> SymbolIterator<'input> {
         self.curr_index() == self.len()
     }
 
-    pub fn remaining_symbols(&self) -> &'input [Symbol<'input>] {
+    pub fn remaining_symbols(&self) -> Option<&'input [Symbol<'input>]> {
         match &self.kind {
             SymbolIteratorKind::Nested(parent) => parent.remaining_symbols(),
             SymbolIteratorKind::Root(root) => root.remaining_symbols(),
@@ -386,14 +386,16 @@ impl<'input> Iterator for SymbolIterator<'input> {
             let mut prefix_matched = false;
 
             for prefix in &self.line_prefixes {
-                let curr_prefix_symbolkinds: Vec<_> = self.remaining_symbols()[..prefix.len()]
+                let curr_prefix_symbolkinds: Vec<_> = self
+                    .remaining_symbols()?
+                    .get(..prefix.len())?
                     .iter()
                     .map(|s| s.kind)
                     .collect();
 
                 if prefix == &curr_prefix_symbolkinds {
                     prefix_matched = true;
-                    // Note: Only update index. Prevents `new_line()` from being changed by possible parent
+                    // Note: Only update index to pass `SymbolKind::Newline` to all nested iterators
                     self.set_curr_index(self.curr_index() + prefix.len());
                     break;
                 }

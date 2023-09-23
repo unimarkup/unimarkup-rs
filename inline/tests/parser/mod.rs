@@ -34,10 +34,8 @@ fn run_test_case(case: crate::TestCase) {
     let symbols = test_runner::scan_str(&case.input);
 
     let runner = SnapTestRunner::with_fn(&case.name, &symbols, |symbols| {
-        let rest: &[_] = &[];
         let inlines: Vec<_> = symbols.parse_inlines().collect();
-        let snapshot = Snapshot::snap(&inlines[..]);
-        (snapshot, rest)
+        Snapshot::snap(&inlines[..])
     })
     .with_info(format!("Test '{}' from '{}'", case.name, case.file_name));
 

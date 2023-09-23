@@ -31,7 +31,7 @@ pub(crate) enum Token<'a> {
 impl ElementParser for Verbatim {
     type Token<'a> = self::Token<'a>;
 
-    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
+    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<Self::Token<'i>>> {
         let start_delim: Vec<_> = input
             .by_ref()
             .take_while(|symbol| matches!(symbol.kind, SymbolKind::Tick))
@@ -79,7 +79,6 @@ impl ElementParser for Verbatim {
 
         let output = TokenizeOutput {
             tokens: vec![Token::StartDelim(start_delim), Token::Content(vec![])], //content)],
-            rest_of_input: input.remaining_symbols(),
         };
 
         Some(output)

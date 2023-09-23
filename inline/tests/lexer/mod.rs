@@ -33,9 +33,7 @@ pub fn test_lexer_snapshots() -> Vec<Trial> {
 fn run_test_case(case: crate::TestCase) {
     let symbols = test_runner::scan_str(&case.input);
     let runner = SnapTestRunner::with_fn(&case.name, &symbols, |symbols| {
-        let rest = &[];
-        let snapshot = Snapshot::snap((case.input.as_ref(), symbols.tokens()));
-        (snapshot, rest)
+        Snapshot::snap((case.input.as_ref(), symbols.tokens()))
     })
     .with_info(format!("Test '{}' from '{}'", case.name, case.file_name));
 

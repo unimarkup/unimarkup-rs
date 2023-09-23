@@ -125,7 +125,7 @@ pub enum HeadingToken<'a> {
 impl ElementParser for Heading {
     type Token<'a> = self::HeadingToken<'a>;
 
-    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
+    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<Self::Token<'i>>> {
         let mut heading_start: Vec<SymbolKind> = input
             .peeking_take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
             .map(|s| s.kind)
@@ -164,7 +164,6 @@ impl ElementParser for Heading {
             return None;
         }
 
-        let rest_of_input = content_iter.remaining_symbols();
         content_iter.update(input);
 
         let output = TokenizeOutput {
@@ -173,7 +172,6 @@ impl ElementParser for Heading {
                 HeadingToken::Content(content_symbols),
                 HeadingToken::End,
             ],
-            rest_of_input,
         };
 
         Some(output)
