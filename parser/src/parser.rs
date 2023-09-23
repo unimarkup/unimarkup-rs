@@ -164,7 +164,6 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
         .expect("Must be valid provider.")
         .scan_str(um_content);
     let mut symbols_iter = SymbolIterator::from(&symbols);
-    // println!("{:?}", &symbols.iter().map(|s| s.kind).collect::<Vec<_>>());
     let blocks = parser.parse(&mut symbols_iter);
 
     let mut unimarkup = Document {

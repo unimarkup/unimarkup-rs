@@ -127,7 +127,9 @@ impl<'input> Parser<'input> {
                 span.end = next_token.span.end;
                 break;
             } else if not_enclosed_and_interrupted {
-                if next_token.consumable_by_plain() {
+                if !matches!(kind, TokenKind::Newline | TokenKind::EscapedNewline)
+                    && next_token.consumable_by_plain()
+                {
                     // consume the token
                     let (next_content, next_span) = next_token.parts();
 
