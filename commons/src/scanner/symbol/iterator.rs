@@ -78,10 +78,11 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
             let _whitespaces = self
                 .peeking_take_while(|s| s.kind == SymbolKind::Whitespace)
                 .count();
-            self.set_peek_index(self.peek_index().saturating_sub(1)); // Note: To compensate last "peeking_next()" in "peeking_take_whil()"
+            // self.set_peek_index(self.peek_index().saturating_sub(1)); // Note: To compensate last "peeking_next()" in "peeking_take_while()"
 
-            self.peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline))
-                .is_some()
+            let new_line = self
+                .peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline));
+            new_line.is_some()
         } else {
             Some(SymbolKind::Blankline) == next
         };
@@ -181,17 +182,11 @@ impl<'input> SymbolIterator<'input> {
     }
 
     pub fn len(&self) -> usize {
-        match &self.kind {
-            SymbolIteratorKind::Nested(parent) => parent.len(),
-            SymbolIteratorKind::Root(root) => root.symbols[self.start_index..].len(),
-        }
+        self.remaining_symbols().unwrap_or(&[]).len()
     }
 
     pub fn is_empty(&self) -> bool {
-        match &self.kind {
-            SymbolIteratorKind::Nested(parent) => parent.is_empty(),
-            SymbolIteratorKind::Root(root) => root.symbols[self.start_index..].is_empty(),
-        }
+        self.len() == 0
     }
 
     pub fn start_index(&self) -> usize {

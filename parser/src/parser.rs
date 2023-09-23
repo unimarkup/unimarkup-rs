@@ -103,7 +103,7 @@ impl MainParser {
         let mut blocks = Vec::default();
 
         #[cfg(debug_assertions)]
-        let mut curr_idx = input.len();
+        let mut curr_len = input.len();
 
         'outer: while let Some(kind) = input.peek_kind() {
             match kind {
@@ -129,10 +129,6 @@ impl MainParser {
                         let mut iter = input.clone();
                         if let Some(mut res_blocks) = parser_fn(&mut iter) {
                             blocks.append(&mut res_blocks);
-                            // TODO: clarify if this is ok? Wouldn't we lose sequences this way?
-                            // input = SymbolIterator::from(rest_of_input);
-
-                            // Maybe this is better? Continue where parser left of
                             *input = iter;
                             continue 'outer; // start from first parser on next input
                         }
@@ -148,8 +144,11 @@ impl MainParser {
 
             #[cfg(debug_assertions)]
             {
-                assert_ne!(input.curr_index(), curr_idx);
-                curr_idx = input.curr_index();
+                assert!(
+                    input.len() < curr_len,
+                    "Parser consumed no symbol in iteration."
+                );
+                curr_len = input.len();
             }
         }
 

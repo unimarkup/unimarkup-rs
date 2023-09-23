@@ -160,8 +160,6 @@ impl ElementParser for Heading {
             input.nest(Some(Rc::new(heading_prefix)), Some(Rc::new(heading_end)));
         let content_symbols = content_iter.take_to_end();
 
-        dbg!(&content_symbols.iter().map(|s| s.kind).collect::<Vec<_>>());
-
         // Line prefixes violated => invalid heading syntax
         if !content_iter.end_reached() {
             return None;
