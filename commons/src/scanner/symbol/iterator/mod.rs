@@ -348,7 +348,7 @@ mod test {
             "Whitespace after hash symbols was not detected."
         );
         assert!(
-            iterator.next().is_none(),
+            iterator.next().unwrap().kind == SymbolKind::EOI,
             "Input end reached, but new symbol was returned."
         );
     }
@@ -448,7 +448,12 @@ mod test {
 
         assert_eq!(
             sym_kinds,
-            vec![SymbolKind::Plain, SymbolKind::Newline, SymbolKind::Plain],
+            vec![
+                SymbolKind::Plain,
+                SymbolKind::Newline,
+                SymbolKind::Plain,
+                SymbolKind::EOI
+            ],
             "Prefix symbols not correctly skipped"
         );
     }

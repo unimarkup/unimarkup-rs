@@ -72,7 +72,12 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
         self.reset_peek();
 
         let next = self
-            .peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline))
+            .peeking_next(|s| {
+                matches!(
+                    s.kind,
+                    SymbolKind::Newline | SymbolKind::Blankline | SymbolKind::EOI
+                )
+            })
             .map(|s| s.kind);
 
         let is_empty_line = if Some(SymbolKind::Newline) == next {
@@ -80,11 +85,15 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
                 .peeking_take_while(|s| s.kind == SymbolKind::Whitespace)
                 .count();
 
-            let new_line = self
-                .peeking_next(|s| matches!(s.kind, SymbolKind::Blankline | SymbolKind::Newline));
+            let new_line = self.peeking_next(|s| {
+                matches!(
+                    s.kind,
+                    SymbolKind::Newline | SymbolKind::Blankline | SymbolKind::EOI
+                )
+            });
             new_line.is_some()
         } else {
-            Some(SymbolKind::Blankline) == next
+            next.is_some()
         };
 
         is_empty_line

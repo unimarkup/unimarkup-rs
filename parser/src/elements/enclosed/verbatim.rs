@@ -57,8 +57,16 @@ impl ElementParser for Verbatim {
             .into_iter()
             .chain(std::iter::repeat(SymbolKind::Tick).take(start_delim_len))
             .collect::<Vec<SymbolKind>>();
-        let end_sequence_len = end_sequence.len();
-        let end_fn = Rc::new(move |matcher: &mut dyn EndMatcher| matcher.matches(&end_sequence));
+        let mut longer_delim_sequence = end_sequence.clone();
+        longer_delim_sequence.push(SymbolKind::Tick);
+
+        let end_fn = Rc::new(move |matcher: &mut dyn EndMatcher| {
+            if !matcher.matches(&longer_delim_sequence) {
+                matcher.consumed_matches(&end_sequence)
+            } else {
+                false
+            }
+        });
 
         let mut content_iter = input.nest(None, Some(end_fn));
         let content = content_iter.take_to_end();
@@ -69,9 +77,12 @@ impl ElementParser for Verbatim {
 
         content_iter.update(input);
 
-        input.dropping(end_sequence_len);
-
         // TODO: handle language attribute
+
+        // ensures empty line after block
+        if !input.consumed_is_empty_line() {
+            return None;
+        }
 
         let output = TokenizeOutput {
             tokens: vec![

@@ -91,6 +91,17 @@ impl Scanner {
             prev_offset = offset;
         }
 
+        symbols.push(Symbol {
+            input,
+            kind: SymbolKind::EOI,
+            offset: Offset {
+                start: prev_offset,
+                end: prev_offset,
+            },
+            start: curr_pos,
+            end: curr_pos,
+        });
+
         // last offset not needed, because break at EOI is always available
         symbols
     }
