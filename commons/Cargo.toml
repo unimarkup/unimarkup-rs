@@ -20,7 +20,7 @@ serde_json.workspace = true
 serde_yaml.workspace = true
 once_cell = { workspace = true, optional = true }
 icu = "=1.2.0"
-zerovec = "0.9.4"
+zerovec = "=0.9.4"
 icu_provider = "=1.2.0"
 icu_provider_adapters = "=1.2.0"
 regex = { version = "1.8.1", optional = true }
