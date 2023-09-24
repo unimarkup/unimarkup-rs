@@ -31,7 +31,8 @@ pub fn test_lexer_snapshots() -> Vec<Trial> {
 }
 
 fn run_test_case(case: crate::TestCase) {
-    let symbols = test_runner::scan_str(&case.input);
+    let mut symbols = test_runner::scan_str(&case.input);
+    symbols.pop(); // Remove EOI symbol. TODO: handle EOI in lexer
     let runner = SnapTestRunner::with_fn(&case.name, &symbols, |symbols| {
         Snapshot::snap((case.input.as_ref(), symbols.tokens()))
     })
