@@ -20,9 +20,14 @@ serde_json.workspace = true
 serde_yaml.workspace = true
 once_cell = { workspace = true, optional = true }
 icu = "=1.2.0"
+icu_locid = "=1.2.0"
 zerovec = "=0.9.4"
+zerovec-derive = "=0.9.4"
+tinystr = "=0.7.1"
 icu_provider = "=1.2.0"
 icu_provider_adapters = "=1.2.0"
+icu_provider_macros = "=1.2.0"
+icu_collections = "=1.2.0"
 regex = { version = "1.8.1", optional = true }
 insta = {version = "1.29.0", features = ["serde"], optional = true}
 itertools = "0.11.0"
