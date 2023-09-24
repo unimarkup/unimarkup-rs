@@ -1,15 +1,23 @@
+//! Contains the [`SymbolIteratorRoot`] that is the root iterator in any [`SymbolIterator`](super::SymbolIterator).
+
 use itertools::PeekingNext;
 
 use crate::scanner::Symbol;
 
+/// The [`SymbolIteratorRoot`] is the root iterator in any [`SymbolIterator`](super::SymbolIterator).
+/// It holds the actual [`Symbol`] slice.
 #[derive(Clone)]
 pub struct SymbolIteratorRoot<'input> {
+    /// The [`Symbol`] slice the iterator was created for.
     symbols: &'input [Symbol<'input>],
+    /// The current index of the iterator inside the [`Symbol`] slice.
     pub(super) curr_index: usize,
+    /// The peek index of the iterator inside the [`Symbol`] slice.
     pub(super) peek_index: usize,
 }
 
 impl<'input> SymbolIteratorRoot<'input> {
+    /// Returns the remaining symbols in this iterator, or `None` if there are no symbols left..
     pub(super) fn remaining_symbols(&self) -> Option<&'input [Symbol<'input>]> {
         self.symbols.get(self.curr_index..)
     }
