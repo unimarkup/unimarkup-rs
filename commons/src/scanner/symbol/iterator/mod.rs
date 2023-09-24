@@ -22,6 +22,8 @@ pub struct SymbolIterator<'input> {
     kind: SymbolIteratorKind<'input>,
     /// The index inside the [`Symbol`]s of the root iterator.
     start_index: usize,
+    /// The nesting depth of this iterator, starting at 0 for the root iterator.
+    depth: usize,
     /// Optional matching function that is used to automatically skip matched prefixes after a new line.
     prefix_match: Option<IteratorPrefixFn>,
     /// Optional matching function that is used to indicate the end of this iterator.
@@ -64,6 +66,7 @@ impl<'input> SymbolIterator<'input> {
     ) -> Self {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(symbols)),
+            depth: 0,
             start_index: 0,
             prefix_match,
             end_match,
@@ -71,22 +74,28 @@ impl<'input> SymbolIterator<'input> {
         }
     }
 
-    /// Returns the length of the remaining [`Symbol`]s this iterator might return.
+    /// Returns the maximum length of the remaining [`Symbol`]s this iterator might return.
     ///
     /// **Note:** This length does not consider parent iterators, or matching functions.
     /// Therefore, the returned number of [`Symbol`]s might differ, but cannot be larger than this length.
-    pub fn len(&self) -> usize {
-        self.remaining_symbols().unwrap_or(&[]).len()
+    pub fn max_len(&self) -> usize {
+        self.max_remaining_symbols().unwrap_or(&[]).len()
     }
 
     /// Returns `true` if no more [`Symbol`]s are available.
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        self.max_remaining_symbols().unwrap_or(&[]).is_empty()
     }
 
     /// Returns the index this iterator was started from the [`Symbol`] slice of the root iterator.
     pub fn start_index(&self) -> usize {
         self.start_index
+    }
+
+    /// The current nested depth this iterator is at.
+    /// The root iterator starts at 0, and every iterator created using [`Self::nest()`] is one depth higher than its parent.
+    pub fn curr_depth(&self) -> usize {
+        self.depth
     }
 
     /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
@@ -139,10 +148,12 @@ impl<'input> SymbolIterator<'input> {
 
     /// Returns the maximal remaining symbols in this iterator.
     ///
-    /// **Note:** Similar to `len()`, this does not consider parent iterators and matching functions.
-    pub fn remaining_symbols(&self) -> Option<&'input [Symbol<'input>]> {
+    /// **Note:** This slice does not consider parent iterators, or matching functions.
+    /// Therefore, the returned [`Symbol`] slice might differ from the symbols returned by calling [`Self::next()`],
+    /// but [`Self::next()`] cannot return more symbols than those inside the returned slice.
+    pub fn max_remaining_symbols(&self) -> Option<&'input [Symbol<'input>]> {
         match &self.kind {
-            SymbolIteratorKind::Nested(parent) => parent.remaining_symbols(),
+            SymbolIteratorKind::Nested(parent) => parent.max_remaining_symbols(),
             SymbolIteratorKind::Root(root) => root.remaining_symbols(),
         }
     }
@@ -176,6 +187,7 @@ impl<'input> SymbolIterator<'input> {
         SymbolIterator {
             kind: SymbolIteratorKind::Nested(Box::new(self.clone())),
             start_index: self.curr_index(),
+            depth: self.depth + 1,
             prefix_match,
             end_match,
             iter_end: self.iter_end,
@@ -226,6 +238,7 @@ impl<'input> From<&'input [Symbol<'input>]> for SymbolIterator<'input> {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
             start_index: 0,
+            depth: 0,
             prefix_match: None,
             end_match: None,
             iter_end: false,
@@ -238,6 +251,7 @@ impl<'input> From<&'input Vec<Symbol<'input>>> for SymbolIterator<'input> {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
             start_index: 0,
+            depth: 0,
             prefix_match: None,
             end_match: None,
             iter_end: false,
@@ -278,6 +292,10 @@ impl<'input> Iterator for SymbolIterator<'input> {
         }
 
         curr_symbol_opt
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.max_len()))
     }
 }
 
@@ -432,6 +450,60 @@ mod test {
             sym_kinds,
             vec![SymbolKind::Plain, SymbolKind::Newline, SymbolKind::Plain],
             "Prefix symbols not correctly skipped"
+        );
+    }
+
+    #[test]
+    fn depth_matcher() {
+        let symbols = Scanner::try_new()
+            .expect("Must be valid provider.")
+            .scan_str("[o [i]]");
+
+        let mut iterator = SymbolIterator::with(
+            &symbols,
+            None,
+            Some(Rc::new(|matcher| {
+                if matcher.at_depth(0) {
+                    matcher.consumed_matches(&[SymbolKind::CloseBracket])
+                } else {
+                    false
+                }
+            })),
+        );
+
+        iterator = iterator.dropping(1); // To skip first open bracket
+        let mut taken_outer = iterator
+            .by_ref()
+            // Note: This will skip the open bracket for both iterators, but this is ok for this test
+            .take_while(|s| s.kind != SymbolKind::OpenBracket)
+            .collect::<Vec<_>>();
+
+        let mut inner_iter = iterator.nest(
+            None,
+            Some(Rc::new(|matcher| {
+                if matcher.at_depth(1) {
+                    matcher.consumed_matches(&[SymbolKind::CloseBracket])
+                } else {
+                    false
+                }
+            })),
+        );
+
+        let taken_inner = inner_iter.take_to_end();
+        inner_iter.update(&mut iterator);
+
+        taken_outer.extend(iterator.take_to_end().iter());
+
+        assert!(iterator.end_reached(), "Iterator end was not reached.");
+        assert_eq!(
+            taken_inner.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+            vec!["i"],
+            "Inner symbols are incorrect."
+        );
+        assert_eq!(
+            taken_outer.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+            vec!["o", " ",],
+            "Outer symbols are incorrect."
         );
     }
 }

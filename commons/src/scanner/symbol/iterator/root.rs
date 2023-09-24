@@ -54,6 +54,11 @@ impl<'input> Iterator for SymbolIteratorRoot<'input> {
 
         Some(symbol)
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.remaining_symbols().unwrap_or(&[]).len();
+        (len, Some(len))
+    }
 }
 
 impl<'input> PeekingNext for SymbolIteratorRoot<'input> {

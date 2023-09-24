@@ -103,7 +103,7 @@ impl MainParser {
         let mut blocks = Vec::default();
 
         #[cfg(debug_assertions)]
-        let mut curr_len = input.len();
+        let mut curr_len = input.max_len();
 
         'outer: while let Some(kind) = input.peek_kind() {
             match kind {
@@ -145,10 +145,10 @@ impl MainParser {
             #[cfg(debug_assertions)]
             {
                 assert!(
-                    input.len() < curr_len,
+                    input.max_len() < curr_len,
                     "Parser consumed no symbol in iteration."
                 );
-                curr_len = input.len();
+                curr_len = input.max_len();
             }
         }
 

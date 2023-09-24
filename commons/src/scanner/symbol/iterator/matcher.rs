@@ -28,6 +28,8 @@ pub trait EndMatcher {
     /// Consuming means the related iterator advances over the matched empty line.
     ///
     /// **Note:** The iterator is only advanced if an empty line is matched.
+    ///
+    /// **Note:** The empty line is **not** included in the symbols returned by [`SymbolIterator::take_to_end()`].
     fn consumed_is_empty_line(&mut self) -> bool;
 
     /// Returns `true` if the given [`Symbol`] sequence matches the upcoming one.
@@ -39,7 +41,14 @@ pub trait EndMatcher {
     /// Consuming means the related iterator advances over the matched sequence.
     ///
     /// **Note:** The iterator is only advanced if the sequence is matched.
+    ///
+    /// **Note:** The matched sequence is **not** included in the symbols returned by [`SymbolIterator::take_to_end()`].
     fn consumed_matches(&mut self, sequence: &[SymbolKind]) -> bool;
+
+    /// Returns `true` if the iterator is at the given nesting depth.
+    ///
+    /// **Note** Use [`SymbolIterator::curr_depth()`] to get the current depth of an iterator.
+    fn at_depth(&self, depth: usize) -> bool;
 }
 
 /// Trait containing functions that are available inside the prefix matcher function.
@@ -50,6 +59,8 @@ pub trait PrefixMatcher {
     /// **Note:** The iterator is only advanced if the sequence is matched.
     ///
     /// **Note:** The given sequence must **not** include any [`SymbolKind::Newline`], because matches are only considered per line.
+    ///
+    /// **Note:** The matched sequence is **not** included in the symbols returned by [`SymbolIterator::take_to_end()`].
     ///
     /// [`Symbol`]: super::Symbol
     fn consumed_prefix(&mut self, sequence: &[SymbolKind]) -> bool;
@@ -110,6 +121,10 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
         }
 
         matched
+    }
+
+    fn at_depth(&self, depth: usize) -> bool {
+        self.curr_depth() == depth
     }
 }
 
