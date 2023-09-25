@@ -1,49 +1,36 @@
 //! Scanner and helper types and traits for structurization of Unimarkup input.
 
+use icu_segmenter::GraphemeClusterSegmenter;
+
 pub mod position;
 pub mod span;
 mod symbol;
 
-use icu::segmenter::{GraphemeClusterSegmenter, SegmenterError};
-use icu_provider_adapters::fallback::LocaleFallbackProvider;
 use position::{Offset, Position as SymPos};
 pub use symbol::{iterator::*, Symbol, SymbolKind};
 
-#[derive(Debug, Clone)]
-struct IcuDataProvider;
-// Generated using: `icu4x-datagen --keys-for-bin .\target\debug\unimarkup.exe --locales full --format mod --out .\commons\src\scanner\icu_data`
-// Note: Run `cargo build` before re-generating the data to ensure the newest binary is inspected by icu4x-datagen.
-include!("./icu_data/mod.rs");
-impl_data_provider!(IcuDataProvider);
-
 #[derive(Debug)]
 pub struct Scanner {
-    provider: LocaleFallbackProvider<IcuDataProvider>,
     segmenter: GraphemeClusterSegmenter,
 }
 
 impl Clone for Scanner {
     fn clone(&self) -> Self {
-        let segmenter = GraphemeClusterSegmenter::try_new_unstable(&self.provider)
-            .expect("Provider is valid at this point.");
+        Scanner::new()
+    }
+}
 
-        Self {
-            provider: self.provider.clone(),
-            segmenter,
-        }
+impl Default for Scanner {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 impl Scanner {
-    pub fn try_new() -> Result<Self, SegmenterError> {
-        let icu_data_provider = IcuDataProvider;
-        let fallback_provider = LocaleFallbackProvider::try_new_unstable(icu_data_provider)?;
-        let segmenter = GraphemeClusterSegmenter::try_new_unstable(&fallback_provider)?;
+    pub fn new() -> Self {
+        let segmenter = GraphemeClusterSegmenter::new();
 
-        Ok(Self {
-            provider: fallback_provider,
-            segmenter,
-        })
+        Self { segmenter }
     }
 
     pub fn scan_str<'s>(&self, input: &'s str) -> Vec<Symbol<'s>> {

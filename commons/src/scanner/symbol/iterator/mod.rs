@@ -328,9 +328,7 @@ mod test {
 
     #[test]
     fn peek_while_index() {
-        let symbols = Scanner::try_new()
-            .expect("Must be valid provider.")
-            .scan_str("## ");
+        let symbols = Scanner::new().scan_str("## ");
 
         let mut iterator = SymbolIterator::from(&symbols);
         let hash_cnt = iterator
@@ -355,9 +353,7 @@ mod test {
 
     #[test]
     fn peek_next() {
-        let symbols = Scanner::try_new()
-            .expect("Must be valid provider.")
-            .scan_str("#*");
+        let symbols = Scanner::new().scan_str("#*");
 
         let mut iterator = SymbolIterator::from(&symbols);
 
@@ -391,9 +387,7 @@ mod test {
 
     #[test]
     fn reach_end() {
-        let symbols = Scanner::try_new()
-            .expect("Must be valid provider.")
-            .scan_str("text*");
+        let symbols = Scanner::new().scan_str("text*");
 
         let mut iterator = SymbolIterator::from(&symbols).nest(
             None,
@@ -421,9 +415,7 @@ mod test {
 
     #[test]
     fn with_nested_and_parent_prefix() {
-        let symbols = Scanner::try_new()
-            .expect("Must be valid provider.")
-            .scan_str("a\n* *b");
+        let symbols = Scanner::new().scan_str("a\n* *b");
 
         let iterator = SymbolIterator::with(
             &symbols,
@@ -460,9 +452,7 @@ mod test {
 
     #[test]
     fn depth_matcher() {
-        let symbols = Scanner::try_new()
-            .expect("Must be valid provider.")
-            .scan_str("[o [i]]");
+        let symbols = Scanner::new().scan_str("[o [i]]");
 
         let mut iterator = SymbolIterator::with(
             &symbols,

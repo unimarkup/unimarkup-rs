@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::Args;
-use icu::locid::Locale;
+use icu_locid::Locale;
 use logid::err;
 use serde::{Deserialize, Serialize};
 
