@@ -1,6 +1,6 @@
 use std::{collections::HashSet, path::PathBuf};
 
-use clap::{crate_authors, Args, Parser};
+use clap::{Args, Parser};
 use logid::err;
 use serde::{Deserialize, Serialize};
 
@@ -43,7 +43,7 @@ pub trait ConfigFns {
 }
 
 #[derive(Parser, Debug, PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
-#[command(name = UNIMARKUP_NAME, help_template = HELP_TEMPLATE, author = crate_authors!(", "), version, about = ABOUT, long_about = None)]
+#[command(name = UNIMARKUP_NAME, help_template = HELP_TEMPLATE, author, version, about = ABOUT, long_about = None)]
 pub struct Config {
     #[command(flatten)]
     pub preamble: Preamble,
