@@ -140,8 +140,7 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
 
 impl<'input> PrefixMatcher for SymbolIterator<'input> {
     fn consumed_prefix(&mut self, sequence: &[SymbolKind]) -> bool {
-        #[cfg(debug_assertions)]
-        assert!(
+        debug_assert!(
             !sequence.contains(&SymbolKind::Newline),
             "Newline symbol in prefix match is not allowed."
         );
