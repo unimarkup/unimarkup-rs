@@ -123,10 +123,9 @@ macro_rules! test_parser_snap {
     ($paths:expr, $parser_fn:expr) => {
         let test_content = $crate::test_runner::test_file::get_test_content($paths.0, $paths.1);
         let cfg = $crate::config::Config::default();
-        let scanner = $crate::scanner::Scanner::new();
 
         for test in &test_content.test_file.tests {
-            let symbols = scanner.scan_str(&test.input);
+            let symbols = $crate::scanner::scan_str(&test.input);
 
             let mut snap_runner = SnapTestRunner::with_fn::<_, _>(&test.name, &symbols, $parser_fn)
                 .with_info(format!(

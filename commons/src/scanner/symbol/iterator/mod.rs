@@ -324,13 +324,13 @@ mod test {
 
     use itertools::{Itertools, PeekingNext};
 
-    use crate::scanner::{PrefixMatcher, Scanner, SymbolKind};
+    use crate::scanner::{PrefixMatcher, SymbolKind};
 
     use super::SymbolIterator;
 
     #[test]
     fn peek_while_index() {
-        let symbols = Scanner::new().scan_str("## ");
+        let symbols = crate::scanner::scan_str("## ");
 
         let mut iterator = SymbolIterator::from(&symbols);
         let hash_cnt = iterator
@@ -355,7 +355,7 @@ mod test {
 
     #[test]
     fn peek_next() {
-        let symbols = Scanner::new().scan_str("#*");
+        let symbols = crate::scanner::scan_str("#*");
 
         let mut iterator = SymbolIterator::from(&symbols);
 
@@ -389,7 +389,7 @@ mod test {
 
     #[test]
     fn reach_end() {
-        let symbols = Scanner::new().scan_str("text*");
+        let symbols = crate::scanner::scan_str("text*");
 
         let mut iterator = SymbolIterator::from(&symbols).nest(
             None,
@@ -417,7 +417,7 @@ mod test {
 
     #[test]
     fn with_nested_and_parent_prefix() {
-        let symbols = Scanner::new().scan_str("a\n* *b");
+        let symbols = crate::scanner::scan_str("a\n* *b");
 
         let iterator = SymbolIterator::with(
             &symbols,
@@ -454,7 +454,7 @@ mod test {
 
     #[test]
     fn depth_matcher() {
-        let symbols = Scanner::new().scan_str("[o [i]]");
+        let symbols = crate::scanner::scan_str("[o [i]]");
 
         let mut iterator = SymbolIterator::with(
             &symbols,

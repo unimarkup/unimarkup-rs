@@ -1,7 +1,7 @@
 //! Module for parsing of Unimarkup elements.
 
 use logid::log;
-use unimarkup_commons::scanner::{Scanner, SymbolIterator, SymbolKind};
+use unimarkup_commons::scanner::{SymbolIterator, SymbolKind};
 
 use crate::{
     document::Document,
@@ -160,7 +160,7 @@ impl MainParser {
 pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let parser = MainParser::default();
 
-    let symbols = Scanner::new().scan_str(um_content);
+    let symbols = unimarkup_commons::scanner::scan_str(um_content);
     let mut symbols_iter = SymbolIterator::from(&symbols);
     let blocks = parser.parse(&mut symbols_iter);
 

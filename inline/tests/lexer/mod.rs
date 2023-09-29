@@ -1,7 +1,7 @@
 use std::panic;
 
 use libtest_mimic::Trial;
-use unimarkup_commons::test_runner::{self, snap_test_runner::SnapTestRunner};
+use unimarkup_commons::test_runner::snap_test_runner::SnapTestRunner;
 use unimarkup_inline::Tokenize;
 
 use crate::snapshot::Snapshot;
@@ -31,7 +31,7 @@ pub fn test_lexer_snapshots() -> Vec<Trial> {
 }
 
 fn run_test_case(case: crate::TestCase) {
-    let mut symbols = test_runner::scan_str(&case.input);
+    let mut symbols = unimarkup_commons::scanner::scan_str(&case.input);
     symbols.pop(); // Remove EOI symbol. TODO: handle EOI in lexer
     let runner = SnapTestRunner::with_fn(&case.name, &symbols, |symbols| {
         Snapshot::snap((case.input.as_ref(), symbols.tokens()))
