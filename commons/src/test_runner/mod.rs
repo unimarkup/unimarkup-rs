@@ -16,7 +16,7 @@ use self::test_file::{TestCase, TestFile};
 
 /// Scans the string using the [`Scanner`] struct.
 pub fn scan_str(input: &str) -> Vec<Symbol> {
-    let scanner = Scanner::try_new().unwrap();
+    let scanner = Scanner::default();
     scanner.scan_str(input)
 }
 

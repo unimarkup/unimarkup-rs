@@ -161,9 +161,7 @@ impl MainParser {
 pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let parser = MainParser::default();
 
-    let symbols = Scanner::try_new()
-        .expect("Must be valid provider.")
-        .scan_str(um_content);
+    let symbols = Scanner::default().scan_str(um_content);
 
     let blocks = parser.parse(symbols);
 
