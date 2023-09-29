@@ -201,6 +201,13 @@ impl<'input> SymbolIterator<'input> {
     /// **Note:** Only updates the parent if `self` is nested.
     pub fn update(self, parent: &mut Self) {
         if let SymbolIteratorKind::Nested(self_parent) = self.kind {
+            // Make sure it actually is the parent.
+            // It is not possible to check more precisely, because other indices are expected to be different due to `clone()`.
+            debug_assert_eq!(
+                self_parent.start_index, parent.start_index,
+                "Updated iterator is not the actual parent of this iterator."
+            );
+
             *parent = *self_parent;
         }
     }
