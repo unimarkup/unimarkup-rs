@@ -28,8 +28,8 @@ pub struct Paragraph {
 
 impl Paragraph {}
 
-impl From<&Vec<&'_ Symbol<'_>>> for Paragraph {
-    fn from(value: &Vec<&'_ Symbol<'_>>) -> Self {
+impl From<Vec<&'_ Symbol<'_>>> for Paragraph {
+    fn from(value: Vec<&'_ Symbol<'_>>) -> Self {
         let content = value
             .iter()
             .map(|&s| *s)
@@ -72,7 +72,7 @@ impl ElementParser for Paragraph {
     }
 
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
-        let block = Block::Paragraph(Paragraph::from(&input));
+        let block = Block::Paragraph(Paragraph::from(input));
 
         Some(vec![block])
     }
