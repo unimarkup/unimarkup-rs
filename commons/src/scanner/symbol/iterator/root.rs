@@ -11,7 +11,7 @@ pub struct SymbolIteratorRoot<'input> {
     /// The [`Symbol`] slice the iterator was created for.
     symbols: &'input [Symbol<'input>],
     /// The current index of the iterator inside the [`Symbol`] slice.
-    pub(super) curr_index: usize,
+    pub(super) index: usize,
     /// The peek index of the iterator inside the [`Symbol`] slice.
     pub(super) peek_index: usize,
 }
@@ -19,7 +19,7 @@ pub struct SymbolIteratorRoot<'input> {
 impl<'input> SymbolIteratorRoot<'input> {
     /// Returns the remaining symbols in this iterator, or `None` if there are no symbols left.
     pub(super) fn remaining_symbols(&self) -> Option<&'input [Symbol<'input>]> {
-        self.symbols.get(self.curr_index..)
+        self.symbols.get(self.index..)
     }
 }
 
@@ -30,7 +30,7 @@ where
     fn from(value: T) -> Self {
         SymbolIteratorRoot {
             symbols: value.into(),
-            curr_index: 0,
+            index: 0,
             peek_index: 0,
         }
     }
@@ -40,10 +40,10 @@ impl<'input> Iterator for SymbolIteratorRoot<'input> {
     type Item = &'input Symbol<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let symbol = self.symbols.get(self.curr_index)?;
+        let symbol = self.symbols.get(self.index)?;
 
-        self.curr_index += 1;
-        self.peek_index = self.curr_index;
+        self.index += 1;
+        self.peek_index = self.index;
 
         Some(symbol)
     }

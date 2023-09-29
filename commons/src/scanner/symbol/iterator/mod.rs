@@ -104,7 +104,7 @@ impl<'input> SymbolIterator<'input> {
     pub fn index(&self) -> usize {
         match &self.kind {
             SymbolIteratorKind::Nested(parent) => parent.index(),
-            SymbolIteratorKind::Root(root) => root.curr_index,
+            SymbolIteratorKind::Root(root) => root.index,
         }
     }
 
@@ -114,7 +114,7 @@ impl<'input> SymbolIterator<'input> {
             match self.kind.borrow_mut() {
                 SymbolIteratorKind::Nested(parent) => parent.set_index(index),
                 SymbolIteratorKind::Root(root) => {
-                    root.curr_index = index;
+                    root.index = index;
                     root.peek_index = index;
                 }
             }
