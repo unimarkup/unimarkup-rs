@@ -16,6 +16,10 @@ pub use root::*;
 /// It allows to add matcher functions to notify the iterator,
 /// when an end of an element is reached, or what prefixes to strip on a new line.
 /// Additionaly, the iterator may be nested to enable transparent iterating for nested elements.
+///
+/// *Transparent* meaning that the nested iterator does not see [`Symbol`]s consumed by the wrapped (parent) iterator.
+/// In other words, wrapped iterators control which [`Symbol`]s will be passed to their nested iterator.
+/// Therefore, each nested iterator only sees those [`Symbol`]s that are relevant to its scope.
 #[derive(Clone)]
 pub struct SymbolIterator<'input> {
     /// The [`SymbolIteratorKind`] of this iterator.
@@ -33,8 +37,6 @@ pub struct SymbolIterator<'input> {
 }
 
 /// The [`SymbolIteratorKind`] defines the kind of a [`SymbolIterator`].
-///
-/// **Note:** This enables iterator nesting.
 #[derive(Clone)]
 pub enum SymbolIteratorKind<'input> {
     /// Defines an iterator as being nested.
