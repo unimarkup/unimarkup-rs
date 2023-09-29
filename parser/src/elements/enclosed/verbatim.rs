@@ -53,8 +53,7 @@ impl ElementParser for Verbatim {
             .take_while(|s| s.kind != SymbolKind::Newline)
             .collect::<Vec<_>>();
 
-        let end_sequence = [SymbolKind::Newline]
-            .into_iter()
+        let end_sequence = std::iter::once(SymbolKind::Newline)
             .chain(std::iter::repeat(SymbolKind::Tick).take(start_delim_len))
             .collect::<Vec<SymbolKind>>();
         let mut longer_delim_sequence = end_sequence.clone();
