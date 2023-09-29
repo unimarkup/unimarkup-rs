@@ -11,6 +11,7 @@ use super::SymbolIterator;
 
 /// Function type to notify an iterator if an end was reached.
 pub type IteratorEndFn = Rc<dyn (Fn(&mut dyn EndMatcher) -> bool)>;
+
 /// Function type to consume prefix sequences of a new line.
 pub type IteratorPrefixFn = Rc<dyn (Fn(&mut dyn PrefixMatcher) -> bool)>;
 
