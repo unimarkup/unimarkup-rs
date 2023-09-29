@@ -67,14 +67,8 @@ impl<'input> PeekingNext for SymbolIteratorRoot<'input> {
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
-        let symbol = self.symbols.get(self.peek_index)?;
-
-        if !(accept)(&symbol) {
-            return None;
-        }
-
+        let symbol = self.symbols.get(self.peek_index).filter(accept)?;
         self.peek_index += 1;
-
         Some(symbol)
     }
 }
