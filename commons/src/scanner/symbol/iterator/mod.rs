@@ -96,23 +96,23 @@ impl<'input> SymbolIterator<'input> {
 
     /// The current nested depth this iterator is at.
     /// The root iterator starts at 0, and every iterator created using [`Self::nest()`] is one depth higher than its parent.
-    pub fn curr_depth(&self) -> usize {
+    pub fn depth(&self) -> usize {
         self.depth
     }
 
     /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
-    pub fn curr_index(&self) -> usize {
+    pub fn index(&self) -> usize {
         match &self.kind {
-            SymbolIteratorKind::Nested(parent) => parent.curr_index(),
+            SymbolIteratorKind::Nested(parent) => parent.index(),
             SymbolIteratorKind::Root(root) => root.curr_index,
         }
     }
 
     /// Sets the current index of this iterator to the given index.
-    pub(super) fn set_curr_index(&mut self, index: usize) {
+    pub(super) fn set_index(&mut self, index: usize) {
         if index >= self.start_index {
             match self.kind.borrow_mut() {
-                SymbolIteratorKind::Nested(parent) => parent.set_curr_index(index),
+                SymbolIteratorKind::Nested(parent) => parent.set_index(index),
                 SymbolIteratorKind::Root(root) => {
                     root.curr_index = index;
                     root.peek_index = index;
@@ -131,7 +131,7 @@ impl<'input> SymbolIterator<'input> {
 
     /// Sets the peek index of this iterator to the given index.
     fn set_peek_index(&mut self, index: usize) {
-        if index >= self.curr_index() {
+        if index >= self.index() {
             match self.kind.borrow_mut() {
                 SymbolIteratorKind::Nested(parent) => parent.set_peek_index(index),
                 SymbolIteratorKind::Root(root) => {
@@ -145,7 +145,7 @@ impl<'input> SymbolIterator<'input> {
     ///
     /// **Note:** Needed to reset peek index after using `peeking_next()`.
     pub fn reset_peek(&mut self) {
-        self.set_peek_index(self.curr_index());
+        self.set_peek_index(self.index());
     }
 
     /// Returns the maximal remaining symbols in this iterator.
@@ -188,7 +188,7 @@ impl<'input> SymbolIterator<'input> {
     ) -> SymbolIterator<'input> {
         SymbolIterator {
             kind: SymbolIteratorKind::Nested(Box::new(self.clone())),
-            start_index: self.curr_index(),
+            start_index: self.index(),
             depth: self.depth + 1,
             prefix_match,
             end_match,
@@ -328,7 +328,7 @@ mod test {
             .count();
 
         let next_symbol = iterator.nth(hash_cnt);
-        let curr_index = iterator.curr_index();
+        let curr_index = iterator.index();
 
         assert_eq!(hash_cnt, 2, "Hash symbols in input not correctly detected.");
         assert_eq!(curr_index, 3, "Current index was not updated correctly.");
@@ -352,7 +352,7 @@ mod test {
         let peeked_symbol = iterator.peeking_next(|_| true);
         let next_symbol = iterator.next();
         let next_peeked_symbol = iterator.peeking_next(|_| true);
-        let curr_index = iterator.curr_index();
+        let curr_index = iterator.index();
 
         assert_eq!(curr_index, 1, "Current index was not updated correctly.");
         assert_eq!(

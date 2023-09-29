@@ -104,7 +104,7 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
         let is_empty_line = self.is_empty_line();
 
         if is_empty_line {
-            self.set_curr_index(self.peek_index()); // To consume peeked symbols
+            self.set_index(self.peek_index()); // To consume peeked symbols
         }
 
         is_empty_line
@@ -127,14 +127,14 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
         let matched = self.matches(sequence);
 
         if matched {
-            self.set_curr_index(self.peek_index()); // To consume peeked symbols
+            self.set_index(self.peek_index()); // To consume peeked symbols
         }
 
         matched
     }
 
     fn at_depth(&self, depth: usize) -> bool {
-        self.curr_depth() == depth
+        self.depth() == depth
     }
 }
 
