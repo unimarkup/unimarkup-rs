@@ -56,7 +56,7 @@ impl<'input> Iterator for SymbolIteratorRoot<'input> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.remaining_symbols().unwrap_or(&[]).len();
+        let len = self.remaining_symbols().map(<[_]>::len).unwrap_or(0);
         (len, Some(len))
     }
 }
