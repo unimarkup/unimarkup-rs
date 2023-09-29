@@ -161,7 +161,7 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let parser = MainParser::default();
 
     let symbols = unimarkup_commons::scanner::scan_str(um_content);
-    let mut symbols_iter = SymbolIterator::from(&symbols);
+    let mut symbols_iter = SymbolIterator::from(&*symbols);
     let blocks = parser.parse(&mut symbols_iter);
 
     let mut unimarkup = Document {

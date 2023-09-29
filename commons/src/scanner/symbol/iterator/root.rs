@@ -23,20 +23,13 @@ impl<'input> SymbolIteratorRoot<'input> {
     }
 }
 
-impl<'input> From<&'input [Symbol<'input>]> for SymbolIteratorRoot<'input> {
-    fn from(value: &'input [Symbol<'input>]) -> Self {
+impl<'input, T> From<T> for SymbolIteratorRoot<'input>
+where
+    T: Into<&'input [Symbol<'input>]>,
+{
+    fn from(value: T) -> Self {
         SymbolIteratorRoot {
-            symbols: value,
-            curr_index: 0,
-            peek_index: 0,
-        }
-    }
-}
-
-impl<'input> From<&'input Vec<Symbol<'input>>> for SymbolIteratorRoot<'input> {
-    fn from(value: &'input Vec<Symbol<'input>>) -> Self {
-        SymbolIteratorRoot {
-            symbols: value,
+            symbols: value.into(),
             curr_index: 0,
             peek_index: 0,
         }

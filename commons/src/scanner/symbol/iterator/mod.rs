@@ -235,21 +235,11 @@ impl<'input> SymbolIterator<'input> {
     }
 }
 
-impl<'input> From<&'input [Symbol<'input>]> for SymbolIterator<'input> {
-    fn from(value: &'input [Symbol<'input>]) -> Self {
-        SymbolIterator {
-            kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
-            start_index: 0,
-            depth: 0,
-            prefix_match: None,
-            end_match: None,
-            iter_end: false,
-        }
-    }
-}
-
-impl<'input> From<&'input Vec<Symbol<'input>>> for SymbolIterator<'input> {
-    fn from(value: &'input Vec<Symbol<'input>>) -> Self {
+impl<'input, T> From<T> for SymbolIterator<'input>
+where
+    T: Into<&'input [Symbol<'input>]>,
+{
+    fn from(value: T) -> Self {
         SymbolIterator {
             kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
             start_index: 0,
@@ -332,7 +322,7 @@ mod test {
     fn peek_while_index() {
         let symbols = crate::scanner::scan_str("## ");
 
-        let mut iterator = SymbolIterator::from(&symbols);
+        let mut iterator = SymbolIterator::from(&*symbols);
         let hash_cnt = iterator
             .peeking_take_while(|symbol| symbol.kind == SymbolKind::Hash)
             .count();
@@ -357,7 +347,7 @@ mod test {
     fn peek_next() {
         let symbols = crate::scanner::scan_str("#*");
 
-        let mut iterator = SymbolIterator::from(&symbols);
+        let mut iterator = SymbolIterator::from(&*symbols);
 
         let peeked_symbol = iterator.peeking_next(|_| true);
         let next_symbol = iterator.next();
@@ -391,7 +381,7 @@ mod test {
     fn reach_end() {
         let symbols = crate::scanner::scan_str("text*");
 
-        let mut iterator = SymbolIterator::from(&symbols).nest(
+        let mut iterator = SymbolIterator::from(&*symbols).nest(
             None,
             Some(Rc::new(|matcher| matcher.matches(&[SymbolKind::Star]))),
         );
