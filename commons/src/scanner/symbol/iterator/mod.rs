@@ -109,7 +109,7 @@ impl<'input> SymbolIterator<'input> {
     }
 
     /// Sets the current index of this iterator to the given index.
-    pub fn set_curr_index(&mut self, index: usize) {
+    pub(super) fn set_curr_index(&mut self, index: usize) {
         if index >= self.start_index {
             match self.kind.borrow_mut() {
                 SymbolIteratorKind::Nested(parent) => parent.set_curr_index(index),
@@ -130,7 +130,7 @@ impl<'input> SymbolIterator<'input> {
     }
 
     /// Sets the peek index of this iterator to the given index.
-    pub fn set_peek_index(&mut self, index: usize) {
+    fn set_peek_index(&mut self, index: usize) {
         if index >= self.curr_index() {
             match self.kind.borrow_mut() {
                 SymbolIteratorKind::Nested(parent) => parent.set_peek_index(index),
