@@ -17,7 +17,7 @@ pub struct SymbolIteratorRoot<'input> {
 }
 
 impl<'input> SymbolIteratorRoot<'input> {
-    /// Returns the remaining symbols in this iterator, or `None` if there are no symbols left..
+    /// Returns the remaining symbols in this iterator, or `None` if there are no symbols left.
     pub(super) fn remaining_symbols(&self) -> Option<&'input [Symbol<'input>]> {
         self.symbols.get(self.curr_index..)
     }
