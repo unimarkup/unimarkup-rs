@@ -20,9 +20,9 @@ pub fn test_core_snapshots() -> Vec<libtest_mimic::Trial> {
         let spec_test_name = format!("{}::spec::{}", module_path!(), case.test.name.as_str());
         let snap_test_name = format!("{}::snap::{}", module_path!(), case.test.name.as_str());
 
-        let case2 = case.clone();
+        let cloned_case = case.clone();
         let spec_test_run = move || {
-            std::panic::catch_unwind(|| run_spec_test(case2)).map_err(|err| {
+            std::panic::catch_unwind(|| run_spec_test(cloned_case)).map_err(|err| {
                 let panic_msg = err
                     .downcast_ref::<&str>()
                     .unwrap_or(&"Panic message not available");
