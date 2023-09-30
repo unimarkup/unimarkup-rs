@@ -7,7 +7,7 @@ use unimarkup_parser::elements::Blocks;
 mod paragraph;
 
 #[derive(Debug)]
-pub(crate) struct Snapshot<T>(T);
+pub struct Snapshot<T>(pub T);
 
 impl<T> Deref for Snapshot<T> {
     type Target = T;

@@ -13,7 +13,7 @@ license.workspace = true
 
 [[test]]
 name="unimarkup-core"
-path="tests/mod.rs"
+path="tests/tests.rs"
 harness=false
 
 [dependencies]

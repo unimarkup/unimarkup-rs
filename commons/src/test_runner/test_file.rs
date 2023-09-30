@@ -10,13 +10,13 @@ pub struct Preamble {
     pub lang: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct TestOutputs {
     pub html: Option<String>,
     pub um: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Test {
     pub name: String,
     pub description: Option<String>,
@@ -27,7 +27,7 @@ pub struct Test {
     pub outputs: TestOutputs,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct TestFile {
     pub spec: String,
     pub name: String,
@@ -36,8 +36,10 @@ pub struct TestFile {
     pub tests: Vec<Test>,
 }
 
+#[derive(Clone)]
 pub struct TestCase {
     pub test: Test,
     pub file_name: String,
     pub out_path: PathBuf,
+    pub file_path: String,
 }

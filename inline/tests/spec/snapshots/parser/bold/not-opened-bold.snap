@@ -1,6 +1,6 @@
 ---
 source: inline/tests/parser/mod.rs
-info: "Test 'not-opened-bold' from 'bold.yml'"
+info: "Test 'not-opened-bold' from 'markup/bold.yml'"
 ---
 Plain @ (1:1)->(1:14) (
     ** not bold**

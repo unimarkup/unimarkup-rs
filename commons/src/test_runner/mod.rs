@@ -10,8 +10,6 @@ pub mod snap_test_runner;
 pub mod spec_test;
 pub mod test_file;
 
-pub use insta;
-
 use self::test_file::{TestCase, TestFile};
 
 /// Scans the string using the [`Scanner`] struct.
@@ -116,10 +114,20 @@ pub fn collect_tests(
             let file_name = path.file_name().and_then(|file| file.to_str()).unwrap();
             let out_path = gen_snap_path(output, &path, separator);
 
+            let file_path: String = path
+                .components()
+                .skip_while(|c| Path::new(c) != Path::new(separator))
+                .collect::<PathBuf>()
+                .to_string_lossy()
+                .to_string();
+
+            dbg!(&file_path);
+
             TestCase {
                 test,
                 file_name: String::from(file_name),
                 out_path,
+                file_path,
             }
         });
 

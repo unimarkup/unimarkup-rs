@@ -1,8 +1,8 @@
 ---
-source: core/tests/test_runner/mod.rs
-info: "Test 'paragraph-paragraph-with-inlines' from: spec/markup/blocks/paragraph.yml"
+source: core/tests/runner/mod.rs
+info: "Test 'paragraph-with-inlines' from: markup/blocks/paragraph.yml"
 ---
-Paragraph(Paragraph **with**  inlines.)
+Paragraph(Paragraph **with** inlines.)
 ---
 With input:
 

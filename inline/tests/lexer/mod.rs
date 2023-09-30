@@ -45,7 +45,7 @@ fn run_test_case(case: test_runner::test_file::TestCase) {
     })
     .with_info(format!(
         "Test '{}' from '{}'",
-        case.test.name, case.file_name
+        case.test.name, case.file_path
     ));
 
     unimarkup_commons::run_snap_test!(runner, &case.out_path);
