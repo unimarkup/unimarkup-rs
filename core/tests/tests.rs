@@ -26,7 +26,7 @@ macro_rules! test_fn {
 fn main() {
     let args = libtest_mimic::Arguments::from_args();
 
-    let mut tests = runner::test_block_snapshots();
+    let mut tests = runner::test_core_snapshots();
     tests.extend(collect_tests());
 
     libtest_mimic::run(&args, tests).exit();

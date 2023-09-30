@@ -5,7 +5,7 @@ use unimarkup_core::Unimarkup;
 
 use crate::snapshot::Snapshot;
 
-pub fn test_block_snapshots() -> Vec<libtest_mimic::Trial> {
+pub fn test_core_snapshots() -> Vec<libtest_mimic::Trial> {
     let tests_path = unimarkup_commons::crate_tests_path!();
 
     let test_cases = test_runner::collect_tests(
