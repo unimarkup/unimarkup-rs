@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use unimarkup_commons::config::locid::Locale;
+use unimarkup_commons::config::icu_locid::Locale;
 use unimarkup_inline::{types::*, Inline};
 use unimarkup_parser::{
     document::Document,

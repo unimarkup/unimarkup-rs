@@ -1,6 +1,6 @@
 ---
 source: inline/tests/lexer/mod.rs
-info: "Test 'simple-plain' from 'plain.yml'"
+info: "Test 'simple-plain' from 'markup/plain.yml'"
 ---
 Simple text.
 Simple

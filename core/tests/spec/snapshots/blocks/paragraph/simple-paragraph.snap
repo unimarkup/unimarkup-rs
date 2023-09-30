@@ -1,7 +1,7 @@
 ---
-source: core/tests/test_runner/mod.rs
+source: core/tests/runner/mod.rs
 description: "Parse a simple paragraph.\n"
-info: "Test 'paragraph-simple-paragraph' from: spec/markup/blocks/paragraph.yml"
+info: "Test 'simple-paragraph' from: markup/blocks/paragraph.yml"
 ---
 Paragraph(Simple paragraph.)
 ---
