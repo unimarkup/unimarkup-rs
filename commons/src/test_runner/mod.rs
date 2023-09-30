@@ -121,8 +121,6 @@ pub fn collect_tests(
                 .to_string_lossy()
                 .to_string();
 
-            dbg!(&file_path);
-
             TestCase {
                 test,
                 file_name: String::from(file_name),
