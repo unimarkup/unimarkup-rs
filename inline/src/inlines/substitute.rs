@@ -83,7 +83,7 @@ pub(crate) struct Substitutor<'a> {
 
 impl<'sub> Substitutor<'sub> {
     pub(crate) fn new() -> Self {
-        let direct: HashMap<_, _> = EMOJIS.into_iter().chain(ARROWS.into_iter()).collect();
+        let direct: HashMap<_, _> = EMOJIS.into_iter().chain(ARROWS).collect();
         let aliased = ALIASES.into_iter().collect();
         let max_len = direct.keys().map(|key| key.len()).max().unwrap_or(0);
         let first_grapheme = direct.keys().map(|key| &key[0..1]).collect();

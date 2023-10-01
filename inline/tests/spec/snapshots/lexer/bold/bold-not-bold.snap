@@ -1,6 +1,6 @@
 ---
 source: inline/tests/lexer/mod.rs
-info: "Test 'bold-not-bold' from 'bold.yml'"
+info: "Test 'bold-not-bold' from 'markup/bold.yml'"
 ---
 **Bold** not bold.
 **

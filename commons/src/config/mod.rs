@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use self::{log_id::ConfigErr, output::Output, preamble::Preamble};
 
-pub use icu_locid as locid;
+pub use icu_locid;
 
 pub mod locale;
 pub mod log_id;
@@ -112,7 +112,7 @@ where
             format!("HashSet conversion failed with: {:?}", err),
         )
     });
-    Ok(HashSet::from_iter(entries?.into_iter()))
+    Ok(HashSet::from_iter(entries?))
 }
 
 // Define extension trait

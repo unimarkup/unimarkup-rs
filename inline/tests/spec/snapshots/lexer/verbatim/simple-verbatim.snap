@@ -1,6 +1,6 @@
 ---
 source: inline/tests/lexer/mod.rs
-info: "Test 'simple-verbatim' from 'verbatim.yml'"
+info: "Test 'simple-verbatim' from 'markup/verbatim.yml'"
 ---
 `Verbatim`
 `

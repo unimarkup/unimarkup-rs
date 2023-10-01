@@ -1,7 +1,6 @@
 use unimarkup_commons::config::{output::OutputFormatKind, Config};
 
-#[test]
-fn compile_empty_content() {
+pub fn compile_empty_content() {
     let mut cfg = Config {
         input: "tests/test_files/all_syntax.um".into(),
         ..Default::default()

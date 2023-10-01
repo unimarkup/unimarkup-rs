@@ -10,13 +10,13 @@ pub struct Preamble {
     pub lang: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct TestOutputs {
     pub html: Option<String>,
     pub um: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Test {
     pub name: String,
     pub description: Option<String>,
@@ -27,7 +27,7 @@ pub struct Test {
     pub outputs: TestOutputs,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct TestFile {
     pub spec: String,
     pub name: String,
@@ -36,17 +36,10 @@ pub struct TestFile {
     pub tests: Vec<Test>,
 }
 
-pub struct TestContent {
-    pub test_file: TestFile,
-    pub snap_path: PathBuf,
-}
-
-pub fn get_test_content(test_filepath: PathBuf, snap_path: PathBuf) -> TestContent {
-    let input = std::fs::read_to_string(test_filepath).unwrap();
-    let test_file: crate::test_runner::test_file::TestFile = serde_yaml::from_str(&input).unwrap();
-
-    TestContent {
-        test_file,
-        snap_path,
-    }
+#[derive(Clone)]
+pub struct TestCase {
+    pub test: Test,
+    pub file_name: String,
+    pub out_path: PathBuf,
+    pub file_path: String,
 }

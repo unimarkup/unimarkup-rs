@@ -2,17 +2,22 @@ use std::panic;
 
 use crate::snapshot::Snapshot;
 use libtest_mimic::Trial;
-use unimarkup_commons::test_runner::snap_test_runner::SnapTestRunner;
+use unimarkup_commons::test_runner::{self, snap_test_runner::SnapTestRunner};
 use unimarkup_inline::ParseInlines;
 
 mod snapshot;
 
 pub fn test_parser_snapshots() -> Vec<Trial> {
-    let test_cases = crate::prepare_test_cases("spec/markup", "spec/snapshots/parser");
-    let mut test_runs = Vec::with_capacity(test_cases.len());
+    let tests_path = unimarkup_commons::crate_tests_path!();
+    let test_cases = test_runner::collect_tests(
+        tests_path.join("spec/markup"),
+        tests_path.join("spec/snapshots/parser"),
+        "markup",
+    );
 
+    let mut test_runs = Vec::with_capacity(test_cases.len());
     for case in test_cases {
-        let test_name = format!("{}::{}", module_path!(), case.name.as_str());
+        let test_name = format!("{}::{}", module_path!(), case.test.name.as_str());
 
         let test_run = move || {
             panic::catch_unwind(|| run_test_case(case)).map_err(|err| {
@@ -30,14 +35,17 @@ pub fn test_parser_snapshots() -> Vec<Trial> {
     test_runs
 }
 
-fn run_test_case(case: crate::TestCase) {
-    let symbols = unimarkup_commons::scanner::scan_str(&case.input);
+fn run_test_case(case: test_runner::test_file::TestCase) {
+    let symbols = unimarkup_commons::scanner::scan_str(&case.test.input);
 
-    let runner = SnapTestRunner::with_fn(&case.name, &symbols, |symbols| {
+    let runner = SnapTestRunner::with_fn(&case.test.name, &symbols, |symbols| {
         let inlines: Vec<_> = symbols.parse_inlines().collect();
         Snapshot::snap(&inlines[..])
     })
-    .with_info(format!("Test '{}' from '{}'", case.name, case.file_name));
+    .with_info(format!(
+        "Test '{}' from '{}'",
+        case.test.name, case.file_path
+    ));
 
     unimarkup_commons::run_snap_test!(runner, &case.out_path);
 }

@@ -22,7 +22,7 @@ once_cell = { workspace = true, optional = true }
 icu_segmenter = "1.3.0"
 icu_locid = "1.3.0"
 regex = { version = "1.8.1", optional = true }
-insta = {version = "1.29.0", features = ["serde"], optional = true}
+insta = { version = "1.29.0", features = ["serde"], optional = true }
 itertools = "0.11.0"
 
 [features]
