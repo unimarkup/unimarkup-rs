@@ -4,4 +4,4 @@ This crate is the parser reference implementation for [Unimarkup](https://github
 
 # License
 
-MIT Licensed
+Apache 2.0 Licensed

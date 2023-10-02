@@ -5,4 +5,4 @@ It may be used as standalone tool to convert Unimarkup files into supported outp
 
 # License
 
-MIT License
+Apache 2.0 Licensed

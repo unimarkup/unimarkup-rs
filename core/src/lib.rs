@@ -1,4 +1,5 @@
 pub use unimarkup_commons as commons;
+pub use unimarkup_inline as inline;
 pub use unimarkup_parser as parser;
 pub use unimarkup_render as render;
 

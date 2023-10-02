@@ -20,6 +20,7 @@ harness=false
 logid.workspace = true
 thiserror.workspace = true
 unimarkup-commons = { path ="../commons/", version = "0" }
+unimarkup-inline = { path = "../inline/", version = "0" }
 unimarkup-parser = { path = "../parser/", version = "0" }
 unimarkup-render = { path = "../render/", version = "0" }
 
