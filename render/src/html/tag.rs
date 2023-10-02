@@ -26,6 +26,7 @@ pub enum HtmlTag {
     Sup,
     Mark,
     Q,
+    Br,
 }
 
 impl HtmlTag {
@@ -51,6 +52,7 @@ impl HtmlTag {
             HtmlTag::Sup => "sup",
             HtmlTag::Mark => "mark",
             HtmlTag::Q => "q",
+            HtmlTag::Br => "br",
         }
     }
 }

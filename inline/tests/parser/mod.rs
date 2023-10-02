@@ -36,13 +36,11 @@ pub fn test_parser_snapshots() -> Vec<Trial> {
 }
 
 fn run_test_case(case: test_runner::test_file::TestCase) {
-    let symbols = test_runner::scan_str(&case.test.input);
+    let symbols = unimarkup_commons::scanner::scan_str(&case.test.input);
 
     let runner = SnapTestRunner::with_fn(&case.test.name, &symbols, |symbols| {
-        let rest: &[_] = &[];
         let inlines: Vec<_> = symbols.parse_inlines().collect();
-        let snapshot = Snapshot::snap(&inlines[..]);
-        (snapshot, rest)
+        Snapshot::snap(&inlines[..])
     })
     .with_info(format!(
         "Test '{}' from '{}'",

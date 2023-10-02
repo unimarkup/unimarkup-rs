@@ -3,20 +3,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::scanner::{Scanner, Symbol};
-
 pub mod as_snapshot;
 pub mod snap_test_runner;
 pub mod spec_test;
 pub mod test_file;
 
 use self::test_file::{TestCase, TestFile};
-
-/// Scans the string using the [`Scanner`] struct.
-pub fn scan_str(input: &str) -> Vec<Symbol> {
-    let scanner = Scanner::default();
-    scanner.scan_str(input)
-}
 
 /// Finds all files with the given extension in the given path (recursively).
 ///

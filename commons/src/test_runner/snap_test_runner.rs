@@ -17,11 +17,9 @@ impl<'a> SnapTestRunner<'a> {
     pub fn with_fn<S, PF>(name: &str, input: &'a S, mut parser: PF) -> SnapTestRunner<'a, ()>
     where
         S: AsRef<[Symbol<'a>]>,
-        PF: for<'s> FnMut(&'s [Symbol<'s>]) -> (String, &'s [Symbol<'s>]),
+        PF: for<'s> FnMut(&'s [Symbol<'s>]) -> String,
     {
-        let (snapshot, rest) = parser(input.as_ref());
-
-        assert_eq!(rest.len(), 0, "Whole input should be parsed");
+        let snapshot = parser(input.as_ref());
 
         SnapTestRunner {
             info: None,
