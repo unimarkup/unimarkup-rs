@@ -1,6 +1,3 @@
-// allows using `__` for better separation in functionnames
-#![allow(non_snake_case)]
-
 mod general {
     pub mod metadata;
     pub mod unimarkup;
