@@ -49,7 +49,7 @@ Add-ons for testing:
 
 We have our own convention for git commit messages that are inspired by [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/).\
 This leads to more **readable** messages that are easy to follow when looking through the [project's history](https://github.com/unimarkup/unimarkup-rs/commits/main).
-In addition, we use git commit messages to automatically get a **change log** using [release-please](https://github.com/googleapis/release-please) from Google.
+In addition, we use git commit messages to automatically generate a **change log** using [release-please](https://github.com/googleapis/release-please) from Google.
 As a result, commit messages not following our convention won't appear in the generated change log.
 
 **Note:** We use `squash merging` for pull requests, so we are able to correct your commit messages, but please try to stick to the convention to make merging easier for us.
