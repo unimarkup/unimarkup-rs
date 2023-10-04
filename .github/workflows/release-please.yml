@@ -20,6 +20,6 @@ jobs:
             [
             {"type":"feat","section":"Features","hidden":false},
             {"type":"fix","section":"Bug Fixes","hidden":false},
-            {"type":"arch","section":"Architectur/Refactor","hidden":false},
+            {"type":"arch","section":"Architecture/Refactor","hidden":false},
             {"type":"chore","section":"Miscellaneous","hidden":true}
             ]
