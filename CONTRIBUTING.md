@@ -35,10 +35,10 @@ To keep track of feature requests, we use the following labels:
 
 We use the following tools for development:
 
-1. [rustup](https://rustup.rs/) to get a Rust compiler.
-2. [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer) as a Language Server to be used with LSP.
+1. [rustup](https://rustup.rs/) to install the Rust toolchain (cargo, clippy, rustc, rustfmt etc)
+2. [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer) as a Language Server to be used with LSP
 3. `clippy` as linter. i.e. for VS Code this setting is in the `rust-analyzer` extension settings (Change `cargo check` command to `clippy`)
-4. Optional: Enable auto-formatting of the code, by using `rustfmt` default settings.
+4. Optional: Enable auto-formatting of the code, by using `rustfmt` default settings
 
 Add-ons for testing:
 
