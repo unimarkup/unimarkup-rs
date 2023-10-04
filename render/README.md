@@ -2,7 +2,7 @@
 
 This crate contains traits and implementations to render Unimarkup elements to all supported output formats.
 The [`Render`](src/render.rs) trait defined in this crate is used to implement rendering to an output format.
-It is already implemented for all supported formats, but it may be used to add support for other formats.
+It is already implemented for all supported formats, but it may be used to add support for other formats, or for alternative rendering implementations. 
 
 ## Adding new elements
 
