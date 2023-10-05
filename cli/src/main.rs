@@ -8,7 +8,7 @@ use logid::{
         filter::{AddonFilter, FilterConfigBuilder},
     },
 };
-use unimarkup_commons::config::{Config, ConfigFns};
+use unimarkup_core::commons::config::Config;
 
 use crate::log_id::{GeneralError, GeneralInfo};
 
@@ -27,37 +27,16 @@ fn main() {
         .all_log_events()
         .build();
 
-    'outer: {
-        match Config::try_parse() {
-            Ok(cfg) => {
-                if let Err(err) = cfg.validate() {
-                    logid::log!(
-                        GeneralError::Compile,
-                        format!("Configuration is invalid: {err}")
-                    );
-                    break 'outer;
-                }
-
-                match compiler::compile(cfg) {
-                    Ok(_) => {
-                        log!(GeneralInfo::FinishedCompiling);
-                    }
-                    Err(error) => {
-                        log!(
-                            GeneralError::Compile,
-                            add: AddonKind::Info(format!("Cause: {:?}", error))
-                        );
-                    }
-                };
-            }
-            Err(error) => {
-                log!(
-                    GeneralError::ArgParse,
-                    add: AddonKind::Info(
-                        format!("Cause:\n\n{}", error.to_string().replace("error: ", "")),
-                    )
-                );
-            }
+    let config = Config::parse();
+    match compiler::compile(config) {
+        Ok(_) => {
+            log!(GeneralInfo::FinishedCompiling);
         }
-    }
+        Err(error) => {
+            log!(
+                GeneralError::Compile,
+                add: AddonKind::Info(format!("Cause: {:?}", error))
+            );
+        }
+    };
 }

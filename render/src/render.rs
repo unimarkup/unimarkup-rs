@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use unimarkup_commons::config::locid::Locale;
+use unimarkup_commons::config::icu_locid::Locale;
 use unimarkup_inline::{types::*, Inline};
 use unimarkup_parser::{
     document::Document,
@@ -158,6 +158,29 @@ pub trait Renderer<T: OutputFormat> {
         Err(RenderError::Unimplemented)
     }
 
+    /// Render [`Newline` content](unimarkup_inline::inlines::Inline) to the output format `T`.
+    fn render_newline(&mut self, _newline: &Newline, _context: &Context) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    /// Render [`EscapedNewline` content](unimarkup_inline::inlines::Inline) to the output format `T`.
+    fn render_escaped_newline(
+        &mut self,
+        _escaped_newline: &EscapedNewline,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    /// Render [`EscapedWhitespace` content](unimarkup_inline::inlines::Inline) to the output format `T`.
+    fn render_escaped_whitespace(
+        &mut self,
+        _escaped_whitespace: &EscapedWhitespace,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
     //----------------------------- GENERIC ELEMENTS -----------------------------
 
     /// Render Unimarkup [`Block`s](Block) to the output format `T`.
@@ -236,6 +259,13 @@ pub trait Renderer<T: OutputFormat> {
             Inline::Quote(quote) => self.render_quote(quote, context),
             Inline::Verbatim(verbatim) => self.render_inline_verbatim(verbatim, context),
             Inline::Plain(plain) => self.render_plain(plain, context),
+            Inline::Newline(newline) => self.render_newline(newline, context),
+            Inline::EscapedNewline(escaped_newline) => {
+                self.render_escaped_newline(escaped_newline, context)
+            }
+            Inline::EscapedWhitespace(escaped_whitespace) => {
+                self.render_escaped_whitespace(escaped_whitespace, context)
+            }
             _ => Err(RenderError::Unimplemented),
         }
     }

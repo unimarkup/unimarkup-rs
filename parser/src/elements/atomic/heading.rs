@@ -1,10 +1,14 @@
+use std::rc::Rc;
+
 use strum_macros::*;
 use unimarkup_inline::{Inline, ParseInlines};
 
 use crate::elements::blocks::Block;
 use crate::elements::Blocks;
 use crate::parser::{ElementParser, TokenizeOutput};
-use unimarkup_commons::scanner::{Symbol, SymbolKind};
+use unimarkup_commons::scanner::{
+    EndMatcher, Itertools, PrefixMatcher, Symbol, SymbolIterator, SymbolKind,
+};
 
 use super::log_id::AtomicError;
 
@@ -112,7 +116,7 @@ pub enum HeadingToken<'a> {
     Level(HeadingLevel),
 
     /// Content of the heading
-    Content(&'a [Symbol<'a>]),
+    Content(Vec<&'a Symbol<'a>>),
 
     /// Marks the end of the heading
     End,
@@ -121,48 +125,76 @@ pub enum HeadingToken<'a> {
 impl ElementParser for Heading {
     type Token<'a> = self::HeadingToken<'a>;
 
-    fn tokenize<'i>(input: &'i [Symbol<'i>]) -> Option<TokenizeOutput<'i, Self::Token<'i>>> {
-        let mut level_depth = input
-            .iter()
-            .take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
-            .count();
+    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<Self::Token<'i>>> {
+        let mut heading_start: Vec<SymbolKind> = input
+            .peeking_take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
+            .map(|s| s.kind)
+            .collect();
 
+        let level_depth = heading_start.len();
         let level: HeadingLevel = HeadingLevel::try_from(level_depth).ok()?;
-        if input.get(level_depth)?.kind != SymbolKind::Whitespace {
+        if input.by_ref().nth(level_depth)?.kind != SymbolKind::Whitespace {
             return None;
         }
-        level_depth += 1; // +1 space offset
 
-        let content_symbols = input
-            .iter()
-            .skip(level_depth)
-            .take_while(|symbol| !matches!(symbol.kind, SymbolKind::Blankline | SymbolKind::EOI))
-            .count();
+        heading_start.push(SymbolKind::Whitespace);
 
-        let content_start = level_depth;
-        let content_end = content_start + content_symbols;
+        let sub_heading_start: Vec<SymbolKind> = std::iter::repeat(SymbolKind::Hash)
+            .take(heading_start.len())
+            .chain([SymbolKind::Whitespace])
+            .collect();
+        let heading_end = move |matcher: &mut dyn EndMatcher| {
+            matcher.consumed_is_empty_line()
+                || matcher.matches(&[SymbolKind::EOI])
+                || level != HeadingLevel::Level6 && matcher.matches(&sub_heading_start)
+        };
 
-        let content = &input[content_start..content_end];
-        let rest = &input[content_end..];
+        let whitespace_indents: Vec<SymbolKind> = std::iter::repeat(SymbolKind::Whitespace)
+            .take(heading_start.len())
+            .collect();
+        let heading_prefix = move |matcher: &mut dyn PrefixMatcher| {
+            matcher.consumed_prefix(&heading_start) || matcher.consumed_prefix(&whitespace_indents)
+        };
+
+        let mut content_iter =
+            input.nest(Some(Rc::new(heading_prefix)), Some(Rc::new(heading_end)));
+        let content_symbols = content_iter.take_to_end();
+
+        // Line prefixes violated => invalid heading syntax
+        if !content_iter.end_reached() {
+            return None;
+        }
+
+        content_iter.update(input);
 
         let output = TokenizeOutput {
             tokens: vec![
                 HeadingToken::Level(level),
-                HeadingToken::Content(content),
+                HeadingToken::Content(content_symbols),
                 HeadingToken::End,
             ],
-            rest_of_input: rest,
         };
 
         Some(output)
     }
 
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
-        let HeadingToken::Level(level) = input[0] else {return None};
-        let HeadingToken::Content(symbols) = input[1] else {return None};
+        let HeadingToken::Level(level) = input[0] else {
+            return None;
+        };
+        let HeadingToken::Content(ref symbols) = input[1] else {
+            return None;
+        };
         let inline_start = symbols.get(0)?.start;
 
-        let content = symbols.parse_inlines().collect();
+        // TODO: Adapt inline lexer to also work with Vec<&'input Symbol>
+        let content = symbols
+            .iter()
+            .map(|&s| *s)
+            .collect::<Vec<Symbol<'_>>>()
+            .parse_inlines()
+            .collect();
+
         let line_nr = inline_start.line;
         let block = Self {
             id: String::default(),
@@ -181,67 +213,3 @@ impl AsRef<Self> for Heading {
         self
     }
 }
-
-// #[allow(non_snake_case)]
-// #[cfg(test)]
-// mod tests {
-//     use crate::elements::atomic::{Heading, HeadingLevel};
-//     use unimarkup_commons::test_runner;
-//     use unimarkup_inline::ParseInlines;
-//     // use unimarkup_render::render::Render;
-
-//     #[test]
-//     fn test__render_html__heading() {
-//         let lowest_level = HeadingLevel::Level1 as usize;
-//         let highest_level = HeadingLevel::Level6 as usize;
-
-//         for level in lowest_level..=highest_level {
-//             let heading_content = test_runner::scan_str("This is a heading")
-//                 .parse_inlines()
-//                 .collect();
-//             let id = format!("heading-id-{}", level);
-
-//             let heading = Heading {
-//                 id: String::from(&id),
-//                 level: HeadingLevel::try_from(level).unwrap(),
-//                 content: heading_content,
-//                 attributes: None,
-//                 line_nr: level,
-//             };
-
-//             let html = heading.render_html();
-
-//             let expected = format!("<h{} id='{}'>This is a heading</h{}>", level, id, level);
-//             assert_eq!(html.body, expected);
-//         }
-//     }
-
-//     #[test]
-//     fn test__render_html__heading_with_inline() {
-//         let lowest_level = HeadingLevel::Level1 as usize;
-//         let highest_level = HeadingLevel::Level6 as usize;
-
-//         for level in lowest_level..=highest_level {
-//             let heading_content = test_runner::scan_str("`This` *is _a_* **heading**")
-//                 .parse_inlines()
-//                 .collect();
-//             let id = format!("heading-id-{}", level);
-
-//             let heading = Heading {
-//                 id: String::from(&id),
-//                 level: HeadingLevel::try_from(level).unwrap(),
-//                 content: heading_content,
-//                 attributes: None,
-//                 line_nr: level,
-//             };
-
-//             let html = heading.render_html();
-
-//             let expected = format!(
-//                 "<h{} id='{}'><pre><code>This</code></pre> <em>is <sub>a</sub></em> <strong>heading</strong></h{}>",
-//                 level, id, level
-//             );
-//             assert_eq!(html.body, expected);
-//         }
-//     }
-// }

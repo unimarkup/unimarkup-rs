@@ -1,6 +1,6 @@
 ---
 source: inline/tests/lexer/mod.rs
-info: "Test 'breaking-unicode' from 'plain.yml'"
+info: "Test 'breaking-unicode' from 'markup/plain.yml'"
 ---
 The character 𝛂 broke some stuff.
 The

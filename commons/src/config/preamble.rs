@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::Args;
-use icu::locid::Locale;
+use icu_locid::Locale;
 use logid::err;
 use serde::{Deserialize, Serialize};
 
@@ -55,7 +55,7 @@ pub struct I18n {
 
 impl ConfigFns for I18n {
     fn merge(&mut self, other: Self) {
-        self.output_langs.extend(other.output_langs.into_iter());
+        self.output_langs.extend(other.output_langs);
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
@@ -79,8 +79,8 @@ pub struct RenderConfig {
 
 impl ConfigFns for RenderConfig {
     fn merge(&mut self, other: Self) {
-        self.ignore.extend(other.ignore.into_iter());
-        self.parameter.extend(other.parameter.into_iter());
+        self.ignore.extend(other.ignore);
+        self.parameter.extend(other.parameter);
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
@@ -103,7 +103,7 @@ pub struct Citedata {
 impl ConfigFns for Citedata {
     fn merge(&mut self, other: Self) {
         self.style.replace_none(other.style);
-        self.references.extend(other.references.into_iter());
+        self.references.extend(other.references);
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
@@ -146,8 +146,8 @@ pub struct Metadata {
 impl ConfigFns for Metadata {
     fn merge(&mut self, other: Self) {
         self.title.replace_none(other.title);
-        self.authors.extend(other.authors.into_iter());
-        self.fonts.extend(other.fonts.into_iter());
+        self.authors.extend(other.authors);
+        self.fonts.extend(other.fonts);
 
         // Note: `base` and `description` must not be merged with sub-configs according to specification.
     }
@@ -184,8 +184,8 @@ pub struct HtmlSpecificParameter {
 
 impl ConfigFns for HtmlSpecificParameter {
     fn merge(&mut self, other: Self) {
-        self.favicons.extend(other.favicons.into_iter());
-        self.keywords.extend(other.keywords.into_iter());
+        self.favicons.extend(other.favicons);
+        self.keywords.extend(other.keywords);
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {

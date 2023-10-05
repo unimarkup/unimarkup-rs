@@ -7,6 +7,7 @@ members = [
     "parser",
     "render",
 ]
+resolver = "2"
 
 # Compile snapshot testing library "insta" with "release" flag so that it runs
 # faster
@@ -24,7 +25,7 @@ description = "Unimarkup compiler written in Rust."
 repository = "https://github.com/Unimarkup/unimarkup-rs"
 homepage = "https://github.com/Unimarkup/unimarkup-rs"
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 
 [workspace.dependencies]
 logid = { version = "0.12.1", features = ["diagnostics"] }

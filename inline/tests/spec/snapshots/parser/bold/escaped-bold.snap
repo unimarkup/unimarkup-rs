@@ -1,6 +1,6 @@
 ---
 source: inline/tests/parser/mod.rs
-info: "Test 'escaped-bold' from 'bold.yml'"
+info: "Test 'escaped-bold' from 'markup/bold.yml'"
 ---
 Plain @ (1:1)->(1:17) (
     ␢␢**not bold**␢␢

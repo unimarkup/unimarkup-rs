@@ -1,7 +1,7 @@
 //! Module for parsing of Unimarkup elements.
 
 use logid::log;
-use unimarkup_commons::scanner::{Scanner, Symbol, SymbolKind};
+use unimarkup_commons::scanner::{SymbolIterator, SymbolKind};
 
 use crate::{
     document::Document,
@@ -17,15 +17,11 @@ use crate::{
 use unimarkup_commons::config::Config;
 
 /// Parser as function that can parse Unimarkup content
-pub type ParserFn = for<'i> fn(&'i [Symbol<'i>]) -> Option<(Blocks, &'i [Symbol<'i>])>;
+pub type ParserFn = for<'i> fn(&mut SymbolIterator<'i>) -> Option<Blocks>;
 
 /// Output of symbol tokenization by a parser of a block.
-pub(crate) struct TokenizeOutput<'a, T>
-where
-    T: 'a,
-{
+pub(crate) struct TokenizeOutput<T> {
     pub(crate) tokens: Vec<T>,
-    pub(crate) rest_of_input: &'a [Symbol<'a>],
 }
 
 /// Trait implemented by a parser for each Unimarkup element.
@@ -34,7 +30,7 @@ pub(crate) trait ElementParser {
     type Token<'a>;
 
     /// Function that converts input symbols into tokens specific for the given element.
-    fn tokenize<'i>(input: &'i [Symbol<'i>]) -> Option<TokenizeOutput<'i, Self::Token<'i>>>;
+    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<Self::Token<'i>>>;
 
     /// Function that parses tokenization output and produces one or more Unimarkup elements.
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks>;
@@ -65,7 +61,7 @@ where
             let tokenize_output = T::tokenize(input)?;
             let blocks = T::parse(tokenize_output.tokens)?;
 
-            Some((blocks, tokenize_output.rest_of_input))
+            Some(blocks)
         }
     }
 }
@@ -103,53 +99,56 @@ impl MainParser {
     }
 
     /// Parses Unimarkup content and produces Unimarkup blocks.
-    pub fn parse<'s>(&self, input: impl AsRef<[Symbol<'s>]>) -> Blocks {
-        let mut input = input.as_ref();
+    pub fn parse(&self, input: &mut SymbolIterator) -> Blocks {
         let mut blocks = Vec::default();
 
         #[cfg(debug_assertions)]
-        let mut input_len = input.len();
+        let mut curr_len = input.max_len();
 
-        'outer: while let Some(sym) = input.first() {
-            match sym.kind {
-                // skip blanklines
-                SymbolKind::Blankline => input = &input[1..],
+        'outer: while let Some(kind) = input.peek_kind() {
+            match kind {
+                // skip newlines between elements
+                SymbolKind::Blankline | SymbolKind::Newline => {
+                    input.next();
+                }
 
                 // stop parsing when end of input is reached
                 SymbolKind::EOI => break,
 
                 // no parser will match, parse with default parser
-                _ if sym.is_not_keyword() => {
-                    let (mut res_blocks, rest_of_input) = (self.default_parser)(input)
+                _ if kind.is_not_keyword() => {
+                    let mut res_blocks = (self.default_parser)(input)
                         .expect("Default parser could not parse content!");
 
                     blocks.append(&mut res_blocks);
-                    input = rest_of_input;
                 }
 
                 // symbol is start of a block, some parser should match
                 _ => {
                     for parser_fn in &self.parsers {
-                        if let Some((mut res_blocks, rest_of_input)) = parser_fn(input) {
+                        let mut iter = input.clone();
+                        if let Some(mut res_blocks) = parser_fn(&mut iter) {
                             blocks.append(&mut res_blocks);
-                            input = rest_of_input;
+                            *input = iter;
                             continue 'outer; // start from first parser on next input
                         }
                     }
 
                     // no registered parser matched -> use default parser
-                    let (mut res_blocks, rest_of_input) = (self.default_parser)(input)
+                    let mut res_blocks = (self.default_parser)(input)
                         .expect("Default parser could not parse content!");
 
                     blocks.append(&mut res_blocks);
-                    input = rest_of_input;
                 }
             }
 
             #[cfg(debug_assertions)]
             {
-                assert_ne!(input.len(), input_len);
-                input_len = input.len();
+                assert!(
+                    input.max_len() < curr_len,
+                    "Parser consumed no symbol in iteration."
+                );
+                curr_len = input.max_len();
             }
         }
 
@@ -161,11 +160,9 @@ impl MainParser {
 pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let parser = MainParser::default();
 
-    let symbols = Scanner::try_new()
-        .expect("Must be valid provider.")
-        .scan_str(um_content);
-
-    let blocks = parser.parse(symbols);
+    let symbols = unimarkup_commons::scanner::scan_str(um_content);
+    let mut symbols_iter = SymbolIterator::from(&*symbols);
+    let blocks = parser.parse(&mut symbols_iter);
 
     let mut unimarkup = Document {
         config: config.clone(),

@@ -4,6 +4,8 @@ use core::fmt;
 
 use super::position::{Offset, Position};
 
+pub mod iterator;
+
 /// Possible kinds of Symbol found in Unimarkup document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SymbolKind {
@@ -66,6 +68,19 @@ impl Default for SymbolKind {
     }
 }
 
+impl SymbolKind {
+    pub fn is_not_keyword(&self) -> bool {
+        matches!(
+            self,
+            SymbolKind::Newline
+                | SymbolKind::Whitespace
+                | SymbolKind::Plain
+                | SymbolKind::Blankline
+                | SymbolKind::EOI
+        )
+    }
+}
+
 /// Symbol representation of literals found in Unimarkup document.
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Symbol<'a> {
@@ -108,14 +123,7 @@ impl fmt::Debug for Symbol<'_> {
 impl Symbol<'_> {
     // TODO: extension trait in core?
     pub fn is_not_keyword(&self) -> bool {
-        matches!(
-            self.kind,
-            SymbolKind::Newline
-                | SymbolKind::Whitespace
-                | SymbolKind::Plain
-                | SymbolKind::Blankline
-                | SymbolKind::EOI
-        )
+        self.kind.is_not_keyword()
     }
 
     /// Returns the original string representation of the symbol.

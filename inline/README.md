@@ -5,4 +5,4 @@ It is extracted from the core crate to be used in lightweight applications like 
 
 # License
 
-MIT Licensed
+Apache 2.0 Licensed

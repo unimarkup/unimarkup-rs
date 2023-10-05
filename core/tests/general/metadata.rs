@@ -5,8 +5,7 @@ use unimarkup_parser::{
     security,
 };
 
-#[test]
-fn test__metadata__create_from_memory() {
+pub fn create_metadata_from_memory() {
     let testfile = "from_memory";
     let content = "some **unimarkup content**";
 

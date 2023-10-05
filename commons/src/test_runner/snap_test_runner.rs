@@ -1,6 +1,8 @@
 use crate::scanner::Symbol;
 use serde::Serialize;
 
+pub use insta::{assert_snapshot, Settings};
+
 #[derive(Debug)]
 pub struct SnapTestRunner<'a, I = ()> {
     pub info: Option<I>,
@@ -15,11 +17,9 @@ impl<'a> SnapTestRunner<'a> {
     pub fn with_fn<S, PF>(name: &str, input: &'a S, mut parser: PF) -> SnapTestRunner<'a, ()>
     where
         S: AsRef<[Symbol<'a>]>,
-        PF: for<'s> FnMut(&'s [Symbol<'s>]) -> (String, &'s [Symbol<'s>]),
+        PF: for<'s> FnMut(&'s [Symbol<'s>]) -> String,
     {
-        let (snapshot, rest) = parser(input.as_ref());
-
-        assert_eq!(rest.len(), 0, "Whole input should be parsed");
+        let snapshot = parser(input.as_ref());
 
         SnapTestRunner {
             info: None,
@@ -65,15 +65,22 @@ where
     }
 }
 
+/// Runs the [`SnapTestRunner`] and writes the snapshot in the given output path.
+///
+/// # Arguments
+///
+/// * *snap_test* - The [`SnapTestRunner`] to run.
+/// * *path* - The path to write the snapshot to.
+///
+/// [SnapTestRunner]: self::SnapTestRunner
 #[macro_export]
 macro_rules! run_snap_test {
-    ($snap_test:expr $(, $path:expr)?) => {
+    ($snap_test:expr, $path:expr) => {
         let snap_test: $crate::test_runner::snap_test_runner::SnapTestRunner<_> = $snap_test;
 
-        let mut settings = $crate::test_runner::insta::Settings::clone_current();
+        let mut settings = $crate::test_runner::snap_test_runner::Settings::clone_current();
 
-        let mut path = std::path::Path::new("../spec/snapshots/");
-        $(path = $path;)?
+        let path = $path;
 
         settings.set_snapshot_path(path);
         settings.set_omit_expression(true);
@@ -102,74 +109,10 @@ macro_rules! run_snap_test {
         settings.set_prepend_module_to_snapshot(false);
 
         settings.bind(|| {
-            $crate::test_runner::insta::assert_snapshot!(snap_test.name.as_str(), snap_content);
+            $crate::test_runner::snap_test_runner::assert_snapshot!(
+                snap_test.name.as_str(),
+                snap_content
+            );
         })
-    };
-}
-
-/// Macro for snapshot testing of spec files.
-///
-/// ## Arguments
-///
-/// * *file_path* ... A path to the spec file to test, where the path must be relative to the `tests` directory of your crate (e.g. "spec/markup/blocks/paragraph.yml")
-/// * *block_ty* ... A specific block element implementing `ParserGenerator` **may** be given as second argument to use the parser of the element for testing
-///
-/// ## Usage
-///
-/// ```ignore
-/// test_parser_snap!("spec/markup/blocks/paragraph.yml", Paragraph);
-/// test_parser_snap!("spec/markup/blocks/paragraph.yml");
-/// ```
-#[macro_export]
-macro_rules! test_parser_snap {
-    ($paths:expr, $parser_fn:expr) => {
-        let test_content = $crate::test_runner::test_file::get_test_content($paths.0, $paths.1);
-        let cfg = $crate::config::Config::default();
-        let scanner = $crate::scanner::Scanner::try_new().unwrap();
-
-        for test in &test_content.test_file.tests {
-            let symbols = scanner.scan_str(&test.input);
-
-            let mut snap_runner = SnapTestRunner::with_fn::<_, _>(&test.name, &symbols, $parser_fn)
-                .with_info(format!(
-                    "Test '{}-{}' from: {}",
-                    &test_content.test_file.name,
-                    &test.name,
-                    $paths.0.to_string_lossy()
-                ));
-
-            if let Some(ref description) = test.description {
-                snap_runner = snap_runner.with_description(description);
-            }
-
-            let snap_runner = snap_runner
-                .with_sub_path(test_content.snap_path.to_str().expect("Invalid sub path"));
-
-            // TODO: preamble?
-
-            $crate::run_snap_test!(snap_runner);
-        }
-    };
-    ($file_path:literal) => {
-        let test_content = $crate::test_runner::test_file::get_test_content($file_path);
-
-        for test in &test_content.test_file.tests {
-            let mut snap_runner = SnapTestRunner::with_parser::<&str, _>(&test.name, &test.input)
-                .with_info(format!(
-                    "Test '{}-{}' from: {}",
-                    &test_content.test_file.name, &test.name, $file_path
-                ));
-
-            if let Some(ref description) = test.description {
-                snap_runner = snap_runner.with_description(description);
-            }
-
-            let snap_runner = snap_runner
-                .with_sub_path(test_content.snap_path.to_str().expect("Invalid sub path"));
-
-            // TODO: preamble?
-
-            $crate::run_snap_test!(snap_runner);
-        }
     };
 }

@@ -6,8 +6,10 @@ use std::{
 };
 
 use logid::{log, logging::event_entry::AddonKind, pipe};
-use unimarkup_commons::config::{output::OutputFormatKind, Config};
-use unimarkup_core::Unimarkup;
+use unimarkup_core::{
+    commons::config::{output::OutputFormatKind, Config},
+    Unimarkup,
+};
 
 use crate::log_id::{GeneralError, GeneralInfo};
 
@@ -15,7 +17,7 @@ use crate::log_id::{GeneralError, GeneralInfo};
 ///
 /// # Arguments
 ///
-/// * `config` - Unimarkup configuration constructed from command-line arguments passed to unimarkup-rs.
+/// * `config` - Unimarkup configuration constructed from command-line arguments passed to *unimarkup*.
 ///
 /// # Errors
 ///

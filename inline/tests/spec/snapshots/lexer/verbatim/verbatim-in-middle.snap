@@ -1,6 +1,6 @@
 ---
 source: inline/tests/lexer/mod.rs
-info: "Test 'verbatim-in-middle' from 'verbatim.yml'"
+info: "Test 'verbatim-in-middle' from 'markup/verbatim.yml'"
 ---
 The next `word` is verbatim.
 The

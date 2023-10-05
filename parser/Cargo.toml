@@ -22,8 +22,3 @@ serde_yaml.workspace = true
 strum = "0.22.0"
 strum_macros = "0.22.0"
 sha3 = "0.10"
-
-[dev-dependencies]
-clap.workspace = true
-unimarkup-commons = { path ="../commons/", version = "0", features = ["test_runner"] }
-regex = "1.8.1"

@@ -1,12 +1,12 @@
 use std::{collections::HashSet, path::PathBuf};
 
-use clap::{crate_authors, Args, Parser};
+use clap::{Args, Parser};
 use logid::err;
 use serde::{Deserialize, Serialize};
 
 use self::{log_id::ConfigErr, output::Output, preamble::Preamble};
 
-pub use icu::locid;
+pub use icu_locid;
 
 pub mod locale;
 pub mod log_id;
@@ -43,7 +43,7 @@ pub trait ConfigFns {
 }
 
 #[derive(Parser, Debug, PartialEq, Eq, Clone, Default, Serialize, Deserialize)]
-#[command(name = UNIMARKUP_NAME, help_template = HELP_TEMPLATE, author = crate_authors!(", "), version, about = ABOUT, long_about = None)]
+#[command(name = UNIMARKUP_NAME, help_template = HELP_TEMPLATE, author, version, about = ABOUT, long_about = None)]
 pub struct Config {
     #[command(flatten)]
     pub preamble: Preamble,
@@ -112,7 +112,7 @@ where
             format!("HashSet conversion failed with: {:?}", err),
         )
     });
-    Ok(HashSet::from_iter(entries?.into_iter()))
+    Ok(HashSet::from_iter(entries?))
 }
 
 // Define extension trait
@@ -129,13 +129,12 @@ impl<T> ReplaceIfNone<T> for Option<T> {
     }
 }
 
-#[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn validate__valid_config() {
+    fn valid_config() {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .canonicalize()
             .unwrap();
@@ -154,7 +153,7 @@ mod tests {
 
     #[should_panic]
     #[test]
-    fn validate__invalid_config() {
+    fn invalid_config() {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .canonicalize()
             .unwrap();
@@ -173,7 +172,7 @@ mod tests {
 
     #[should_panic]
     #[test]
-    fn test__validate__invalid_multi_file_config() {
+    fn invalid_multi_file_config() {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .canonicalize()
             .unwrap();

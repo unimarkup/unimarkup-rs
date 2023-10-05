@@ -47,11 +47,10 @@ pub fn generate_id(input: &str) -> Option<String> {
     Some(result)
 }
 
-#[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test__generate_id__valid_id() {
+    fn generate_valid_id() {
         let input = "This is some input";
         let expect = "This-is-some-input";
 
@@ -64,7 +63,7 @@ mod tests {
     }
 
     #[test]
-    fn test__generate_id__valid_id_with_num() {
+    fn generate_valid_id_with_num() {
         let input = "Th15 15 1npu7 with num6ers1";
         let expect = "Th15-15-1npu7-with-num6ers1";
 
@@ -77,7 +76,7 @@ mod tests {
     }
 
     #[test]
-    fn test__generate_id__valid_id_many_symbols() {
+    fn generate_valid_id_using_many_symbols() {
         let input = "7h1$\t~1d~\t \"c0n741n$\" 'many' $ym6o1$ ~!@#$%%^&^&*()_+}{[]";
         let expect = "7h1$-~1d~-\"c0n741n$\"-'many'-$ym6o1$-~!@#$%%^&^&*()_+}{[]";
 
@@ -90,7 +89,7 @@ mod tests {
     }
 
     #[test]
-    fn test__generate_id__empty_input() {
+    fn generate_no_id_from_empty_input() {
         let input = "";
 
         let id = super::generate_id(input);
@@ -99,7 +98,7 @@ mod tests {
     }
 
     #[test]
-    fn test__generate_id__whitespace_only() {
+    fn generate_no_id_from_whitespace_only() {
         let input = " ";
 
         let id = super::generate_id(input);
