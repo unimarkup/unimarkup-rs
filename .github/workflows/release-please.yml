@@ -13,7 +13,6 @@ jobs:
         with:
           release-type: rust
           package-name: unimarkup-rs
-          pull-request-title-pattern: "chore: release${component} ${version}"
           # Breaking changes might happen frequently before 1.0.0 => only bump minor
           bump-minor-pre-major: true
           changelog-types: >
