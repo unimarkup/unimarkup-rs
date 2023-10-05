@@ -8,6 +8,7 @@ use crate::{
     elements::{
         atomic::{Heading, Paragraph},
         enclosed::Verbatim,
+        indents::BulletList,
         Blocks,
     },
     log_id::MainParserInfo,
@@ -87,6 +88,7 @@ impl Default for MainParser {
         // TODO: how to handle preamble parser?
         parser.register_parser(Heading::generate_parser());
         parser.register_parser(Verbatim::generate_parser());
+        parser.register_parser(BulletList::generate_parser());
 
         log!(MainParserInfo::Initialized);
         parser

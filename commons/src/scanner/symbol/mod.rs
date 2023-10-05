@@ -129,30 +129,9 @@ impl Symbol<'_> {
     /// Returns the original string representation of the symbol.
     pub fn as_str(&self) -> &str {
         match self.kind {
-            SymbolKind::Hash => "#",
             SymbolKind::Plain => &self.input[self.offset.start..self.offset.end],
-            SymbolKind::Tick => "`",
             SymbolKind::Whitespace => &self.input[self.offset.start..self.offset.end],
-            SymbolKind::Newline | SymbolKind::Blankline => "\n",
-            SymbolKind::EOI => "",
-            SymbolKind::Backslash => "\\",
-            SymbolKind::Star => "*",
-            SymbolKind::Minus => "-",
-            SymbolKind::Plus => "+",
-            SymbolKind::Underline => "_",
-            SymbolKind::Caret => "^",
-            SymbolKind::Overline => "‾",
-            SymbolKind::Pipe => "|",
-            SymbolKind::Tilde => "~",
-            SymbolKind::Quote => "\"",
-            SymbolKind::Dollar => "$",
-            SymbolKind::OpenParenthesis => "(",
-            SymbolKind::CloseParenthesis => ")",
-            SymbolKind::OpenBracket => "[",
-            SymbolKind::CloseBracket => "]",
-            SymbolKind::OpenBrace => "{",
-            SymbolKind::CloseBrace => "}",
-            SymbolKind::Colon => ":",
+            _ => self.kind.as_str(),
         }
     }
 
@@ -243,6 +222,37 @@ impl From<&str> for SymbolKind {
                 SymbolKind::Whitespace
             }
             _ => SymbolKind::Plain,
+        }
+    }
+}
+
+impl SymbolKind {
+    pub fn as_str(&self) -> &str {
+        match self {
+            SymbolKind::Hash => "#",
+            SymbolKind::Plain => "",
+            SymbolKind::Tick => "`",
+            SymbolKind::Whitespace => " ",
+            SymbolKind::Newline | SymbolKind::Blankline => "\n",
+            SymbolKind::EOI => "",
+            SymbolKind::Backslash => "\\",
+            SymbolKind::Star => "*",
+            SymbolKind::Minus => "-",
+            SymbolKind::Plus => "+",
+            SymbolKind::Underline => "_",
+            SymbolKind::Caret => "^",
+            SymbolKind::Overline => "‾",
+            SymbolKind::Pipe => "|",
+            SymbolKind::Tilde => "~",
+            SymbolKind::Quote => "\"",
+            SymbolKind::Dollar => "$",
+            SymbolKind::OpenParenthesis => "(",
+            SymbolKind::CloseParenthesis => ")",
+            SymbolKind::OpenBracket => "[",
+            SymbolKind::CloseBracket => "]",
+            SymbolKind::OpenBrace => "{",
+            SymbolKind::CloseBrace => "}",
+            SymbolKind::Colon => ":",
         }
     }
 }

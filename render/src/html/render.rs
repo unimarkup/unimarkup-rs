@@ -1,6 +1,7 @@
 use unimarkup_inline::types::*;
+use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
 
-use crate::render::{Context, Renderer};
+use crate::render::{Context, OutputFormat, Renderer};
 
 use super::{
     highlight, tag::HtmlTag, Html, HtmlAttribute, HtmlAttributes, HtmlBody, HtmlElement, HtmlHead,
@@ -63,6 +64,43 @@ impl Renderer<Html> for HtmlRenderer {
         );
 
         Ok(Html::nested(HtmlTag::Pre, HtmlAttributes::default(), inner))
+    }
+
+    fn render_bullet_list(
+        &mut self,
+        bullet_list: &BulletList,
+        context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let mut entries = Html::new(context);
+
+        for entry in &bullet_list.entries {
+            entries.append(self.render_bullet_list_entry(entry, context)?)?;
+        }
+
+        Ok(Html::nested(
+            HtmlTag::Ul,
+            HtmlAttributes::default(),
+            entries,
+        ))
+    }
+
+    fn render_bullet_list_entry(
+        &mut self,
+        bullet_list_entry: &BulletListEntry,
+        context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let mut entry_heading = self.render_inlines(&bullet_list_entry.heading, context)?;
+
+        if !bullet_list_entry.body.is_empty() {
+            entry_heading = Html::nested(HtmlTag::P, HtmlAttributes::default(), entry_heading);
+            entry_heading.append(self.render_blocks(&bullet_list_entry.body, context)?)?;
+        }
+
+        Ok(Html::nested(
+            HtmlTag::Li,
+            HtmlAttributes::default(),
+            entry_heading,
+        ))
     }
 
     fn render_bold(

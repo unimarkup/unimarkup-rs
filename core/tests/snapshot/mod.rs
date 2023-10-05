@@ -4,6 +4,7 @@ use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
 use unimarkup_parser::elements::blocks::Block;
 use unimarkup_parser::elements::Blocks;
 
+mod bullet_list;
 mod paragraph;
 
 #[derive(Debug)]
@@ -30,6 +31,7 @@ impl AsSnapshot for Snapshot<&Block> {
     fn as_snapshot(&self) -> String {
         match **self {
             Block::Paragraph(block) => Snapshot(block).as_snapshot(),
+            Block::BulletList(block) => Snapshot(block).as_snapshot(),
             _ => unimplemented!("TODO: Implement snapshot for {:?}", self),
         }
     }

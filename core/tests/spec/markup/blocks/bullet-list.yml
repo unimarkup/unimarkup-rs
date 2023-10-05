@@ -1,0 +1,17 @@
+spec: "0.0.1"
+
+name: bullet-list
+description: Test the bullet list element.
+
+tests:
+  - name: single-list-entry
+    description: |
+      Parse bullet list with one entry
+
+    input: |
+      - single list entry
+
+    html: |
+      <ul>
+        <li>single list entry</li>
+      </ul>

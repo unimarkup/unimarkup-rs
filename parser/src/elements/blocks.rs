@@ -3,6 +3,7 @@
 use super::{
     atomic::{Heading, Paragraph},
     enclosed::Verbatim,
+    indents::{BulletList, BulletListEntry},
 };
 
 /// Generic enum for all Unimarkup block elements.
@@ -15,6 +16,10 @@ pub enum Block {
     Paragraph(Paragraph),
     /// Represents the verbatim block
     Verbatim(Verbatim),
+    /// Represents the bullet list block
+    BulletList(BulletList),
+    /// Represents the bullet list entry block
+    BulletListEntry(BulletListEntry),
 }
 
 impl Block {
@@ -41,6 +46,8 @@ impl Block {
             Block::Heading(_) => "Heading",
             Block::Paragraph(_) => "Paragraph",
             Block::Verbatim(_) => "Verbatim",
+            Block::BulletList(_) => "BulletList",
+            Block::BulletListEntry(_) => "BulletListEntry",
         }
     }
 }
@@ -75,3 +82,5 @@ macro_rules! impl_from {
 impl_from!(Heading from Heading);
 impl_from!(Verbatim from Verbatim);
 impl_from!(Paragraph from Paragraph);
+impl_from!(BulletList from BulletList);
+impl_from!(BulletListEntry from BulletListEntry);

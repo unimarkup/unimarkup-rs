@@ -10,6 +10,7 @@ use unimarkup_parser::{
         atomic::{Heading, Paragraph},
         blocks::Block,
         enclosed,
+        indents::{BulletList, BulletListEntry},
     },
 };
 
@@ -68,6 +69,24 @@ pub trait Renderer<T: OutputFormat> {
     fn render_verbatim_block(
         &mut self,
         _verbatim: &enclosed::Verbatim,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    /// Render a Unimarkup [`BulletList`] to the output format `T`.
+    fn render_bullet_list(
+        &mut self,
+        _bullet_list: &BulletList,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    /// Render a Unimarkup [`BulletListEntry`] to the output format `T`.
+    fn render_bullet_list_entry(
+        &mut self,
+        _bullet_list_entry: &BulletListEntry,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -214,6 +233,7 @@ pub trait Renderer<T: OutputFormat> {
             Block::Heading(heading) => self.render_heading(heading, context),
             Block::Paragraph(paragraph) => self.render_paragraph(paragraph, context),
             Block::Verbatim(verbatim) => self.render_verbatim_block(verbatim, context),
+            Block::BulletList(bullet_list) => self.render_bullet_list(bullet_list, context),
             _ => Err(RenderError::Unimplemented),
         }
     }
