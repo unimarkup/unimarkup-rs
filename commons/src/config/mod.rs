@@ -129,13 +129,12 @@ impl<T> ReplaceIfNone<T> for Option<T> {
     }
 }
 
-#[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn validate__valid_config() {
+    fn valid_config() {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .canonicalize()
             .unwrap();
@@ -154,7 +153,7 @@ mod tests {
 
     #[should_panic]
     #[test]
-    fn validate__invalid_config() {
+    fn invalid_config() {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .canonicalize()
             .unwrap();
@@ -173,7 +172,7 @@ mod tests {
 
     #[should_panic]
     #[test]
-    fn test__validate__invalid_multi_file_config() {
+    fn invalid_multi_file_config() {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .canonicalize()
             .unwrap();

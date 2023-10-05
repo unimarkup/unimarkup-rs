@@ -15,7 +15,4 @@ license.workspace = true
 logid.workspace = true
 thiserror.workspace = true
 clap.workspace = true
-unimarkup-commons = { path = "../commons/", version = "0" }
 unimarkup-core = { path = "../core/", version = "0" }
-tracing = "0.1.37"
-tracing-subscriber = "0.3.16"

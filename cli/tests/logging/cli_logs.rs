@@ -6,7 +6,7 @@ use std::{
 const TEST_FILE: &str = "supported.um";
 
 #[test]
-fn test__main_log_trace__attributes_file() {
+fn log_output_set_correctly() {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .canonicalize()
         .unwrap();

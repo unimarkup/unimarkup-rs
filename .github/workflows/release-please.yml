@@ -13,16 +13,13 @@ jobs:
         with:
           release-type: rust
           package-name: unimarkup-rs
+          pull-request-title-pattern: "chore: release${component} ${version}"
+          # Breaking changes might happen frequently before 1.0.0 => only bump minor
+          bump-minor-pre-major: true
           changelog-types: >
             [
             {"type":"feat","section":"Features","hidden":false},
             {"type":"fix","section":"Bug Fixes","hidden":false},
-            {"type":"ci","section":"CI","hidden":false},
-            {"type":"build","section":"Build","hidden":false},
-            {"type":"chore","section":"Miscellaneous","hidden":true},
-            {"type":"docs","section":"Documentation","hidden":false},
-            {"type":"style","section":"Code Style","hidden":true},
-            {"type":"refactor","section":"Refactoring","hidden":true},
-            {"type":"perf","section":"Performance","hidden":false},
-            {"type":"test","section":"Testing","hidden":false}
+            {"type":"arch","section":"Architecture/Refactor","hidden":false},
+            {"type":"chore","section":"Miscellaneous","hidden":true}
             ]

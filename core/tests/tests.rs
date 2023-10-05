@@ -1,6 +1,3 @@
-// allows using `__` for better separation in functionnames
-#![allow(non_snake_case)]
-
 mod general {
     pub mod metadata;
     pub mod unimarkup;
@@ -34,7 +31,7 @@ fn main() {
 
 fn collect_tests() -> impl IntoIterator<Item = libtest_mimic::Trial> {
     [
-        test_fn!(general::metadata::test__metadata__create_from_memory),
+        test_fn!(general::metadata::create_metadata_from_memory),
         test_fn!(general::unimarkup::compile_empty_content),
     ]
 }
