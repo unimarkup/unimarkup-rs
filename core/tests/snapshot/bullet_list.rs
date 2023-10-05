@@ -8,9 +8,10 @@ impl AsSnapshot for Snapshot<&BulletList> {
 
         for entry in &self.entries {
             content.push_str(&Snapshot(entry).as_snapshot());
+            content.push('\n');
         }
 
-        format!("BulletList(\n{content}\n)")
+        format!("BulletList(\n{content})")
     }
 }
 

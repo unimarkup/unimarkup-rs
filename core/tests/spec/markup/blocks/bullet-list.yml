@@ -15,3 +15,17 @@ tests:
       <ul>
         <li>single list entry</li>
       </ul>
+
+  - name: two-list-entries
+    description: |
+      Parse bullet list with two entries
+
+    input: |
+      - first list entry
+      - second list entry
+
+    html: |
+      <ul>
+        <li>first list entry</li>
+        <li>second list entry</li>
+      </ul>

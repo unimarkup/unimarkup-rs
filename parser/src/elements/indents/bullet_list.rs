@@ -160,26 +160,35 @@ impl ElementParser for BulletListEntry {
         );
 
         let entry_heading_symbols = entry_heading_iter.take_to_end();
-        entry_heading_iter.update(input);
         let entry_heading = entry_heading_symbols
             .iter()
             .map(|&s| *s)
             .collect::<Vec<Symbol<'_>>>()
             .parse_inlines()
             .collect();
+        entry_heading_iter.update(input);
 
-        if Some(SymbolKind::Newline) == input.peek_kind() {
-            input.next();
+        while input.consumed_is_empty_line() {
+            // skip empty lines
         }
 
-        let mut entry_body_iter = input.nest(
-            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-                matcher.consumed_prefix(indent_sequence)
-            })),
-            None,
-        );
-        let entry_body = MainParser::default().parse(&mut entry_body_iter);
-        entry_body_iter.update(input);
+        let entry_body = if !input.matches(STAR_ENTRY_START)
+            && !input.matches(MINUS_ENTRY_START)
+            && !input.matches(PLUS_ENTRY_START)
+        {
+            let mut entry_body_iter = input.nest(
+                Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                    matcher.consumed_prefix(indent_sequence)
+                })),
+                None,
+            );
+            let body = MainParser::default().parse(&mut entry_body_iter);
+            entry_body_iter.update(input);
+            body
+        } else {
+            input.next(); // Consume "Newline" symbol of next list entry
+            Vec::new()
+        };
 
         Some(crate::TokenizeOutput {
             tokens: vec![
