@@ -17,8 +17,6 @@ pub enum SymbolKind {
     Whitespace,
     /// A line break literal (for example `\n` or '\r\n')
     Newline,
-    /// Empty line, can be separator between blocks
-    Blankline,
     /// End of Unimarkup document
     EOI,
     /// The backslash (`\`) is used for escaping other symbols.
@@ -72,11 +70,7 @@ impl SymbolKind {
     pub fn is_not_keyword(&self) -> bool {
         matches!(
             self,
-            SymbolKind::Newline
-                | SymbolKind::Whitespace
-                | SymbolKind::Plain
-                | SymbolKind::Blankline
-                | SymbolKind::EOI
+            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Plain | SymbolKind::EOI
         )
     }
 }
@@ -233,7 +227,7 @@ impl SymbolKind {
             SymbolKind::Plain => "",
             SymbolKind::Tick => "`",
             SymbolKind::Whitespace => " ",
-            SymbolKind::Newline | SymbolKind::Blankline => "\n",
+            SymbolKind::Newline => "\n",
             SymbolKind::EOI => "",
             SymbolKind::Backslash => "\\",
             SymbolKind::Star => "*",

@@ -1,0 +1,18 @@
+---
+source: core/tests/runner/mod.rs
+description: "Parse bullet list followed by paragraph\n"
+info: "Test 'list-before-paragraph' from: markup\\blocks\\bullet-list.yml"
+---
+BulletList(
+BulletListEntry(
+single list entry
+)
+)Paragraph(Outer paragraph)
+---
+With input:
+
+- single list entry
+
+Outer paragraph
+
+

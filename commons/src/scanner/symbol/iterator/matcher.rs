@@ -26,7 +26,8 @@ pub trait EndMatcher {
     fn is_empty_line(&mut self) -> bool;
 
     /// Wrapper around [`Self::is_empty_line()`] that additionally consumes the matched empty line.
-    /// Consuming means the related iterator advances over the matched empty line.
+    /// Consuming means the related iterator advances over the matched empty line, but not the end newline.
+    /// Not consuming the end newline allows to consume contiguous empty lines.
     ///
     /// **Note:** The iterator is only advanced if an empty line is matched.
     ///
@@ -73,12 +74,7 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
         self.reset_peek();
 
         let next = self
-            .peeking_next(|s| {
-                matches!(
-                    s.kind,
-                    SymbolKind::Newline | SymbolKind::Blankline | SymbolKind::EOI
-                )
-            })
+            .peeking_next(|s| matches!(s.kind, SymbolKind::Newline | SymbolKind::EOI))
             .map(|s| s.kind);
 
         let is_empty_line = if Some(SymbolKind::Newline) == next {
@@ -86,12 +82,13 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
                 .peeking_take_while(|s| s.kind == SymbolKind::Whitespace)
                 .count();
 
-            let new_line = self.peeking_next(|s| {
-                matches!(
-                    s.kind,
-                    SymbolKind::Newline | SymbolKind::Blankline | SymbolKind::EOI
-                )
-            });
+            let new_line =
+                self.peeking_next(|s| matches!(s.kind, SymbolKind::Newline | SymbolKind::EOI));
+
+            if Some(SymbolKind::Newline) == new_line.map(|s| s.kind) {
+                self.set_peek_index(self.peek_index() - 1); // Do not consume next newline to enable consumption of contiguous empty lines
+            }
+
             new_line.is_some()
         } else {
             next.is_some()

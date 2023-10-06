@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use unimarkup_commons::scanner::{EndMatcher, PrefixMatcher, Symbol, SymbolIterator, SymbolKind};
+use unimarkup_commons::scanner::{EndMatcher, PrefixMatcher, Symbol, SymbolKind};
 use unimarkup_inline::{Inline, ParseInlines};
 
 use crate::{elements::blocks::Block, ElementParser, MainParser};
@@ -172,7 +172,8 @@ impl ElementParser for BulletListEntry {
             // skip empty lines
         }
 
-        let entry_body = if !input.matches(STAR_ENTRY_START)
+        let entry_body = if !input.end_reached()
+            && !input.matches(STAR_ENTRY_START)
             && !input.matches(MINUS_ENTRY_START)
             && !input.matches(PLUS_ENTRY_START)
         {

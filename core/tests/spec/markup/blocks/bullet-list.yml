@@ -29,3 +29,35 @@ tests:
         <li>first list entry</li>
         <li>second list entry</li>
       </ul>
+
+  - name: list-entry-with-body
+    description: |
+      Parse bullet list with paragraph in entry body
+
+    input: |
+      - single list entry
+
+        Entry has body.
+
+    html: |
+      <ul>
+        <li>
+          <p>single list entry</p>
+          <p>Entry has body.</p>
+        </li>
+      </ul>
+
+  - name: list-before-paragraph
+    description: |
+      Parse bullet list followed by paragraph
+
+    input: |
+      - single list entry
+
+      Outer paragraph
+
+    html: |
+      <ul>
+        <li>single list entry</li>
+      </ul>
+      <p>Outer paragraph</p>

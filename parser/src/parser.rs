@@ -1,7 +1,7 @@
 //! Module for parsing of Unimarkup elements.
 
 use logid::log;
-use unimarkup_commons::scanner::{SymbolIterator, SymbolKind};
+use unimarkup_commons::scanner::{EndMatcher, SymbolIterator, SymbolKind};
 
 use crate::{
     document::Document,
@@ -107,23 +107,29 @@ impl MainParser {
         #[cfg(debug_assertions)]
         let mut curr_len = input.max_len();
 
+        input.reset_peek();
+
         'outer: while let Some(kind) = input.peek_kind() {
             match kind {
-                // skip newlines between elements
-                SymbolKind::Blankline | SymbolKind::Newline => {
-                    input.next();
+                // skip newlines and empty lines before elements
+                SymbolKind::Newline => {
+                    while input.consumed_is_empty_line() {
+                        // consume contiguous empty lines
+                    }
+                    // Consume newline before next block element
+                    if input.next().is_none() {
+                        break 'outer;
+                    }
                 }
 
                 // stop parsing when end of input is reached
-                SymbolKind::EOI => break,
+                SymbolKind::EOI => break 'outer,
 
                 // no parser will match, parse with default parser
-                _ if kind.is_not_keyword() => {
-                    let mut res_blocks = (self.default_parser)(input)
-                        .expect("Default parser could not parse content!");
-
-                    blocks.append(&mut res_blocks);
-                }
+                _ if kind.is_not_keyword() => match (self.default_parser)(input) {
+                    Some(mut default) => blocks.append(&mut default),
+                    None => break 'outer,
+                },
 
                 // symbol is start of a block, some parser should match
                 _ => {
@@ -137,10 +143,10 @@ impl MainParser {
                     }
 
                     // no registered parser matched -> use default parser
-                    let mut res_blocks = (self.default_parser)(input)
-                        .expect("Default parser could not parse content!");
-
-                    blocks.append(&mut res_blocks);
+                    match (self.default_parser)(input) {
+                        Some(mut default) => blocks.append(&mut default),
+                        None => break 'outer,
+                    }
                 }
             }
 

@@ -34,6 +34,8 @@ pub struct SymbolIterator<'input> {
     end_match: Option<IteratorEndFn>,
     /// Flag set to `true` if this iterator reached its end.
     iter_end: bool,
+    /// Flag set to `true` if prefix mismatch occured.
+    prefix_mismatch: bool,
 }
 
 /// The [`SymbolIteratorKind`] defines the kind of a [`SymbolIterator`].
@@ -73,6 +75,7 @@ impl<'input> SymbolIterator<'input> {
             prefix_match,
             end_match,
             iter_end: false,
+            prefix_mismatch: false,
         }
     }
 
@@ -193,6 +196,7 @@ impl<'input> SymbolIterator<'input> {
             prefix_match,
             end_match,
             iter_end: self.iter_end,
+            prefix_mismatch: self.prefix_mismatch,
         }
     }
 
@@ -254,6 +258,7 @@ where
             prefix_match: None,
             end_match: None,
             iter_end: false,
+            prefix_mismatch: false,
         }
     }
 }
@@ -262,7 +267,7 @@ impl<'input> Iterator for SymbolIterator<'input> {
     type Item = &'input Symbol<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.end_reached() {
+        if self.prefix_mismatch || self.end_reached() {
             return None;
         }
 
@@ -286,6 +291,7 @@ impl<'input> Iterator for SymbolIterator<'input> {
 
             // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
             if !prefix_match(self) {
+                self.prefix_mismatch = true;
                 return None;
             }
         }
@@ -498,6 +504,39 @@ mod test {
             taken_outer.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
             vec!["o", " ",],
             "Outer symbols are incorrect."
+        );
+    }
+
+    #[test]
+    fn prefix_mismatch_returns_none_forever() {
+        let symbols = crate::scanner::scan_str("a\n  b\nc");
+
+        let mut iterator = SymbolIterator::with(
+            &symbols,
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[SymbolKind::Whitespace, SymbolKind::Whitespace])
+            })),
+            None,
+        );
+
+        let sym_kinds = iterator
+            .take_to_end()
+            .iter()
+            .map(|s| s.kind)
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            sym_kinds,
+            vec![SymbolKind::Plain, SymbolKind::Newline, SymbolKind::Plain,],
+            "Iterator did not stop on prefix mismatch"
+        );
+        assert!(
+            iterator.next().is_none(),
+            "Prefix mismatch not returning `None`."
+        );
+        assert!(
+            iterator.next().is_none(),
+            "Prefix mismatch not returning `None`."
         );
     }
 }

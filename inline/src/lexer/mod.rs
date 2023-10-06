@@ -149,7 +149,7 @@ impl SymbolExt for Symbol<'_> {
     }
 
     fn is_newline(&self) -> bool {
-        matches!(self.kind, SymbolKind::Newline | SymbolKind::Blankline)
+        matches!(self.kind, SymbolKind::Newline)
     }
 
     fn is_significant_esc(&self) -> bool {
@@ -443,7 +443,7 @@ impl<'input> TokenIterator<'input> {
 
         let kind = match sym.kind {
             SymbolKind::Whitespace => TokenKind::Whitespace,
-            SymbolKind::Newline | SymbolKind::Blankline => TokenKind::Newline,
+            SymbolKind::Newline => TokenKind::Newline,
             _ => TokenKind::Plain,
         };
 
