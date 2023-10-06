@@ -4,24 +4,26 @@ description: "Parse bullet list with different keywords\n"
 info: "Test 'different-list-keywords' from: markup\\blocks\\bullet-list.yml"
 ---
 BulletList(
-BulletListEntry(
-star list entry
-
-BulletList(
-BulletListEntry(
-nested minus list entry
-)
-)
-)
-BulletListEntry(
-plus list entry
-
-BulletList(
-BulletListEntry(
-nested star list entry
-)
-)
-)
+  BulletListEntry(
+    EntryHeading(star list entry)
+    EntryBody(
+      BulletList(
+        BulletListEntry(
+          EntryHeading(nested minus list entry)
+        )
+      )
+    )
+  )
+  BulletListEntry(
+    EntryHeading(plus list entry)
+    EntryBody(
+      BulletList(
+        BulletListEntry(
+          EntryHeading(nested star list entry)
+        )
+      )
+    )
+  )
 )
 ---
 With input:

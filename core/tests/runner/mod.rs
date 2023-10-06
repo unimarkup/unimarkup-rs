@@ -72,10 +72,7 @@ fn run_snap_test(case: test_runner::test_file::TestCase) {
     let mut snap_runner = SnapTestRunner::with_fn::<_, _>(&case.test.name, &symbols, |_input| {
         let um = unimarkup_core::parser::parse_unimarkup(&case.test.input, &mut cfg);
 
-        um.blocks
-            .iter()
-            .map(|block| Snapshot(block).as_snapshot())
-            .collect()
+        Snapshot(um.blocks).as_snapshot()
     })
     .with_info(format!(
         "Test '{}' from: {}",

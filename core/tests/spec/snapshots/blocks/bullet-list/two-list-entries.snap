@@ -4,12 +4,12 @@ description: "Parse bullet list with two entries\n"
 info: "Test 'two-list-entries' from: markup\\blocks\\bullet-list.yml"
 ---
 BulletList(
-BulletListEntry(
-first list entry
-)
-BulletListEntry(
-second list entry
-)
+  BulletListEntry(
+    EntryHeading(first list entry)
+  )
+  BulletListEntry(
+    EntryHeading(second list entry)
+  )
 )
 ---
 With input:

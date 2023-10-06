@@ -4,10 +4,11 @@ description: "Parse bullet list followed by paragraph\n"
 info: "Test 'list-before-paragraph' from: markup\\blocks\\bullet-list.yml"
 ---
 BulletList(
-BulletListEntry(
-single list entry
+  BulletListEntry(
+    EntryHeading(single list entry)
+  )
 )
-)Paragraph(Outer paragraph)
+Paragraph(Outer paragraph)
 ---
 With input:
 

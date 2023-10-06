@@ -4,9 +4,9 @@ description: "Parse bullet list with one entry\n"
 info: "Test 'single-list-entry' from: markup\\blocks\\bullet-list.yml"
 ---
 BulletList(
-BulletListEntry(
-single list entry
-)
+  BulletListEntry(
+    EntryHeading(single list entry)
+  )
 )
 ---
 With input:

@@ -4,11 +4,12 @@ description: "Parse bullet list with paragraph in entry body\n"
 info: "Test 'list-entry-with-body' from: markup\\blocks\\bullet-list.yml"
 ---
 BulletList(
-BulletListEntry(
-single list entry
-
-Paragraph(Entry has body.)
-)
+  BulletListEntry(
+    EntryHeading(single list entry)
+    EntryBody(
+      Paragraph(Entry has body.)
+    )
+  )
 )
 ---
 With input:
