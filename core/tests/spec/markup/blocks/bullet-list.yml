@@ -79,3 +79,29 @@ tests:
           </ul>
         </li>
       </ul>
+
+  - name: different-list-keywords
+    description: |
+      Parse bullet list with different keywords
+
+    input: |
+      * star list entry
+        - nested minus list entry
+      + plus list entry
+        * nested star list entry
+
+    html: |
+      <ul>
+        <li>
+          <p>star list entry</p>
+          <ul>
+            <li>nested minus list entry</li>
+          </ul>
+        </li>
+        <li>
+          <p>plus list entry</p>
+          <ul>
+            <li>nested star list entry</li>
+          </ul>
+        </li>
+      </ul>
