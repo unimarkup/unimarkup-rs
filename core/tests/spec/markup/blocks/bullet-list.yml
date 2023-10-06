@@ -61,3 +61,21 @@ tests:
         <li>single list entry</li>
       </ul>
       <p>Outer paragraph</p>
+
+  - name: nested-list
+    description: |
+      Parse nested bullet list
+
+    input: |
+      - single list entry
+        - nested list entry
+
+    html: |
+      <ul>
+        <li>
+          <p>single list entry</p>
+          <ul>
+            <li>nested list entry</li>
+          </ul>
+        </li>
+      </ul>

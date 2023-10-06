@@ -89,6 +89,28 @@ const PLUS_ENTRY_START: &[SymbolKind] = &[
     SymbolKind::Whitespace,
 ];
 
+const STAR_SUB_ENTRY_START: &[SymbolKind] = &[
+    SymbolKind::Newline,
+    SymbolKind::Whitespace,
+    SymbolKind::Whitespace,
+    SymbolKind::Star,
+    SymbolKind::Whitespace,
+];
+const MINUS_SUB_ENTRY_START: &[SymbolKind] = &[
+    SymbolKind::Newline,
+    SymbolKind::Whitespace,
+    SymbolKind::Whitespace,
+    SymbolKind::Minus,
+    SymbolKind::Whitespace,
+];
+const PLUS_SUB_ENTRY_START: &[SymbolKind] = &[
+    SymbolKind::Newline,
+    SymbolKind::Whitespace,
+    SymbolKind::Whitespace,
+    SymbolKind::Plus,
+    SymbolKind::Whitespace,
+];
+
 impl ElementParser for BulletList {
     type Token<'a> = self::BulletListEntry;
 
@@ -156,6 +178,9 @@ impl ElementParser for BulletListEntry {
                     || matcher.matches(STAR_ENTRY_START)
                     || matcher.matches(MINUS_ENTRY_START)
                     || matcher.matches(PLUS_ENTRY_START)
+                    || matcher.matches(STAR_SUB_ENTRY_START)
+                    || matcher.matches(MINUS_SUB_ENTRY_START)
+                    || matcher.matches(PLUS_SUB_ENTRY_START)
             })),
         );
 
