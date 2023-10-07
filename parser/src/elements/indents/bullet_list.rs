@@ -143,7 +143,10 @@ impl ElementParser for BulletList {
             match BulletListEntry::tokenize(input) {
                 Some(entry_tokens) => {
                     let Block::BulletListEntry(entry) =
-                        BulletListEntry::parse(entry_tokens.tokens)?.pop()? else { return None };
+                        BulletListEntry::parse(entry_tokens.tokens)?.pop()?
+                    else {
+                        return None;
+                    };
 
                     tokens.push(entry);
                 }
@@ -244,11 +247,21 @@ impl ElementParser for BulletListEntry {
     }
 
     fn parse(mut input: Vec<Self::Token<'_>>) -> Option<crate::elements::Blocks> {
-        let EntryToken::Attributes(attributes) = input.pop()? else { return None };
-        let EntryToken::Body(body) = input.pop()? else { return None };
-        let EntryToken::Heading(heading) = input.pop()? else { return None };
-        let EntryToken::Keyword(keyword) = input.pop()? else { return None };
-        let EntryToken::Id(id) = input.pop()? else { return None };
+        let EntryToken::Attributes(attributes) = input.pop()? else {
+            return None;
+        };
+        let EntryToken::Body(body) = input.pop()? else {
+            return None;
+        };
+        let EntryToken::Heading(heading) = input.pop()? else {
+            return None;
+        };
+        let EntryToken::Keyword(keyword) = input.pop()? else {
+            return None;
+        };
+        let EntryToken::Id(id) = input.pop()? else {
+            return None;
+        };
 
         Some(vec![Block::BulletListEntry(BulletListEntry {
             id,
