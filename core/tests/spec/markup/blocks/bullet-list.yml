@@ -80,6 +80,30 @@ tests:
         </li>
       </ul>
 
+  - name: deeply-nested-list
+    description: |
+      Parse a deeply nested bullet list
+
+    input: |
+      - single list entry
+        - nested list entry
+          - deeply-nested list entry
+
+    html: |
+      <ul>
+        <li>
+          <p>single list entry</p>
+          <ul>
+            <li>
+              <p>nested list entry</p>
+              <ul>
+                <li>deeply-nested list entry</li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+
   - name: different-list-keywords
     description: |
       Parse bullet list with different keywords
