@@ -1,3 +1,5 @@
+//! Contains the structs and parsers to parse bullet list elements.
+
 use std::rc::Rc;
 
 use unimarkup_commons::scanner::{EndMatcher, PrefixMatcher, Symbol, SymbolKind};
@@ -10,31 +12,38 @@ use crate::{elements::blocks::Block, ElementParser, MainParser};
 pub struct BulletList {
     /// Unique identifier for a bullet list.
     pub id: String,
-
+    /// The list entries of this bullet list.
     pub entries: Vec<BulletListEntry>,
 }
 
+/// Structure of a Unimarkup bullet list entry.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BulletListEntry {
+    /// The ID of this entry.
     pub id: String,
-
+    /// The [`BulletListEntryKeyword`] used to create this entry.
     pub keyword: BulletListEntryKeyword,
-
+    /// The entry heading content of this entry.
     pub heading: Vec<Inline>,
-
+    /// The body of this entry.
     pub body: Vec<Block>,
-
+    /// The attributes set for this entry.
     pub attributes: String,
 }
 
+/// Enum representing the keyword used to create a [`BulletListEntry`].
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BulletListEntryKeyword {
+    /// Minus keyword: `-`
     Minus,
+    /// Plus keyword: `+`
     Plus,
+    /// Star keyword: `*`
     Star,
 }
 
 impl BulletListEntryKeyword {
+    /// String representation of the [`BulletListEntryKeyword`].
     pub fn as_str(&self) -> &str {
         match self {
             BulletListEntryKeyword::Minus => SymbolKind::Minus.as_str(),
@@ -63,6 +72,13 @@ impl TryFrom<SymbolKind> for BulletListEntryKeyword {
             _ => Err(ConversionError::CannotConvertSymbol),
         }
     }
+}
+
+/// Enum representing possible conversion errors
+/// that may occur when converting [`SymbolKind`] to [`BulletListEntryKeyword`].
+pub enum ConversionError {
+    /// Error denoting that the given [`SymbolKind`] could not be converted to a [`BulletListEntryKeyword`].
+    CannotConvertSymbol,
 }
 
 pub(crate) enum EntryToken {
@@ -242,8 +258,4 @@ impl ElementParser for BulletListEntry {
             attributes,
         })])
     }
-}
-
-pub enum ConversionError {
-    CannotConvertSymbol,
 }
