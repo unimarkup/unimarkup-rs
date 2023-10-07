@@ -101,7 +101,7 @@ impl MainParser {
     }
 
     /// Parses Unimarkup content and produces Unimarkup blocks.
-    pub fn parse(&self, mut input: &mut SymbolIterator) -> Blocks {
+    pub fn parse(&self, input: &mut SymbolIterator) -> Blocks {
         let mut blocks = Vec::default();
 
         #[cfg(debug_assertions)]
@@ -117,19 +117,19 @@ impl MainParser {
                         // consume contiguous empty lines
                     }
                     // Consume newline before next block element
-                    if input.next().is_none() {
-                        break 'outer;
-                    }
+                    input.next();
                 }
 
                 // stop parsing when end of input is reached
                 SymbolKind::EOI => break 'outer,
 
                 // no parser will match, parse with default parser
-                _ if kind.is_not_keyword() => match (self.default_parser)(input) {
-                    Some(mut default) => blocks.append(&mut default),
-                    None => break 'outer,
-                },
+                _ if kind.is_not_keyword() => {
+                    blocks.append(
+                        &mut (self.default_parser)(input)
+                            .expect("Default parser failed parsing non-keyword."),
+                    );
+                }
 
                 // symbol is start of a block, some parser should match
                 _ => {
@@ -143,10 +143,11 @@ impl MainParser {
                     }
 
                     // no registered parser matched -> use default parser
-                    match (self.default_parser)(input) {
-                        Some(mut default) => blocks.append(&mut default),
-                        None => break 'outer,
-                    }
+                    blocks.append(
+                        &mut (self.default_parser)(input).expect(
+                            "Default parser failed parsing content no other parser matched.",
+                        ),
+                    );
                 }
             }
 

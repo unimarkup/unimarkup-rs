@@ -115,7 +115,7 @@ impl ElementParser for BulletList {
     type Token<'a> = self::BulletListEntry;
 
     fn tokenize<'i>(
-        mut input: &mut unimarkup_commons::scanner::SymbolIterator<'i>,
+        input: &mut unimarkup_commons::scanner::SymbolIterator<'i>,
     ) -> Option<crate::TokenizeOutput<Self::Token<'i>>> {
         let mut tokens = Vec::new();
 
@@ -160,7 +160,7 @@ impl ElementParser for BulletListEntry {
     type Token<'a> = self::EntryToken;
 
     fn tokenize<'i>(
-        mut input: &mut unimarkup_commons::scanner::SymbolIterator<'i>,
+        input: &mut unimarkup_commons::scanner::SymbolIterator<'i>,
     ) -> Option<crate::TokenizeOutput<Self::Token<'i>>> {
         let entry_keyword = BulletListEntryKeyword::try_from(input.next()?).ok()?;
 
