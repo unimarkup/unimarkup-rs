@@ -66,12 +66,19 @@ pub trait PrefixMatcher {
     ///
     /// [`Symbol`]: super::Symbol
     fn consumed_prefix(&mut self, sequence: &[SymbolKind]) -> bool;
+
+    /// Returns `true` if the upcoming [`Symbol`] sequence is an empty line.
+    /// Meaning that a line contains no [`Symbol`] or only [`SymbolKind::Whitespace`].
+    ///
+    /// **Note:** This is also `true` if a parent iterator stripped non-whitespace symbols, and the nested iterator only has whitespace symbols.
+    ///
+    /// [`Symbol`]: super::Symbol
+    fn empty_line(&mut self) -> bool;
 }
 
 impl<'input> EndMatcher for SymbolIterator<'input> {
     fn is_empty_line(&mut self) -> bool {
-        // Note: Multiple matches may be set in the match closure, so we need to ensure that all start at the same index
-        self.reset_peek();
+        let peek_index = self.peek_index();
 
         let next = self
             .peeking_next(|s| matches!(s.kind, SymbolKind::Newline | SymbolKind::EOI))
@@ -94,6 +101,9 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
             next.is_some()
         };
 
+        self.set_match_index(self.peek_index());
+        self.set_peek_index(peek_index);
+
         is_empty_line
     }
 
@@ -101,7 +111,11 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
         let is_empty_line = self.is_empty_line();
 
         if is_empty_line {
-            self.set_index(self.peek_index()); // To consume peeked symbols
+            self.set_peek_index(self.match_index()); // To consume matched symbols for `peeking_next()`
+
+            if !self.peek_matching {
+                self.set_index(self.match_index()); // To consume matched symbols for `next()`
+            }
         }
 
         is_empty_line
@@ -109,14 +123,17 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
 
     fn matches(&mut self, sequence: &[SymbolKind]) -> bool {
         // Note: Multiple matches may be set in the match closure, so we need to ensure that all start at the same index
-        self.reset_peek();
+        let peek_index = self.peek_index();
 
         for kind in sequence {
             if self.peeking_next(|s| s.kind == *kind).is_none() {
+                self.set_peek_index(peek_index);
                 return false;
             }
         }
 
+        self.set_match_index(self.peek_index());
+        self.set_peek_index(peek_index);
         true
     }
 
@@ -124,7 +141,11 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
         let matched = self.matches(sequence);
 
         if matched {
-            self.set_index(self.peek_index()); // To consume peeked symbols
+            self.set_peek_index(self.match_index()); // To consume matched symbols for `peeking_next()`
+
+            if !self.peek_matching {
+                self.set_index(self.match_index()); // To consume matched symbols for `next()`
+            }
         }
 
         matched
@@ -143,5 +164,20 @@ impl<'input> PrefixMatcher for SymbolIterator<'input> {
         );
 
         self.consumed_matches(sequence)
+    }
+
+    fn empty_line(&mut self) -> bool {
+        let peek_index = self.peek_index();
+
+        // NOTE: `Newline` at start is already ensured for prefix matches.
+        let _whitespaces = self
+            .peeking_take_while(|s| s.kind == SymbolKind::Whitespace)
+            .count();
+
+        let new_line =
+            self.peeking_next(|s| matches!(s.kind, SymbolKind::Newline | SymbolKind::EOI));
+
+        self.set_peek_index(peek_index);
+        new_line.is_some()
     }
 }

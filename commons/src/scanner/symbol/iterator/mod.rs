@@ -36,6 +36,11 @@ pub struct SymbolIterator<'input> {
     iter_end: bool,
     /// Flag set to `true` if prefix mismatch occured.
     prefix_mismatch: bool,
+    /// Flag set to `true` to indicate matching context in [`Self::next()`].
+    next_matching: bool,
+    /// Flag set to `true` to indicate matching context in [`Self::peeking_next()`]
+    /// Used to prevent consumed matching while peeking.
+    peek_matching: bool,
 }
 
 /// The [`SymbolIteratorKind`] defines the kind of a [`SymbolIterator`].
@@ -76,6 +81,8 @@ impl<'input> SymbolIterator<'input> {
             end_match,
             iter_end: false,
             prefix_mismatch: false,
+            next_matching: false,
+            peek_matching: false,
         }
     }
 
@@ -144,6 +151,24 @@ impl<'input> SymbolIterator<'input> {
         }
     }
 
+    fn match_index(&self) -> usize {
+        match &self.kind {
+            SymbolIteratorKind::Nested(parent) => parent.match_index(),
+            SymbolIteratorKind::Root(root) => root.match_index,
+        }
+    }
+
+    fn set_match_index(&mut self, index: usize) {
+        if index >= self.index() {
+            match self.kind.borrow_mut() {
+                SymbolIteratorKind::Nested(parent) => parent.set_match_index(index),
+                SymbolIteratorKind::Root(root) => {
+                    root.match_index = index;
+                }
+            }
+        }
+    }
+
     /// Resets peek to get `peek() == next()`.
     ///
     /// **Note:** Needed to reset peek index after using `peeking_next()`.
@@ -197,6 +222,8 @@ impl<'input> SymbolIterator<'input> {
             end_match,
             iter_end: self.iter_end,
             prefix_mismatch: self.prefix_mismatch,
+            next_matching: self.next_matching,
+            peek_matching: self.peek_matching,
         }
     }
 
@@ -259,6 +286,8 @@ where
             end_match: None,
             iter_end: false,
             prefix_mismatch: false,
+            next_matching: false,
+            peek_matching: false,
         }
     }
 }
@@ -272,8 +301,11 @@ impl<'input> Iterator for SymbolIterator<'input> {
         }
 
         if let Some(end_fn) = self.end_match.clone() {
+            self.next_matching = true;
+
             if (end_fn)(self) {
                 self.iter_end = true;
+                self.next_matching = false;
                 return None;
             }
         }
@@ -288,14 +320,17 @@ impl<'input> Iterator for SymbolIterator<'input> {
                 .prefix_match
                 .clone()
                 .expect("Prefix match checked above to be some.");
+            self.next_matching = true;
 
             // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
             if !prefix_match(self) {
                 self.prefix_mismatch = true;
+                self.next_matching = false;
                 return None;
             }
         }
 
+        self.next_matching = false;
         curr_symbol_opt
     }
 
@@ -310,14 +345,54 @@ impl<'input> PeekingNext for SymbolIterator<'input> {
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
-        // Note: Not possible to restrict peek to return only symbols `next()` would return,
-        // because `peeking_next()` is needed in End- and PrefixMatcher.
-        // Using the same logic as in `next()` would result in endless loop inside `peeking_next()` => StackOverflow
+        if self.prefix_mismatch || self.end_reached() {
+            return None;
+        }
 
-        match &mut self.kind {
+        if !self.next_matching && !self.peek_matching {
+            if let Some(end_fn) = self.end_match.clone() {
+                let peek_index = self.peek_index();
+                self.peek_matching = true;
+
+                let end_matched = (end_fn)(self);
+
+                self.peek_matching = false;
+                self.set_peek_index(peek_index);
+
+                if end_matched {
+                    return None;
+                }
+            }
+        }
+
+        let peeked_symbol_opt = match &mut self.kind {
             SymbolIteratorKind::Nested(parent) => parent.peeking_next(accept),
             SymbolIteratorKind::Root(root) => root.peeking_next(accept),
+        };
+
+        if !self.next_matching
+            && !self.peek_matching
+            && peeked_symbol_opt?.kind == SymbolKind::Newline
+            && self.prefix_match.is_some()
+        {
+            let prefix_match = self
+                .prefix_match
+                .clone()
+                .expect("Prefix match checked above to be some.");
+            let peek_index = self.peek_index();
+            self.peek_matching = true;
+
+            let prefix_matched = prefix_match(self);
+
+            self.peek_matching = false;
+
+            if !prefix_matched {
+                self.set_peek_index(peek_index);
+                return None;
+            }
         }
+
+        peeked_symbol_opt
     }
 }
 
@@ -329,7 +404,7 @@ mod test {
 
     use crate::scanner::{PrefixMatcher, SymbolKind};
 
-    use super::SymbolIterator;
+    use super::{EndMatcher, SymbolIterator};
 
     #[test]
     fn peek_while_index() {
@@ -452,6 +527,147 @@ mod test {
                 SymbolKind::EOI
             ],
             "Prefix symbols not correctly skipped"
+        );
+    }
+
+    #[test]
+    fn nested_peek() {
+        let symbols = crate::scanner::scan_str("a\n* *b");
+
+        let iterator = SymbolIterator::with(
+            &symbols,
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[SymbolKind::Star, SymbolKind::Whitespace])
+            })),
+            None,
+        );
+
+        let mut inner = iterator.nest(
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[SymbolKind::Star])
+            })),
+            None,
+        );
+
+        let sym_1 = inner.peeking_next(|_| true);
+        assert_eq!(
+            "a",
+            sym_1.unwrap().as_str(),
+            "Peeking next symbol did not return 'a'."
+        );
+        let sym_2 = inner.peeking_next(|_| true);
+        assert_eq!(
+            "\n",
+            sym_2.unwrap().as_str(),
+            "Peeking next symbol did not return newline."
+        );
+        let sym_3 = inner.peeking_next(|_| true);
+        assert_eq!(
+            "b",
+            sym_3.unwrap().as_str(),
+            "Peeking next symbol did not return 'b'."
+        );
+    }
+
+    #[test]
+    fn outer_end_match_takes_precedence() {
+        let symbols = crate::scanner::scan_str("e+f-");
+
+        let mut iterator = SymbolIterator::with(
+            &symbols,
+            None,
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.matches(&[SymbolKind::Plus])
+            })),
+        );
+
+        let mut inner = iterator.nest(
+            None,
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.matches(&[SymbolKind::Minus])
+            })),
+        );
+
+        assert_eq!(
+            "e",
+            inner.peeking_next(|_| true).unwrap().as_str(),
+            "First peeked symbol is not 'e'."
+        );
+        assert!(
+            inner.peeking_next(|_| true).is_none(),
+            "Outer end did not take precedence with `peeking_next()`."
+        );
+        assert!(
+            !inner.end_reached(),
+            "Peeking end wrongfully set 'end_reached()'."
+        );
+        assert!(
+            inner.peeking_next(|_| true).is_none(),
+            "Successive peek over outer end returned symbol."
+        );
+
+        inner.reset_peek();
+
+        assert_eq!(
+            "e",
+            inner.next().unwrap().as_str(),
+            "First symbol is not 'e'."
+        );
+        assert!(
+            inner.next().is_none(),
+            "Outer end did not take precedence with `next()`."
+        );
+        assert!(
+            !inner.end_reached(),
+            "Reaching end set for inner, eventhough only outer reached end."
+        );
+        assert!(
+            inner.next().is_none(),
+            "Successive `next()` over outer end returned symbol."
+        );
+
+        inner.update(&mut iterator);
+
+        assert!(
+            iterator.end_reached(),
+            "`end_reached()` not set for outer iterator."
+        );
+        assert!(
+            iterator.next().is_none(),
+            "Successive `next()` over outer end returned symbol."
+        );
+    }
+
+    #[test]
+    fn peek_and_next_return_same_symbols() {
+        let symbols = crate::scanner::scan_str("a\n* *b+-");
+
+        let iterator = SymbolIterator::with(
+            &symbols,
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[SymbolKind::Star, SymbolKind::Whitespace])
+            })),
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.matches(&[SymbolKind::Plus])
+            })),
+        );
+
+        let mut inner = iterator.nest(
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[SymbolKind::Star])
+            })),
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.matches(&[SymbolKind::Minus])
+            })),
+        );
+
+        let peeked_symbols = inner.peeking_take_while(|_| true).collect::<Vec<_>>();
+        inner.reset_peek();
+        let next_symbols = inner.take_to_end();
+
+        assert_eq!(
+            peeked_symbols, next_symbols,
+            "Peeked (left) and next (right) symbols differ."
         );
     }
 

@@ -6,6 +6,7 @@ use unimarkup_parser::elements::Blocks;
 
 mod bullet_list;
 mod paragraph;
+mod verbatim;
 
 #[derive(Debug)]
 pub struct Snapshot<T>(pub T);
@@ -42,6 +43,7 @@ impl AsSnapshot for Snapshot<&Block> {
         match **self {
             Block::Paragraph(block) => Snapshot(block).as_snapshot(),
             Block::BulletList(block) => Snapshot(block).as_snapshot(),
+            Block::Verbatim(block) => Snapshot(block).as_snapshot(),
             _ => unimplemented!("TODO: Implement snapshot for {:?}", self),
         }
     }

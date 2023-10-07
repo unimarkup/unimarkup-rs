@@ -101,7 +101,7 @@ impl MainParser {
     }
 
     /// Parses Unimarkup content and produces Unimarkup blocks.
-    pub fn parse(&self, input: &mut SymbolIterator) -> Blocks {
+    pub fn parse(&self, mut input: &mut SymbolIterator) -> Blocks {
         let mut blocks = Vec::default();
 
         #[cfg(debug_assertions)]

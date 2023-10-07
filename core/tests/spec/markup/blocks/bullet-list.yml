@@ -105,3 +105,24 @@ tests:
           </ul>
         </li>
       </ul>
+
+  - name: list-entry-with-verbatim-block
+    description: |
+      Parse bullet list with verbatim block in entry body
+
+    input: |
+      - single list entry
+
+        ```
+        Verbatim block
+        ```
+
+    html: |
+      <ul>
+        <li>
+          <p>single list entry</p>
+          <pre><code>
+            <span class="highlighted_text highlighted_plain">Verbatim block</span>
+          </code></pre>
+        </li>
+      </ul>
