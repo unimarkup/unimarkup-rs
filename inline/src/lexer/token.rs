@@ -3,7 +3,7 @@ use std::ops::{Add, AddAssign, Sub, SubAssign};
 use unimarkup_commons::scanner::span::{Span, SpanLen};
 use unimarkup_commons::scanner::{self, SymbolKind};
 
-use super::resolver::Resolved;
+use super::resolver::State;
 use super::ContentOption;
 use crate::Inline;
 
@@ -695,12 +695,12 @@ pub enum Spacing {
     None,
 }
 
-impl From<Resolved> for Spacing {
-    fn from(resolved: Resolved) -> Self {
+impl From<State> for Spacing {
+    fn from(resolved: State) -> Self {
         match resolved {
-            Resolved::Open => Spacing::Pre,
-            Resolved::Close => Spacing::Post,
-            Resolved::Neither => Spacing::Both,
+            State::Open => Spacing::Pre,
+            State::Close => Spacing::Post,
+            State::Unresolved | State::Plain => Spacing::Both,
         }
     }
 }
