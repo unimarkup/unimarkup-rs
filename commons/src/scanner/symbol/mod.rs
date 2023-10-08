@@ -154,27 +154,26 @@ impl Symbol<'_> {
     /// position of first symbol until the end of last symbol.
     ///
     /// Returns `None` if the referenced input in the given symbols is not the same.
-    pub fn flatten(symbols: &[Self]) -> Option<&str> {
-        debug_assert!(symbols
-            .windows(2)
-            .all(|window| window[0].input == window[1].input));
+    pub fn flatten(symbols: &[Self]) -> &str {
+        // debug_assert!(symbols
+        //     .windows(2)
+        //     .all(|window| window[0].input == window[1].input));
 
-        if symbols.is_empty() {
-            return Some("");
-        }
+        if symbols.is_empty() {}
 
-        let first = symbols.first()?;
-        let last = symbols.last()?;
+        let first = symbols.first();
+        let last = symbols.last();
 
-        if first.input == last.input {
-            let input = first.input;
+        match (first, last) {
+            (Some(first), Some(last)) => {
+                let input = first.input;
 
-            let start = first.offset.start;
-            let end = last.offset.end;
+                let start = first.offset.start;
+                let end = last.offset.end;
 
-            Some(&input[start..end])
-        } else {
-            None
+                &input[start..end]
+            }
+            _ => "",
         }
     }
 
