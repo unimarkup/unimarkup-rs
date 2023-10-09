@@ -151,28 +151,35 @@ impl Symbol<'_> {
     }
 
     /// Flattens the input of consecutive symbols. Returns the slice of input starting from start
-    /// position of first symbol until the end of last symbol.
+    /// position of first symbol until the end of last symbol. Returns [`None`] if slice is empty.
     ///
-    /// Returns `None` if the referenced input in the given symbols is not the same.
-    pub fn flatten(symbols: &[Self]) -> &str {
-        // debug_assert!(symbols
-        //     .windows(2)
-        //     .all(|window| window[0].input == window[1].input));
+    /// # Panics
+    ///
+    /// It's assumed that all [`Symbol`]s in slice reference the same input. If not, the function
+    /// might panic (guaranteed in debug) if inputs are not the same and last [`Symbol`] in slice
+    /// references input that is longer than the one referenced in the first [`Symbol`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use unimarkup_commons::scanner::{scan_str, Symbol};
+    ///
+    /// let input = "This is a string";
+    /// let symbols: Vec<_> = scan_str(input);
+    ///
+    /// assert_eq!(input, Symbol::flatten(&symbols).unwrap());
+    /// ```
+    pub fn flatten(symbols: &[Self]) -> Option<&str> {
+        let (first, last) = (symbols.first()?, symbols.last()?);
 
-        let first = symbols.first();
-        let last = symbols.last();
+        debug_assert_eq!(first.input, last.input);
 
-        match (first, last) {
-            (Some(first), Some(last)) => {
-                let input = first.input;
+        let input = first.input;
 
-                let start = first.offset.start;
-                let end = last.offset.end;
+        let start = first.offset.start;
+        let end = last.offset.end;
 
-                &input[start..end]
-            }
-            _ => "",
-        }
+        Some(&input[start..end])
     }
 
     /// Flattens the iterator of consecutive symbols. Returns the slice of input starting from start

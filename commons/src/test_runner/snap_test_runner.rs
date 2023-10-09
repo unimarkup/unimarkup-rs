@@ -24,7 +24,7 @@ impl<'a> SnapTestRunner<'a> {
         SnapTestRunner {
             info: None,
             desc: None,
-            input: Some(Symbol::flatten(input.as_ref())),
+            input: Symbol::flatten(input.as_ref()),
             name: name.into(),
             sub_path: None,
             snapshot,

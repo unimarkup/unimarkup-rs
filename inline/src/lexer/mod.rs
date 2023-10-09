@@ -295,7 +295,7 @@ impl<'input> TokenIterator<'input> {
 
         let curr_index = self.index + symbol_len;
         let content = subst.map_or_else(
-            || Symbol::flatten(&self.symbols[self.index..curr_index]),
+            || Symbol::flatten(&self.symbols[self.index..curr_index]).unwrap(),
             |subst| subst.as_str(),
         );
 
@@ -476,7 +476,7 @@ impl<'input> TokenIterator<'input> {
             kind,
             span,
             spacing,
-            content: Some(content),
+            content,
         };
 
         Some(token)
