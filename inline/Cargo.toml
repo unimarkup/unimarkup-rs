@@ -20,6 +20,8 @@ harness=false
 logid.workspace = true
 ribbon.workspace = true
 unimarkup-commons = { path = "../commons/", version = "0" }
+unicode-segmentation = "1.8.0"
+fxhash = "0.2.1"
 
 [dev-dependencies]
 unimarkup-commons = { path ="../commons/", version = "0", features = ["test_runner"] }
