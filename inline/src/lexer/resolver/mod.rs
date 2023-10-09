@@ -1,9 +1,8 @@
 use ribbon::{Enroll, Ribbon, Tape};
 
 use std::{
-    collections::{btree_map::Entry, BTreeMap},
+    collections::{btree_map, BTreeMap},
     iter::Map,
-    ops::Range,
     vec,
 };
 
@@ -20,7 +19,7 @@ type Indices = Vec<usize>;
 #[repr(transparent)]
 /// Internal data structure for storing [`Indices`] of [`TokenKind`]s in specific [`Scope`].
 struct TokenMap {
-    map: BTreeMap<(TokenKind, Scope), Indices>,
+    map: BTreeMap<(Scope, TokenKind), Indices>,
 }
 
 impl TokenMap {
@@ -44,13 +43,21 @@ impl TokenMap {
             .or_insert_with(|| vec![index]);
     }
 
-    fn entry(&mut self, kind: TokenKind, scope: Scope) -> Entry<(TokenKind, Scope), Indices> {
-        let key = (Self::general_key(kind), scope);
+    fn entry(
+        &mut self,
+        kind: TokenKind,
+        scope: Scope,
+    ) -> btree_map::Entry<(Scope, TokenKind), Indices> {
+        let key = (scope, Self::general_key(kind));
         self.map.entry(key)
     }
 
+    fn entries(&mut self) -> btree_map::IterMut<'_, (Scope, TokenKind), Indices> {
+        self.map.iter_mut()
+    }
+
     fn get_mut(&mut self, kind: TokenKind, scope: Scope) -> Option<&mut Indices> {
-        let key = (Self::general_key(kind), scope);
+        let key = (scope, Self::general_key(kind));
         self.map.get_mut(&key)
     }
 }
@@ -86,10 +93,6 @@ pub(crate) struct TokenResolver<'token> {
     /// Scopes are introduced by brackets (for example text groups).
     curr_scope: usize,
 
-    /// `Token`s with index contained in any of the interrupted ranges are interrupted and should be
-    /// treated as plain tokens.
-    interrupted: Vec<Range<usize>>,
-
     /// Tape that enables expanding *visible* context inside of the TokenIterator.
     pub(crate) tape: Tape<TokenIter<'token>>,
 
@@ -107,7 +110,6 @@ impl<'token> TokenResolver<'token> {
 
         Self {
             curr_scope: 0,
-            interrupted: Vec::default(),
             tape,
             tape_idx: 0,
             unresolved: TokenMap::new(),
@@ -194,7 +196,10 @@ impl<'token> TokenResolver<'token> {
         match resolved_idx {
             Some(idx) => {
                 let tail_idx = self.tape_idx + self.tape.len() - 1;
-                self.interrupted.push((idx + 1)..tail_idx);
+
+                for (_, indices) in self.unresolved.entries() {
+                    indices.retain(|i| *i > idx && *i < tail_idx);
+                }
             }
             None => {
                 if let Some(end) = self.tape.peek_back() {
@@ -330,14 +335,6 @@ impl<'token> TokenResolver<'token> {
             let token = self.tape.peek_at(idx)?;
 
             if !token.state && token.token.overlaps(&curr_token.token) && token.token.opens() {
-                if self
-                    .interrupted
-                    .iter()
-                    .any(|range| range.contains(&(idx + self.tape_idx)))
-                {
-                    return None;
-                }
-
                 let idx_ref = IdxRef { idx: i, indices };
                 return Some((self.tape.peek_at_mut(idx)?, idx_ref, idx + self.tape_idx));
             }
