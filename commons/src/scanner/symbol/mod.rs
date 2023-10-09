@@ -159,8 +159,6 @@ impl Symbol<'_> {
         //     .windows(2)
         //     .all(|window| window[0].input == window[1].input));
 
-        if symbols.is_empty() {}
-
         let first = symbols.first();
         let last = symbols.last();
 

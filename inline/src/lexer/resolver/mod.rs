@@ -167,14 +167,6 @@ impl<'token> TokenResolver<'token> {
         }
     }
 
-    fn is_interrupted(&self, token: &RawToken) -> bool {
-        !token.is_resolved()
-            && self
-                .interrupted
-                .iter()
-                .any(|range| range.contains(&self.tape_idx))
-    }
-
     fn try_resolve(&mut self) -> bool {
         // multiple cases for current - unresolved token relationship:
         // 1. current IS ambiguous, there is unresolved one that IS ambiguous (ambiguous, ambiguous)
