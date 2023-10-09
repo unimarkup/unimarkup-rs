@@ -141,7 +141,7 @@ impl<'token> TokenResolver<'token> {
                         self.tape_idx += 1;
 
                         continue;
-                    } else if self.is_interrupted(t) || t.is_resolved() {
+                    } else if t.is_resolved() {
                         self.tape_idx += 1;
                         return self.tape.pop_front();
                     } else if (t.token.closes(None) && !t.token.opens()) || !expanded {
@@ -331,6 +331,7 @@ impl<'token> TokenResolver<'token> {
                 indices.remove(i);
                 return None;
             }
+
             let idx = *idx - self.tape_idx; // offset the index as tape progressed
 
             let curr_token = &self.tape.peek_back()?;
