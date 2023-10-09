@@ -14,12 +14,13 @@ pub(crate) use raw_token::*;
 
 type Scope = usize;
 type Indices = Vec<usize>;
+type TokenMapKey = (Scope, TokenKind);
 
 #[derive(Debug, Clone)]
 #[repr(transparent)]
 /// Internal data structure for storing [`Indices`] of [`TokenKind`]s in specific [`Scope`].
 struct TokenMap {
-    map: BTreeMap<(Scope, TokenKind), Indices>,
+    map: BTreeMap<TokenMapKey, Indices>,
 }
 
 impl TokenMap {
@@ -43,22 +44,22 @@ impl TokenMap {
             .or_insert_with(|| vec![index]);
     }
 
-    fn entry(
-        &mut self,
-        kind: TokenKind,
-        scope: Scope,
-    ) -> btree_map::Entry<(Scope, TokenKind), Indices> {
-        let key = (scope, Self::general_key(kind));
+    fn entry(&mut self, kind: TokenKind, scope: Scope) -> btree_map::Entry<TokenMapKey, Indices> {
+        let key = Self::create_key(kind, scope);
         self.map.entry(key)
     }
 
-    fn entries(&mut self) -> btree_map::IterMut<'_, (Scope, TokenKind), Indices> {
+    fn entries(&mut self) -> btree_map::IterMut<'_, TokenMapKey, Indices> {
         self.map.iter_mut()
     }
 
     fn get_mut(&mut self, kind: TokenKind, scope: Scope) -> Option<&mut Indices> {
-        let key = (scope, Self::general_key(kind));
+        let key = Self::create_key(kind, scope);
         self.map.get_mut(&key)
+    }
+
+    fn create_key(kind: TokenKind, scope: Scope) -> TokenMapKey {
+        (scope, Self::general_key(kind))
     }
 }
 
