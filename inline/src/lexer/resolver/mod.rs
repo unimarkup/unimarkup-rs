@@ -107,7 +107,7 @@ pub(crate) struct TokenResolver<'token> {
 
 impl<'token> TokenResolver<'token> {
     pub(crate) fn new(iter: TokenIterator<'token>) -> Self {
-        let tape = iter.clone().map(RawToken::new as _).tape();
+        let tape = iter.map(RawToken::new as _).tape();
 
         Self {
             curr_scope: 0,
