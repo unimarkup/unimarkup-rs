@@ -23,7 +23,7 @@ pub use root::*;
 #[derive(Clone)]
 pub struct SymbolIterator<'input> {
     /// The [`SymbolIteratorKind`] of this iterator.
-    kind: SymbolIteratorKind<'input>,
+    parent: SymbolIteratorKind<'input>,
     /// The index inside the [`Symbol`]s of the root iterator.
     start_index: usize,
     /// The nesting depth of this iterator, starting at 0 for the root iterator.
@@ -83,7 +83,7 @@ impl<'input> SymbolIterator<'input> {
         end_match: Option<IteratorEndFn>,
     ) -> Self {
         SymbolIterator {
-            kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(symbols)),
+            parent: SymbolIteratorKind::Root(SymbolIteratorRoot::from(symbols)),
             depth: 0,
             start_index: 0,
             prefix_match,
@@ -121,7 +121,7 @@ impl<'input> SymbolIterator<'input> {
 
     /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
     pub fn index(&self) -> usize {
-        match &self.kind {
+        match &self.parent {
             SymbolIteratorKind::Nested(parent) => parent.index(),
             SymbolIteratorKind::Root(root) => root.index,
         }
@@ -130,7 +130,7 @@ impl<'input> SymbolIterator<'input> {
     /// Sets the current index of this iterator to the given index.
     pub(super) fn set_index(&mut self, index: usize) {
         if index >= self.start_index {
-            match self.kind.borrow_mut() {
+            match self.parent.borrow_mut() {
                 SymbolIteratorKind::Nested(parent) => parent.set_index(index),
                 SymbolIteratorKind::Root(root) => {
                     root.index = index;
@@ -142,7 +142,7 @@ impl<'input> SymbolIterator<'input> {
 
     /// Returns the index used to peek.
     fn peek_index(&self) -> usize {
-        match &self.kind {
+        match &self.parent {
             SymbolIteratorKind::Nested(parent) => parent.peek_index(),
             SymbolIteratorKind::Root(root) => root.peek_index,
         }
@@ -151,7 +151,7 @@ impl<'input> SymbolIterator<'input> {
     /// Sets the peek index of this iterator to the given index.
     fn set_peek_index(&mut self, index: usize) {
         if index >= self.index() {
-            match self.kind.borrow_mut() {
+            match self.parent.borrow_mut() {
                 SymbolIteratorKind::Nested(parent) => parent.set_peek_index(index),
                 SymbolIteratorKind::Root(root) => {
                     root.peek_index = index;
@@ -161,7 +161,7 @@ impl<'input> SymbolIterator<'input> {
     }
 
     fn match_index(&self) -> usize {
-        match &self.kind {
+        match &self.parent {
             SymbolIteratorKind::Nested(parent) => parent.match_index(),
             SymbolIteratorKind::Root(root) => root.match_index,
         }
@@ -169,7 +169,7 @@ impl<'input> SymbolIterator<'input> {
 
     fn set_match_index(&mut self, index: usize) {
         if index >= self.index() {
-            match self.kind.borrow_mut() {
+            match self.parent.borrow_mut() {
                 SymbolIteratorKind::Nested(parent) => parent.set_match_index(index),
                 SymbolIteratorKind::Root(root) => {
                     root.match_index = index;
@@ -191,7 +191,7 @@ impl<'input> SymbolIterator<'input> {
     /// Therefore, the returned [`Symbol`] slice might differ from the symbols returned by calling [`Self::next()`],
     /// but [`Self::next()`] cannot return more symbols than those inside the returned slice.
     pub fn max_remaining_symbols(&self) -> Option<&'input [Symbol<'input>]> {
-        match &self.kind {
+        match &self.parent {
             SymbolIteratorKind::Nested(parent) => parent.max_remaining_symbols(),
             SymbolIteratorKind::Root(root) => root.remaining_symbols(),
         }
@@ -228,7 +228,7 @@ impl<'input> SymbolIterator<'input> {
         end_match: Option<IteratorEndFn>,
     ) -> SymbolIterator<'input> {
         SymbolIterator {
-            kind: SymbolIteratorKind::Nested(Box::new(self.clone())),
+            parent: SymbolIteratorKind::Nested(Box::new(self.clone())),
             start_index: self.index(),
             depth: self.depth + 1,
             prefix_match,
@@ -244,7 +244,7 @@ impl<'input> SymbolIterator<'input> {
     ///
     /// **Note:** Only updates the parent if `self` is nested.
     pub fn update(self, parent: &mut Self) {
-        if let SymbolIteratorKind::Nested(self_parent) = self.kind {
+        if let SymbolIteratorKind::Nested(self_parent) = self.parent {
             // Make sure it actually is the parent.
             // It is not possible to check more precisely, because other indices are expected to be different due to `clone()`.
             debug_assert_eq!(
@@ -292,7 +292,7 @@ where
 {
     fn from(value: T) -> Self {
         SymbolIterator {
-            kind: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
+            parent: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
             start_index: 0,
             depth: 0,
             prefix_match: None,
@@ -323,7 +323,7 @@ impl<'input> Iterator for SymbolIterator<'input> {
             }
         }
 
-        let curr_symbol_opt = match &mut self.kind {
+        let curr_symbol_opt = match &mut self.parent {
             SymbolIteratorKind::Nested(parent) => parent.next(),
             SymbolIteratorKind::Root(root) => root.next(),
         };
@@ -378,7 +378,7 @@ impl<'input> PeekingNext for SymbolIterator<'input> {
             }
         }
 
-        let peeked_symbol_opt = match &mut self.kind {
+        let peeked_symbol_opt = match &mut self.parent {
             SymbolIteratorKind::Nested(parent) => parent.peeking_next(accept),
             SymbolIteratorKind::Root(root) => root.peeking_next(accept),
         };
