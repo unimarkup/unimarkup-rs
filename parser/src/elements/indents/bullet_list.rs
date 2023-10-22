@@ -183,7 +183,7 @@ impl ElementParser for BulletListEntry {
     ) -> Option<crate::TokenizeOutput<Self::Token<'i>>> {
         let entry_keyword = BulletListEntryKeyword::try_from(input.next()?).ok()?;
 
-        if SymbolKind::Whitespace != input.next()?.kind {
+        if input.next()?.kind != SymbolKind::Whitespace {
             return None;
         }
 
