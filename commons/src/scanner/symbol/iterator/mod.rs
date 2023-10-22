@@ -33,12 +33,21 @@ pub struct SymbolIterator<'input> {
     /// Optional matching function that is used to indicate the end of this iterator.
     end_match: Option<IteratorEndFn>,
     /// Flag set to `true` if this iterator reached its end.
+    ///
+    /// Prevents the iterator from jumping over the end sequence.
     iter_end: bool,
     /// Flag set to `true` if prefix mismatch occured.
+    ///
+    /// Prevents the iterator from returning symbols once no prefix matched.
     prefix_mismatch: bool,
     /// Flag set to `true` to indicate matching context in [`Self::next()`].
+    ///
+    /// End/Prefix matching in `next()` uses `peeking_next()` to check wether the given function matches or not.
+    /// Without this flag, `peeking_next()` would apply end/prefix matching itself,
+    /// leading to invalid symbols being passed to matching functions for `next()`.
     next_matching: bool,
     /// Flag set to `true` to indicate matching context in [`Self::peeking_next()`]
+    ///
     /// Used to prevent consumed matching while peeking.
     peek_matching: bool,
 }
