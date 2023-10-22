@@ -7,7 +7,7 @@ use super::test_file::{Test, TestOutputs};
 
 static HTML_ID_MATCHER: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"(<[^\s]+)[^i]*id=(?:"|')[^"']*(?:"|')([^>]*>)"#).unwrap());
-static HTML_SPACE_REMOVER: Lazy<Regex> = Lazy::new(|| Regex::new(r#">\s+<"#).unwrap());
+static HTML_SPACE_REMOVER: Lazy<Regex> = Lazy::new(|| Regex::new(r">\s+<").unwrap());
 
 pub fn assert_um_spec<C>(test_group: &str, test: &Test, config: Config, compile: C)
 where

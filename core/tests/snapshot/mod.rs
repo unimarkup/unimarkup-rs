@@ -22,11 +22,9 @@ impl<T> Deref for Snapshot<T> {
 impl AsSnapshot for Snapshot<Blocks> {
     fn as_snapshot(&self) -> String {
         if self.len() > 1 {
-            let content: String = self
-                .0
-                .iter()
-                .map(|block| format!("{}\n", Snapshot(block).as_snapshot()))
-                .collect();
+            let content: String = self.0.iter().fold(String::new(), |s, block| {
+                s + &Snapshot(block).as_snapshot() + "\n"
+            });
 
             content.rsplit_once('\n').unwrap().0.to_string()
         } else {

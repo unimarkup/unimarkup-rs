@@ -11,7 +11,9 @@ impl AsSnapshot for Snapshot<&BulletList> {
             content.push('\n');
         }
 
-        let content: String = content.lines().map(|line| format!("  {line}\n")).collect();
+        let content: String = content
+            .lines()
+            .fold(String::new(), |s, line| s + "  " + line + "\n");
         format!("BulletList(\n{content})")
     }
 }
@@ -27,8 +29,7 @@ impl AsSnapshot for Snapshot<&BulletListEntry> {
         let entry_heading = if entry_heading.lines().count() > 1 {
             let entry_heading: String = entry_heading
                 .lines()
-                .map(|line| format!("    {line}\n"))
-                .collect();
+                .fold(String::new(), |s, line| s + "    " + line + "\n");
             format!("  EntryHeading(\n{entry_heading}\n  )")
         } else {
             format!("  EntryHeading({entry_heading})")
@@ -45,8 +46,7 @@ impl AsSnapshot for Snapshot<&BulletListEntry> {
 
             let entry_body: String = entry_body
                 .lines()
-                .map(|line| format!("    {line}\n"))
-                .collect();
+                .fold(String::new(), |s, line| s + "    " + line + "\n");
             let entry_body = format!("  EntryBody(\n{entry_body}  )");
 
             format!("BulletListEntry(\n{entry_heading}\n{entry_body}\n)")

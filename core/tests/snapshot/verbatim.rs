@@ -9,7 +9,9 @@ impl AsSnapshot for Snapshot<&Verbatim> {
         let is_multiline = content.lines().count() > 1;
 
         if is_multiline {
-            let content: String = content.lines().map(|line| format!("\t{line}\n")).collect();
+            let content: String = content
+                .lines()
+                .fold(String::new(), |s, line| s + "\t" + line + "\n");
             format!("VerbatimBlock(\n{content}\n)")
         } else {
             format!("VerbatimBlock({content})")
