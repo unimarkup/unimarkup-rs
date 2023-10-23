@@ -17,14 +17,16 @@ pub enum SymbolKind {
     Whitespace,
     /// A line break literal (for example `\n` or '\r\n')
     Newline,
-    /// Empty line, can be separator between blocks
-    Blankline,
     /// End of Unimarkup document
     EOI,
     /// The backslash (`\`) is used for escaping other symbols.
     Backslash,
-    /// The star (`*`) literal is used for bold and/or italic formatting.
+    /// The star (`*`) literal is used for various elements.
     Star,
+    /// The minus (`-`) literal is used for various elements.
+    Minus,
+    /// The plus (`+`) literal is used for various elements.
+    Plus,
     /// The underline (`_`) literal is used for underline and/or subscript formatting.
     Underline,
     /// The caret (`^`) literal is used for superscript formatting.
@@ -68,11 +70,7 @@ impl SymbolKind {
     pub fn is_not_keyword(&self) -> bool {
         matches!(
             self,
-            SymbolKind::Newline
-                | SymbolKind::Whitespace
-                | SymbolKind::Plain
-                | SymbolKind::Blankline
-                | SymbolKind::EOI
+            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Plain | SymbolKind::EOI
         )
     }
 }
@@ -125,28 +123,9 @@ impl Symbol<'_> {
     /// Returns the original string representation of the symbol.
     pub fn as_str(&self) -> &str {
         match self.kind {
-            SymbolKind::Hash => "#",
             SymbolKind::Plain => &self.input[self.offset.start..self.offset.end],
-            SymbolKind::Tick => "`",
             SymbolKind::Whitespace => &self.input[self.offset.start..self.offset.end],
-            SymbolKind::Newline | SymbolKind::Blankline => "\n",
-            SymbolKind::EOI => "",
-            SymbolKind::Backslash => "\\",
-            SymbolKind::Star => "*",
-            SymbolKind::Underline => "_",
-            SymbolKind::Caret => "^",
-            SymbolKind::Overline => "‾",
-            SymbolKind::Pipe => "|",
-            SymbolKind::Tilde => "~",
-            SymbolKind::Quote => "\"",
-            SymbolKind::Dollar => "$",
-            SymbolKind::OpenParenthesis => "(",
-            SymbolKind::CloseParenthesis => ")",
-            SymbolKind::OpenBracket => "[",
-            SymbolKind::CloseBracket => "]",
-            SymbolKind::OpenBrace => "{",
-            SymbolKind::CloseBrace => "}",
-            SymbolKind::Colon => ":",
+            _ => self.kind.as_str(),
         }
     }
 
@@ -217,6 +196,8 @@ impl From<&str> for SymbolKind {
             "`" => SymbolKind::Tick,
             "\\" => SymbolKind::Backslash,
             "*" => SymbolKind::Star,
+            "-" => SymbolKind::Minus,
+            "+" => SymbolKind::Plus,
             "_" => SymbolKind::Underline,
             "^" => SymbolKind::Caret,
             "‾" => SymbolKind::Overline,
@@ -239,6 +220,37 @@ impl From<&str> for SymbolKind {
                 SymbolKind::Whitespace
             }
             _ => SymbolKind::Plain,
+        }
+    }
+}
+
+impl SymbolKind {
+    pub fn as_str(&self) -> &str {
+        match self {
+            SymbolKind::Hash => "#",
+            SymbolKind::Plain => "",
+            SymbolKind::Tick => "`",
+            SymbolKind::Whitespace => " ",
+            SymbolKind::Newline => "\n",
+            SymbolKind::EOI => "",
+            SymbolKind::Backslash => "\\",
+            SymbolKind::Star => "*",
+            SymbolKind::Minus => "-",
+            SymbolKind::Plus => "+",
+            SymbolKind::Underline => "_",
+            SymbolKind::Caret => "^",
+            SymbolKind::Overline => "‾",
+            SymbolKind::Pipe => "|",
+            SymbolKind::Tilde => "~",
+            SymbolKind::Quote => "\"",
+            SymbolKind::Dollar => "$",
+            SymbolKind::OpenParenthesis => "(",
+            SymbolKind::CloseParenthesis => ")",
+            SymbolKind::OpenBracket => "[",
+            SymbolKind::CloseBracket => "]",
+            SymbolKind::OpenBrace => "{",
+            SymbolKind::CloseBrace => "}",
+            SymbolKind::Colon => ":",
         }
     }
 }

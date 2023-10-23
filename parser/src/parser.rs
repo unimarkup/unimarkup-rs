@@ -1,13 +1,14 @@
 //! Module for parsing of Unimarkup elements.
 
 use logid::log;
-use unimarkup_commons::scanner::{SymbolIterator, SymbolKind};
+use unimarkup_commons::scanner::{EndMatcher, SymbolIterator, SymbolKind};
 
 use crate::{
     document::Document,
     elements::{
         atomic::{Heading, Paragraph},
         enclosed::Verbatim,
+        indents::BulletList,
         Blocks,
     },
     log_id::MainParserInfo,
@@ -87,6 +88,7 @@ impl Default for MainParser {
         // TODO: how to handle preamble parser?
         parser.register_parser(Heading::generate_parser());
         parser.register_parser(Verbatim::generate_parser());
+        parser.register_parser(BulletList::generate_parser());
 
         log!(MainParserInfo::Initialized);
         parser
@@ -105,22 +107,28 @@ impl MainParser {
         #[cfg(debug_assertions)]
         let mut curr_len = input.max_len();
 
+        input.reset_peek();
+
         'outer: while let Some(kind) = input.peek_kind() {
             match kind {
-                // skip newlines between elements
-                SymbolKind::Blankline | SymbolKind::Newline => {
+                // skip newlines and empty lines before elements
+                SymbolKind::Newline => {
+                    while input.consumed_is_empty_line() {
+                        // consume contiguous empty lines
+                    }
+                    // Consume newline before next block element
                     input.next();
                 }
 
                 // stop parsing when end of input is reached
-                SymbolKind::EOI => break,
+                SymbolKind::EOI => break 'outer,
 
                 // no parser will match, parse with default parser
                 _ if kind.is_not_keyword() => {
-                    let mut res_blocks = (self.default_parser)(input)
-                        .expect("Default parser could not parse content!");
-
-                    blocks.append(&mut res_blocks);
+                    blocks.append(
+                        &mut (self.default_parser)(input)
+                            .expect("Default parser failed parsing non-keyword."),
+                    );
                 }
 
                 // symbol is start of a block, some parser should match
@@ -135,10 +143,11 @@ impl MainParser {
                     }
 
                     // no registered parser matched -> use default parser
-                    let mut res_blocks = (self.default_parser)(input)
-                        .expect("Default parser could not parse content!");
-
-                    blocks.append(&mut res_blocks);
+                    blocks.append(
+                        &mut (self.default_parser)(input).expect(
+                            "Default parser failed parsing content no other parser matched.",
+                        ),
+                    );
                 }
             }
 

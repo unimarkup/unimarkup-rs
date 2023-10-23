@@ -1,0 +1,21 @@
+---
+source: core/tests/runner/mod.rs
+description: "Parse bullet list with paragraph in entry body\n"
+info: "Test 'list-entry-with-body' from: markup\\blocks\\bullet-list.yml"
+---
+BulletList(
+  BulletListEntry(
+    EntryHeading(single list entry)
+    EntryBody(
+      Paragraph(Entry has body.)
+    )
+  )
+)
+---
+With input:
+
+- single list entry
+
+  Entry has body.
+
+

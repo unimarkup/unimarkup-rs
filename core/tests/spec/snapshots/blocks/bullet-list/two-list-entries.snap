@@ -1,0 +1,20 @@
+---
+source: core/tests/runner/mod.rs
+description: "Parse bullet list with two entries\n"
+info: "Test 'two-list-entries' from: markup\\blocks\\bullet-list.yml"
+---
+BulletList(
+  BulletListEntry(
+    EntryHeading(first list entry)
+  )
+  BulletListEntry(
+    EntryHeading(second list entry)
+  )
+)
+---
+With input:
+
+- first list entry
+- second list entry
+
+

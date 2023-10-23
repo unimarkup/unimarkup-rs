@@ -1,0 +1,24 @@
+---
+source: core/tests/runner/mod.rs
+description: "Parse nested bullet list\n"
+info: "Test 'nested-list' from: markup\\blocks\\bullet-list.yml"
+---
+BulletList(
+  BulletListEntry(
+    EntryHeading(single list entry)
+    EntryBody(
+      BulletList(
+        BulletListEntry(
+          EntryHeading(nested list entry)
+        )
+      )
+    )
+  )
+)
+---
+With input:
+
+- single list entry
+  - nested list entry
+
+

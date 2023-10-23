@@ -1,0 +1,36 @@
+---
+source: core/tests/runner/mod.rs
+description: "Parse bullet list with different keywords\n"
+info: "Test 'different-list-keywords' from: markup\\blocks\\bullet-list.yml"
+---
+BulletList(
+  BulletListEntry(
+    EntryHeading(star list entry)
+    EntryBody(
+      BulletList(
+        BulletListEntry(
+          EntryHeading(nested minus list entry)
+        )
+      )
+    )
+  )
+  BulletListEntry(
+    EntryHeading(plus list entry)
+    EntryBody(
+      BulletList(
+        BulletListEntry(
+          EntryHeading(nested star list entry)
+        )
+      )
+    )
+  )
+)
+---
+With input:
+
+* star list entry
+  - nested minus list entry
++ plus list entry
+  * nested star list entry
+
+

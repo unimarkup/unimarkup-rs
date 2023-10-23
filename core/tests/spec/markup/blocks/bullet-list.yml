@@ -1,0 +1,152 @@
+spec: "0.0.1"
+
+name: bullet-list
+description: Test the bullet list element.
+
+tests:
+  - name: single-list-entry
+    description: |
+      Parse bullet list with one entry
+
+    input: |
+      - single list entry
+
+    html: |
+      <ul>
+        <li>single list entry</li>
+      </ul>
+
+  - name: two-list-entries
+    description: |
+      Parse bullet list with two entries
+
+    input: |
+      - first list entry
+      - second list entry
+
+    html: |
+      <ul>
+        <li>first list entry</li>
+        <li>second list entry</li>
+      </ul>
+
+  - name: list-entry-with-body
+    description: |
+      Parse bullet list with paragraph in entry body
+
+    input: |
+      - single list entry
+
+        Entry has body.
+
+    html: |
+      <ul>
+        <li>
+          <p>single list entry</p>
+          <p>Entry has body.</p>
+        </li>
+      </ul>
+
+  - name: list-before-paragraph
+    description: |
+      Parse bullet list followed by paragraph
+
+    input: |
+      - single list entry
+
+      Outer paragraph
+
+    html: |
+      <ul>
+        <li>single list entry</li>
+      </ul>
+      <p>Outer paragraph</p>
+
+  - name: nested-list
+    description: |
+      Parse nested bullet list
+
+    input: |
+      - single list entry
+        - nested list entry
+
+    html: |
+      <ul>
+        <li>
+          <p>single list entry</p>
+          <ul>
+            <li>nested list entry</li>
+          </ul>
+        </li>
+      </ul>
+
+  - name: deeply-nested-list
+    description: |
+      Parse a deeply nested bullet list
+
+    input: |
+      - single list entry
+        - nested list entry
+          - deeply-nested list entry
+
+    html: |
+      <ul>
+        <li>
+          <p>single list entry</p>
+          <ul>
+            <li>
+              <p>nested list entry</p>
+              <ul>
+                <li>deeply-nested list entry</li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+  - name: different-list-keywords
+    description: |
+      Parse bullet list with different keywords
+
+    input: |
+      * star list entry
+        - nested minus list entry
+      + plus list entry
+        * nested star list entry
+
+    html: |
+      <ul>
+        <li>
+          <p>star list entry</p>
+          <ul>
+            <li>nested minus list entry</li>
+          </ul>
+        </li>
+        <li>
+          <p>plus list entry</p>
+          <ul>
+            <li>nested star list entry</li>
+          </ul>
+        </li>
+      </ul>
+
+  - name: list-entry-with-verbatim-block
+    description: |
+      Parse bullet list with verbatim block in entry body
+
+    input: |
+      - single list entry
+
+        ```
+        Verbatim block
+        ```
+
+    html: |
+      <ul>
+        <li>
+          <p>single list entry</p>
+          <pre><code>
+            <span class="highlighted_text highlighted_plain">Verbatim block</span>
+          </code></pre>
+        </li>
+      </ul>

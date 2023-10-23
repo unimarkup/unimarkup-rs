@@ -21,7 +21,7 @@ pub fn scan_str(input: &str) -> Vec<Symbol<'_>> {
     // skip(1) to ignore break at start of input
     for offset in segmenter.segment_str(input).skip(1) {
         if let Some(grapheme) = input.get(prev_offset..offset) {
-            let mut kind = SymbolKind::from(grapheme);
+            let kind = SymbolKind::from(grapheme);
 
             let end_pos = if kind == SymbolKind::Newline {
                 SymPos {
@@ -36,11 +36,6 @@ pub fn scan_str(input: &str) -> Vec<Symbol<'_>> {
                     col_grapheme: (curr_pos.col_grapheme + 1),
                 }
             };
-
-            if curr_pos.col_utf8 == 1 && kind == SymbolKind::Newline {
-                // newline at the start of line -> Blankline
-                kind = SymbolKind::Blankline;
-            }
 
             symbols.push(Symbol {
                 input,

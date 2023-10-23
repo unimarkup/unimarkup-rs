@@ -14,6 +14,9 @@ pub struct SymbolIteratorRoot<'input> {
     pub(super) index: usize,
     /// The peek index of the iterator inside the [`Symbol`] slice.
     pub(super) peek_index: usize,
+    /// The match index of the iterator inside the [`Symbol`] slice.
+    /// Used to keep track of end and prefix matches to consume the matched sequence length.    
+    pub(super) match_index: usize,
 }
 
 impl<'input> SymbolIteratorRoot<'input> {
@@ -32,6 +35,7 @@ where
             symbols: value.into(),
             index: 0,
             peek_index: 0,
+            match_index: 0,
         }
     }
 }

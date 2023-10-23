@@ -1,16 +1,10 @@
 use super::Snapshot;
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
-use unimarkup_parser::elements::atomic::Paragraph;
+use unimarkup_parser::elements::enclosed::Verbatim;
 
-impl AsSnapshot for Snapshot<&Paragraph> {
+impl AsSnapshot for Snapshot<&Verbatim> {
     fn as_snapshot(&self) -> String {
-        let content: String = self
-            .content
-            .iter()
-            .map(|inline| inline.as_string())
-            .collect();
-
-        let content = content.trim_end();
+        let content = &self.content;
 
         let is_multiline = content.lines().count() > 1;
 
@@ -18,9 +12,9 @@ impl AsSnapshot for Snapshot<&Paragraph> {
             let content: String = content
                 .lines()
                 .fold(String::new(), |s, line| s + "\t" + line + "\n");
-            format!("Paragraph(\n{content}\n)")
+            format!("VerbatimBlock(\n{content}\n)")
         } else {
-            format!("Paragraph({content})")
+            format!("VerbatimBlock({content})")
         }
     }
 }

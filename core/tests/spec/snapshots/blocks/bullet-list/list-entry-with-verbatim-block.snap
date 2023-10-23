@@ -1,0 +1,23 @@
+---
+source: core/tests/runner/mod.rs
+description: "Parse bullet list with verbatim block in entry body\n"
+info: "Test 'list-entry-with-verbatim-block' from: markup\\blocks\\bullet-list.yml"
+---
+BulletList(
+  BulletListEntry(
+    EntryHeading(single list entry)
+    EntryBody(
+      VerbatimBlock(Verbatim block)
+    )
+  )
+)
+---
+With input:
+
+- single list entry
+
+  ```
+  Verbatim block
+  ```
+
+

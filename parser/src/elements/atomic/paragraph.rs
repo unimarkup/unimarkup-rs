@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::rc::Rc;
 
 use unimarkup_inline::{Inline, ParseInlines};
 
@@ -7,7 +8,7 @@ use crate::{
     elements::{blocks::Block, types},
     parser::TokenizeOutput,
 };
-use unimarkup_commons::scanner::{Symbol, SymbolIterator, SymbolKind};
+use unimarkup_commons::scanner::{EndMatcher, Symbol, SymbolIterator};
 
 /// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -54,21 +55,24 @@ impl From<Vec<&'_ Symbol<'_>>> for Paragraph {
     }
 }
 
-fn not_closing_symbol(symbol: &&Symbol) -> bool {
-    [SymbolKind::Blankline, SymbolKind::EOI]
-        .iter()
-        .all(|closing| *closing != symbol.kind)
-}
-
 impl ElementParser for Paragraph {
     type Token<'a> = &'a Symbol<'a>;
 
     fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<Self::Token<'i>>> {
-        let content = input.by_ref().take_while(not_closing_symbol).collect();
+        let mut content_iter = input.nest(
+            None,
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.consumed_is_empty_line()
+            })),
+        );
+        let content = content_iter.take_to_end();
+        content_iter.update(input);
 
-        let output = TokenizeOutput { tokens: content };
+        if content.is_empty() {
+            return None;
+        }
 
-        Some(output)
+        Some(TokenizeOutput { tokens: content })
     }
 
     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
