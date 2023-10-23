@@ -168,7 +168,7 @@ impl<'token> Lexer<'token> {
         TokenIterator {
             symbols,
             index: 0,
-            substitutor: Substitutor::new(),
+            substitutor: Substitutor::global(),
         }
     }
 
@@ -246,7 +246,7 @@ pub struct TokenIterator<'input> {
     /// [`Substitutor`] used for resolving inline substitutions. Right now, substitutor uses only
     /// built-in substitutions and has 'static lifetime per default, and can be shortened to any
     /// other lifetime.
-    substitutor: Substitutor<'input>,
+    substitutor: &'static Substitutor<'static>,
 }
 
 impl<'input> TokenIterator<'input> {
@@ -558,7 +558,7 @@ impl<'input> Iterator for TokenIterator<'input> {
         // 3. next grapheme is not a keyword -> it is plain text
 
         match self.get_symbol(self.index) {
-            Some(symbol) if symbol.is_keyword() || symbol.is_start_of_subst(&self.substitutor) => {
+            Some(symbol) if symbol.is_keyword() || symbol.is_start_of_subst(self.substitutor) => {
                 self.lex_keyword()
             }
             Some(symbol) if symbol.is_esc() => {
