@@ -74,3 +74,23 @@ tests:
 
     html: |
       The next <strong>word</strong> is bold.
+
+  - name: ambiguous-start
+    description: |
+      Bold that's started with an ambiguous token.
+
+    input: |
+      The next ***word** is bold.
+
+    html: |
+      The next *<strong>word</strong> is bold.
+
+  - name: ambiguous-end
+    description: |
+      Bold that's ended with an ambiguous token.
+
+    input: |
+      The next **word*** is bold.
+
+    html: |
+      The next <strong>word</strong>* is bold.

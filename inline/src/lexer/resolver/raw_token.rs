@@ -4,32 +4,56 @@ use crate::{Spacing, SpanExt, Token, TokenKind};
 
 // Token can either be opening one, closing one, or neither
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(crate) enum Resolved {
+pub(crate) enum State {
     Open,
     Close,
-    Neither,
+    Unresolved,
+    Plain,
 }
 
-impl Not for Resolved {
+impl From<TokenKind> for State {
+    fn from(value: TokenKind) -> Self {
+        match value {
+            TokenKind::OpenParens
+            | TokenKind::CloseParens
+            | TokenKind::OpenBracket
+            | TokenKind::CloseBracket
+            | TokenKind::OpenBrace
+            | TokenKind::CloseBrace
+            | TokenKind::Substitution
+            | TokenKind::Newline
+            | TokenKind::EscapedNewline
+            | TokenKind::Whitespace
+            | TokenKind::EscapedWhitespace
+            | TokenKind::Plain => State::Plain,
+
+            _ => State::Unresolved,
+        }
+    }
+}
+
+impl Not for State {
     type Output = bool;
 
     fn not(self) -> Self::Output {
-        matches!(self, Self::Neither)
+        matches!(self, Self::Unresolved)
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct RawToken<'input> {
     pub(crate) token: Token<'input>,
-    pub(crate) state: Resolved,
+    pub(crate) state: State,
     pub(crate) tail: Option<Box<RawToken<'input>>>,
 }
 
 impl<'input> RawToken<'input> {
-    pub(crate) fn new(token: Token<'input>) -> Self {
-        Self {
+    pub(crate) fn new(token: Token) -> RawToken {
+        let state = State::from(token.kind);
+
+        RawToken {
             token,
-            state: Resolved::Neither,
+            state,
             tail: None,
         }
     }
@@ -37,9 +61,9 @@ impl<'input> RawToken<'input> {
     fn order(&mut self) {
         if let Some(ref sec_part) = self.tail {
             match (self.state, sec_part.state) {
-                (Resolved::Open, Resolved::Close)
-                | (Resolved::Neither, Resolved::Close)
-                | (Resolved::Open, Resolved::Neither) => {}
+                (State::Open, State::Close)
+                | (State::Unresolved, State::Close)
+                | (State::Open, State::Unresolved) => {}
                 _ => self.swap_parts(),
             }
         }
@@ -74,24 +98,33 @@ impl<'input> RawToken<'input> {
         self.token = first;
         self.tail = Some(Box::new(RawToken {
             token: second,
-            state: Resolved::Neither,
+            state: State::Unresolved,
             tail: None,
         }));
     }
 
-    pub(crate) fn set_head_state(&mut self, state: Resolved) {
+    pub(crate) fn set_head_state(&mut self, state: State) {
         self.state = state;
     }
 
-    pub(crate) fn set_tail_state(&mut self, state: Resolved) {
+    pub(crate) fn set_tail_state(&mut self, state: State) {
         if let Some(tail) = self.tail.as_mut() {
             tail.state = state;
         }
     }
 
-    pub(crate) fn set_state(&mut self, state: Resolved) {
+    pub(crate) fn set_state(&mut self, state: State) {
         self.set_head_state(state);
         self.set_tail_state(state);
+    }
+
+    pub(crate) fn is_resolved(&self) -> bool {
+        let self_resolved = self.state != State::Unresolved;
+
+        match self.tail.as_ref() {
+            Some(tail) => tail.is_resolved() && self_resolved,
+            None => self_resolved,
+        }
     }
 }
 

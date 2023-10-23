@@ -1,5 +1,8 @@
-use std::collections::{HashMap, HashSet};
+//! Substitutor and constants that can be substituted in Unimarkup content.
 
+use fxhash::{FxHashMap, FxHashSet};
+
+use logid::evident::once_cell::sync::Lazy;
 use unimarkup_commons::scanner::{self, span::Span};
 
 /// ASCII Emojis that can be replaced with their Unicode versions in a Unimarkup text.
@@ -75,25 +78,31 @@ pub const ALIASES: [(&str, &str); 20] = [
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Substitutor<'a> {
-    direct: HashMap<&'a str, &'a str>,
-    aliased: HashMap<&'a str, &'a str>,
+    direct: FxHashMap<&'a str, &'a str>,
+    aliased: FxHashMap<&'a str, &'a str>,
     max_len: usize,
-    first_grapheme: HashSet<&'a str>,
+    first_grapheme: FxHashSet<&'a str>,
 }
 
+static GLOBAL: Lazy<Substitutor> = Lazy::new(Substitutor::create_global);
+
 impl<'sub> Substitutor<'sub> {
-    pub(crate) fn new() -> Self {
-        let direct: HashMap<_, _> = EMOJIS.into_iter().chain(ARROWS).collect();
+    fn create_global() -> Substitutor<'static> {
+        let direct: FxHashMap<_, _> = EMOJIS.into_iter().chain(ARROWS).collect();
         let aliased = ALIASES.into_iter().collect();
         let max_len = direct.keys().map(|key| key.len()).max().unwrap_or(0);
         let first_grapheme = direct.keys().map(|key| &key[0..1]).collect();
 
-        Self {
+        Substitutor {
             direct,
             aliased,
             max_len,
             first_grapheme,
         }
+    }
+
+    pub fn global() -> &'static Substitutor<'static> {
+        &GLOBAL
     }
 
     pub(crate) fn get_subst(&self, slice: &'sub str, span: Span) -> Option<Substitute<'sub>> {

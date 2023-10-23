@@ -1,6 +1,8 @@
+use ribbon::{Enroll, Ribbon, Tape};
+
 use std::{
-    collections::{btree_map::Entry, BTreeMap},
-    ops::Range,
+    collections::{btree_map, BTreeMap},
+    iter::Map,
     vec,
 };
 
@@ -12,12 +14,13 @@ pub(crate) use raw_token::*;
 
 type Scope = usize;
 type Indices = Vec<usize>;
+type TokenMapKey = (Scope, TokenKind);
 
 #[derive(Debug, Clone)]
 #[repr(transparent)]
 /// Internal data structure for storing [`Indices`] of [`TokenKind`]s in specific [`Scope`].
 struct TokenMap {
-    map: BTreeMap<(TokenKind, Scope), Indices>,
+    map: BTreeMap<TokenMapKey, Indices>,
 }
 
 impl TokenMap {
@@ -41,16 +44,38 @@ impl TokenMap {
             .or_insert_with(|| vec![index]);
     }
 
-    fn entry(&mut self, kind: TokenKind, scope: Scope) -> Entry<(TokenKind, Scope), Indices> {
-        let key = (Self::general_key(kind), scope);
+    fn entry(&mut self, kind: TokenKind, scope: Scope) -> btree_map::Entry<TokenMapKey, Indices> {
+        let key = Self::create_key(kind, scope);
         self.map.entry(key)
     }
 
+    fn entries(&mut self) -> btree_map::IterMut<'_, TokenMapKey, Indices> {
+        self.map.iter_mut()
+    }
+
     fn get_mut(&mut self, kind: TokenKind, scope: Scope) -> Option<&mut Indices> {
-        let key = (Self::general_key(kind), scope);
+        let key = Self::create_key(kind, scope);
         self.map.get_mut(&key)
     }
+
+    fn create_key(kind: TokenKind, scope: Scope) -> TokenMapKey {
+        (scope, Self::general_key(kind))
+    }
 }
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct IdxRef<'indices> {
+    idx: usize,
+    indices: &'indices mut Indices,
+}
+
+impl IdxRef<'_> {
+    fn delete(self) {
+        self.indices.remove(self.idx);
+    }
+}
+
+type TokenIter<'token> = Map<TokenIterator<'token>, fn(crate::Token) -> RawToken>;
 
 /// Resolver of [`RawToken`]s, finds pairs of open/close tokens and marks them as such. If no pairs
 /// are found, tokens are marked as plain.
@@ -66,136 +91,203 @@ impl TokenMap {
 /// - Every time a token pair is matched, all non-resolved tokens between them are marked as plain
 #[derive(Debug, Clone)]
 pub(crate) struct TokenResolver<'token> {
+    /// Scopes are introduced by brackets (for example text groups).
     curr_scope: usize,
-    interrupted: Vec<Range<usize>>,
-    pub(crate) tokens: Vec<RawToken<'token>>,
+
+    /// Tape that enables expanding *visible* context inside of the TokenIterator.
+    pub(crate) tape: Tape<TokenIter<'token>>,
+
+    /// The index of the `Token` at head of `Tape`. That is, the number of the `Token` that will be
+    /// returned by the resolver, with 0 being the number of the first `Token`.
+    tape_idx: usize,
+
+    /// Mapping of `TokenKind` to indices of `Token`s that are not yet resolved.
+    unresolved: TokenMap,
 }
 
 impl<'token> TokenResolver<'token> {
     pub(crate) fn new(iter: TokenIterator<'token>) -> Self {
-        let mut new = Self {
+        let tape = iter.map(RawToken::new as _).tape();
+
+        Self {
             curr_scope: 0,
-            interrupted: Vec::default(),
-            tokens: iter.map(RawToken::new).collect(),
-        };
-
-        new.resolve();
-        new
-    }
-
-    fn resolve(&mut self) {
-        // map found tokens to their index in tokens vector
-        let mut token_map: TokenMap = TokenMap::new();
-
-        for index in 0..self.tokens.len() {
-            // on open/close bracket simply increment/decrement scope
-            if self.tokens[index].token.kind.is_open_bracket() {
-                self.curr_scope += 1;
-                continue;
-            } else if self.tokens[index].token.kind.is_close_bracket() {
-                // scope < 0 is user input error
-                // TODO: report this as a warning or an error
-                self.curr_scope = self.curr_scope.saturating_sub(1);
-                continue;
-            }
-
-            // try to resolve token
-            if let Some(begin_index) = self.resolve_token(&mut token_map, index) {
-                // open tokens from begin_index to index are interrupted
-                self.interrupted.push((begin_index + 1)..index);
-            }
-
-            if !self.tokens[index].state {
-                let kind = self.tokens[index].token.kind;
-                // save positions of every unresolved token
-                token_map.update_or_insert(kind, index, self.curr_scope);
-            }
+            tape,
+            tape_idx: 0,
+            unresolved: TokenMap::new(),
         }
     }
 
-    fn resolve_token(&mut self, token_map: &mut TokenMap, index: usize) -> Option<usize> {
+    fn next_token(&mut self) -> Option<RawToken<'token>> {
+        // idea:
+        //
+        // * First token resolved -> Pop and return it
+        // * First token not resolved:
+        //   - expand tape until matching closing token is found
+        //   - try to resolve the first token
+        //   - repeat until whole token is resolved (two resolving needed for compound token)
+        //   - pop and return it
+
+        let mut looped = false;
+        let mut expanded = false;
+        loop {
+            match self.tape.peek_front() {
+                Some(t) => {
+                    if t.token.kind.is_parenthesis() {
+                        if t.token.kind.is_open_bracket() {
+                            self.curr_scope += 1;
+                        } else {
+                            // TODO: syntax error, report to user
+                            let _ = self.curr_scope.saturating_sub(1);
+                        }
+
+                        self.tape.pop_front();
+                        self.tape_idx += 1;
+
+                        continue;
+                    } else if t.is_resolved() {
+                        self.tape_idx += 1;
+                        return self.tape.pop_front();
+                    } else if (t.token.closes(None) && !t.token.opens()) || !expanded {
+                        // token not resolved, but it's either:
+                        // * closing token with no tokens before it, and is not an opening token
+                        //   -> is plain token
+                        //
+                        // * or token not resolved, but there are no more tokens to check,
+                        //   -> it can't be resolved, so it's a plain token
+                        return self.tape.pop_front();
+                    }
+                }
+                None => {
+                    // no new tokens available, token at the head of tape cannot be resolved
+                    if looped && !expanded {
+                        return None;
+                    }
+                }
+            }
+
+            expanded = self.try_resolve();
+            looped = true;
+        }
+    }
+
+    fn try_resolve(&mut self) -> bool {
         // multiple cases for current - unresolved token relationship:
         // 1. current IS ambiguous, there is unresolved one that IS ambiguous (ambiguous, ambiguous)
         // 2. current IS ambiguous, there is unresolved one that IS NOT ambiguous (simple, ambiguous)
         // 3. current NOT ambiguous, there is unresolved one that IS NOT ambiguous: (simple, simple)
         // 4. current NOT ambiguous, there is unresolved one that IS ambiguous (ambiguous, simple)
 
-        if self.tokens[index].token.closes(None) {
-            if self.tokens[index].token.is_ambiguous() {
-                return self.resolve_compound_token(token_map, index);
-            } else {
-                return self.resolve_simple_token(token_map, index);
+        let expanded = self.tape.expand();
+
+        let resolved_idx = match self.tape.peek_back() {
+            None => return false,
+
+            Some(end) => {
+                if !end.token.closes(None) {
+                    // if it's not closing, it cannot resolve opened token
+                    None
+                } else if end.token.is_ambiguous() {
+                    self.resolve_compound_token()
+                } else {
+                    self.resolve_simple_token()
+                }
+            }
+        };
+
+        match resolved_idx {
+            Some(idx) => {
+                let tail_idx = self.tape_idx + self.tape.len() - 1;
+
+                for (_, indices) in self.unresolved.entries() {
+                    indices.retain(|i| *i > idx && *i < tail_idx);
+                }
+            }
+            None => {
+                if let Some(end) = self.tape.peek_back() {
+                    if end.token.opens() && !end.token.kind.is_parenthesis() {
+                        self.unresolved.update_or_insert(
+                            end.token.kind,
+                            self.tape_idx + self.tape.len() - 1,
+                            self.curr_scope,
+                        );
+                    }
+                }
             }
         }
 
-        None
+        expanded
     }
 
-    fn resolve_simple_token(&mut self, token_map: &mut TokenMap, index: usize) -> Option<usize> {
-        let token_kind = self.tokens[index].token.kind;
+    fn resolve_simple_token(&mut self) -> Option<usize> {
+        let token_kind = self.tape.peek_back()?.token.kind;
 
-        let indices = token_map.get_mut(token_kind, self.curr_scope)?;
-        let (unr_token, i, token_index) = self.find_first_matching(indices, index)?;
+        let (unr_token, idx_ref, token_index) = self.find_first_matching(token_kind)?;
 
         if unr_token.token.is_ambiguous() {
             // opening token IS ambiguous (ambiguous, simple)
 
             unr_token.split_ambiguous();
-            if unr_token.token.kind != token_kind {
-                unr_token.set_tail_state(Resolved::Open);
-            } else {
-                unr_token.set_head_state(Resolved::Open);
+            if unr_token.token.kind == token_kind {
+                // make sure resolved part is in tail
                 unr_token.swap_parts();
             }
 
-            self.tokens[index].set_head_state(Resolved::Close);
+            unr_token.set_tail_state(State::Open);
+
+            self.tape.peek_back_mut()?.set_head_state(State::Close);
+
             Some(token_index)
         } else {
-            // opening token IS NOT ambiguous, (simple, simple) case
-            unr_token.set_head_state(Resolved::Open);
-            self.tokens[index].set_head_state(Resolved::Close);
+            idx_ref.delete();
+
+            // opening token IS NOT ambiguous, only head available so mark it appropriately
+            unr_token.set_head_state(State::Open);
+
+            let curr_token = self.tape.peek_back_mut()?;
+
+            curr_token.set_head_state(State::Close);
 
             if let Some(RawToken {
-                state: Resolved::Close,
+                state: State::Close,
                 ..
-            }) = self.tokens[index].tail.as_deref()
+            }) = curr_token.tail.as_deref()
             {
-                self.tokens[index].swap_parts();
+                curr_token.swap_parts();
             }
 
-            indices.remove(i);
             Some(token_index)
         }
     }
 
-    fn resolve_compound_token(&mut self, token_map: &mut TokenMap, index: usize) -> Option<usize> {
-        let token_kind = self.tokens[index].token.kind;
-        let indices = token_map.get_mut(token_kind, self.curr_scope)?;
-        let (unr_token, i, token_index) = self.find_first_matching(indices, index)?;
+    fn resolve_compound_token(&mut self) -> Option<usize> {
+        let token_kind = self.tape.peek_back()?.token.kind;
+        let (unr_token, idx_ref, token_index) = self.find_first_matching(token_kind)?;
 
         if unr_token.token.is_ambiguous() {
+            idx_ref.delete();
             // there is unresolved one that IS ambiguous (ambiguous, ambiguous)
             unr_token.split_ambiguous();
 
             let unr_kind = unr_token.token.kind;
-            unr_token.set_state(Resolved::Open);
+            unr_token.set_state(State::Open);
 
-            self.tokens[index].split_ambiguous();
-            self.tokens[index].set_state(Resolved::Close);
+            let curr_token = self.tape.peek_back_mut()?;
+
+            curr_token.split_ambiguous();
+            curr_token.set_state(State::Close);
 
             // make sure the parts are symmetric
-            if self.tokens[index].token.kind == unr_kind {
-                self.tokens[index].swap_parts();
+            if curr_token.token.kind == unr_kind {
+                curr_token.swap_parts();
             }
 
-            indices.remove(i);
             return Some(token_index);
         } else {
             // there is unresolved one that IS NOT ambiguous (simple, ambiguous)
             let kind = unr_token.token.kind;
-            if let Some(token_index) = self.resolve_partial(indices, index, kind) {
+            if let Some(token_index) = self.resolve_partial(kind) {
                 // try to resolve the remaining part
-                self.resolve_token(token_map, index);
+                self.try_resolve();
                 return Some(token_index);
             }
         }
@@ -203,50 +295,49 @@ impl<'token> TokenResolver<'token> {
         None
     }
 
-    fn resolve_partial(
-        &mut self,
-        indices: &mut Indices,
-        index: usize,
-        kind: TokenKind,
-    ) -> Option<usize> {
-        if let Some((unr_token, i, token_index)) = self.find_first_matching(indices, index) {
-            unr_token.set_head_state(Resolved::Open);
+    fn resolve_partial(&mut self, kind: TokenKind) -> Option<usize> {
+        let (unr_token, idx_ref, token_index) = self.find_first_matching(kind)?;
 
-            let curr_token = &mut self.tokens[index];
+        idx_ref.delete();
 
-            curr_token.split_ambiguous();
+        unr_token.set_head_state(State::Open);
 
-            if curr_token.token.kind != kind {
-                curr_token.set_tail_state(Resolved::Close);
-            } else {
-                curr_token.set_head_state(Resolved::Close);
-                curr_token.swap_parts();
-            }
+        let curr_token = self.tape.peek_back_mut()?;
 
-            indices.remove(i);
+        curr_token.split_ambiguous();
 
-            Some(token_index)
+        if curr_token.token.kind != kind {
+            curr_token.set_tail_state(State::Close);
         } else {
-            None
+            curr_token.set_head_state(State::Close);
+            curr_token.swap_parts();
         }
+
+        Some(token_index)
     }
 
     fn find_first_matching(
         &mut self,
-        indices: &Indices,
-        curr_idx: usize,
-    ) -> Option<(&mut RawToken<'token>, usize, usize)> {
+        token_kind: TokenKind,
+    ) -> Option<(&mut RawToken<'token>, IdxRef, usize)> {
+        let indices = self.unresolved.get_mut(token_kind, self.curr_scope)?;
+
         // find first unresolved token
         for (i, idx) in indices.iter().enumerate() {
-            let curr_token = &self.tokens[curr_idx];
-            let token = &self.tokens[*idx];
+            if *idx < self.tape_idx {
+                // token already resolved
+                indices.remove(i);
+                return None;
+            }
+
+            let idx = *idx - self.tape_idx; // offset the index as tape progressed
+
+            let curr_token = &self.tape.peek_back()?;
+            let token = self.tape.peek_at(idx)?;
 
             if !token.state && token.token.overlaps(&curr_token.token) && token.token.opens() {
-                if self.interrupted.iter().any(|range| range.contains(idx)) {
-                    return None;
-                }
-
-                return Some((&mut self.tokens[*idx], i, *idx));
+                let idx_ref = IdxRef { idx: i, indices };
+                return Some((self.tape.peek_at_mut(idx)?, idx_ref, idx + self.tape_idx));
             }
         }
 
@@ -254,21 +345,19 @@ impl<'token> TokenResolver<'token> {
     }
 
     pub(crate) fn into_iter(self) -> IntoIter<'token> {
-        IntoIter {
-            iter: self.tokens.into_iter(),
-        }
+        IntoIter { inner: self }
     }
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct IntoIter<'token> {
-    iter: vec::IntoIter<RawToken<'token>>,
+    inner: TokenResolver<'token>,
 }
 
 impl<'token> Iterator for IntoIter<'token> {
     type Item = RawToken<'token>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+        self.inner.next_token()
     }
 }

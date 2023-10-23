@@ -1,0 +1,25 @@
+---
+source: inline/tests/parser/mod.rs
+info: "Test 'ambiguous-start' from 'markup/bold.yml'"
+---
+Plain @ (1:1)->(1:11) (
+    The next *
+    ^^^^^^^^^^
+)
+Bold @ (1:11)->(1:19) (
+    Plain @ (1:13)->(1:17) (
+        word
+        ^^^^
+    )
+)
+Plain @ (1:19)->(1:28) (
+     is bold.
+    ^^^^^^^^^
+)
+
+---
+With input:
+
+The next ***word** is bold.
+
+
