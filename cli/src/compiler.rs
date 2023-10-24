@@ -25,16 +25,13 @@ use crate::log_id::{GeneralError, GeneralInfo};
 ///
 /// Returns a [`GeneralError`] if error occurs during compilation.
 pub fn compile(config: Config) -> Result<(), GeneralError> {
-    let source: String = match config.input.extension().and_then(OsStr::to_str) {
-        Some("umi") => unsafe { String::from_utf8_unchecked(fs::read(&config.input).unwrap()) },
-        _ => fs::read_to_string(&config.input).map_err(|error| {
-            pipe!(
-                GeneralError::FileRead,
-                format!("Could not read file: '{:?}'", &config.input),
-                add: AddonKind::Info(format!("Cause: {}", error))
-            )
-        })?,
-    };
+    let source = fs::read_to_string(&config.input).map_err(|error| {
+        pipe!(
+            GeneralError::FileRead,
+            format!("Could not read file: '{:?}'", &config.input),
+            add: AddonKind::Info(format!("Cause: {}", error))
+        )
+    })?;
 
     let out_path = {
         if let Some(ref out_file) = config.output.file {
@@ -51,17 +48,16 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
     for format in um.get_formats() {
         match format {
             OutputFormatKind::Html => write_file(
-                &um.render_html(false)
+                &um.render_html()
                     .map_err(|_| GeneralError::Render)?
                     .to_string(),
                 &out_path,
                 format.extension(),
             )?,
-            OutputFormatKind::Pdf => write_raw_file(
-                &um.render_pdf().map_err(|err| {
-                    log!(err);
-                    GeneralError::Render
-                })?,
+            OutputFormatKind::Pdf => write_file(
+                &um.render_html()
+                    .map_err(|_| GeneralError::Render)?
+                    .to_string(),
                 &out_path,
                 format.extension(),
             )?,
@@ -79,8 +75,8 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
     Ok(())
 }
 
-fn write_raw_file(
-    content: &[u8],
+fn write_file(
+    content: &str,
     out_path: impl AsRef<Path>,
     extension: &str,
 ) -> Result<(), GeneralError> {
@@ -99,12 +95,4 @@ fn write_raw_file(
             add: AddonKind::Info(format!("Cause: {}", error))
         )
     })
-}
-
-fn write_file(
-    content: &str,
-    out_path: impl AsRef<Path>,
-    extension: &str,
-) -> Result<(), GeneralError> {
-    write_raw_file(content.as_bytes(), out_path, extension)
 }
