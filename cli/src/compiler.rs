@@ -6,6 +6,7 @@ use std::{
 };
 
 use logid::{log, logging::event_entry::AddonKind, pipe};
+
 use unimarkup_core::{
     commons::config::{output::OutputFormatKind, Config},
     Unimarkup,
@@ -50,7 +51,14 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
                     .map_err(|_| GeneralError::Render)?
                     .to_string(),
                 &out_path,
-                OutputFormatKind::Html.extension(),
+                format.extension(),
+            )?,
+            OutputFormatKind::Pdf => write_file(
+                &um.render_html()
+                    .map_err(|_| GeneralError::Render)?
+                    .to_string(),
+                &out_path,
+                format.extension(),
             )?,
             OutputFormatKind::Umi => write_file(
                 &um.render_umi()

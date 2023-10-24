@@ -13,7 +13,7 @@ pub struct Output {
     /// Defines the output format to render to.
     /// If this option is not set, the input is rendered to all supported formats.
     ///
-    /// **Supported formats:** `html`
+    /// **Supported formats:** `html`, `pdf`
     #[arg(long, alias = "output-formats", value_parser = parse_to_hashset::<OutputFormatKind>, required = false, default_value = "html")]
     pub formats: HashSet<OutputFormatKind>,
     /// `true` overwrites existing output files
@@ -71,6 +71,7 @@ pub enum OutputFormatKind {
     #[default]
     Html,
     Umi,
+    Pdf,
 }
 
 impl OutputFormatKind {
@@ -79,6 +80,7 @@ impl OutputFormatKind {
         match self {
             OutputFormatKind::Html => "html",
             OutputFormatKind::Umi => "umi",
+            OutputFormatKind::Pdf => "pdf",
         }
     }
 }
@@ -90,6 +92,7 @@ impl FromStr for OutputFormatKind {
         match s.to_lowercase().as_str() {
             "html" => Ok(OutputFormatKind::Html),
             "umi" => Ok(OutputFormatKind::Umi),
+            "pdf" => Ok(OutputFormatKind::Pdf),
             o => Err(format!("Bad output format: {}", o)),
         }
     }
