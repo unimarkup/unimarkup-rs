@@ -26,6 +26,16 @@ impl<'input> SymbolIteratorRoot<'input> {
     pub(super) fn remaining_symbols(&self) -> Option<&'input [Symbol<'input>]> {
         self.symbols.get(self.index..)
     }
+
+    /// Returns the symbol that is directly before the current index.
+    /// If no previous symbol exists, `None`` is returned.
+    pub(super) fn prev(&self) -> Option<&'input Symbol<'input>> {
+        if self.index > 0 {
+            self.symbols.get(self.index - 1)
+        } else {
+            None
+        }
+    }
 }
 
 impl<'input, T> From<T> for SymbolIteratorRoot<'input>

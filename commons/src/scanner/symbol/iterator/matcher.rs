@@ -46,6 +46,9 @@ pub trait EndMatcher {
     ///
     /// **Note:** The matched sequence is **not** included in the symbols returned by [`SymbolIterator::take_to_end()`].
     fn consumed_matches(&mut self, sequence: &[SymbolKind]) -> bool;
+
+    /// Returns `true` if the given [`SymbolKind`] is equal to the kind of the previous symbol returned using `next()`.
+    fn matches_prev(&mut self, kind: SymbolKind) -> bool;
 }
 
 /// Trait containing functions that are available inside the prefix matcher function.
@@ -110,6 +113,10 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
 
             if !self.peek_matching {
                 self.set_index(self.match_index()); // To consume matched symbols for `next()`
+
+                // This could set the wrong symbol for prefix matches,
+                // but the previous symbol for prefix matches gets overwritten in `next()` anyways.
+                self.prev_symbol = self.prev_root_symbol().copied();
             }
         }
 
@@ -140,10 +147,19 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
 
             if !self.peek_matching {
                 self.set_index(self.match_index()); // To consume matched symbols for `next()`
+
+                // This could set the wrong symbol for prefix matches,
+                // but the previous symbol for prefix matches gets overwritten in `next()` anyways.
+                self.prev_symbol = self.prev_root_symbol().copied();
             }
         }
 
         matched
+    }
+
+    fn matches_prev(&mut self, kind: SymbolKind) -> bool {
+        self.prev_kind()
+            .map_or(false, |self_kind| self_kind == kind)
     }
 }
 

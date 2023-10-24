@@ -54,6 +54,11 @@ pub struct SymbolIterator<'input> {
     ///
     /// Used to prevent consumed matching while peeking.
     peek_matching: bool,
+    /// The previous symbol this iterator returned with `next()` or `consumed_matches()`.
+    /// It is only updated if `next()` returns Some`, or `consumed_matches()` matched.
+    ///
+    /// Symbols matched with prefix matching are skipped, because `Newline` symbol is passed to all nested iterators.
+    prev_symbol: Option<Symbol<'input>>,
 }
 
 /// The [`SymbolIteratorKind`] defines the kind of a [`SymbolIterator`].
@@ -98,6 +103,7 @@ impl<'input> SymbolIterator<'input> {
             prefix_mismatch: false,
             next_matching: false,
             peek_matching: false,
+            prev_symbol: None,
         }
     }
 
@@ -126,6 +132,7 @@ impl<'input> SymbolIterator<'input> {
             prefix_mismatch: false,
             next_matching: false,
             peek_matching: false,
+            prev_symbol: None,
         }
     }
 
@@ -255,6 +262,23 @@ impl<'input> SymbolIterator<'input> {
         }
     }
 
+    /// Returns the previous symbol this iterator returned via `next()` or `consumed_matches()`.
+    pub fn prev_symbol(&self) -> Option<&Symbol<'input>> {
+        self.prev_symbol.as_ref()
+    }
+
+    /// Returns the [`SymbolKind`] of the previous symbol this iterator returned via `next()` or `consumed_matches()`.
+    pub fn prev_kind(&self) -> Option<SymbolKind> {
+        self.prev_symbol.map(|s| s.kind)
+    }
+
+    fn prev_root_symbol(&self) -> Option<&Symbol<'input>> {
+        match &self.parent {
+            SymbolIteratorKind::Nested(parent) => parent.prev_root_symbol(),
+            SymbolIteratorKind::Root(root) => root.prev(),
+        }
+    }
+
     /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
     ///
     /// **Note:** Any change in this iterator is **not** propagated to the nested iterator.
@@ -281,6 +305,7 @@ impl<'input> SymbolIterator<'input> {
             prefix_mismatch: self.prefix_mismatch,
             next_matching: self.next_matching,
             peek_matching: self.peek_matching,
+            prev_symbol: None,
         }
     }
 
@@ -315,6 +340,7 @@ impl<'input> SymbolIterator<'input> {
             prefix_mismatch: self.prefix_mismatch,
             next_matching: self.next_matching,
             peek_matching: self.peek_matching,
+            prev_symbol: None,
         }
     }
 
@@ -345,6 +371,7 @@ impl<'input> SymbolIterator<'input> {
             prefix_mismatch: self.prefix_mismatch,
             next_matching: self.next_matching,
             peek_matching: self.peek_matching,
+            prev_symbol: None,
         }
     }
 
@@ -412,6 +439,7 @@ where
             prefix_mismatch: false,
             next_matching: false,
             peek_matching: false,
+            prev_symbol: None,
         }
     }
 }
@@ -444,6 +472,7 @@ impl<'input> Iterator for SymbolIterator<'input> {
             SymbolIteratorKind::Root(root) => root.next(),
         };
 
+        // Prefix matching after `peeking_next()` to skip prefix symbols, but pass `Newline` to nested iterators.
         if in_scope && curr_symbol_opt?.kind == SymbolKind::Newline && self.prefix_match.is_some() {
             let prefix_match = self
                 .prefix_match
@@ -457,6 +486,10 @@ impl<'input> Iterator for SymbolIterator<'input> {
                 self.next_matching = false;
                 return None;
             }
+        }
+
+        if curr_symbol_opt.is_some() {
+            self.prev_symbol = curr_symbol_opt.copied();
         }
 
         self.next_matching = false;
@@ -496,6 +529,8 @@ impl<'input> PeekingNext for SymbolIterator<'input> {
                 if end_matched {
                     return None;
                 }
+
+                self.highest_peek_index = self.highest_peek_index.max(self.peek_index());
             }
         }
 
@@ -504,6 +539,7 @@ impl<'input> PeekingNext for SymbolIterator<'input> {
             SymbolIteratorKind::Root(root) => root.peeking_next(accept),
         };
 
+        // Prefix matching after `peeking_next()` to skip prefix symbols, but pass `Newline` to nested iterators.
         if in_scope
             && !self.next_matching
             && !self.peek_matching
@@ -525,10 +561,6 @@ impl<'input> PeekingNext for SymbolIterator<'input> {
                 self.set_peek_index(peek_index);
                 return None;
             }
-        }
-
-        if !self.next_matching && !self.peek_matching && peeked_symbol_opt.is_some() {
-            self.highest_peek_index = self.highest_peek_index.max(self.peek_index());
         }
 
         peeked_symbol_opt
@@ -620,6 +652,45 @@ mod test {
             .collect::<Vec<_>>();
 
         assert!(iterator.end_reached(), "Iterator end was not reached.");
+        assert_eq!(
+            taken_symkinds,
+            vec![
+                SymbolKind::Plain,
+                SymbolKind::Plain,
+                SymbolKind::Plain,
+                SymbolKind::Plain
+            ],
+            "Symbols till end was reached are incorrect."
+        );
+    }
+
+    #[test]
+    fn reach_consumed_end() {
+        let symbols = crate::scanner::scan_str("text*");
+
+        let mut iterator = SymbolIterator::from(&*symbols).nest(
+            None,
+            Some(Rc::new(|matcher| {
+                matcher.consumed_matches(&[SymbolKind::Star])
+            })),
+        );
+
+        let taken_symkinds = iterator
+            .take_to_end()
+            .iter()
+            .map(|s| s.kind)
+            .collect::<Vec<_>>();
+
+        assert!(iterator.end_reached(), "Iterator end was not reached.");
+        assert!(
+            iterator.next().is_none(),
+            "Iterator returns symbol after end."
+        );
+        assert_eq!(
+            iterator.prev_symbol().unwrap().as_str(),
+            "*",
+            "Previous symbol was not the matched one."
+        );
         assert_eq!(
             taken_symkinds,
             vec![
@@ -938,5 +1009,114 @@ mod test {
         iterator.take_to_end();
 
         assert!(iterator.end_reached(), "Main iterator did not reach end.");
+    }
+
+    #[test]
+    fn prev_kind() {
+        let symbols = crate::scanner::scan_str("a *\n");
+
+        let mut iterator = SymbolIterator::with(&symbols, None, None);
+
+        assert_eq!(
+            iterator.next().unwrap().as_str(),
+            "a",
+            "`next()` returned wrong symbol."
+        );
+        assert_eq!(
+            iterator.prev_kind().unwrap(),
+            SymbolKind::Plain,
+            "Previous SymbolKind not correctly stored."
+        );
+
+        assert_eq!(
+            iterator.next().unwrap().as_str(),
+            " ",
+            "`next()` returned wrong symbol."
+        );
+        assert_eq!(
+            iterator.prev_kind().unwrap(),
+            SymbolKind::Whitespace,
+            "Previous SymbolKind not correctly stored."
+        );
+
+        assert_eq!(
+            iterator.next().unwrap().as_str(),
+            "*",
+            "`next()` returned wrong symbol."
+        );
+        assert_eq!(
+            iterator.prev_kind().unwrap(),
+            SymbolKind::Star,
+            "Previous SymbolKind not correctly stored."
+        );
+
+        assert_eq!(
+            iterator.next().unwrap().as_str(),
+            "\n",
+            "`next()` returned wrong symbol."
+        );
+        assert_eq!(
+            iterator.prev_kind().unwrap(),
+            SymbolKind::Newline,
+            "Previous SymbolKind not correctly stored."
+        );
+    }
+
+    #[test]
+    fn prev_symbol_from_end_match() {
+        let symbols = crate::scanner::scan_str("a*+b");
+
+        let mut iterator = SymbolIterator::with(
+            &symbols,
+            None,
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.consumed_matches(&[SymbolKind::Star, SymbolKind::Plus])
+            })),
+        );
+
+        let content = iterator
+            .take_to_end()
+            .iter()
+            .fold(String::new(), |mut combined, s| {
+                combined.push_str(s.as_str());
+                combined
+            });
+
+        assert_eq!(content, "a", "End match returned wrong content.");
+        assert_eq!(
+            iterator.prev_symbol().unwrap().as_str(),
+            "+",
+            "Previous symbol not correctly updated from end match."
+        );
+    }
+
+    #[test]
+    fn prev_symbol_from_prefix_match() {
+        let symbols = crate::scanner::scan_str("\n*+b");
+
+        let mut iterator = SymbolIterator::with(
+            &symbols,
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[SymbolKind::Star, SymbolKind::Plus])
+            })),
+            None,
+        );
+
+        assert_eq!(
+            iterator.next().unwrap().as_str(),
+            "\n",
+            "`next()` returned wrong symbol."
+        );
+        // Previous symbol is not set for prefix symbols, because `Newline` symbol gets passed to nested iterators for their prefix match
+        assert_eq!(
+            iterator.prev_symbol().unwrap().as_str(),
+            "\n",
+            "Previous symbol not correctly updated from prefix match."
+        );
+        assert_eq!(
+            iterator.next().unwrap().as_str(),
+            "b",
+            "`next()` returned wrong symbol."
+        );
     }
 }
