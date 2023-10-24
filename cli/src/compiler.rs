@@ -96,8 +96,6 @@ fn create_pdf_data(html: &str, out_path: impl AsRef<Path>) {
             .expect("Error getting temp file path")
     );
 
-    temp_html_file.keep().expect("error");
-
     let browser = Browser::new(LaunchOptions::default()).expect("Error");
     let tab = browser.new_tab().expect("Error");
     let tab = tab
