@@ -46,11 +46,6 @@ pub trait EndMatcher {
     ///
     /// **Note:** The matched sequence is **not** included in the symbols returned by [`SymbolIterator::take_to_end()`].
     fn consumed_matches(&mut self, sequence: &[SymbolKind]) -> bool;
-
-    /// Returns `true` if the iterator is at the given nesting depth.
-    ///
-    /// **Note** Use [`SymbolIterator::curr_depth()`] to get the current depth of an iterator.
-    fn at_depth(&self, depth: usize) -> bool;
 }
 
 /// Trait containing functions that are available inside the prefix matcher function.
@@ -149,10 +144,6 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
         }
 
         matched
-    }
-
-    fn at_depth(&self, depth: usize) -> bool {
-        self.depth() == depth
     }
 }
 

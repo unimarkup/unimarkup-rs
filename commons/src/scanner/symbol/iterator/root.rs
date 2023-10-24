@@ -17,6 +17,8 @@ pub struct SymbolIteratorRoot<'input> {
     /// The match index of the iterator inside the [`Symbol`] slice.
     /// Used to keep track of end and prefix matches to consume the matched sequence length.    
     pub(super) match_index: usize,
+    /// The highest scope any nested iterator based on this root iterator is in.
+    pub(super) scope: usize,
 }
 
 impl<'input> SymbolIteratorRoot<'input> {
@@ -36,6 +38,7 @@ where
             index: 0,
             peek_index: 0,
             match_index: 0,
+            scope: 0,
         }
     }
 }

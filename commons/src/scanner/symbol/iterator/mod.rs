@@ -26,8 +26,12 @@ pub struct SymbolIterator<'input> {
     parent: SymbolIteratorKind<'input>,
     /// The index inside the [`Symbol`]s of the root iterator.
     start_index: usize,
-    /// The nesting depth of this iterator, starting at 0 for the root iterator.
-    depth: usize,
+    /// The scope this iterator is in, starting at 0 if parent is the root iterator.
+    scope: usize,
+    /// Flag set to `true` if this iterator pushed a new scope.
+    scoped: bool,
+    /// Index used to skip end matchings in case subsequent symbols already passed end matching for previous `peeking_next` calls.
+    highest_peek_index: usize,
     /// Optional matching function that is used to automatically skip matched prefixes after a new line.
     prefix_match: Option<IteratorPrefixFn>,
     /// Optional matching function that is used to indicate the end of this iterator.
@@ -84,7 +88,37 @@ impl<'input> SymbolIterator<'input> {
     ) -> Self {
         SymbolIterator {
             parent: SymbolIteratorKind::Root(SymbolIteratorRoot::from(symbols)),
-            depth: 0,
+            scope: 0,
+            scoped: false,
+            highest_peek_index: 0,
+            start_index: 0,
+            prefix_match,
+            end_match,
+            iter_end: false,
+            prefix_mismatch: false,
+            next_matching: false,
+            peek_matching: false,
+        }
+    }
+
+    /// Creates a new scoped [`SymbolIterator`] from the given [`Symbol`] slice,
+    /// and the given matching functions.
+    ///
+    /// # Arguments
+    ///
+    /// * `symbols` ... [`Symbol`] slice to iterate over
+    /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
+    /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
+    pub fn scoped(
+        symbols: &'input [Symbol<'input>],
+        prefix_match: Option<IteratorPrefixFn>,
+        end_match: Option<IteratorEndFn>,
+    ) -> Self {
+        SymbolIterator {
+            parent: SymbolIteratorKind::Root(SymbolIteratorRoot::from(symbols)),
+            scope: 0,
+            scoped: true,
+            highest_peek_index: 0,
             start_index: 0,
             prefix_match,
             end_match,
@@ -111,12 +145,6 @@ impl<'input> SymbolIterator<'input> {
     /// Returns the index this iterator was started from the [`Symbol`] slice of the root iterator.
     pub fn start_index(&self) -> usize {
         self.start_index
-    }
-
-    /// The current nested depth this iterator is at.
-    /// The root iterator starts at 0, and every iterator created using [`Self::nest()`] is one depth higher than its parent.
-    pub fn depth(&self) -> usize {
-        self.depth
     }
 
     /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
@@ -213,6 +241,20 @@ impl<'input> SymbolIterator<'input> {
         self.peek().map(|s| s.kind)
     }
 
+    fn push_scope(&mut self, scope: usize) {
+        match self.parent.borrow_mut() {
+            SymbolIteratorKind::Nested(parent) => parent.push_scope(scope),
+            SymbolIteratorKind::Root(root) => root.scope = scope,
+        }
+    }
+
+    fn root_scope(&self) -> usize {
+        match &self.parent {
+            SymbolIteratorKind::Nested(parent) => parent.root_scope(),
+            SymbolIteratorKind::Root(root) => root.scope,
+        }
+    }
+
     /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
     ///
     /// **Note:** Any change in this iterator is **not** propagated to the nested iterator.
@@ -230,7 +272,73 @@ impl<'input> SymbolIterator<'input> {
         SymbolIterator {
             parent: SymbolIteratorKind::Nested(Box::new(self.clone())),
             start_index: self.index(),
-            depth: self.depth + 1,
+            scope: self.scope,
+            scoped: false,
+            highest_peek_index: self.index(),
+            prefix_match,
+            end_match,
+            iter_end: self.iter_end,
+            prefix_mismatch: self.prefix_mismatch,
+            next_matching: self.next_matching,
+            peek_matching: self.peek_matching,
+        }
+    }
+
+    /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
+    /// Pushes the new iterator to a new scope, and only runs the given matching functions in the new scope.
+    ///
+    /// **Note:** Any change in this iterator is **not** propagated to the nested iterator.
+    /// See [`Self::update()`] on how to synchronize this iterator with the nested one.
+    ///
+    /// # Arguments
+    ///
+    /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
+    /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
+    pub fn nest_with_scope(
+        &self,
+        prefix_match: Option<IteratorPrefixFn>,
+        end_match: Option<IteratorEndFn>,
+    ) -> SymbolIterator<'input> {
+        let scope = self.scope + 1;
+        let mut parent = self.clone();
+        parent.push_scope(scope);
+
+        SymbolIterator {
+            parent: SymbolIteratorKind::Nested(Box::new(parent)),
+            start_index: self.index(),
+            scope,
+            scoped: true,
+            highest_peek_index: self.index(),
+            prefix_match,
+            end_match,
+            iter_end: self.iter_end,
+            prefix_mismatch: self.prefix_mismatch,
+            next_matching: self.next_matching,
+            peek_matching: self.peek_matching,
+        }
+    }
+
+    /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
+    /// Matching functions of the new iterator are only run in the scope of this iterator.
+    ///
+    /// **Note:** Any change in this iterator is **not** propagated to the nested iterator.
+    /// See [`Self::update()`] on how to synchronize this iterator with the nested one.
+    ///
+    /// # Arguments
+    ///
+    /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
+    /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
+    pub fn nest_scoped(
+        &self,
+        prefix_match: Option<IteratorPrefixFn>,
+        end_match: Option<IteratorEndFn>,
+    ) -> SymbolIterator<'input> {
+        SymbolIterator {
+            parent: SymbolIteratorKind::Nested(Box::new(self.clone())),
+            start_index: self.index(),
+            scope: self.scope,
+            scoped: true,
+            highest_peek_index: self.index(),
             prefix_match,
             end_match,
             iter_end: self.iter_end,
@@ -244,13 +352,14 @@ impl<'input> SymbolIterator<'input> {
     ///
     /// **Note:** Only updates the parent if `self` is nested.
     pub fn update(self, parent: &mut Self) {
-        if let SymbolIteratorKind::Nested(self_parent) = self.parent {
+        if let SymbolIteratorKind::Nested(mut self_parent) = self.parent {
             // Make sure it actually is the parent.
             // It is not possible to check more precisely, because other indices are expected to be different due to `clone()`.
             debug_assert_eq!(
                 self_parent.start_index, parent.start_index,
                 "Updated iterator is not the actual parent of this iterator."
             );
+            self_parent.push_scope(self_parent.scope);
 
             *parent = *self_parent;
         }
@@ -294,7 +403,9 @@ where
         SymbolIterator {
             parent: SymbolIteratorKind::Root(SymbolIteratorRoot::from(value)),
             start_index: 0,
-            depth: 0,
+            scope: 0,
+            scoped: false,
+            highest_peek_index: 0,
             prefix_match: None,
             end_match: None,
             iter_end: false,
@@ -313,13 +424,18 @@ impl<'input> Iterator for SymbolIterator<'input> {
             return None;
         }
 
-        if let Some(end_fn) = self.end_match.clone() {
-            self.next_matching = true;
+        let in_scope = !self.scoped || self.scope == self.root_scope();
+        let allow_end_matching = in_scope && (self.highest_peek_index <= self.index());
 
-            if (end_fn)(self) {
-                self.iter_end = true;
-                self.next_matching = false;
-                return None;
+        if allow_end_matching {
+            if let Some(end_fn) = self.end_match.clone() {
+                self.next_matching = true;
+
+                if (end_fn)(self) {
+                    self.iter_end = true;
+                    self.next_matching = false;
+                    return None;
+                }
             }
         }
 
@@ -328,7 +444,7 @@ impl<'input> Iterator for SymbolIterator<'input> {
             SymbolIteratorKind::Root(root) => root.next(),
         };
 
-        if curr_symbol_opt?.kind == SymbolKind::Newline && self.prefix_match.is_some() {
+        if in_scope && curr_symbol_opt?.kind == SymbolKind::Newline && self.prefix_match.is_some() {
             let prefix_match = self
                 .prefix_match
                 .clone()
@@ -362,7 +478,12 @@ impl<'input> PeekingNext for SymbolIterator<'input> {
             return None;
         }
 
-        if !self.next_matching && !self.peek_matching {
+        // Note: Only end matching can be optimized, because once an end is reached, subsequent calls return None,
+        // which might not be the case for prefix matching.
+        let in_scope = !self.scoped || self.scope == self.root_scope();
+        let allow_end_matching = in_scope && (self.highest_peek_index <= self.peek_index());
+
+        if allow_end_matching && !self.next_matching && !self.peek_matching {
             if let Some(end_fn) = self.end_match.clone() {
                 let peek_index = self.peek_index();
                 self.peek_matching = true;
@@ -383,7 +504,8 @@ impl<'input> PeekingNext for SymbolIterator<'input> {
             SymbolIteratorKind::Root(root) => root.peeking_next(accept),
         };
 
-        if !self.next_matching
+        if in_scope
+            && !self.next_matching
             && !self.peek_matching
             && peeked_symbol_opt?.kind == SymbolKind::Newline
             && self.prefix_match.is_some()
@@ -403,6 +525,10 @@ impl<'input> PeekingNext for SymbolIterator<'input> {
                 self.set_peek_index(peek_index);
                 return None;
             }
+        }
+
+        if !self.next_matching && !self.peek_matching && peeked_symbol_opt.is_some() {
+            self.highest_peek_index = self.highest_peek_index.max(self.peek_index());
         }
 
         peeked_symbol_opt
@@ -685,18 +811,14 @@ mod test {
     }
 
     #[test]
-    fn depth_matcher() {
-        let symbols = crate::scanner::scan_str("[o [i]]");
+    fn scoping() {
+        let symbols = crate::scanner::scan_str("[o [i] o]");
 
-        let mut iterator = SymbolIterator::with(
+        let mut iterator = SymbolIterator::scoped(
             &symbols,
             None,
             Some(Rc::new(|matcher| {
-                if matcher.at_depth(0) {
-                    matcher.consumed_matches(&[SymbolKind::CloseBracket])
-                } else {
-                    false
-                }
+                matcher.consumed_matches(&[SymbolKind::CloseBracket])
             })),
         );
 
@@ -707,18 +829,19 @@ mod test {
             .take_while(|s| s.kind != SymbolKind::OpenBracket)
             .collect::<Vec<_>>();
 
-        let mut inner_iter = iterator.nest(
+        let mut inner_iter = iterator.nest_with_scope(
             None,
             Some(Rc::new(|matcher| {
-                if matcher.at_depth(1) {
-                    matcher.consumed_matches(&[SymbolKind::CloseBracket])
-                } else {
-                    false
-                }
+                matcher.consumed_matches(&[SymbolKind::CloseBracket])
             })),
         );
 
         let taken_inner = inner_iter.take_to_end();
+        assert!(
+            inner_iter.end_reached(),
+            "Inner iterator end was not reached."
+        );
+
         inner_iter.update(&mut iterator);
 
         taken_outer.extend(iterator.take_to_end().iter());
@@ -731,7 +854,7 @@ mod test {
         );
         assert_eq!(
             taken_outer.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-            vec!["o", " ",],
+            vec!["o", " ", " ", "o"],
             "Outer symbols are incorrect."
         );
     }
