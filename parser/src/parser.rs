@@ -81,7 +81,7 @@ impl Default for MainParser {
         let default = Paragraph::generate_parser();
 
         let mut parser = Self {
-            parsers: Vec::with_capacity(2),
+            parsers: Vec::with_capacity(3),
             default_parser: default,
         };
 
@@ -160,6 +160,9 @@ impl MainParser {
                 curr_len = input.max_len();
             }
         }
+
+        // To consume symbols in end matching
+        let _ = input.next();
 
         blocks
     }
