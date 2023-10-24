@@ -58,6 +58,8 @@ pub enum SymbolKind {
     CloseBrace,
     /// A colon literal (`:`) is used as marker (e.g. for alias substitutions `::heart::`).
     Colon,
+    /// Used in matching functions to match any symbol.
+    Any,
 }
 
 impl Default for SymbolKind {
@@ -251,6 +253,7 @@ impl SymbolKind {
             SymbolKind::OpenBrace => "{",
             SymbolKind::CloseBrace => "}",
             SymbolKind::Colon => ":",
+            SymbolKind::Any => "",
         }
     }
 }

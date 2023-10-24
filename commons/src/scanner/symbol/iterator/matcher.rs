@@ -121,7 +121,7 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
         let peek_index = self.peek_index();
 
         for kind in sequence {
-            if self.peeking_next(|s| s.kind == *kind).is_none() {
+            if self.peeking_next(|s| s.kind == *kind).is_none() && kind != &SymbolKind::Any {
                 self.set_peek_index(peek_index);
                 return false;
             }

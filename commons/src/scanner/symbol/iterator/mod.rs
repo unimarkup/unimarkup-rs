@@ -891,4 +891,52 @@ mod test {
             "Prefix mismatch not returning `None`."
         );
     }
+
+    #[test]
+    fn match_any_symbol() {
+        let symbols = crate::scanner::scan_str("a* -\n:");
+
+        let mut iterator = SymbolIterator::with(
+            &symbols,
+            None,
+            // Matches "\n:"
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.consumed_matches(&[SymbolKind::Any, SymbolKind::Colon])
+            })),
+        );
+
+        // Matches "a*"
+        let mut inner = iterator.nest(
+            None,
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.consumed_matches(&[SymbolKind::Any, SymbolKind::Star])
+            })),
+        );
+        inner.take_to_end();
+        assert!(
+            inner.end_reached(),
+            "First inner iterator did not reach end."
+        );
+
+        inner.update(&mut iterator);
+
+        // Matches " -"
+        let mut inner = iterator.nest(
+            None,
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.consumed_matches(&[SymbolKind::Any, SymbolKind::Minus])
+            })),
+        );
+        inner.take_to_end();
+        assert!(
+            inner.end_reached(),
+            "Second inner iterator did not reach end."
+        );
+
+        inner.update(&mut iterator);
+
+        iterator.take_to_end();
+
+        assert!(iterator.end_reached(), "Main iterator did not reach end.");
+    }
 }
