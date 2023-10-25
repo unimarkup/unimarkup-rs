@@ -11,6 +11,7 @@ use headless_chrome::{Browser, LaunchOptions};
 use logid::{log, logging::event_entry::AddonKind, pipe};
 use tempfile::Builder;
 
+use unimarkup_core::commons::config::output::OutputFormatKind::Pdf;
 use unimarkup_core::{
     commons::config::{output::OutputFormatKind, Config},
     Unimarkup,
@@ -78,38 +79,40 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
     Ok(())
 }
 
-fn create_pdf_data(html: &str, out_path: impl AsRef<Path>) {
+fn create_pdf_data(html: &str, out_path: impl AsRef<Path>) -> Result<(), GeneralError> {
     let mut temp_html_file = Builder::new()
         .suffix(".html")
         .tempfile()
-        .expect("Error creating temp html file");
+        .map_err(|_| GeneralError::FileWrite)?;
 
-    temp_html_file.write_all(html.as_bytes()).expect("Error");
-    temp_html_file.flush().expect("Error");
+    temp_html_file
+        .write_all(html.as_bytes())
+        .map_err(|_| GeneralError::FileWrite)?;
     let temp_file_url = format!(
         "file://{}",
         temp_html_file
             .as_ref()
             .as_os_str()
             .to_str()
-            .expect("Error getting temp file path")
+            .ok_or(GeneralError::FileWrite)?
     );
 
     let browser = Browser::new(LaunchOptions::default()).expect("Error");
-    let tab = browser.new_tab().expect("Error");
-    let tab = tab
+    let pdf_bytes = browser
+        .new_tab()
+        .map_err(|_| GeneralError::Render)?
         .navigate_to(temp_file_url.as_str())
-        .expect("error browser")
+        .map_err(|_| GeneralError::FileRead)?
         .wait_until_navigated()
-        .expect("error");
-
-    let pdf_bytes = tab
+        .map_err(|_| GeneralError::FileRead)?
         .print_to_pdf(Some(PrintToPdfOptions::default()))
-        .expect("error");
+        .map_err(|_| GeneralError::Render)?;
 
     let mut full_out_path: PathBuf = out_path.as_ref().into();
-    full_out_path.set_extension("pdf");
-    std::fs::write(full_out_path, pdf_bytes).expect("TODO: panic message");
+    full_out_path.set_extension(Pdf.extension());
+    std::fs::write(full_out_path, pdf_bytes).map_err(|_| GeneralError::Render)?;
+
+    Ok(())
 }
 
 fn write_file(
