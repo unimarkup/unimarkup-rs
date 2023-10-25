@@ -75,6 +75,13 @@ impl SymbolKind {
             SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Plain | SymbolKind::EOI
         )
     }
+
+    pub fn is_space(&self) -> bool {
+        matches!(
+            self,
+            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::EOI
+        )
+    }
 }
 
 /// Symbol representation of literals found in Unimarkup document.

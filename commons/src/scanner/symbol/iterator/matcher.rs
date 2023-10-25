@@ -47,8 +47,12 @@ pub trait EndMatcher {
     /// **Note:** The matched sequence is **not** included in the symbols returned by [`SymbolIterator::take_to_end()`].
     fn consumed_matches(&mut self, sequence: &[SymbolKind]) -> bool;
 
-    /// Returns `true` if the given [`SymbolKind`] is equal to the kind of the previous symbol returned using `next()`.
+    /// Returns `true` if the given [`SymbolKind`] is equal to the kind of the previous symbol returned using `next()` or `consumed_matches()`.
     fn matches_prev(&mut self, kind: SymbolKind) -> bool;
+
+    /// Returns `true` if the previous symbol returned using `next()` or `consumed_matches()` is either
+    /// whitespace, newline, EOI, or no previous symbol exists.
+    fn prev_is_space(&mut self) -> bool;
 }
 
 /// Trait containing functions that are available inside the prefix matcher function.
@@ -160,6 +164,11 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
     fn matches_prev(&mut self, kind: SymbolKind) -> bool {
         self.prev_kind()
             .map_or(false, |self_kind| self_kind == kind)
+    }
+
+    fn prev_is_space(&mut self) -> bool {
+        // default `true`, because "no prev" means start of input, which is considered as space.
+        self.prev_kind().map_or(true, |k| k.is_space())
     }
 }
 
