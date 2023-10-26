@@ -58,8 +58,6 @@ pub enum SymbolKind {
     CloseBrace,
     /// A colon literal (`:`) is used as marker (e.g. for alias substitutions `::heart::`).
     Colon,
-    /// Used in matching functions to match any symbol.
-    Any,
 }
 
 impl Default for SymbolKind {
@@ -76,6 +74,28 @@ impl SymbolKind {
         )
     }
 
+    pub fn is_keyword(&self) -> bool {
+        !self.is_not_keyword()
+    }
+
+    pub fn is_open_parenthesis(&self) -> bool {
+        matches!(
+            self,
+            SymbolKind::OpenParenthesis | SymbolKind::OpenBracket | SymbolKind::OpenBrace
+        )
+    }
+
+    pub fn is_close_parenthesis(&self) -> bool {
+        matches!(
+            self,
+            SymbolKind::CloseParenthesis | SymbolKind::CloseBracket | SymbolKind::CloseBrace
+        )
+    }
+
+    pub fn is_parenthesis(&self) -> bool {
+        self.is_open_parenthesis() || self.is_close_parenthesis()
+    }
+
     pub fn is_space(&self) -> bool {
         matches!(
             self,
@@ -89,7 +109,7 @@ impl SymbolKind {
 pub struct Symbol<'a> {
     /// Original input the symbol is found in.
     pub input: &'a str,
-    pub(crate) offset: Offset,
+    pub offset: Offset,
     /// Kind of the symbol, e.g. a hash (#)
     pub kind: SymbolKind,
     /// Start position of the symbol in input.
@@ -260,7 +280,6 @@ impl SymbolKind {
             SymbolKind::OpenBrace => "{",
             SymbolKind::CloseBrace => "}",
             SymbolKind::Colon => ":",
-            SymbolKind::Any => "",
         }
     }
 }

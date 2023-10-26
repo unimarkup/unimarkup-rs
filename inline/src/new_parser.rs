@@ -265,7 +265,7 @@ mod test {
     }
 
     #[test]
-    fn parse_bold_italic_diff_start() {
+    fn parse_italic_bold_diff_start() {
         let symbols = unimarkup_commons::scanner::scan_str("*italic**bold***");
         let mut sym_iter = SymbolIterator::from(&*symbols);
 
@@ -287,6 +287,40 @@ mod test {
                     Bold {
                         inner: vec![Plain {
                             content: "bold".to_string()
+                        }
+                        .into()]
+                    }
+                    .into()
+                ]
+            }),
+            "Bold italic not correctly parsed."
+        );
+        assert_eq!(sym_iter.next(), None, "Iterator not fully consumed.");
+    }
+
+    #[test]
+    fn parse_bold_italic_diff_start() {
+        let symbols = unimarkup_commons::scanner::scan_str("**bold*italic***");
+        let mut sym_iter = SymbolIterator::from(&*symbols);
+
+        let inlines = InlineParser::default().parse(&mut sym_iter);
+
+        assert_eq!(
+            inlines.len(),
+            1,
+            "Parser returned more than one inline element."
+        );
+        assert_eq!(
+            inlines.first().unwrap(),
+            &Inline::Bold(Bold {
+                inner: vec![
+                    Plain {
+                        content: "bold".to_string()
+                    }
+                    .into(),
+                    Italic {
+                        inner: vec![Plain {
+                            content: "italic".to_string()
                         }
                         .into()]
                     }

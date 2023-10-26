@@ -7,7 +7,9 @@ use unimarkup_commons::{
 
 use crate::{
     element::{Inline, InlineElement, InlineError},
+    inline_parser,
     new_parser::InlineParser,
+    tokenize::{iterator::InlineTokenIterator, token::InlineTokenKind},
 };
 
 use super::{Bold, Italic, BOLD_ITALIC_KEYWORD_LIMIT};
@@ -16,6 +18,67 @@ use super::{Bold, Italic, BOLD_ITALIC_KEYWORD_LIMIT};
 pub enum BoldItalic {
     Bold(Bold),
     Italic(Italic),
+}
+
+pub fn parse(input: &mut InlineTokenIterator) -> Option<Inline> {
+    let mut open_token = input.next()?;
+
+    if input.peek_kind()?.is_space() {
+        // Split ambiguous in case of leading space. Bold wins
+        if open_token.kind == InlineTokenKind::ItalicBold {
+            let mut cached = open_token;
+            cached.kind = InlineTokenKind::Italic;
+
+            //TODO: update spans
+
+            input.cache_token(cached);
+            open_token.kind = InlineTokenKind::Bold;
+        } else {
+            return None;
+        }
+    }
+
+    match open_token.kind {
+        InlineTokenKind::ItalicBold => {
+            input.push_format(InlineTokenKind::Italic);
+            input.push_format(InlineTokenKind::Bold);
+        }
+        InlineTokenKind::Italic | InlineTokenKind::Bold => {
+            input.push_format(open_token.kind);
+        }
+        _ => {
+            return None;
+        }
+    }
+
+    let inner = inline_parser::InlineParser::default().parse(input);
+
+    resolve_closing(input, inner)
+}
+
+fn resolve_closing(input: &mut InlineTokenIterator, inline: Vec<Inline>) -> Option<Inline> {
+    todo!();
+
+    match input.peek() {
+        Some(close_token) => {
+            // open = bold, close = italic => italic was opened in other parser => close bold, but do not consume close and no second part
+
+            // open = italic, close = bold => bold was opened in other parser => close italic, but do not consume close and no second part
+
+            // open & close = italic => close italic and consume close and no second part
+            // open & close = bold => close bold and consume close and no second part
+            // open & close = italicbold => close italicbold and consume close and no second part
+
+            // open = bold, close = italicbold => close bold, consume close, cache italic and parse second part to get possible italic open
+            // open = italic, close = italicbold => close italic, consume close, cache bold and parse second part to get possible bold open
+
+            // open = italicbold, close = bold => close bold, consume close and parse second part (split span of open)
+            // open = italicbold, close = italic => close italic, consume close and parse second part
+        }
+        None => {
+            // close open format only and return
+        }
+    }
 }
 
 impl InlineElement for BoldItalic {}

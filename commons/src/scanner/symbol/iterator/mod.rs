@@ -8,6 +8,8 @@ use super::{Symbol, SymbolKind};
 mod matcher;
 mod root;
 
+pub mod new;
+
 pub use itertools::*;
 pub use matcher::*;
 pub use root::*;
@@ -163,7 +165,7 @@ impl<'input> SymbolIterator<'input> {
     }
 
     /// Sets the current index of this iterator to the given index.
-    pub(super) fn set_index(&mut self, index: usize) {
+    pub fn set_index(&mut self, index: usize) {
         if index >= self.start_index {
             match self.parent.borrow_mut() {
                 SymbolIteratorKind::Nested(parent) => parent.set_index(index),
@@ -176,7 +178,7 @@ impl<'input> SymbolIterator<'input> {
     }
 
     /// Returns the index used to peek.
-    fn peek_index(&self) -> usize {
+    pub fn peek_index(&self) -> usize {
         match &self.parent {
             SymbolIteratorKind::Nested(parent) => parent.peek_index(),
             SymbolIteratorKind::Root(root) => root.peek_index,
@@ -184,7 +186,7 @@ impl<'input> SymbolIterator<'input> {
     }
 
     /// Sets the peek index of this iterator to the given index.
-    fn set_peek_index(&mut self, index: usize) {
+    pub fn set_peek_index(&mut self, index: usize) {
         if index >= self.index() {
             match self.parent.borrow_mut() {
                 SymbolIteratorKind::Nested(parent) => parent.set_peek_index(index),
@@ -195,14 +197,14 @@ impl<'input> SymbolIterator<'input> {
         }
     }
 
-    fn match_index(&self) -> usize {
+    pub fn match_index(&self) -> usize {
         match &self.parent {
             SymbolIteratorKind::Nested(parent) => parent.match_index(),
             SymbolIteratorKind::Root(root) => root.match_index,
         }
     }
 
-    fn set_match_index(&mut self, index: usize) {
+    pub fn set_match_index(&mut self, index: usize) {
         if index >= self.index() {
             match self.parent.borrow_mut() {
                 SymbolIteratorKind::Nested(parent) => parent.set_match_index(index),
@@ -402,6 +404,17 @@ impl<'input> SymbolIterator<'input> {
         let _last_symbol = self.by_ref().last();
 
         self
+    }
+
+    pub fn peek_nth(&mut self, n: usize) -> Option<&'input Symbol<'input>> {
+        let mut symbol = self.peeking_next(|_| true);
+
+        for _ in 0..n {
+            symbol = self.peeking_next(|_| true);
+            symbol?;
+        }
+
+        symbol
     }
 
     /// Collects and returns all symbols until one of the end functions signals the end,
@@ -961,54 +974,6 @@ mod test {
             iterator.next().is_none(),
             "Prefix mismatch not returning `None`."
         );
-    }
-
-    #[test]
-    fn match_any_symbol() {
-        let symbols = crate::scanner::scan_str("a* -\n:");
-
-        let mut iterator = SymbolIterator::with(
-            &symbols,
-            None,
-            // Matches "\n:"
-            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-                matcher.consumed_matches(&[SymbolKind::Any, SymbolKind::Colon])
-            })),
-        );
-
-        // Matches "a*"
-        let mut inner = iterator.nest(
-            None,
-            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-                matcher.consumed_matches(&[SymbolKind::Any, SymbolKind::Star])
-            })),
-        );
-        inner.take_to_end();
-        assert!(
-            inner.end_reached(),
-            "First inner iterator did not reach end."
-        );
-
-        inner.update(&mut iterator);
-
-        // Matches " -"
-        let mut inner = iterator.nest(
-            None,
-            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-                matcher.consumed_matches(&[SymbolKind::Any, SymbolKind::Minus])
-            })),
-        );
-        inner.take_to_end();
-        assert!(
-            inner.end_reached(),
-            "Second inner iterator did not reach end."
-        );
-
-        inner.update(&mut iterator);
-
-        iterator.take_to_end();
-
-        assert!(iterator.end_reached(), "Main iterator did not reach end.");
     }
 
     #[test]

@@ -6,6 +6,7 @@ use icu_segmenter::GraphemeClusterSegmenter;
 pub mod position;
 pub mod span;
 mod symbol;
+pub mod token;
 
 use position::{Offset, Position as SymPos};
 pub use symbol::{iterator::*, Symbol, SymbolKind};

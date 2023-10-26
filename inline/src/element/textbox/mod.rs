@@ -52,7 +52,8 @@ impl Parser<Inline> for TextBox {
                 })),
             );
 
-            let next_kind = link_iter.next().map_or(SymbolKind::Any, |s| s.kind);
+            // TODO: Replace Plain with Any kind
+            let next_kind = link_iter.next().map_or(SymbolKind::Plain, |s| s.kind);
             if next_kind == SymbolKind::OpenParenthesis {
                 let link =
                     link_iter

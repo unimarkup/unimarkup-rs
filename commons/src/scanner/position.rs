@@ -20,14 +20,20 @@ pub struct Position {
 }
 
 /// Symbol offset in the original input.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct Offset {
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Offset {
     /// Start offset of a symbol, inclusive. This is the same as the end offset
     /// of the previous symbol.
     pub start: usize,
     /// End offset of a symbol, exclusive. This is the same as the start offset
     /// of the next symbol.
     pub end: usize,
+}
+
+impl Offset {
+    pub fn extend(&mut self, other: Offset) {
+        self.end = self.end.max(other.end)
+    }
 }
 
 impl Position {
