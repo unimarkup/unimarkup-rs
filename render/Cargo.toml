@@ -24,3 +24,6 @@ mathemascii = "0.4.0"
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
+
+headless_chrome.workspace = true
+tempfile.workspace = true

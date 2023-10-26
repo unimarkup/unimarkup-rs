@@ -2,6 +2,7 @@ pub use unimarkup_commons as commons;
 pub use unimarkup_inline as inline;
 pub use unimarkup_parser as parser;
 pub use unimarkup_render as render;
+use unimarkup_render::pdf::render::render_pdf;
 
 use crate::commons::config::output::OutputFormatKind;
 use crate::commons::config::Config;
@@ -48,5 +49,9 @@ impl Unimarkup {
 
     pub fn render_umi(&self) -> Result<Umi, RenderError> {
         self.render(UmiRenderer::default())
+    }
+
+    pub fn render_pdf(&self) -> Result<Vec<u8>, RenderError> {
+        render_pdf(&self.render_html()?.to_string())
     }
 }

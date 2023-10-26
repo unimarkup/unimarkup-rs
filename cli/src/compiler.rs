@@ -1,17 +1,12 @@
 //! Entry module for unimarkup-rs.
 
-use std::io::Write;
 use std::{
     fs,
     path::{Path, PathBuf},
 };
 
-use headless_chrome::types::PrintToPdfOptions;
-use headless_chrome::{Browser, LaunchOptions};
 use logid::{log, logging::event_entry::AddonKind, pipe};
-use tempfile::Builder;
 
-use unimarkup_core::commons::config::output::OutputFormatKind::Pdf;
 use unimarkup_core::{
     commons::config::{output::OutputFormatKind, Config},
     Unimarkup,
@@ -58,10 +53,8 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
                 &out_path,
                 format.extension(),
             )?,
-            OutputFormatKind::Pdf => create_pdf_data(
-                &um.render_html()
-                    .map_err(|_| GeneralError::Render)?
-                    .to_string(),
+            OutputFormatKind::Pdf => write_raw_file(
+                um.render_pdf().map_err(|_| GeneralError::Render)?,
                 &out_path,
                 format.extension(),
             )?,
@@ -79,44 +72,8 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
     Ok(())
 }
 
-fn create_pdf_data(html: &str, out_path: impl AsRef<Path>) -> Result<(), GeneralError> {
-    let mut temp_html_file = Builder::new()
-        .suffix(".html")
-        .tempfile()
-        .map_err(|_| GeneralError::FileWrite)?;
-
-    temp_html_file
-        .write_all(html.as_bytes())
-        .map_err(|_| GeneralError::FileWrite)?;
-    let temp_file_url = format!(
-        "file://{}",
-        temp_html_file
-            .as_ref()
-            .as_os_str()
-            .to_str()
-            .ok_or(GeneralError::FileWrite)?
-    );
-
-    let browser = Browser::new(LaunchOptions::default()).expect("Error");
-    let pdf_bytes = browser
-        .new_tab()
-        .map_err(|_| GeneralError::Render)?
-        .navigate_to(temp_file_url.as_str())
-        .map_err(|_| GeneralError::FileRead)?
-        .wait_until_navigated()
-        .map_err(|_| GeneralError::FileRead)?
-        .print_to_pdf(Some(PrintToPdfOptions::default()))
-        .map_err(|_| GeneralError::Render)?;
-
-    let mut full_out_path: PathBuf = out_path.as_ref().into();
-    full_out_path.set_extension(Pdf.extension());
-    std::fs::write(full_out_path, pdf_bytes).map_err(|_| GeneralError::Render)?;
-
-    Ok(())
-}
-
-fn write_file(
-    content: &str,
+fn write_raw_file(
+    content: Vec<u8>,
     out_path: impl AsRef<Path>,
     extension: &str,
 ) -> Result<(), GeneralError> {
@@ -135,4 +92,12 @@ fn write_file(
             add: AddonKind::Info(format!("Cause: {}", error))
         )
     })
+}
+
+fn write_file(
+    content: &str,
+    out_path: impl AsRef<Path>,
+    extension: &str,
+) -> Result<(), GeneralError> {
+    write_raw_file(content.as_bytes().to_vec(), out_path, extension)
 }
