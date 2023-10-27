@@ -9,7 +9,10 @@ use crate::{
     element::{Inline, InlineElement, InlineError},
     inline_parser,
     new_parser::InlineParser,
-    tokenize::{iterator::InlineTokenIterator, token::InlineTokenKind},
+    tokenize::{
+        iterator::InlineTokenIterator,
+        token::{InlineToken, InlineTokenKind},
+    },
 };
 
 use super::{Bold, Italic, BOLD_ITALIC_KEYWORD_LIMIT};
@@ -53,30 +56,215 @@ pub fn parse(input: &mut InlineTokenIterator) -> Option<Inline> {
 
     let inner = inline_parser::InlineParser::default().parse(input);
 
-    resolve_closing(input, inner)
+    resolve_closing(input, open_token, inner)
 }
 
-fn resolve_closing(input: &mut InlineTokenIterator, inline: Vec<Inline>) -> Option<Inline> {
-    todo!();
+fn resolve_closing(
+    input: &mut InlineTokenIterator,
+    open_token: InlineToken<'_>,
+    inner: Vec<Inline>,
+) -> Option<Inline> {
+    let mut outer: Vec<Inline> = Vec::default();
 
-    match input.peek() {
-        Some(close_token) => {
-            // open = bold, close = italic => italic was opened in other parser => close bold, but do not consume close and no second part
+    let intermediate_token = match input.peek() {
+        Some(mut close_token) => {
+            if open_token.kind == InlineTokenKind::Bold
+                && close_token.kind == InlineTokenKind::Italic
+            {
+                // open = bold, close = italic => italic was opened in other parser => close bold, but do not consume close and no second part
+                input.pop_format(InlineTokenKind::Bold);
+                return Some(Bold { inner }.into());
+            } else if open_token.kind == InlineTokenKind::Italic
+                && close_token.kind == InlineTokenKind::Bold
+            {
+                // open = italic, close = bold => bold was opened in other parser => close italic, but do not consume close and no second part
+                input.pop_format(InlineTokenKind::Italic);
+                return Some(Italic { inner }.into());
+            } else if open_token.kind == InlineTokenKind::Italic
+                && close_token.kind == InlineTokenKind::Italic
+            {
+                // open & close = italic => close italic and consume close and no second part
+                input.next()?;
+                input.pop_format(InlineTokenKind::Italic);
+                return Some(Italic { inner }.into());
+            } else if open_token.kind == InlineTokenKind::Bold
+                && close_token.kind == InlineTokenKind::Bold
+            {
+                // open & close = bold => close bold and consume close and no second part
+                input.next()?;
+                input.pop_format(InlineTokenKind::Bold);
+                return Some(Bold { inner }.into());
+            } else if open_token.kind == InlineTokenKind::ItalicBold
+                && close_token.kind == InlineTokenKind::ItalicBold
+            {
+                // open & close = italicbold => close italicbold and consume close and no second part
+                input.next()?;
+                input.pop_format(InlineTokenKind::ItalicBold);
+                return Some(
+                    Bold {
+                        inner: vec![Italic { inner }.into()],
+                    }
+                    .into(),
+                );
+            } else if open_token.kind == InlineTokenKind::Bold
+                && close_token.kind == InlineTokenKind::ItalicBold
+            {
+                // open = bold, close = italicbold => close bold, consume close, cache italic and no second part, because italic is handled by other parser
+                input.next()?;
+                input.pop_format(InlineTokenKind::Bold);
 
-            // open = italic, close = bold => bold was opened in other parser => close italic, but do not consume close and no second part
+                close_token.kind = InlineTokenKind::Italic;
+                input.cache_token(close_token);
+                return Some(Bold { inner }.into());
+            } else if open_token.kind == InlineTokenKind::Italic
+                && close_token.kind == InlineTokenKind::ItalicBold
+            {
+                // open = italic, close = italicbold => close italic, consume close, cache bold and no second part, because bold is handled by other parser
+                input.next()?;
+                input.pop_format(InlineTokenKind::Italic);
 
-            // open & close = italic => close italic and consume close and no second part
-            // open & close = bold => close bold and consume close and no second part
-            // open & close = italicbold => close italicbold and consume close and no second part
+                close_token.kind = InlineTokenKind::Bold;
+                input.cache_token(close_token);
+                return Some(Italic { inner }.into());
+            } else if open_token.kind == InlineTokenKind::ItalicBold
+                && close_token.kind == InlineTokenKind::Bold
+            {
+                // open = italicbold, close = bold => close bold, consume close and parse second part (split span of open)
+                input.next()?;
+                input.pop_format(InlineTokenKind::Bold);
+                outer.push(Bold { inner }.into());
 
-            // open = bold, close = italicbold => close bold, consume close, cache italic and parse second part to get possible italic open
-            // open = italic, close = italicbold => close italic, consume close, cache bold and parse second part to get possible bold open
+                close_token.kind = InlineTokenKind::Italic;
+                input.cache_token(close_token);
+                close_token
+            } else if open_token.kind == InlineTokenKind::ItalicBold
+                && close_token.kind == InlineTokenKind::Italic
+            {
+                // open = italicbold, close = italic => close italic, consume close and parse second part
+                input.next()?;
+                input.pop_format(InlineTokenKind::Italic);
+                outer.push(Italic { inner }.into());
 
-            // open = italicbold, close = bold => close bold, consume close and parse second part (split span of open)
-            // open = italicbold, close = italic => close italic, consume close and parse second part
+                close_token.kind = InlineTokenKind::Bold;
+                //TODO: update spans & prev_token
+                input.cache_token(close_token);
+                close_token
+            } else {
+                // closing token is not compatible with bold or italic => other outer format closed
+                // close open format, but do not consume close
+                if open_token.kind == InlineTokenKind::ItalicBold {
+                    input.pop_format(InlineTokenKind::Italic);
+                    input.pop_format(InlineTokenKind::Bold);
+
+                    return Some(
+                        Bold {
+                            inner: vec![Italic { inner }.into()],
+                        }
+                        .into(),
+                    );
+                } else if open_token.kind == InlineTokenKind::Italic {
+                    input.pop_format(open_token.kind);
+                    return Some(Italic { inner }.into());
+                } else {
+                    input.pop_format(open_token.kind);
+                    return Some(Bold { inner }.into());
+                }
+            }
         }
         None => {
             // close open format only and return
+            // This is ok, because if ambiguous would have been split, peek() would have returned the partial closing token
+            if open_token.kind == InlineTokenKind::ItalicBold {
+                input.pop_format(InlineTokenKind::Italic);
+                input.pop_format(InlineTokenKind::Bold);
+
+                return Some(
+                    Bold {
+                        inner: vec![Italic { inner }.into()],
+                    }
+                    .into(),
+                );
+            } else if open_token.kind == InlineTokenKind::Italic {
+                input.pop_format(open_token.kind);
+                return Some(Italic { inner }.into());
+            } else {
+                input.pop_format(open_token.kind);
+                return Some(Bold { inner }.into());
+            }
+        }
+    };
+
+    outer.append(&mut inline_parser::InlineParser::default().parse(input));
+
+    match input.peek() {
+        Some(mut close_token) => {
+            // open is always italicbold
+            // interm = bold, close = bold => unreachable, because bold open would create a recursive call to parser
+            debug_assert!(
+                intermediate_token.kind != close_token.kind,
+                "Intermediate and closing token cannot be same, because of recursive parser call."
+            );
+
+            if close_token.kind == InlineTokenKind::Italic {
+                // interm = bold, close = italic => close italic, consume close
+                debug_assert!(
+                    intermediate_token.kind == InlineTokenKind::Bold,
+                    "Intermediate token != Bold for closing Italic."
+                );
+
+                input.next()?;
+                input.pop_format(close_token.kind);
+                Some(Italic { inner: outer }.into())
+            } else if close_token.kind == InlineTokenKind::Bold {
+                // interm = italic, close = bold => close bold, consume close
+                debug_assert!(
+                    intermediate_token.kind == InlineTokenKind::Italic,
+                    "Intermediate token != Italic for closing Bold."
+                );
+
+                input.next()?;
+                input.pop_format(close_token.kind);
+                Some(Bold { inner: outer }.into())
+            } else if intermediate_token.kind == InlineTokenKind::Italic
+                && close_token.kind == InlineTokenKind::ItalicBold
+            {
+                // interm = italic, close = italicbold => close bold, consume close, cache italic
+                input.next()?;
+                input.pop_format(InlineTokenKind::Bold);
+
+                close_token.kind = InlineTokenKind::Italic;
+                input.cache_token(close_token);
+                Some(Bold { inner: outer }.into())
+            } else if intermediate_token.kind == InlineTokenKind::Bold
+                && close_token.kind == InlineTokenKind::ItalicBold
+            {
+                // interm = bold, close = italicbold => close italic, consume close, cache bold
+                input.next()?;
+                input.pop_format(InlineTokenKind::Italic);
+
+                close_token.kind = InlineTokenKind::Bold;
+                input.cache_token(close_token);
+                Some(Italic { inner: outer }.into())
+            } else {
+                // close neither italic, bold, italicbold => close format that was not closed in intermediate, but do not consume close => outer format closed
+                if intermediate_token.kind == InlineTokenKind::Italic {
+                    input.pop_format(open_token.kind);
+                    Some(Italic { inner: outer }.into())
+                } else {
+                    input.pop_format(open_token.kind);
+                    Some(Bold { inner: outer }.into())
+                }
+            }
+        }
+        None => {
+            // close format that was not closed above
+            if intermediate_token.kind == InlineTokenKind::Italic {
+                input.pop_format(open_token.kind);
+                Some(Italic { inner: outer }.into())
+            } else {
+                input.pop_format(open_token.kind);
+                Some(Bold { inner: outer }.into())
+            }
         }
     }
 }

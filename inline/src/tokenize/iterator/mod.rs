@@ -93,7 +93,7 @@ impl<'input> InlineTokenIterator<'input> {
         self.prev_token.as_ref()
     }
 
-    pub fn set_prev_token(&self, token: InlineToken<'input>) {
+    pub fn set_prev_token(&mut self, token: InlineToken<'input>) {
         self.prev_token = Some(token);
     }
 
@@ -120,8 +120,8 @@ impl<'input> InlineTokenIterator<'input> {
 
     /// Tries to split an ambiguous format, so an partial open format may close on next iteration.
     /// This is achieved by adapting the span of the given ambiguous token, and caching the partial token.
-    pub(crate) fn ambiguous_split(&mut self, token: &mut InlineToken) {
-        let mut cached = token;
+    pub(crate) fn ambiguous_split(&mut self, token: &mut InlineToken<'input>) {
+        let mut cached = token.to_owned();
 
         let split = if token.kind == InlineTokenKind::ItalicBold {
             // TODO: handle spans correctly
@@ -154,7 +154,7 @@ impl<'input> InlineTokenIterator<'input> {
         };
 
         if split {
-            self.cache_token(*cached);
+            self.cache_token(cached);
         }
     }
 
