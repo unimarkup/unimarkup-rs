@@ -267,8 +267,8 @@ impl<'input> TokenIterator<'input> {
     fn prev_root_token(&self) -> Option<&Token<'input>> {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.prev_root_token(),
-            TokenIteratorKind::Base(base) => base.prev(),
-            TokenIteratorKind::ScopeRoot(root) => root.prev(),
+            TokenIteratorKind::Base(base) => base.prev_token(),
+            TokenIteratorKind::ScopeRoot(root) => root.prev_token(),
         }
     }
 

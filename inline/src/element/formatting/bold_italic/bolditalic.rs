@@ -61,12 +61,12 @@ pub fn parse(input: &mut InlineTokenIterator) -> Option<Inline> {
 
 fn resolve_closing(
     input: &mut InlineTokenIterator,
-    open_token: InlineToken<'_>,
+    mut open_token: InlineToken<'_>,
     inner: Vec<Inline>,
 ) -> Option<Inline> {
     let mut outer: Vec<Inline> = Vec::default();
 
-    let intermediate_token = match input.peek() {
+    let updated_open = match input.peek() {
         Some(mut close_token) => {
             if open_token.kind == InlineTokenKind::Bold
                 && close_token.kind == InlineTokenKind::Italic
@@ -130,25 +130,25 @@ fn resolve_closing(
                 && close_token.kind == InlineTokenKind::Bold
             {
                 // open = italicbold, close = bold => close bold, consume close and parse second part (split span of open)
+                // no cache, because "split" is on open token
                 input.next()?;
                 input.pop_format(InlineTokenKind::Bold);
                 outer.push(Bold { inner }.into());
 
-                close_token.kind = InlineTokenKind::Italic;
-                input.cache_token(close_token);
-                close_token
+                open_token.kind = InlineTokenKind::Italic;
+                open_token
             } else if open_token.kind == InlineTokenKind::ItalicBold
                 && close_token.kind == InlineTokenKind::Italic
             {
                 // open = italicbold, close = italic => close italic, consume close and parse second part
+                // no cache, because "split" is on open token
                 input.next()?;
                 input.pop_format(InlineTokenKind::Italic);
                 outer.push(Italic { inner }.into());
 
-                close_token.kind = InlineTokenKind::Bold;
+                open_token.kind = InlineTokenKind::Bold;
                 //TODO: update spans & prev_token
-                input.cache_token(close_token);
-                close_token
+                open_token
             } else {
                 // closing token is not compatible with bold or italic => other outer format closed
                 // close open format, but do not consume close
@@ -198,71 +198,65 @@ fn resolve_closing(
 
     match input.peek() {
         Some(mut close_token) => {
-            // open is always italicbold
-            // interm = bold, close = bold => unreachable, because bold open would create a recursive call to parser
-            debug_assert!(
-                intermediate_token.kind != close_token.kind,
-                "Intermediate and closing token cannot be same, because of recursive parser call."
-            );
-
+            // open token was updated to either italic or bold from italicbold
             if close_token.kind == InlineTokenKind::Italic {
-                // interm = bold, close = italic => close italic, consume close
+                // updated open = italic, close = italic => close italic, consume close
                 debug_assert!(
-                    intermediate_token.kind == InlineTokenKind::Bold,
-                    "Intermediate token != Bold for closing Italic."
+                    updated_open.kind == InlineTokenKind::Italic,
+                    "Closing italic did not match updated open token."
                 );
 
                 input.next()?;
                 input.pop_format(close_token.kind);
                 Some(Italic { inner: outer }.into())
             } else if close_token.kind == InlineTokenKind::Bold {
-                // interm = italic, close = bold => close bold, consume close
+                // updated open = bold, close = bold => close bold, consume close
                 debug_assert!(
-                    intermediate_token.kind == InlineTokenKind::Italic,
-                    "Intermediate token != Italic for closing Bold."
+                    updated_open.kind == InlineTokenKind::Bold,
+                    "Closing bold did not match updated open token."
                 );
 
                 input.next()?;
                 input.pop_format(close_token.kind);
                 Some(Bold { inner: outer }.into())
-            } else if intermediate_token.kind == InlineTokenKind::Italic
+            } else if updated_open.kind == InlineTokenKind::Italic
                 && close_token.kind == InlineTokenKind::ItalicBold
             {
-                // interm = italic, close = italicbold => close bold, consume close, cache italic
-                input.next()?;
-                input.pop_format(InlineTokenKind::Bold);
-
-                close_token.kind = InlineTokenKind::Italic;
-                input.cache_token(close_token);
-                Some(Bold { inner: outer }.into())
-            } else if intermediate_token.kind == InlineTokenKind::Bold
-                && close_token.kind == InlineTokenKind::ItalicBold
-            {
-                // interm = bold, close = italicbold => close italic, consume close, cache bold
+                // updated open = italic, close = italicbold => close italic, consume close, cache bold
                 input.next()?;
                 input.pop_format(InlineTokenKind::Italic);
 
                 close_token.kind = InlineTokenKind::Bold;
                 input.cache_token(close_token);
                 Some(Italic { inner: outer }.into())
+            } else if updated_open.kind == InlineTokenKind::Bold
+                && close_token.kind == InlineTokenKind::ItalicBold
+            {
+                // updated open = bold, close = italicbold => close bold, consume close, cache italic
+                input.next()?;
+                input.pop_format(InlineTokenKind::Bold);
+
+                close_token.kind = InlineTokenKind::Italic;
+                input.cache_token(close_token);
+                Some(Bold { inner: outer }.into())
             } else {
                 // close neither italic, bold, italicbold => close format that was not closed in intermediate, but do not consume close => outer format closed
-                if intermediate_token.kind == InlineTokenKind::Italic {
-                    input.pop_format(open_token.kind);
+                if updated_open.kind == InlineTokenKind::Italic {
+                    input.pop_format(updated_open.kind);
                     Some(Italic { inner: outer }.into())
                 } else {
-                    input.pop_format(open_token.kind);
+                    input.pop_format(updated_open.kind);
                     Some(Bold { inner: outer }.into())
                 }
             }
         }
         None => {
             // close format that was not closed above
-            if intermediate_token.kind == InlineTokenKind::Italic {
-                input.pop_format(open_token.kind);
+            if updated_open.kind == InlineTokenKind::Italic {
+                input.pop_format(updated_open.kind);
                 Some(Italic { inner: outer }.into())
             } else {
-                input.pop_format(open_token.kind);
+                input.pop_format(updated_open.kind);
                 Some(Bold { inner: outer }.into())
             }
         }
@@ -383,11 +377,101 @@ impl TryFrom<Inline> for BoldItalic {
 
 #[cfg(test)]
 mod test {
-    use unimarkup_commons::scanner::SymbolIterator;
+    use unimarkup_commons::scanner::{token::iterator::TokenIterator, SymbolIterator};
 
     use crate::element::plain::Plain;
 
     use super::*;
+
+    #[test]
+    fn parse_new_bold_italic() {
+        let symbols = unimarkup_commons::scanner::scan_str("***bold**italic*");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+
+        let inline = parse(&mut token_iter).unwrap();
+
+        assert_eq!(
+            inline,
+            Italic {
+                inner: vec![
+                    Bold {
+                        inner: vec![Plain {
+                            content: "bold".to_string(),
+                        }
+                        .into()]
+                    }
+                    .into(),
+                    Plain {
+                        content: "italic".to_string(),
+                    }
+                    .into()
+                ],
+            }
+            .into(),
+            "Bold + italic not correctly parsed."
+        )
+    }
+
+    #[test]
+    fn parse_new_bold_italic_closing_bolditalic() {
+        let symbols = unimarkup_commons::scanner::scan_str("**bold*italic***");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+
+        let inline = parse(&mut token_iter).unwrap();
+
+        assert_eq!(
+            inline,
+            Bold {
+                inner: vec![
+                    Plain {
+                        content: "bold".to_string(),
+                    }
+                    .into(),
+                    Italic {
+                        inner: vec![Plain {
+                            content: "italic".to_string(),
+                        }
+                        .into()]
+                    }
+                    .into(),
+                ],
+            }
+            .into(),
+            "Bold + italic not correctly parsed."
+        )
+    }
+
+    #[test]
+    fn parse_bold_before_italic() {
+        let symbols = unimarkup_commons::scanner::scan_str("**bold***italic*");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+
+        let bold = parse(&mut token_iter).unwrap();
+        let italic = parse(&mut token_iter).unwrap();
+
+        assert_eq!(
+            bold,
+            Bold {
+                inner: vec![Plain {
+                    content: "bold".to_string(),
+                }
+                .into(),],
+            }
+            .into(),
+            "Bold not correctly parsed."
+        );
+        assert_eq!(
+            italic,
+            Italic {
+                inner: vec![Plain {
+                    content: "italic".to_string(),
+                }
+                .into(),],
+            }
+            .into(),
+            "Italic not correctly parsed."
+        )
+    }
 
     #[test]
     fn parse_bold_italic() {

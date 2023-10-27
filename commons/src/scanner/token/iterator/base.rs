@@ -24,7 +24,7 @@ pub struct TokenIteratorBase<'input> {
 impl<'input> TokenIteratorExt<'input> for TokenIteratorBase<'input> {
     /// Returns the symbol that is directly before the current index.
     /// If no previous symbol exists, `None`` is returned.
-    fn prev(&self) -> Option<&Token<'input>> {
+    fn prev_token(&self) -> Option<&Token<'input>> {
         self.prev_token.as_ref()
     }
 

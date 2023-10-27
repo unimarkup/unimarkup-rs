@@ -240,13 +240,16 @@ impl<'input> Iterator for InlineTokenIterator<'input> {
             return Some(token);
         }
 
-        let next = self.peeking_next(|_| true);
-        self.token_iter.set_index(self.token_iter.peek_index());
+        if self.end_reached() {
+            return None;
+        }
+
+        let next = InlineToken::from(&self.token_iter.next()?);
 
         // Converted token from inner to also get possibly consumed tokens
         self.prev_token = self.token_iter.prev_token().map(InlineToken::from);
 
-        next
+        Some(next)
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {

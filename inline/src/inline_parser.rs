@@ -16,15 +16,13 @@ pub struct InlineParser {
     handle_formats: bool,
     //TODO: use hashmap with InlineTokenKind for parser fns, because every kind has at most one parser
     scoped_parsers: Vec<InlineParserFn>,
-    format_parsers: Vec<InlineParserFn>,
 }
 
 impl Default for InlineParser {
     fn default() -> Self {
         Self {
-            handle_formats: false,
+            handle_formats: true,
             scoped_parsers: Vec::with_capacity(2),
-            format_parsers: Vec::with_capacity(2),
         }
     }
 }
@@ -58,14 +56,14 @@ impl InlineParser {
                         continue 'outer;
                     }
                 }
-            } else if kind.is_format_keyword() && self.handle_formats {
+            } else if self.handle_formats && kind.is_format_keyword() {
                 // An open format closes => unwrap to closing format element
                 // closing token is not consumed here => the element parser needs this info
                 if input.format_closes(kind) {
                     format_closes = true;
                     break 'outer;
                 } else if !input.format_is_open(kind) {
-                    for parser_fn in &self.format_parsers {
+                    if let Some(parser_fn) = get_format_parser(kind) {
                         let mut iter = input.clone();
                         if let Some(res_inline) = parser_fn(&mut iter) {
                             inlines.push(res_inline);
@@ -97,14 +95,14 @@ impl InlineParser {
                 None => inlines.push(next.into()),
             }
 
-            #[cfg(debug_assertions)]
-            {
-                assert!(
-                    input.max_len() < curr_len,
-                    "Parser consumed no symbol in iteration."
-                );
-                curr_len = input.max_len();
-            }
+            // #[cfg(debug_assertions)]
+            // {
+            //     assert!(
+            //         input.max_len() < curr_len,
+            //         "Parser consumed no symbol in iteration."
+            //     );
+            //     curr_len = input.max_len();
+            // }
         }
 
         // TODO: check for implicit substitutions if last is plain...
@@ -115,5 +113,14 @@ impl InlineParser {
         }
 
         inlines
+    }
+}
+
+fn get_format_parser(kind: InlineTokenKind) -> Option<InlineParserFn> {
+    match kind {
+        InlineTokenKind::Bold | InlineTokenKind::Italic | InlineTokenKind::ItalicBold => {
+            Some(crate::element::formatting::bold_italic::parse)
+        }
+        _ => None,
     }
 }

@@ -14,7 +14,7 @@ pub struct TokenIteratorScopeRoot<'input> {
 impl<'input> TokenIteratorExt<'input> for TokenIteratorScopeRoot<'input> {
     /// Returns the symbol that is directly before the current index.
     /// If no previous symbol exists, `None`` is returned.
-    fn prev(&self) -> Option<&Token<'input>> {
+    fn prev_token(&self) -> Option<&Token<'input>> {
         self.token_iter.prev_token()
     }
 

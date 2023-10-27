@@ -5,7 +5,7 @@ use crate::scanner::token::Token;
 pub(crate) trait TokenIteratorExt<'input>:
     Iterator<Item = Token<'input>> + PeekingNext + Clone
 {
-    fn prev(&self) -> Option<&Token<'input>>;
+    fn prev_token(&self) -> Option<&Token<'input>>;
 
     fn max_len(&self) -> usize;
 
