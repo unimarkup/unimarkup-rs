@@ -114,24 +114,20 @@ impl<'input> InlineTokenIterator<'input> {
         self.open_formats.remove(&format)
     }
 
-    pub(crate) fn open_formats(&self) -> &HashSet<InlineTokenKind> {
-        &self.open_formats
-    }
-
     /// Tries to split an ambiguous format, so an partial open format may close on next iteration.
     /// This is achieved by adapting the span of the given ambiguous token, and caching the partial token.
     pub(crate) fn ambiguous_split(&mut self, token: &mut InlineToken<'input>) {
         let mut cached = token.to_owned();
 
         let split = if token.kind == InlineTokenKind::ItalicBold {
-            // TODO: handle spans correctly
+            // TODO: handle spans correctly and update offset of "split" token for as_str()
 
             // Italic and bold might be both open, but bold wins split
             if self.open_formats.contains(&InlineTokenKind::Bold) {
-                cached.kind = InlineTokenKind::Italic;
+                cached.kind = InlineTokenKind::Bold;
                 true
             } else if self.open_formats.contains(&InlineTokenKind::Italic) {
-                cached.kind = InlineTokenKind::Bold;
+                cached.kind = InlineTokenKind::Italic;
                 true
             } else {
                 false

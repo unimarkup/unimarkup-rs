@@ -225,6 +225,7 @@ impl InlineTokenKind {
                 | InlineTokenKind::Subscript
                 | InlineTokenKind::UnderlineSubscript
                 | InlineTokenKind::Superscript
+                | InlineTokenKind::Strikethrough
                 | InlineTokenKind::Quote
                 | InlineTokenKind::Verbatim
                 | InlineTokenKind::Highlight

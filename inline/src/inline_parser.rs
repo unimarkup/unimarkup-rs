@@ -47,6 +47,10 @@ impl InlineParser {
         'outer: while let Some(kind) = input.peek_kind() {
             // TODO: handle implicit substitutions of last if kind is space and last inline is plain
 
+            if kind == InlineTokenKind::EOI {
+                break 'outer;
+            }
+
             if kind.is_scoped_format_keyword() || kind.is_open_parenthesis() {
                 for parser_fn in &self.scoped_parsers {
                     let mut iter = input.clone();
@@ -121,6 +125,51 @@ fn get_format_parser(kind: InlineTokenKind) -> Option<InlineParserFn> {
         InlineTokenKind::Bold | InlineTokenKind::Italic | InlineTokenKind::ItalicBold => {
             Some(crate::element::formatting::bold_italic::parse)
         }
+        InlineTokenKind::Strikethrough => Some(crate::element::formatting::strikethrough::parse),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use unimarkup_commons::scanner::token::iterator::TokenIterator;
+
+    use crate::{
+        element::{
+            formatting::{bold_italic::Bold, strikethrough::Strikethrough},
+            plain::Plain,
+        },
+        inline_parser::InlineParser,
+        tokenize::iterator::InlineTokenIterator,
+    };
+
+    #[test]
+    fn parse_strikethrough_in_unclosed_bold() {
+        let symbols = unimarkup_commons::scanner::scan_str("**~~strikethrough~~");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+
+        let inlines = InlineParser::default().parse(&mut token_iter);
+
+        assert_eq!(
+            inlines.len(),
+            1,
+            "Parser did not return one inline element."
+        );
+
+        assert_eq!(
+            Bold::try_from(inlines[0].clone()).unwrap(),
+            Bold {
+                inner: vec![Strikethrough {
+                    inner: vec![Plain {
+                        content: "strikethrough".to_string(),
+                    }
+                    .into()],
+                }
+                .into()],
+            },
+            "Strikethrough not correctly parsed."
+        );
+
+        assert_eq!(token_iter.next(), None, "Iterator not fully consumed.");
     }
 }

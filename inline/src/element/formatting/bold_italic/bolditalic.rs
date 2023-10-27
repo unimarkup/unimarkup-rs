@@ -379,12 +379,12 @@ impl TryFrom<Inline> for BoldItalic {
 mod test {
     use unimarkup_commons::scanner::{token::iterator::TokenIterator, SymbolIterator};
 
-    use crate::element::plain::Plain;
+    use crate::element::{plain::Plain, spaces::Whitespace};
 
     use super::*;
 
     #[test]
-    fn parse_new_bold_italic() {
+    fn parse_bold_italic() {
         let symbols = unimarkup_commons::scanner::scan_str("***bold**italic*");
         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
 
@@ -403,6 +403,35 @@ mod test {
                     .into(),
                     Plain {
                         content: "italic".to_string(),
+                    }
+                    .into()
+                ],
+            }
+            .into(),
+            "Bold + italic not correctly parsed."
+        )
+    }
+
+    #[test]
+    fn parse_italic_bold() {
+        let symbols = unimarkup_commons::scanner::scan_str("***italic*bold**");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+
+        let inline = parse(&mut token_iter).unwrap();
+
+        assert_eq!(
+            inline,
+            Bold {
+                inner: vec![
+                    Italic {
+                        inner: vec![Plain {
+                            content: "italic".to_string(),
+                        }
+                        .into()]
+                    }
+                    .into(),
+                    Plain {
+                        content: "bold".to_string(),
                     }
                     .into()
                 ],
@@ -474,79 +503,11 @@ mod test {
     }
 
     #[test]
-    fn parse_bold_italic() {
-        let symbols = unimarkup_commons::scanner::scan_str("***bold**italic*");
-        let mut sym_iter = SymbolIterator::from(&*symbols);
-
-        let inline = BoldItalic::parse(&mut sym_iter).unwrap();
-
-        assert_eq!(
-            Italic::try_from(inline).unwrap(),
-            Italic {
-                inner: vec![
-                    Bold {
-                        inner: vec![Plain {
-                            content: "bold".to_string(),
-                        }
-                        .into()]
-                    }
-                    .into(),
-                    Plain {
-                        content: "italic".to_string(),
-                    }
-                    .into()
-                ],
-            },
-            "Bold + italic not correctly parsed."
-        );
-
-        assert_eq!(
-            sym_iter.next().unwrap().kind,
-            SymbolKind::EOI,
-            "Iterator returned symbols after EOI"
-        );
-    }
-
-    #[test]
-    fn parse_italic_bold() {
-        let symbols = unimarkup_commons::scanner::scan_str("***italic*bold**");
-        let mut sym_iter = SymbolIterator::from(&*symbols);
-
-        let inline = BoldItalic::parse(&mut sym_iter).unwrap();
-
-        assert_eq!(
-            Bold::try_from(inline).unwrap(),
-            Bold {
-                inner: vec![
-                    Italic {
-                        inner: vec![Plain {
-                            content: "italic".to_string(),
-                        }
-                        .into()]
-                    }
-                    .into(),
-                    Plain {
-                        content: "bold".to_string(),
-                    }
-                    .into()
-                ],
-            },
-            "Italic + bold not correctly parsed."
-        );
-
-        assert_eq!(
-            sym_iter.next().unwrap().kind,
-            SymbolKind::EOI,
-            "Iterator returned symbols after EOI"
-        );
-    }
-
-    #[test]
     fn parse_italic_bold_with_contiguous_stars() {
         let symbols = unimarkup_commons::scanner::scan_str("***italic*a****a**");
-        let mut sym_iter = SymbolIterator::from(&*symbols);
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
 
-        let inline = BoldItalic::parse(&mut sym_iter).unwrap();
+        let inline = parse(&mut token_iter).unwrap();
 
         assert_eq!(
             Bold::try_from(inline).unwrap(),
@@ -569,9 +530,37 @@ mod test {
         );
 
         assert_eq!(
-            sym_iter.next().unwrap().kind,
-            SymbolKind::EOI,
+            token_iter.next().unwrap().kind,
+            InlineTokenKind::EOI,
             "Iterator returned symbols after EOI"
         );
     }
+
+    // TODO: fix offset in ambiguous split to get correct plain conversion
+    // #[test]
+    // fn parse_bold_before_invalid_close_italicbold() {
+    //     let symbols = unimarkup_commons::scanner::scan_str("**bold ***");
+    //     let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+
+    //     let bold = parse(&mut token_iter).unwrap();
+
+    //     assert_eq!(
+    //         bold,
+    //         Bold {
+    //             inner: vec![
+    //                 Plain {
+    //                     content: "bold".to_string(),
+    //                 }
+    //                 .into(),
+    //                 Whitespace {}.into(),
+    //                 Plain {
+    //                     content: "*".to_string(),
+    //                 }
+    //                 .into()
+    //             ],
+    //         }
+    //         .into(),
+    //         "Bold not correctly parsed."
+    //     );
+    // }
 }
