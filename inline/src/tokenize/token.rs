@@ -35,7 +35,37 @@ impl<'input> InlineToken<'input> {
             InlineTokenKind::Plain
             | InlineTokenKind::EscapedPlain
             | InlineTokenKind::EscapedWhitespace => &self.input[self.offset.start..self.offset.end],
-            _ => self.kind.as_str(),
+            InlineTokenKind::Bold
+            | InlineTokenKind::Italic
+            | InlineTokenKind::ItalicBold
+            | InlineTokenKind::Highlight
+            | InlineTokenKind::Underline
+            | InlineTokenKind::Subscript
+            | InlineTokenKind::UnderlineSubscript
+            | InlineTokenKind::Math
+            | InlineTokenKind::Verbatim
+            | InlineTokenKind::Overline
+            | InlineTokenKind::Superscript
+            | InlineTokenKind::Quote
+            | InlineTokenKind::Strikethrough
+            | InlineTokenKind::NamedSubstitution
+            | InlineTokenKind::OpenBrace
+            | InlineTokenKind::OpenBracket
+            | InlineTokenKind::OpenParenthesis
+            | InlineTokenKind::CloseBrace
+            | InlineTokenKind::CloseBracket
+            | InlineTokenKind::CloseParenthesis
+            | InlineTokenKind::Whitespace
+            | InlineTokenKind::Newline
+            | InlineTokenKind::EscapedNewline
+            | InlineTokenKind::EOI => self.kind.as_str(),
+            InlineTokenKind::Comment { .. }
+            | InlineTokenKind::ImplicitSubstitution(_)
+            | InlineTokenKind::Any
+            | InlineTokenKind::PossibleAttributes => panic!(
+                "Tried to create &str from '{:?}', which has undefined &str representation.",
+                self
+            ),
         }
     }
 }

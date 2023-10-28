@@ -35,8 +35,8 @@ impl<'input> From<&Symbol<'input>> for Token<'input> {
     }
 }
 
-impl From<Token<'_>> for String {
-    fn from(value: Token<'_>) -> Self {
+impl From<&Token<'_>> for String {
+    fn from(value: &Token<'_>) -> Self {
         match value.kind {
             TokenKind::Plain | TokenKind::Punctuation | TokenKind::Whitespace => {
                 value.input[value.offset.start..value.offset.end].to_string()
@@ -50,5 +50,11 @@ impl From<Token<'_>> for String {
             }
             _ => String::from(value.kind),
         }
+    }
+}
+
+impl From<Token<'_>> for String {
+    fn from(value: Token<'_>) -> Self {
+        String::from(&value)
     }
 }

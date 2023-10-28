@@ -1,6 +1,6 @@
 //! Inline parser
 
-use unimarkup_commons::scanner::{token::iterator::TokenIterator, SymbolIterator};
+use unimarkup_commons::scanner::token::iterator::TokenIterator;
 
 use crate::{
     element::Inline,
@@ -11,20 +11,9 @@ use crate::{
 pub type InlineParserFn = for<'i> fn(&mut InlineTokenIterator<'i>) -> Option<Inline>;
 
 /// Main parser for Unimarkup inline elements.
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct InlineParser {
     macros_only: bool,
-    //TODO: use hashmap with InlineTokenKind for parser fns, because every kind has at most one parser
-    scoped_parsers: Vec<InlineParserFn>,
-}
-
-impl Default for InlineParser {
-    fn default() -> Self {
-        Self {
-            macros_only: false,
-            scoped_parsers: Vec::with_capacity(2),
-        }
-    }
 }
 
 /// Creates inline elements using the given token iterator.
@@ -37,21 +26,13 @@ pub fn parse_inlines(token_iter: TokenIterator) -> Vec<Inline> {
 /// Creates inline elements using the given token iterator.
 /// All elements except escaped graphemes and macros are converted to plain content.
 pub fn parse_inlines_with_macros_only(token_iter: TokenIterator) -> Vec<Inline> {
-    InlineParser {
-        macros_only: true,
-        scoped_parsers: Vec::default(),
-    }
-    .parse(&mut InlineTokenIterator::from(
+    InlineParser { macros_only: true }.parse(&mut InlineTokenIterator::from(
         TokenIterator::with_scoped_root(token_iter),
     ))
 }
 
 pub(crate) fn parse_with_macros_only(token_iter: &mut InlineTokenIterator) -> Vec<Inline> {
-    InlineParser {
-        macros_only: true,
-        scoped_parsers: Vec::default(),
-    }
-    .parse(token_iter)
+    InlineParser { macros_only: true }.parse(token_iter)
 }
 
 impl InlineParser {
@@ -65,8 +46,6 @@ impl InlineParser {
         input.reset_peek();
 
         'outer: while let Some(kind) = input.peek_kind() {
-            // TODO: handle implicit substitutions of last if kind is space and last inline is plain
-
             if kind == InlineTokenKind::EOI {
                 break 'outer;
             }
@@ -142,8 +121,6 @@ impl InlineParser {
             // }
         }
 
-        // TODO: check for implicit substitutions if last is plain...
-
         if !format_closes {
             // To consume tokens in end matching, but do not consume closing formatting tokens
             let _ = input.next();
@@ -168,6 +145,7 @@ fn get_scoped_parser(kind: InlineTokenKind, macros_only: bool) -> Option<InlineP
         InlineTokenKind::Verbatim if !macros_only => {
             Some(crate::element::formatting::verbatim::parse)
         }
+        InlineTokenKind::OpenBracket if !macros_only => Some(crate::element::textbox::parse),
         _ => None,
     }
 }
@@ -180,6 +158,7 @@ mod test {
         element::{
             formatting::{bold_italic::Bold, strikethrough::Strikethrough},
             plain::Plain,
+            textbox::TextBox,
         },
         inline_parser::InlineParser,
         tokenize::iterator::InlineTokenIterator,
@@ -213,5 +192,37 @@ mod test {
         );
 
         assert_eq!(token_iter.next(), None, "Iterator not fully consumed.");
+    }
+
+    #[test]
+    fn parse_textbox_scoped_bold() {
+        let symbols = unimarkup_commons::scanner::scan_str("**outer[**inner]");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+
+        let inlines = InlineParser::default().parse(&mut token_iter);
+
+        assert_eq!(
+            inlines[0],
+            Bold {
+                inner: vec![
+                    Plain {
+                        content: "outer".to_string(),
+                    }
+                    .into(),
+                    TextBox {
+                        inner: vec![Bold {
+                            inner: vec![Plain {
+                                content: "inner".to_string(),
+                            }
+                            .into()],
+                        }
+                        .into(),],
+                    }
+                    .into(),
+                ]
+            }
+            .into(),
+            "Textbox with scoped Bold not correctly parsed."
+        );
     }
 }

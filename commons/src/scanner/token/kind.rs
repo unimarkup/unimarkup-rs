@@ -1,4 +1,4 @@
-use crate::scanner::{position::Offset, SymbolKind};
+use crate::scanner::SymbolKind;
 
 use super::implicit::ImplicitSubstitution;
 

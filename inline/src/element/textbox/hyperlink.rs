@@ -4,6 +4,7 @@ use crate::element::{Inline, InlineError};
 pub struct Hyperlink {
     pub(crate) inner: Vec<Inline>,
     pub(crate) link: String,
+    pub(crate) alt_text: Option<String>,
 }
 
 impl From<Hyperlink> for Inline {
