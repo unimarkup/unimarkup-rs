@@ -38,6 +38,8 @@ pub fn parse(input: &mut InlineTokenIterator) -> Option<Inline> {
 
     let inner = inline_parser::parse_with_macros_only(&mut scoped_iter);
 
+    scoped_iter.allow_implicits();
+
     //TODO: get prev token from scoped_iter to get span of closing tick, or of implicit close
 
     scoped_iter.update(input);
@@ -90,6 +92,46 @@ mod test {
             Verbatim {
                 inner: vec![Plain {
                     content: "verbatim".to_string(),
+                }
+                .into()],
+            }
+            .into(),
+            "Verbatim not correctly parsed."
+        )
+    }
+
+    #[test]
+    fn parse_format_ignored_in_verbatim() {
+        let symbols = unimarkup_commons::scanner::scan_str("`verb**atim`");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+
+        let inline = parse(&mut token_iter).unwrap();
+
+        assert_eq!(
+            inline,
+            Verbatim {
+                inner: vec![Plain {
+                    content: "verb**atim".to_string(),
+                }
+                .into()],
+            }
+            .into(),
+            "Verbatim not correctly parsed."
+        )
+    }
+
+    #[test]
+    fn parse_implicit_substitution_ignored_in_verbatim() {
+        let symbols = unimarkup_commons::scanner::scan_str("`verb(tm)atim`");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+
+        let inline = parse(&mut token_iter).unwrap();
+
+        assert_eq!(
+            inline,
+            Verbatim {
+                inner: vec![Plain {
+                    content: "verb(tm)atim".to_string(),
                 }
                 .into()],
             }
