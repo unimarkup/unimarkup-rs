@@ -13,7 +13,7 @@ pub type InlineParserFn = for<'i> fn(&mut InlineTokenIterator<'i>) -> Option<Inl
 /// Main parser for Unimarkup inline elements.
 #[derive(Clone)]
 pub struct InlineParser {
-    handle_formats: bool,
+    macros_only: bool,
     //TODO: use hashmap with InlineTokenKind for parser fns, because every kind has at most one parser
     scoped_parsers: Vec<InlineParserFn>,
 }
@@ -21,20 +21,40 @@ pub struct InlineParser {
 impl Default for InlineParser {
     fn default() -> Self {
         Self {
-            handle_formats: true,
+            macros_only: false,
             scoped_parsers: Vec::with_capacity(2),
         }
     }
 }
 
-impl InlineParser {
-    /// Creates inline elements from the given symbol iterator.
-    pub fn parse_inlines(token_iter: TokenIterator) -> Vec<Inline> {
-        InlineParser::default().parse(&mut InlineTokenIterator::from(
-            TokenIterator::with_scope_root(token_iter),
-        ))
-    }
+/// Creates inline elements using the given token iterator.
+pub fn parse_inlines(token_iter: TokenIterator) -> Vec<Inline> {
+    InlineParser::default().parse(&mut InlineTokenIterator::from(
+        TokenIterator::with_scoped_root(token_iter),
+    ))
+}
 
+/// Creates inline elements using the given token iterator.
+/// All elements except escaped graphemes and macros are converted to plain content.
+pub fn parse_inlines_with_macros_only(token_iter: TokenIterator) -> Vec<Inline> {
+    InlineParser {
+        macros_only: true,
+        scoped_parsers: Vec::default(),
+    }
+    .parse(&mut InlineTokenIterator::from(
+        TokenIterator::with_scoped_root(token_iter),
+    ))
+}
+
+pub(crate) fn parse_with_macros_only(token_iter: &mut InlineTokenIterator) -> Vec<Inline> {
+    InlineParser {
+        macros_only: true,
+        scoped_parsers: Vec::default(),
+    }
+    .parse(token_iter)
+}
+
+impl InlineParser {
     pub(crate) fn parse(&self, input: &mut InlineTokenIterator) -> Vec<Inline> {
         let mut inlines = Vec::default();
         let mut format_closes = false;
@@ -51,8 +71,9 @@ impl InlineParser {
                 break 'outer;
             }
 
-            if kind.is_scoped_format_keyword() || kind.is_open_parenthesis() {
-                for parser_fn in &self.scoped_parsers {
+            if (!self.macros_only && kind.is_scoped_format_keyword()) || kind.is_open_parenthesis()
+            {
+                if let Some(parser_fn) = get_scoped_parser(kind, self.macros_only) {
                     let mut iter = input.clone();
                     if let Some(res_inline) = parser_fn(&mut iter) {
                         inlines.push(res_inline);
@@ -60,7 +81,7 @@ impl InlineParser {
                         continue 'outer;
                     }
                 }
-            } else if self.handle_formats && kind.is_format_keyword() {
+            } else if !self.macros_only && kind.is_format_keyword() {
                 // An open format closes => unwrap to closing format element
                 // closing token is not consumed here => the element parser needs this info
                 if input.format_closes(kind) {
@@ -85,6 +106,18 @@ impl InlineParser {
                 input.ambiguous_split(&mut next);
 
                 // If keyword was not handled above => convert token to plain
+                next.kind = InlineTokenKind::Plain;
+                input.set_prev_token(next); // update prev token, because next changed afterwards
+            } else if self.macros_only
+                && matches!(
+                    kind,
+                    InlineTokenKind::Comment { .. }
+                        | InlineTokenKind::ImplicitSubstitution(_)
+                        | InlineTokenKind::Whitespace
+                )
+            {
+                // Only escapes, newlines and macros remain as is in macro only mode
+                // This is used for example in verbatim context
                 next.kind = InlineTokenKind::Plain;
                 input.set_prev_token(next); // update prev token, because next changed afterwards
             }
@@ -126,6 +159,15 @@ fn get_format_parser(kind: InlineTokenKind) -> Option<InlineParserFn> {
             Some(crate::element::formatting::bold_italic::parse)
         }
         InlineTokenKind::Strikethrough => Some(crate::element::formatting::strikethrough::parse),
+        _ => None,
+    }
+}
+
+fn get_scoped_parser(kind: InlineTokenKind, macros_only: bool) -> Option<InlineParserFn> {
+    match kind {
+        InlineTokenKind::Verbatim if !macros_only => {
+            Some(crate::element::formatting::verbatim::parse)
+        }
         _ => None,
     }
 }

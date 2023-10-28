@@ -4,17 +4,18 @@ use itertools::PeekingNext;
 
 use crate::scanner::{
     new::SymbolIterator,
-    token::{Token, TokenKind},
+    token::{
+        iterator::{base::TokenIteratorBase, extension::TokenIteratorExt},
+        Token, TokenKind,
+    },
 };
-
-use super::{base::TokenIteratorBase, extension::TokenIteratorExt};
 
 /// The [`TokenIteratorRoot`] is the root iterator in any [`TokenIterator`](super::TokenIterator).
 /// It holds the actual [`Symbol`] slice.
 #[derive(Clone)]
 pub struct TokenIteratorImplicits<'input> {
     /// The [`Symbol`] slice the iterator was created for.
-    base_iter: TokenIteratorBase<'input>,
+    pub(super) base_iter: TokenIteratorBase<'input>,
     prev_token: Option<Token<'input>>,
     prev_peeked_token: Option<Token<'input>>,
     allow_implicits: bool,
@@ -146,7 +147,7 @@ impl<'input> PeekingNext for TokenIteratorImplicits<'input> {
             }
 
             let mut implicit_iter = self.clone();
-            if let Some(implicit_token) = crate::scanner::token::get_implicit(&mut implicit_iter) {
+            if let Some(implicit_token) = super::get_implicit(&mut implicit_iter) {
                 token = implicit_token;
                 *self = implicit_iter;
             }
@@ -161,5 +162,26 @@ impl<'input> PeekingNext for TokenIteratorImplicits<'input> {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::scanner::token::{
+        implicit::ImplicitSubstitution, iterator::TokenIterator, TokenKind,
+    };
+
+    #[test]
+    fn trademark_substitution() {
+        let symbols = crate::scanner::scan_str("(TM)");
+        let mut token_iter = TokenIterator::from(&*symbols);
+
+        let token = token_iter.next().unwrap();
+
+        assert_eq!(
+            token.kind,
+            TokenKind::ImplicitSubstitution(ImplicitSubstitution::Trademark),
+            "Trademark token was not detected."
+        );
     }
 }

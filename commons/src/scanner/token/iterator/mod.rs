@@ -5,20 +5,18 @@ use std::borrow::BorrowMut;
 
 use crate::scanner::{new::SymbolIterator, Symbol};
 
-use self::{
-    base::TokenIteratorBase,
-    extension::TokenIteratorExt,
-    implicits::{TokenIteratorImplicitExt, TokenIteratorImplicits},
-    scope_root::TokenIteratorScopedRoot,
+use self::{extension::TokenIteratorExt, scope_root::TokenIteratorScopedRoot};
+
+use super::{
+    implicit::iterator::{TokenIteratorImplicitExt, TokenIteratorImplicits},
+    Token, TokenKind,
 };
 
-use super::{Token, TokenKind};
-
-mod extension;
 mod matcher;
 
+pub(crate) mod extension;
+
 pub mod base;
-pub mod implicits;
 pub mod scope_root;
 
 use helper::PeekingNext;
@@ -127,7 +125,7 @@ impl<'input> TokenIterator<'input> {
         }
     }
 
-    pub fn with_scope_root(token_iter: TokenIterator<'input>) -> Self {
+    pub fn with_scoped_root(token_iter: TokenIterator<'input>) -> Self {
         TokenIterator {
             parent: TokenIteratorKind::ScopedRoot(Box::new(TokenIteratorScopedRoot::from(
                 token_iter,

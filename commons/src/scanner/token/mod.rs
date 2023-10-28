@@ -6,9 +6,7 @@ use super::{
     Symbol, SymbolKind,
 };
 
-mod implicit;
-pub use implicit::*;
-
+pub mod implicit;
 pub mod iterator;
 
 /// Token lexed from Unimarkup text.

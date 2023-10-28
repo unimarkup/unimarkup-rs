@@ -1,8 +1,8 @@
 use itertools::PeekingNext;
 
-use crate::scanner::token::Token;
+use crate::scanner::token::{implicit::iterator::TokenIteratorImplicitExt, Token};
 
-use super::{extension::TokenIteratorExt, implicits::TokenIteratorImplicitExt, TokenIterator};
+use super::{extension::TokenIteratorExt, TokenIterator};
 
 #[derive(Clone)]
 pub struct TokenIteratorScopedRoot<'input> {

@@ -1,6 +1,6 @@
 use unimarkup_commons::scanner::{
     position::{Offset, Position},
-    token::{ImplicitSubstitution, Token, TokenKind},
+    token::{implicit::ImplicitSubstitution, Token, TokenKind},
 };
 
 /// Token lexed from Unimarkup text.

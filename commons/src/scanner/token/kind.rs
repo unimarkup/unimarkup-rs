@@ -1,6 +1,6 @@
 use crate::scanner::{position::Offset, SymbolKind};
 
-use super::ImplicitSubstitution;
+use super::implicit::ImplicitSubstitution;
 
 /// The kind of the token found in Unimarkup document.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

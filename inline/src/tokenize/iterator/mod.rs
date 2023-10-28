@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 
 use unimarkup_commons::scanner::{
-    token::iterator::{IteratorEndFn, TokenIterator},
+    token::{
+        implicit::iterator::TokenIteratorImplicitExt,
+        iterator::{IteratorEndFn, TokenIterator},
+    },
     PeekingNext,
 };
 
@@ -188,9 +191,17 @@ impl<'input> InlineTokenIterator<'input> {
         self.token_iter.nest_with_scope(None, end_match)
     }
 
+    //TODO: delete function
     /// Merge the parent iterator of the given symbol iterator to take the progress of it.
-    pub fn merge(&mut self, sym_iter: TokenIterator<'input>) {
-        sym_iter.update(&mut self.token_iter);
+    pub fn merge(&mut self, token_iter: TokenIterator<'input>) {
+        token_iter.update(&mut self.token_iter);
+    }
+
+    /// Updates the given parent iterator to take the progress of the nested iterator.
+    ///
+    /// **Note:** Only updates the parent if `self` is nested.
+    pub fn update(self, parent: &mut Self) {
+        self.token_iter.update(&mut parent.token_iter);
     }
 
     /// Tries to skip symbols until one of the end functions signals the end.
@@ -271,5 +282,15 @@ impl<'input> PeekingNext for InlineTokenIterator<'input> {
         }
 
         Some(InlineToken::from(&self.token_iter.peeking_next(|_| true)?))
+    }
+}
+
+impl TokenIteratorImplicitExt for InlineTokenIterator<'_> {
+    fn ignore_implicits(&mut self) {
+        self.token_iter.ignore_implicits();
+    }
+
+    fn allow_implicits(&mut self) {
+        self.token_iter.allow_implicits();
     }
 }

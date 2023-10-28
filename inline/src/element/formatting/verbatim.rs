@@ -2,12 +2,17 @@ use std::rc::Rc;
 
 use unimarkup_commons::{
     parser::{GroupParser, Parser},
-    scanner::{EndMatcher, SymbolKind},
+    scanner::{
+        token::{implicit::iterator::TokenIteratorImplicitExt, iterator::EndMatcher, TokenKind},
+        SymbolKind,
+    },
 };
 
 use crate::{
     element::{Inline, InlineElement, InlineError},
+    inline_parser,
     new_parser::InlineParser,
+    tokenize::{iterator::InlineTokenIterator, token::InlineTokenKind},
 };
 
 pub const VERBATIM_KEYWORD_LIMIT: &[SymbolKind] = &[SymbolKind::Tick, SymbolKind::Tick];
@@ -17,43 +22,34 @@ pub struct Verbatim {
     pub(crate) inner: Vec<Inline>,
 }
 
+pub fn parse(input: &mut InlineTokenIterator) -> Option<Inline> {
+    let open_token = input.next()?;
+
+    if input.peek_kind()?.is_space() || open_token.kind != InlineTokenKind::Verbatim {
+        return None;
+    }
+
+    let mut scoped_iter: InlineTokenIterator<'_> = input
+        .nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+            !matcher.prev_is_space() && matcher.consumed_matches(&[TokenKind::Tick(1)])
+        })))
+        .into();
+    scoped_iter.ignore_implicits();
+
+    let inner = inline_parser::parse_with_macros_only(&mut scoped_iter);
+
+    //TODO: get prev token from scoped_iter to get span of closing tick, or of implicit close
+
+    scoped_iter.update(input);
+
+    Some(Verbatim { inner }.into())
+}
+
 impl InlineElement for Verbatim {}
 
 impl Parser<Inline> for Verbatim {
     fn parse(input: &mut unimarkup_commons::scanner::SymbolIterator) -> Option<Inline> {
-        // New scope to prevent other elements from matching keywords.
-        // Needed in case `peek()` would already return a keyword
-        let mut start_iter = input.nest_with_scope(None, None);
-
-        let first_symbol = start_iter.next()?;
-        let second_symbol = start_iter.peek()?;
-
-        if first_symbol.kind != SymbolKind::Tick
-            || second_symbol.kind == SymbolKind::Tick
-            || second_symbol.kind.is_space()
-        {
-            return None;
-        }
-
-        start_iter.update(input);
-
-        // New scope to prevent other elements from matching keywords.
-        let mut inner_iter = input.nest_with_scope(
-            None,
-            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-                !matcher.prev_is_space()
-                    && !matcher.matches(VERBATIM_KEYWORD_LIMIT)
-                    && matcher.consumed_matches(&[SymbolKind::Tick])
-            })),
-        );
-
-        // Note: `base()` only parses Plain, spaces, and escaped symbols
-        let inline_parser = InlineParser::base();
-        let inner = inline_parser.parse(&mut inner_iter);
-
-        inner_iter.update(input);
-
-        Some(Verbatim { inner }.into())
+        todo!()
     }
 }
 
@@ -76,11 +72,31 @@ impl TryFrom<Inline> for Verbatim {
 
 #[cfg(test)]
 mod test {
-    use unimarkup_commons::scanner::SymbolIterator;
+    use unimarkup_commons::scanner::{token::iterator::TokenIterator, SymbolIterator};
 
     use crate::element::plain::{EscapedPlain, Plain};
 
     use super::*;
+
+    #[test]
+    fn parse_new_verbatim() {
+        let symbols = unimarkup_commons::scanner::scan_str("`verbatim`");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+
+        let inline = parse(&mut token_iter).unwrap();
+
+        assert_eq!(
+            inline,
+            Verbatim {
+                inner: vec![Plain {
+                    content: "verbatim".to_string(),
+                }
+                .into()],
+            }
+            .into(),
+            "Verbatim not correctly parsed."
+        )
+    }
 
     #[test]
     fn parse_verbatim() {
