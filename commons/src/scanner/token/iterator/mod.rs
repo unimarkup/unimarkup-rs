@@ -6,7 +6,10 @@ use std::borrow::BorrowMut;
 use crate::scanner::{new::SymbolIterator, Symbol};
 
 use self::{
-    base::TokenIteratorBase, extension::TokenIteratorExt, scope_root::TokenIteratorScopeRoot,
+    base::TokenIteratorBase,
+    extension::TokenIteratorExt,
+    implicits::{TokenIteratorImplicitExt, TokenIteratorImplicits},
+    scope_root::TokenIteratorScopedRoot,
 };
 
 use super::{Token, TokenKind};
@@ -15,6 +18,7 @@ mod extension;
 mod matcher;
 
 pub mod base;
+pub mod implicits;
 pub mod scope_root;
 
 use helper::PeekingNext;
@@ -80,10 +84,10 @@ pub enum TokenIteratorKind<'input> {
     /// The contained iterator is the parent iterator.
     Nested(Box<TokenIterator<'input>>),
     /// Iterator that converts symbols to tokens.
-    Base(TokenIteratorBase<'input>),
+    Root(TokenIteratorImplicits<'input>),
     /// Iterator to define a new scope root.
     /// Meaning that the scope for parent iterators remains unchanged.
-    ScopeRoot(Box<TokenIteratorScopeRoot<'input>>),
+    ScopedRoot(Box<TokenIteratorScopedRoot<'input>>),
 }
 
 impl<'input> TokenIterator<'input> {
@@ -107,7 +111,7 @@ impl<'input> TokenIterator<'input> {
         end_match: Option<IteratorEndFn>,
     ) -> Self {
         TokenIterator {
-            parent: TokenIteratorKind::Base(TokenIteratorBase::from(sym_iter)),
+            parent: TokenIteratorKind::Root(TokenIteratorImplicits::from(sym_iter)),
             scope: 0,
             scoped: false,
             highest_peek_index: 0,
@@ -125,7 +129,7 @@ impl<'input> TokenIterator<'input> {
 
     pub fn with_scope_root(token_iter: TokenIterator<'input>) -> Self {
         TokenIterator {
-            parent: TokenIteratorKind::ScopeRoot(Box::new(TokenIteratorScopeRoot::from(
+            parent: TokenIteratorKind::ScopedRoot(Box::new(TokenIteratorScopedRoot::from(
                 token_iter,
             ))),
             scope: 0,
@@ -150,8 +154,8 @@ impl<'input> TokenIterator<'input> {
     pub fn max_len(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.max_len(),
-            TokenIteratorKind::Base(base) => base.max_len(),
-            TokenIteratorKind::ScopeRoot(root) => root.max_len(),
+            TokenIteratorKind::Root(base) => base.max_len(),
+            TokenIteratorKind::ScopedRoot(root) => root.max_len(),
         }
     }
 
@@ -169,8 +173,8 @@ impl<'input> TokenIterator<'input> {
     pub fn index(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.index(),
-            TokenIteratorKind::Base(base) => base.index(),
-            TokenIteratorKind::ScopeRoot(root) => root.index(),
+            TokenIteratorKind::Root(base) => base.index(),
+            TokenIteratorKind::ScopedRoot(root) => root.index(),
         }
     }
 
@@ -179,8 +183,8 @@ impl<'input> TokenIterator<'input> {
         if index >= self.start_index {
             match self.parent.borrow_mut() {
                 TokenIteratorKind::Nested(parent) => parent.set_index(index),
-                TokenIteratorKind::Base(base) => base.set_index(index),
-                TokenIteratorKind::ScopeRoot(root) => root.set_index(index),
+                TokenIteratorKind::Root(base) => base.set_index(index),
+                TokenIteratorKind::ScopedRoot(root) => root.set_index(index),
             }
         }
     }
@@ -189,8 +193,8 @@ impl<'input> TokenIterator<'input> {
     pub fn peek_index(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.peek_index(),
-            TokenIteratorKind::Base(base) => base.peek_index(),
-            TokenIteratorKind::ScopeRoot(root) => root.peek_index(),
+            TokenIteratorKind::Root(base) => base.peek_index(),
+            TokenIteratorKind::ScopedRoot(root) => root.peek_index(),
         }
     }
 
@@ -199,8 +203,8 @@ impl<'input> TokenIterator<'input> {
         if index >= self.index() {
             match self.parent.borrow_mut() {
                 TokenIteratorKind::Nested(parent) => parent.set_peek_index(index),
-                TokenIteratorKind::Base(base) => base.set_peek_index(index),
-                TokenIteratorKind::ScopeRoot(root) => root.set_peek_index(index),
+                TokenIteratorKind::Root(base) => base.set_peek_index(index),
+                TokenIteratorKind::ScopedRoot(root) => root.set_peek_index(index),
             }
         }
     }
@@ -241,16 +245,16 @@ impl<'input> TokenIterator<'input> {
     fn push_scope(&mut self, scope: usize) {
         match self.parent.borrow_mut() {
             TokenIteratorKind::Nested(parent) => parent.push_scope(scope),
-            TokenIteratorKind::Base(base) => base.set_scope(scope),
-            TokenIteratorKind::ScopeRoot(root) => root.set_scope(scope),
+            TokenIteratorKind::Root(base) => base.set_scope(scope),
+            TokenIteratorKind::ScopedRoot(root) => root.set_scope(scope),
         }
     }
 
     fn root_scope(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.root_scope(),
-            TokenIteratorKind::Base(base) => base.scope(),
-            TokenIteratorKind::ScopeRoot(root) => root.scope(),
+            TokenIteratorKind::Root(base) => base.scope(),
+            TokenIteratorKind::ScopedRoot(root) => root.scope(),
         }
     }
 
@@ -267,8 +271,8 @@ impl<'input> TokenIterator<'input> {
     fn prev_root_token(&self) -> Option<&Token<'input>> {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.prev_root_token(),
-            TokenIteratorKind::Base(base) => base.prev_token(),
-            TokenIteratorKind::ScopeRoot(root) => root.prev_token(),
+            TokenIteratorKind::Root(base) => base.prev_token(),
+            TokenIteratorKind::ScopedRoot(root) => root.prev_token(),
         }
     }
 
@@ -397,10 +401,28 @@ impl<'input> TokenIterator<'input> {
     }
 }
 
+impl TokenIteratorImplicitExt for TokenIterator<'_> {
+    fn ignore_implicits(&mut self) {
+        match self.parent.borrow_mut() {
+            TokenIteratorKind::Nested(parent) => parent.ignore_implicits(),
+            TokenIteratorKind::Root(root) => root.ignore_implicits(),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.ignore_implicits(),
+        }
+    }
+
+    fn allow_implicits(&mut self) {
+        match self.parent.borrow_mut() {
+            TokenIteratorKind::Nested(parent) => parent.allow_implicits(),
+            TokenIteratorKind::Root(root) => root.allow_implicits(),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.allow_implicits(),
+        }
+    }
+}
+
 impl<'input> From<SymbolIterator<'input>> for TokenIterator<'input> {
     fn from(value: SymbolIterator<'input>) -> Self {
         TokenIterator {
-            parent: TokenIteratorKind::Base(TokenIteratorBase::from(value)),
+            parent: TokenIteratorKind::Root(TokenIteratorImplicits::from(value)),
             start_index: 0,
             match_index: 0,
             scope: 0,
@@ -451,8 +473,8 @@ impl<'input> Iterator for TokenIterator<'input> {
 
         let curr_token_opt = match &mut self.parent {
             TokenIteratorKind::Nested(parent) => parent.next(),
-            TokenIteratorKind::Base(base) => base.next(),
-            TokenIteratorKind::ScopeRoot(root) => root.next(),
+            TokenIteratorKind::Root(base) => base.next(),
+            TokenIteratorKind::ScopedRoot(root) => root.next(),
         };
 
         // Prefix matching after `peeking_next()` to skip prefix symbols, but pass `Newline` to nested iterators.
@@ -519,8 +541,8 @@ impl<'input> PeekingNext for TokenIterator<'input> {
 
         let peeked_token_opt = match &mut self.parent {
             TokenIteratorKind::Nested(parent) => parent.peeking_next(accept),
-            TokenIteratorKind::Base(base) => base.peeking_next(accept),
-            TokenIteratorKind::ScopeRoot(root) => root.peeking_next(accept),
+            TokenIteratorKind::Root(base) => base.peeking_next(accept),
+            TokenIteratorKind::ScopedRoot(root) => root.peeking_next(accept),
         };
 
         // Prefix matching after `peeking_next()` to skip prefix symbols, but pass `Newline` to nested iterators.

@@ -3,8 +3,11 @@ pub use kind::*;
 
 use super::{
     position::{Offset, Position},
-    Symbol,
+    Symbol, SymbolKind,
 };
+
+mod implicit;
+pub use implicit::*;
 
 pub mod iterator;
 
@@ -30,6 +33,24 @@ impl<'input> From<&Symbol<'input>> for Token<'input> {
             kind: TokenKind::from(value.kind),
             start: value.start,
             end: value.end,
+        }
+    }
+}
+
+impl From<Token<'_>> for String {
+    fn from(value: Token<'_>) -> Self {
+        match value.kind {
+            TokenKind::Plain | TokenKind::Punctuation | TokenKind::Whitespace => {
+                value.input[value.offset.start..value.offset.end].to_string()
+            }
+            TokenKind::EscapedPlain | TokenKind::EscapedWhitespace => {
+                let escaped_str = &value.input
+                    [(value.offset.start + SymbolKind::Backslash.as_str().len())..value.offset.end];
+                let mut s = String::with_capacity(escaped_str.len());
+                s.push_str(escaped_str);
+                s
+            }
+            _ => String::from(value.kind),
         }
     }
 }

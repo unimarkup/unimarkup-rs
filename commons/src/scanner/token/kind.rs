@@ -1,4 +1,6 @@
-use crate::scanner::SymbolKind;
+use crate::scanner::{position::Offset, SymbolKind};
+
+use super::ImplicitSubstitution;
 
 /// The kind of the token found in Unimarkup document.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -17,6 +19,7 @@ pub enum TokenKind {
     Quote(usize),
     Dollar(usize),
     Colon(usize),
+    Dot(usize),
 
     // parenthesis
     OpenParenthesis,
@@ -40,9 +43,14 @@ pub enum TokenKind {
     // Plain
     #[default]
     Plain,
+    Punctuation,
 
-    // Comments
-    Comment,
+    // Specials
+    Comment {
+        // Set to `true` if comment was implicitly closed at end of line
+        implicit_close: bool,
+    },
+    ImplicitSubstitution(ImplicitSubstitution),
 
     // For matching
     Any,
@@ -66,7 +74,9 @@ impl TokenKind {
                 | TokenKind::EscapedWhitespace
                 | TokenKind::EscapedNewline
                 | TokenKind::Plain
-                | TokenKind::Comment
+                | TokenKind::Punctuation
+                | TokenKind::Comment { .. }
+                | TokenKind::ImplicitSubstitution(_)
                 | TokenKind::Any
                 | TokenKind::PossibleAttributes
                 | TokenKind::PossibleDecorator
@@ -97,12 +107,92 @@ impl TokenKind {
             TokenKind::Newline | TokenKind::Whitespace | TokenKind::EOI | TokenKind::Blankline
         )
     }
+
+    pub fn is_plain(&self) -> bool {
+        matches!(self, TokenKind::Plain | TokenKind::Punctuation)
+    }
+}
+
+impl From<TokenKind> for String {
+    fn from(value: TokenKind) -> Self {
+        match value {
+            TokenKind::Star(len) => SymbolKind::Star.as_str().repeat(len),
+            TokenKind::Hash(len) => SymbolKind::Hash.as_str().repeat(len),
+            TokenKind::Minus(len) => SymbolKind::Minus.as_str().repeat(len),
+            TokenKind::Plus(len) => SymbolKind::Plus.as_str().repeat(len),
+            TokenKind::Underline(len) => SymbolKind::Underline.as_str().repeat(len),
+            TokenKind::Caret(len) => SymbolKind::Caret.as_str().repeat(len),
+            TokenKind::Tick(len) => SymbolKind::Tick.as_str().repeat(len),
+            TokenKind::Overline(len) => SymbolKind::Overline.as_str().repeat(len),
+            TokenKind::Pipe(len) => SymbolKind::Pipe.as_str().repeat(len),
+            TokenKind::Tilde(len) => SymbolKind::Tilde.as_str().repeat(len),
+            TokenKind::Quote(len) => SymbolKind::Quote.as_str().repeat(len),
+            TokenKind::Dollar(len) => SymbolKind::Dollar.as_str().repeat(len),
+            TokenKind::Colon(len) => SymbolKind::Colon.as_str().repeat(len),
+            TokenKind::Dot(len) => SymbolKind::Dot.as_str().repeat(len),
+            TokenKind::OpenParenthesis => {
+                let mut s = String::with_capacity(SymbolKind::OpenParenthesis.as_str().len());
+                s.push_str(SymbolKind::OpenParenthesis.as_str());
+                s
+            }
+            TokenKind::CloseParenthesis => {
+                let mut s = String::with_capacity(SymbolKind::CloseParenthesis.as_str().len());
+                s.push_str(SymbolKind::CloseParenthesis.as_str());
+                s
+            }
+            TokenKind::OpenBracket => {
+                let mut s = String::with_capacity(SymbolKind::OpenBracket.as_str().len());
+                s.push_str(SymbolKind::OpenBracket.as_str());
+                s
+            }
+            TokenKind::CloseBracket => {
+                let mut s = String::with_capacity(SymbolKind::CloseBracket.as_str().len());
+                s.push_str(SymbolKind::CloseBracket.as_str());
+                s
+            }
+            TokenKind::OpenBrace => {
+                let mut s = String::with_capacity(SymbolKind::OpenBrace.as_str().len());
+                s.push_str(SymbolKind::OpenBrace.as_str());
+                s
+            }
+            TokenKind::CloseBrace => {
+                let mut s = String::with_capacity(SymbolKind::CloseBrace.as_str().len());
+                s.push_str(SymbolKind::CloseBrace.as_str());
+                s
+            }
+            TokenKind::EscapedNewline | TokenKind::Newline => {
+                let mut s = String::with_capacity(SymbolKind::Newline.as_str().len());
+                s.push_str(SymbolKind::Newline.as_str());
+                s
+            }
+            TokenKind::Whitespace => {
+                let mut s = String::with_capacity(SymbolKind::Whitespace.as_str().len());
+                s.push_str(SymbolKind::Whitespace.as_str());
+                s
+            }
+            TokenKind::Blankline => "\n\n".to_string(),
+            TokenKind::Plain
+            | TokenKind::Punctuation
+            | TokenKind::EscapedPlain
+            | TokenKind::EscapedWhitespace
+            | TokenKind::ImplicitSubstitution(_)
+            | TokenKind::Comment { .. }
+            | TokenKind::PossibleAttributes
+            | TokenKind::PossibleDecorator
+            | TokenKind::Any
+            | TokenKind::EOI => panic!(
+                "Tried to create String from '{:?}', which has undefined String representation.",
+                value
+            ),
+        }
+    }
 }
 
 impl From<SymbolKind> for TokenKind {
     fn from(value: SymbolKind) -> Self {
         match value {
             SymbolKind::Plain | SymbolKind::Backslash => TokenKind::Plain, // Backslash is incorrect, but will be corrected in iterator
+            SymbolKind::TerminalPunctuation => TokenKind::Punctuation,
             SymbolKind::Whitespace => TokenKind::Whitespace,
             SymbolKind::Newline => TokenKind::Newline,
             SymbolKind::EOI => TokenKind::EOI,
@@ -119,6 +209,7 @@ impl From<SymbolKind> for TokenKind {
             SymbolKind::Quote => TokenKind::Quote(1),
             SymbolKind::Dollar => TokenKind::Dollar(1),
             SymbolKind::Colon => TokenKind::Colon(1),
+            SymbolKind::Dot => TokenKind::Colon(1),
             SymbolKind::OpenParenthesis => TokenKind::OpenParenthesis,
             SymbolKind::CloseParenthesis => TokenKind::CloseParenthesis,
             SymbolKind::OpenBracket => TokenKind::OpenBracket,
@@ -136,6 +227,7 @@ impl From<(SymbolKind, usize)> for TokenKind {
 
         match kind {
             SymbolKind::Plain | SymbolKind::Backslash => TokenKind::Plain, // Backslash is incorrect, but will be corrected in iterator
+            SymbolKind::TerminalPunctuation => TokenKind::Punctuation,
             SymbolKind::Whitespace => TokenKind::Whitespace,
             SymbolKind::Newline => TokenKind::Newline,
             SymbolKind::EOI => TokenKind::EOI,
@@ -152,6 +244,7 @@ impl From<(SymbolKind, usize)> for TokenKind {
             SymbolKind::Quote => TokenKind::Quote(len),
             SymbolKind::Dollar => TokenKind::Dollar(len),
             SymbolKind::Colon => TokenKind::Colon(len),
+            SymbolKind::Dot => TokenKind::Dot(len),
             SymbolKind::OpenParenthesis => TokenKind::OpenParenthesis,
             SymbolKind::CloseParenthesis => TokenKind::CloseParenthesis,
             SymbolKind::OpenBracket => TokenKind::OpenBracket,

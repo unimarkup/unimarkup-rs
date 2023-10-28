@@ -2,16 +2,26 @@ use itertools::PeekingNext;
 
 use crate::scanner::token::Token;
 
-use super::{extension::TokenIteratorExt, TokenIterator};
+use super::{extension::TokenIteratorExt, implicits::TokenIteratorImplicitExt, TokenIterator};
 
 #[derive(Clone)]
-pub struct TokenIteratorScopeRoot<'input> {
+pub struct TokenIteratorScopedRoot<'input> {
     /// The [`Symbol`] slice the iterator was created for.
     token_iter: TokenIterator<'input>,
     scope: usize,
 }
 
-impl<'input> TokenIteratorExt<'input> for TokenIteratorScopeRoot<'input> {
+impl TokenIteratorImplicitExt for TokenIteratorScopedRoot<'_> {
+    fn ignore_implicits(&mut self) {
+        todo!()
+    }
+
+    fn allow_implicits(&mut self) {
+        todo!()
+    }
+}
+
+impl<'input> TokenIteratorExt<'input> for TokenIteratorScopedRoot<'input> {
     /// Returns the symbol that is directly before the current index.
     /// If no previous symbol exists, `None`` is returned.
     fn prev_token(&self) -> Option<&Token<'input>> {
@@ -60,16 +70,16 @@ impl<'input> TokenIteratorExt<'input> for TokenIteratorScopeRoot<'input> {
     }
 }
 
-impl<'input> From<TokenIterator<'input>> for TokenIteratorScopeRoot<'input> {
+impl<'input> From<TokenIterator<'input>> for TokenIteratorScopedRoot<'input> {
     fn from(value: TokenIterator<'input>) -> Self {
-        TokenIteratorScopeRoot {
+        TokenIteratorScopedRoot {
             token_iter: value,
             scope: 0,
         }
     }
 }
 
-impl<'input> Iterator for TokenIteratorScopeRoot<'input> {
+impl<'input> Iterator for TokenIteratorScopedRoot<'input> {
     type Item = Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -81,7 +91,7 @@ impl<'input> Iterator for TokenIteratorScopeRoot<'input> {
     }
 }
 
-impl<'input> PeekingNext for TokenIteratorScopeRoot<'input> {
+impl<'input> PeekingNext for TokenIteratorScopedRoot<'input> {
     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,

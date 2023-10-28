@@ -1,6 +1,6 @@
 use unimarkup_commons::scanner::{
     position::{Offset, Position},
-    token::{Token, TokenKind},
+    token::{ImplicitSubstitution, Token, TokenKind},
 };
 
 /// Token lexed from Unimarkup text.
@@ -125,7 +125,10 @@ pub enum InlineTokenKind {
 
     EOI,
 
-    Comment,
+    Comment {
+        implicit_close: bool,
+    },
+    ImplicitSubstitution(ImplicitSubstitution),
 
     // For matching
     Any,
@@ -134,13 +137,13 @@ pub enum InlineTokenKind {
 
 impl InlineTokenKind {
     /// Returns the textual representation of the kind.
-    pub const fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match *self {
             InlineTokenKind::Bold => "**",
             InlineTokenKind::ItalicBold => "***",
             InlineTokenKind::Italic => "*",
             InlineTokenKind::Newline | InlineTokenKind::EscapedNewline => "\n",
-            InlineTokenKind::Whitespace | InlineTokenKind::EscapedWhitespace => " ",
+            InlineTokenKind::Whitespace => " ",
             InlineTokenKind::Underline => "__",
             InlineTokenKind::Subscript => "_",
             InlineTokenKind::Superscript => "^",
@@ -150,7 +153,7 @@ impl InlineTokenKind {
             InlineTokenKind::Strikethrough => "~~",
             InlineTokenKind::Verbatim => "`",
             InlineTokenKind::Quote => "\"\"",
-            InlineTokenKind::Math => "$",
+            InlineTokenKind::Math => "$$",
             InlineTokenKind::OpenParenthesis => "(",
             InlineTokenKind::CloseParenthesis => ")",
             InlineTokenKind::OpenBracket => "[",
@@ -158,8 +161,17 @@ impl InlineTokenKind {
             InlineTokenKind::OpenBrace => "{",
             InlineTokenKind::CloseBrace => "}",
             InlineTokenKind::NamedSubstitution => "::",
-            InlineTokenKind::Plain => "",
-            _ => "",
+            InlineTokenKind::EOI => "",
+            InlineTokenKind::Plain
+            | InlineTokenKind::EscapedPlain
+            | InlineTokenKind::EscapedWhitespace
+            | InlineTokenKind::Comment { .. }
+            | InlineTokenKind::ImplicitSubstitution(_)
+            | InlineTokenKind::Any
+            | InlineTokenKind::PossibleAttributes => panic!(
+                "Tried to create &str from '{:?}', which has undefined &str representation.",
+                self
+            ),
         }
     }
 
@@ -178,7 +190,8 @@ impl InlineTokenKind {
                 | InlineTokenKind::Whitespace
                 | InlineTokenKind::Plain
                 | InlineTokenKind::EOI
-                | InlineTokenKind::Comment
+                | InlineTokenKind::Comment { .. }
+                | InlineTokenKind::ImplicitSubstitution(_)
                 | InlineTokenKind::EscapedNewline
                 | InlineTokenKind::EscapedWhitespace
                 | InlineTokenKind::EscapedPlain
@@ -212,7 +225,10 @@ impl InlineTokenKind {
     }
 
     pub fn is_space(&self) -> bool {
-        matches!(self, InlineTokenKind::Newline | InlineTokenKind::Whitespace)
+        matches!(
+            self,
+            InlineTokenKind::Newline | InlineTokenKind::Whitespace | InlineTokenKind::EOI
+        )
     }
 
     pub fn is_format_keyword(&self) -> bool {
@@ -339,12 +355,22 @@ impl From<TokenKind> for InlineTokenKind {
             TokenKind::EscapedPlain => InlineTokenKind::EscapedPlain,
             TokenKind::EscapedWhitespace => InlineTokenKind::EscapedWhitespace,
             TokenKind::EscapedNewline => InlineTokenKind::EscapedNewline,
-            TokenKind::Comment => InlineTokenKind::Comment,
+            TokenKind::Comment { implicit_close } => InlineTokenKind::Comment { implicit_close },
+            TokenKind::ImplicitSubstitution(impl_subst) => {
+                InlineTokenKind::ImplicitSubstitution(impl_subst)
+            }
+
             TokenKind::Any => InlineTokenKind::Any,
             TokenKind::PossibleAttributes => InlineTokenKind::PossibleAttributes,
             TokenKind::Blankline => panic!("Blankline in inline content is not allowed."),
 
-            _ => InlineTokenKind::Plain,
+            TokenKind::Plain
+            | TokenKind::Dot(_)
+            | TokenKind::Hash(_)
+            | TokenKind::Minus(_)
+            | TokenKind::Plus(_)
+            | TokenKind::PossibleDecorator
+            | TokenKind::Punctuation => InlineTokenKind::Plain,
         }
     }
 }

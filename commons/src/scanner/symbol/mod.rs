@@ -2,17 +2,23 @@
 
 use core::fmt;
 
+use icu_properties::sets::CodePointSetDataBorrowed;
+
 use super::position::{Offset, Position};
 
 pub mod iterator;
 
+pub const TERMINAL_PUNCTUATION: CodePointSetDataBorrowed<'static> =
+    icu_properties::sets::terminal_punctuation();
+
 /// Possible kinds of Symbol found in Unimarkup document.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SymbolKind {
-    /// Hash symbol (#) used for headings
-    Hash,
     /// Regular text with no semantic meaning
+    #[default]
     Plain,
+    /// Unicode terminal punctuation
+    TerminalPunctuation,
     /// Any non-linebreaking whitespace
     Whitespace,
     /// A line break literal (for example `\n` or '\r\n')
@@ -21,6 +27,8 @@ pub enum SymbolKind {
     EOI,
     /// The backslash (`\`) is used for escaping other symbols.
     Backslash,
+    /// Hash symbol (#) used for headings
+    Hash,
     /// The star (`*`) literal is used for various elements.
     Star,
     /// The minus (`-`) literal is used for various elements.
@@ -43,6 +51,10 @@ pub enum SymbolKind {
     Quote,
     /// The dollar (`$`) literal is used for math mode formatting.
     Dollar,
+    /// A colon literal (`:`) is used as marker (e.g. for alias substitutions `::heart::`).
+    Colon,
+    /// A dot literal (`.`).
+    Dot,
     /// The open parentheses (`(`) literal is used for additional data to text group elements (e.g.
     /// image insert).
     OpenParenthesis,
@@ -56,21 +68,17 @@ pub enum SymbolKind {
     OpenBrace,
     /// The close brace (`}`) literal is used for inline attributes.
     CloseBrace,
-    /// A colon literal (`:`) is used as marker (e.g. for alias substitutions `::heart::`).
-    Colon,
-}
-
-impl Default for SymbolKind {
-    fn default() -> Self {
-        Self::Plain
-    }
 }
 
 impl SymbolKind {
     pub fn is_not_keyword(&self) -> bool {
         matches!(
             self,
-            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Plain | SymbolKind::EOI
+            SymbolKind::Newline
+                | SymbolKind::Whitespace
+                | SymbolKind::Plain
+                | SymbolKind::Dot
+                | SymbolKind::EOI
         )
     }
 
@@ -241,6 +249,7 @@ impl From<&str> for SymbolKind {
             "{" => SymbolKind::OpenBrace,
             "}" => SymbolKind::CloseBrace,
             ":" => SymbolKind::Colon,
+            "." => SymbolKind::Dot,
             symbol
                 if symbol != "\n"
                     && symbol != "\r\n"
@@ -248,7 +257,17 @@ impl From<&str> for SymbolKind {
             {
                 SymbolKind::Whitespace
             }
-            _ => SymbolKind::Plain,
+            _ => {
+                let mut kind = SymbolKind::Plain;
+
+                if let Some(c) = value.chars().next() {
+                    if TERMINAL_PUNCTUATION.contains(c) {
+                        kind = SymbolKind::TerminalPunctuation;
+                    }
+                }
+
+                kind
+            }
         }
     }
 }
@@ -256,8 +275,11 @@ impl From<&str> for SymbolKind {
 impl SymbolKind {
     pub fn as_str(&self) -> &str {
         match self {
+            SymbolKind::Plain | SymbolKind::TerminalPunctuation => panic!(
+                "Tried to create &str from '{:?}', which has undefined &str representation.",
+                self
+            ),
             SymbolKind::Hash => "#",
-            SymbolKind::Plain => "",
             SymbolKind::Tick => "`",
             SymbolKind::Whitespace => " ",
             SymbolKind::Newline => "\n",
@@ -280,6 +302,7 @@ impl SymbolKind {
             SymbolKind::OpenBrace => "{",
             SymbolKind::CloseBrace => "}",
             SymbolKind::Colon => ":",
+            SymbolKind::Dot => ".",
         }
     }
 }
