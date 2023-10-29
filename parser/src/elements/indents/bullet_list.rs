@@ -3,7 +3,6 @@
 use std::rc::Rc;
 
 use unimarkup_commons::lexer::{EndMatcher, PrefixMatcher, Symbol, SymbolKind};
-use unimarkup_inline::{Inline, ParseInlines};
 
 use crate::{elements::blocks::Block, ElementParser, MainParser};
 

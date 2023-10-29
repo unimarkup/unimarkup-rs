@@ -1,6 +1,9 @@
-use unimarkup_commons::lexer::{position::Position, span::Span};
+use unimarkup_commons::lexer::position::Position;
 
-use crate::tokenize::token::{InlineToken, InlineTokenKind};
+use crate::{
+    element::InlineElement,
+    tokenize::token::{InlineToken, InlineTokenKind},
+};
 
 use super::Inline;
 
@@ -22,6 +25,22 @@ macro_rules! base_inlines {
                 }
             }
 
+            $(
+                impl InlineElement for $element {
+                    fn to_plain_string(&self) -> String {
+                        self.$content.clone()
+                    }
+
+                    fn start(&self) -> Position {
+                        self.start
+                    }
+
+                    fn end(&self) -> Position {
+                        self.end
+                    }
+                }
+            )?
+
             impl $element {
                 pub fn new($($content: $content_type, )?start: Position, end: Position) -> Self {
                     Self { $($content, )?start, end }
@@ -32,21 +51,6 @@ macro_rules! base_inlines {
                         &self.$content
                     }
                 )?
-
-                pub fn start(&self) -> Position {
-                    self.start
-                }
-
-                pub fn end(&self) -> Position {
-                    self.end
-                }
-
-                pub fn span(&self) -> Span {
-                    Span {
-                        start: self.start,
-                        end: self.end,
-                    }
-                }
             }
         )+
     }
@@ -62,10 +66,33 @@ base_inlines!(
 );
 
 impl Plain {
-    pub fn push_str(&mut self, s: &str) {
-        self.content.push_str(s);
+    pub fn push_token(&mut self, token: InlineToken<'_>) {
+        self.end = token.end;
+        self.content.push_str(token.as_str());
     }
 }
+
+macro_rules! element_without_content {
+    ($($element:ident),+) => {
+        $(
+            impl InlineElement for $element {
+                fn to_plain_string(&self) -> String {
+                    InlineTokenKind::$element.as_str().to_string()
+                }
+
+                fn start(&self) -> Position {
+                    self.start
+                }
+
+                fn end(&self) -> Position {
+                    self.end
+                }
+            }
+        )+
+    };
+}
+
+element_without_content!(Whitespace, Newline, EscapedNewline);
 
 impl<'input> From<InlineToken<'input>> for Inline {
     fn from(value: InlineToken<'input>) -> Self {

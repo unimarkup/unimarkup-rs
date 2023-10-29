@@ -82,7 +82,7 @@ impl<'input> EndMatcher for TokenIterator<'input> {
     fn is_blank_line(&mut self) -> bool {
         matches!(
             self.peek_kind(),
-            Some(TokenKind::Blankline) | Some(TokenKind::EOI)
+            Some(TokenKind::Blankline) | Some(TokenKind::Eoi)
         )
     }
 
@@ -183,7 +183,7 @@ impl<'input> PrefixMatcher for TokenIterator<'input> {
             .peeking_take_while(|s| s.kind == TokenKind::Whitespace)
             .count();
 
-        let new_line = self.peeking_next(|s| matches!(s.kind, TokenKind::Newline | TokenKind::EOI));
+        let new_line = self.peeking_next(|s| matches!(s.kind, TokenKind::Newline | TokenKind::Eoi));
 
         // NOTE: Not consumed, because nested prefix matchers must see the potentially empty line too
         self.set_peek_index(peek_index);

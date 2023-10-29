@@ -1,9 +1,7 @@
-use unimarkup_commons::{
-    lexer::{position::Position, span::Span},
-    parsing::Context,
-};
+use unimarkup_commons::{lexer::position::Position, parsing::Context};
 
 use crate::{
+    element::InlineElement,
     inline_parser,
     tokenize::{iterator::InlineTokenIterator, token::InlineTokenKind},
 };
@@ -78,6 +76,20 @@ macro_rules! inline_formats {
             }
         }
 
+        impl InlineElement for $format {
+            fn to_plain_string(&self) -> String {
+                format!("{}{}{}", InlineTokenKind::$format.as_str(), self.inner.to_plain_string(), if self.implicit_end {""} else {InlineTokenKind::$format.as_str()})
+            }
+
+            fn start(&self) -> Position {
+                self.start
+            }
+
+            fn end(&self) -> Position {
+                self.end
+            }
+        }
+
         impl $format {
             pub fn new(
                 inner: Vec<Inline>,
@@ -103,23 +115,8 @@ macro_rules! inline_formats {
                 self.attributes.as_ref()
             }
 
-            pub fn start(&self) -> Position {
-                self.start
-            }
-
-            pub fn end(&self) -> Position {
-                self.end
-            }
-
             pub fn implicit_end(&self) -> bool {
                 self.implicit_end
-            }
-
-            pub fn span(&self) -> Span {
-                Span {
-                    start: self.start,
-                    end: self.end,
-                }
             }
         })+
     };

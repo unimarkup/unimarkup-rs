@@ -17,16 +17,19 @@ pub struct InlineParser {
 }
 
 /// Creates inline elements using the given token iterator.
-pub fn parse_inlines(token_iter: TokenIterator, context: &mut Context) -> Vec<Inline> {
+pub fn parse_inlines<'input>(
+    token_iter: impl Into<TokenIterator<'input>>,
+    context: &mut Context,
+) -> Vec<Inline> {
     InlineParser::default().parse(
-        &mut InlineTokenIterator::from(TokenIterator::with_scoped_root(token_iter)),
+        &mut InlineTokenIterator::from(TokenIterator::with_scoped_root(token_iter.into())),
         context,
     )
 }
 
 /// Creates inline elements using the given token iterator.
 /// All elements except escaped graphemes and macros are converted to plain content.
-pub fn parse_inlines_with_macros_only(
+pub(crate) fn parse_inlines_with_macros_only(
     token_iter: TokenIterator,
     context: &mut Context,
 ) -> Vec<Inline> {
@@ -120,7 +123,7 @@ impl InlineParser {
             match inlines.last_mut() {
                 Some(last) => match last {
                     Inline::Plain(plain) if next.kind == InlineTokenKind::Plain => {
-                        plain.push_str(next.as_str());
+                        plain.push_token(next);
                     }
                     _ => inlines.push(next.into()),
                 },
@@ -176,50 +179,37 @@ fn get_scoped_parser(kind: InlineTokenKind, macros_only: bool) -> Option<InlineP
     }
 }
 
-// #[cfg(test)]
-// mod test {
-//     use unimarkup_commons::scanner::token::iterator::TokenIterator;
+#[cfg(test)]
+mod test {
+    use unimarkup_commons::{lexer::token::iterator::TokenIterator, parsing::Context};
 
-//     use crate::{
-//         element::{
-//             formatting::{Subscript, Underline},
-//             plain::Plain,
-//             textbox::TextBox,
-//         },
-//         inline_parser::InlineParser,
-//         tokenize::iterator::InlineTokenIterator,
-//     };
+    use crate::{inline_parser::InlineParser, tokenize::iterator::InlineTokenIterator};
 
-//     #[test]
-//     fn parse_strikethrough_in_unclosed_bold() {
-//         let symbols = unimarkup_commons::scanner::scan_str("**~~strikethrough~~");
-//         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+    #[test]
+    fn parse_strikethrough_in_unclosed_bold() {
+        let symbols = unimarkup_commons::lexer::scan_str("**bold**[*italic* `verbati  m`]");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
 
-//         let inlines = InlineParser::default().parse(&mut token_iter);
+        let inlines = InlineParser::default().parse(&mut token_iter, &mut Context::default());
 
-//         assert_eq!(
-//             inlines.len(),
-//             1,
-//             "Parser did not return one inline element."
-//         );
+        dbg!(&inlines);
+        // assert_eq!(
+        //     Bold::try_from(inlines[0].clone()).unwrap(),
+        //     Bold {
+        //         inner: vec![Strikethrough {
+        //             inner: vec![Plain {
+        //                 content: "strikethrough".to_string(),
+        //             }
+        //             .into()],
+        //         }
+        //         .into()],
+        //     },
+        //     "Strikethrough not correctly parsed."
+        // );
 
-//         assert_eq!(
-//             Bold::try_from(inlines[0].clone()).unwrap(),
-//             Bold {
-//                 inner: vec![Strikethrough {
-//                     inner: vec![Plain {
-//                         content: "strikethrough".to_string(),
-//                     }
-//                     .into()],
-//                 }
-//                 .into()],
-//             },
-//             "Strikethrough not correctly parsed."
-//         );
-
-//         assert_eq!(token_iter.next(), None, "Iterator not fully consumed.");
-//     }
-
+        assert_eq!(token_iter.next(), None, "Iterator not fully consumed.");
+    }
+}
 //     #[test]
 //     fn parse_textbox_scoped_bold() {
 //         let symbols = unimarkup_commons::scanner::scan_str("**outer[**inner]");

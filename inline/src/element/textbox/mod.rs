@@ -1,7 +1,10 @@
 use std::rc::Rc;
 
 use unimarkup_commons::{
-    lexer::token::{iterator::EndMatcher, TokenKind},
+    lexer::{
+        position::Position,
+        token::{iterator::EndMatcher, TokenKind},
+    },
     parsing::Context,
 };
 
@@ -12,13 +15,40 @@ use crate::{
 
 use self::hyperlink::Hyperlink;
 
-use super::Inline;
+use super::{Inline, InlineElement};
 
 pub mod hyperlink;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextBox {
-    pub(crate) inner: Vec<Inline>,
+    inner: Vec<Inline>,
+    attributes: Option<Vec<Inline>>,
+    start: Position,
+    end: Position,
+}
+
+impl TextBox {
+    pub fn new(
+        inner: Vec<Inline>,
+        attributes: Option<Vec<Inline>>,
+        start: Position,
+        end: Position,
+    ) -> Self {
+        Self {
+            inner,
+            attributes,
+            start,
+            end,
+        }
+    }
+
+    pub fn inner(&self) -> &Vec<Inline> {
+        &self.inner
+    }
+
+    pub fn attributes(&self) -> Option<&Vec<Inline>> {
+        self.attributes.as_ref()
+    }
 }
 
 pub fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<Inline> {
@@ -43,7 +73,13 @@ pub fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<I
 
     let inner = inline_parser::InlineParser::default().parse(&mut scoped_iter, context);
 
-    //TODO: get prev token from scoped_iter to get span of closing token, or of implicit close
+    let prev_token = if inner.is_empty() {
+        open_token
+    } else {
+        *scoped_iter
+            .prev_token()
+            .expect("Inlines in textbox => previous token must exist.")
+    };
     let end_reached = scoped_iter.end_reached();
     scoped_iter.update(input);
 
@@ -63,7 +99,7 @@ pub fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<I
                 combined
             },
         );
-        let alt_text =
+        let link_text =
             link_iter
                 .take_to_end()
                 .iter()
@@ -72,23 +108,42 @@ pub fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<I
                     combined
                 });
 
+        let link_close_token = if link_text.is_empty() && !link_iter.end_reached() {
+            prev_token
+        } else {
+            *link_iter.prev_token().expect(
+                "Link text has content or closing parenthesis found => previous token must exist.",
+            )
+        };
+
         link_iter.update(input);
 
         return Some(
-            Hyperlink {
+            Hyperlink::new(
                 inner,
                 link,
-                alt_text: if alt_text.is_empty() {
+                if link_text.is_empty() {
                     None
                 } else {
-                    Some(alt_text)
+                    Some(link_text)
                 },
-            }
+                None,
+                open_token.start,
+                link_close_token.end,
+            )
             .into(),
         );
     }
 
-    Some(TextBox { inner }.into())
+    Some(
+        TextBox {
+            inner,
+            attributes: None,
+            start: open_token.start,
+            end: prev_token.end,
+        }
+        .into(),
+    )
 }
 
 fn parse_box_variant(_input: &mut InlineTokenIterator) -> Option<Inline> {
@@ -100,6 +155,20 @@ fn parse_box_variant(_input: &mut InlineTokenIterator) -> Option<Inline> {
 impl From<TextBox> for Inline {
     fn from(value: TextBox) -> Self {
         Inline::TextBox(value)
+    }
+}
+
+impl InlineElement for TextBox {
+    fn to_plain_string(&self) -> String {
+        format!("[{}]", self.inner.to_plain_string())
+    }
+
+    fn start(&self) -> Position {
+        self.start
+    }
+
+    fn end(&self) -> Position {
+        self.end
     }
 }
 

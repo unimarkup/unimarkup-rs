@@ -112,7 +112,7 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
         let mut token = Token::from(first_symbol);
 
         match first_kind {
-            SymbolKind::Eoi => token.kind = TokenKind::EOI,
+            SymbolKind::Eoi => token.kind = TokenKind::Eoi,
             SymbolKind::Whitespace | SymbolKind::Plain => {
                 let seq_len = self.sym_iter.peek_while_count(|s| s.kind == first_kind);
 

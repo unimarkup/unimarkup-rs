@@ -35,7 +35,7 @@ pub enum TokenKind {
     Whitespace,
     Newline,
     Blankline,
-    EOI,
+    Eoi,
 
     // Escaped
     EscapedPlain,
@@ -72,7 +72,7 @@ impl TokenKind {
             TokenKind::Whitespace
                 | TokenKind::Newline
                 | TokenKind::Blankline
-                | TokenKind::EOI
+                | TokenKind::Eoi
                 | TokenKind::EscapedPlain
                 | TokenKind::EscapedWhitespace
                 | TokenKind::EscapedNewline
@@ -108,7 +108,7 @@ impl TokenKind {
     pub fn is_space(&self) -> bool {
         matches!(
             self,
-            TokenKind::Newline | TokenKind::Whitespace | TokenKind::EOI | TokenKind::Blankline
+            TokenKind::Newline | TokenKind::Whitespace | TokenKind::Eoi | TokenKind::Blankline
         )
     }
 
@@ -185,7 +185,7 @@ impl From<TokenKind> for String {
             | TokenKind::PossibleAttributes
             | TokenKind::PossibleDecorator
             | TokenKind::Any
-            | TokenKind::EOI => panic!(
+            | TokenKind::Eoi => panic!(
                 "Tried to create String from '{:?}', which has undefined String representation.",
                 value
             ),
@@ -200,7 +200,7 @@ impl From<SymbolKind> for TokenKind {
             SymbolKind::TerminalPunctuation => TokenKind::Punctuation,
             SymbolKind::Whitespace => TokenKind::Whitespace,
             SymbolKind::Newline => TokenKind::Newline,
-            SymbolKind::Eoi => TokenKind::EOI,
+            SymbolKind::Eoi => TokenKind::Eoi,
             SymbolKind::Hash => TokenKind::Hash(1),
             SymbolKind::Star => TokenKind::Star(1),
             SymbolKind::Minus => TokenKind::Minus(1),
@@ -235,7 +235,7 @@ impl From<(SymbolKind, usize)> for TokenKind {
             SymbolKind::TerminalPunctuation => TokenKind::Punctuation,
             SymbolKind::Whitespace => TokenKind::Whitespace,
             SymbolKind::Newline => TokenKind::Newline,
-            SymbolKind::Eoi => TokenKind::EOI,
+            SymbolKind::Eoi => TokenKind::Eoi,
             SymbolKind::Hash => TokenKind::Hash(len),
             SymbolKind::Star => TokenKind::Star(len),
             SymbolKind::Minus => TokenKind::Minus(len),

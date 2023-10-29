@@ -2,8 +2,10 @@ use std::panic;
 
 use crate::snapshot::Snapshot;
 use libtest_mimic::Trial;
-use unimarkup_commons::test_runner::{self, snap_test_runner::SnapTestRunner};
-use unimarkup_inline::ParseInlines;
+use unimarkup_commons::{
+    parsing::Context,
+    test_runner::{self, snap_test_runner::SnapTestRunner},
+};
 
 mod snapshot;
 
@@ -39,7 +41,8 @@ fn run_test_case(case: test_runner::test_file::TestCase) {
     let symbols = unimarkup_commons::lexer::scan_str(&case.test.input);
 
     let runner = SnapTestRunner::with_fn(&case.test.name, &symbols, |symbols| {
-        let inlines: Vec<_> = symbols.parse_inlines().collect();
+        let inlines: Vec<_> =
+            unimarkup_inline::inline_parser::parse_inlines(symbols, &mut Context::default());
         Snapshot::snap(&inlines[..])
     })
     .with_info(format!(

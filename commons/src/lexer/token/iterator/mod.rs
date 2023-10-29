@@ -613,7 +613,7 @@ mod test {
             "Whitespace after keywords was not detected."
         );
         assert!(
-            iterator.next().unwrap().kind == TokenKind::EOI,
+            iterator.next().unwrap().kind == TokenKind::Eoi,
             "Input end reached, but EOI was not returned."
         );
     }

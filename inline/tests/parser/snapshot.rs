@@ -1,23 +1,35 @@
 use std::collections::VecDeque;
 
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
-use unimarkup_inline::{ContentRef, Inline};
+use unimarkup_inline::element::{
+    formatting::{
+        Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
+        Underline, Verbatim,
+    },
+    Inline, InlineElement,
+};
 
 use crate::Snapshot;
+
+impl AsSnapshot for Snapshot<&str> {
+    fn as_snapshot(&self) -> String {
+        self.trim_end().to_string()
+    }
+}
 
 impl AsSnapshot for Snapshot<&[Inline]> {
     fn as_snapshot(&self) -> String {
         self.iter()
-            .filter(|inline| !inline.as_string().trim().is_empty())
+            .filter(|inline| !inline.to_plain_string().trim().is_empty())
             .map(Snapshot::snap)
             .collect()
     }
 }
 
-impl AsSnapshot for Snapshot<&VecDeque<Inline>> {
+impl AsSnapshot for Snapshot<&Vec<Inline>> {
     fn as_snapshot(&self) -> String {
         self.iter()
-            .filter(|inline| !inline.as_string().trim().is_empty())
+            .filter(|inline| !inline.to_plain_string().trim().is_empty())
             .map(Snapshot::snap)
             .collect()
     }
@@ -26,7 +38,7 @@ impl AsSnapshot for Snapshot<&VecDeque<Inline>> {
 impl AsSnapshot for Snapshot<&Inline> {
     fn as_snapshot(&self) -> String {
         let start = self.variant_str();
-        let inner = Snapshot::snap(self.inner());
+        let inner = inner_snapshot(self);
 
         let indent = "    ";
 
@@ -43,8 +55,8 @@ impl AsSnapshot for Snapshot<&Inline> {
 
             // Escaped tokens cause the span to be longer than the rendered content. Distribute
             // the _excess_ length as prefix/suffix
-            let has_prefix_suffix = matches!(self.inner(), ContentRef::Plain(_))
-                && self.span().len_utf8().unwrap_or(1) > content.len();
+            let has_prefix_suffix =
+                self.is_plain() && self.span().len_utf8().unwrap_or(1) > content.len();
 
             let prefix_sufix_len = if has_prefix_suffix {
                 (self.span().len_utf8().unwrap_or(1) - content.len()) / 2
@@ -67,11 +79,12 @@ impl AsSnapshot for Snapshot<&Inline> {
             if matches!(
                 self.0,
                 Inline::Plain(_)
+                    | Inline::EscapedPlain(_)
                     | Inline::Verbatim(_)
-                    | Inline::Parentheses(_)
                     | Inline::EscapedNewline(_)
                     | Inline::EscapedWhitespace(_)
                     | Inline::Newline(_)
+                    | Inline::Whitespace(_)
             ) {
                 res.push_str(indent);
                 res.push_str(&"^".repeat(self.span().len_grapheme().unwrap_or(1)));
@@ -84,17 +97,53 @@ impl AsSnapshot for Snapshot<&Inline> {
     }
 }
 
-impl AsSnapshot for Snapshot<ContentRef<'_>> {
-    fn as_snapshot(&self) -> String {
-        match self.0 {
-            ContentRef::Plain(plain) => Snapshot(plain).as_snapshot(),
-            ContentRef::Nested(nested) => Snapshot(nested).as_snapshot(),
-        }
+fn inner_snapshot(inline: &Inline) -> String {
+    match inline {
+        Inline::Bold(inline) => Snapshot::snap(inline),
+        Inline::Italic(inline) => Snapshot::snap(inline),
+        Inline::Underline(inline) => Snapshot::snap(inline),
+        Inline::Subscript(inline) => Snapshot::snap(inline),
+        Inline::Superscript(inline) => Snapshot::snap(inline),
+        Inline::Overline(inline) => Snapshot::snap(inline),
+        Inline::Strikethrough(inline) => Snapshot::snap(inline),
+        Inline::Highlight(inline) => Snapshot::snap(inline),
+        Inline::Quote(inline) => Snapshot::snap(inline),
+        Inline::Math(inline) => Snapshot::snap(inline),
+        Inline::TextBox(inline) => Snapshot::snap(inline.inner()),
+        Inline::Hyperlink(inline) => Snapshot::snap(inline.inner()),
+        Inline::Verbatim(inline) => Snapshot::snap(inline),
+        Inline::Newline(_) | Inline::EscapedNewline(_) => Snapshot::snap("\n"),
+        Inline::Whitespace(_) => Snapshot::snap(" "),
+        Inline::EscapedWhitespace(inline) => inline.space().clone(),
+        Inline::Plain(inline) => inline.content().clone(),
+        Inline::EscapedPlain(inline) => inline.content().clone(),
+
+        Inline::NamedSubstitution(_) => todo!(),
     }
 }
 
-impl AsSnapshot for Snapshot<&str> {
-    fn as_snapshot(&self) -> String {
-        self.trim_end().to_string()
-    }
+macro_rules! format_to_inline {
+    ($($format:ident),+) => {
+        $(
+            impl AsSnapshot for Snapshot<&$format> {
+                fn as_snapshot(&self) -> String {
+                    Snapshot::snap(self.inner())
+                }
+            }
+        )+
+    };
 }
+
+format_to_inline!(
+    Bold,
+    Italic,
+    Underline,
+    Subscript,
+    Superscript,
+    Strikethrough,
+    Highlight,
+    Overline,
+    Verbatim,
+    Quote,
+    Math
+);

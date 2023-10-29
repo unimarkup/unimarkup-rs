@@ -24,7 +24,7 @@ impl<'input> From<&Token<'input>> for InlineToken<'input> {
             offset: value.offset,
             kind: InlineTokenKind::from(value.kind),
             start: value.start,
-            end: value.start,
+            end: value.end,
         }
     }
 }
@@ -32,10 +32,12 @@ impl<'input> From<&Token<'input>> for InlineToken<'input> {
 impl<'input> InlineToken<'input> {
     pub fn as_str(&self) -> &str {
         match self.kind {
-            InlineTokenKind::Plain
-            | InlineTokenKind::Directuri
-            | InlineTokenKind::EscapedPlain
-            | InlineTokenKind::EscapedWhitespace => &self.input[self.offset.start..self.offset.end],
+            InlineTokenKind::Plain | InlineTokenKind::Directuri => {
+                &self.input[self.offset.start..self.offset.end]
+            }
+            InlineTokenKind::EscapedPlain | InlineTokenKind::EscapedWhitespace => {
+                &self.input[self.offset.start + 1..self.offset.end] // +1 to skip backslash
+            }
             InlineTokenKind::Bold
             | InlineTokenKind::Italic
             | InlineTokenKind::BoldItalic
@@ -406,7 +408,7 @@ impl From<TokenKind> for InlineTokenKind {
             TokenKind::CloseBrace => InlineTokenKind::CloseBrace,
             TokenKind::Whitespace => InlineTokenKind::Whitespace,
             TokenKind::Newline => InlineTokenKind::Newline,
-            TokenKind::EOI => InlineTokenKind::Eoi,
+            TokenKind::Eoi | TokenKind::Blankline => InlineTokenKind::Eoi, // Blankline is not allowed in inlines => treat as inline end
             TokenKind::EscapedPlain => InlineTokenKind::EscapedPlain,
             TokenKind::EscapedWhitespace => InlineTokenKind::EscapedWhitespace,
             TokenKind::EscapedNewline => InlineTokenKind::EscapedNewline,
@@ -418,7 +420,6 @@ impl From<TokenKind> for InlineTokenKind {
 
             TokenKind::Any => InlineTokenKind::Any,
             TokenKind::PossibleAttributes => InlineTokenKind::PossibleAttributes,
-            TokenKind::Blankline => panic!("Blankline in inline content is not allowed."),
 
             TokenKind::Plain
             | TokenKind::Dot(_)
@@ -462,7 +463,7 @@ impl From<InlineTokenKind> for TokenKind {
             InlineTokenKind::EscapedWhitespace => TokenKind::EscapedWhitespace,
             InlineTokenKind::Plain => TokenKind::Plain,
             InlineTokenKind::EscapedPlain => TokenKind::EscapedPlain,
-            InlineTokenKind::Eoi => TokenKind::EOI,
+            InlineTokenKind::Eoi => TokenKind::Eoi,
             InlineTokenKind::Comment { implicit_close } => TokenKind::Comment { implicit_close },
             InlineTokenKind::ImplicitSubstitution(impl_subst) => {
                 TokenKind::ImplicitSubstitution(impl_subst)
