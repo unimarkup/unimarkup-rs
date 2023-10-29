@@ -586,13 +586,13 @@ mod test {
 
     use itertools::{Itertools, PeekingNext};
 
-    use crate::scanner::{PrefixMatcher, SymbolKind};
+    use crate::lexer::{PrefixMatcher, SymbolKind};
 
     use super::{EndMatcher, SymbolIterator};
 
     #[test]
     fn peek_while_index() {
-        let symbols = crate::scanner::scan_str("## ");
+        let symbols = crate::lexer::scan_str("## ");
 
         let mut iterator = SymbolIterator::from(&*symbols);
         let hash_cnt = iterator
@@ -617,7 +617,7 @@ mod test {
 
     #[test]
     fn peek_next() {
-        let symbols = crate::scanner::scan_str("#*");
+        let symbols = crate::lexer::scan_str("#*");
 
         let mut iterator = SymbolIterator::from(&*symbols);
 
@@ -651,7 +651,7 @@ mod test {
 
     #[test]
     fn reach_end() {
-        let symbols = crate::scanner::scan_str("text*");
+        let symbols = crate::lexer::scan_str("text*");
 
         let mut iterator = SymbolIterator::from(&*symbols).nest(
             None,
@@ -679,7 +679,7 @@ mod test {
 
     #[test]
     fn reach_consumed_end() {
-        let symbols = crate::scanner::scan_str("text*");
+        let symbols = crate::lexer::scan_str("text*");
 
         let mut iterator = SymbolIterator::from(&*symbols).nest(
             None,
@@ -718,7 +718,7 @@ mod test {
 
     #[test]
     fn with_nested_and_parent_prefix() {
-        let symbols = crate::scanner::scan_str("a\n* *b");
+        let symbols = crate::lexer::scan_str("a\n* *b");
 
         let iterator = SymbolIterator::with(
             &symbols,
@@ -755,7 +755,7 @@ mod test {
 
     #[test]
     fn nested_peek() {
-        let symbols = crate::scanner::scan_str("a\n* *b");
+        let symbols = crate::lexer::scan_str("a\n* *b");
 
         let iterator = SymbolIterator::with(
             &symbols,
@@ -794,7 +794,7 @@ mod test {
 
     #[test]
     fn outer_end_match_takes_precedence() {
-        let symbols = crate::scanner::scan_str("e+f-");
+        let symbols = crate::lexer::scan_str("e+f-");
 
         let mut iterator = SymbolIterator::with(
             &symbols,
@@ -863,7 +863,7 @@ mod test {
 
     #[test]
     fn peek_and_next_return_same_symbols() {
-        let symbols = crate::scanner::scan_str("a\n* *b+-");
+        let symbols = crate::lexer::scan_str("a\n* *b+-");
 
         let iterator = SymbolIterator::with(
             &symbols,
@@ -896,7 +896,7 @@ mod test {
 
     #[test]
     fn scoping() {
-        let symbols = crate::scanner::scan_str("[o [i] o]");
+        let symbols = crate::lexer::scan_str("[o [i] o]");
 
         let mut iterator = SymbolIterator::scoped(
             &symbols,
@@ -945,7 +945,7 @@ mod test {
 
     #[test]
     fn prefix_mismatch_returns_none_forever() {
-        let symbols = crate::scanner::scan_str("a\n  b\nc");
+        let symbols = crate::lexer::scan_str("a\n  b\nc");
 
         let mut iterator = SymbolIterator::with(
             &symbols,
@@ -978,7 +978,7 @@ mod test {
 
     #[test]
     fn prev_kind() {
-        let symbols = crate::scanner::scan_str("a *\n");
+        let symbols = crate::lexer::scan_str("a *\n");
 
         let mut iterator = SymbolIterator::with(&symbols, None, None);
 
@@ -1029,7 +1029,7 @@ mod test {
 
     #[test]
     fn prev_symbol_from_end_match() {
-        let symbols = crate::scanner::scan_str("a*+b");
+        let symbols = crate::lexer::scan_str("a*+b");
 
         let mut iterator = SymbolIterator::with(
             &symbols,
@@ -1057,7 +1057,7 @@ mod test {
 
     #[test]
     fn prev_symbol_from_prefix_match() {
-        let symbols = crate::scanner::scan_str("\n*+b");
+        let symbols = crate::lexer::scan_str("\n*+b");
 
         let mut iterator = SymbolIterator::with(
             &symbols,

@@ -1,4 +1,4 @@
-use crate::scanner::{position::Position, span::Span};
+use crate::lexer::{position::Position, span::Span};
 
 use super::Parser;
 

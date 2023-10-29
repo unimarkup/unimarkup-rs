@@ -2,7 +2,7 @@
 
 use itertools::PeekingNext;
 
-use crate::scanner::Symbol;
+use crate::lexer::Symbol;
 
 /// The [`SymbolIteratorRoot`] is the root iterator in any [`SymbolIterator`](super::SymbolIterator).
 /// It holds the actual [`Symbol`] slice.

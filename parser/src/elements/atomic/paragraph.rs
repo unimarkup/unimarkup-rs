@@ -8,7 +8,7 @@ use crate::{
     elements::{blocks::Block, types},
     parser::TokenizeOutput,
 };
-use unimarkup_commons::scanner::{EndMatcher, Symbol, SymbolIterator};
+use unimarkup_commons::lexer::{EndMatcher, Symbol, SymbolIterator};
 
 /// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

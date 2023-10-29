@@ -1,6 +1,6 @@
 //! Structs and implementations of Inlines that can contain only String as content.
 
-use unimarkup_commons::scanner::span::Span;
+use unimarkup_commons::lexer::span::Span;
 
 macro_rules! impl_plain_inline {
     (

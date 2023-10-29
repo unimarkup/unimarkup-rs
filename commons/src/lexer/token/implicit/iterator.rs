@@ -2,7 +2,7 @@
 
 use itertools::PeekingNext;
 
-use crate::scanner::{
+use crate::lexer::{
     new::SymbolIterator,
     token::{
         iterator::{base::TokenIteratorBase, extension::TokenIteratorExt},
@@ -167,13 +167,11 @@ impl<'input> PeekingNext for TokenIteratorImplicits<'input> {
 
 #[cfg(test)]
 mod test {
-    use crate::scanner::token::{
-        implicit::ImplicitSubstitution, iterator::TokenIterator, TokenKind,
-    };
+    use crate::lexer::token::{implicit::ImplicitSubstitution, iterator::TokenIterator, TokenKind};
 
     #[test]
     fn trademark_substitution() {
-        let symbols = crate::scanner::scan_str("(TM)");
+        let symbols = crate::lexer::scan_str("(TM)");
         let mut token_iter = TokenIterator::from(&*symbols);
 
         let token = token_iter.next().unwrap();

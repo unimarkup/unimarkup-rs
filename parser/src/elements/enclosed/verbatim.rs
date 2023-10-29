@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::elements::blocks::Block;
 use crate::elements::Blocks;
 use crate::parser::{ElementParser, TokenizeOutput};
-use unimarkup_commons::scanner::{EndMatcher, Itertools, Symbol, SymbolIterator, SymbolKind};
+use unimarkup_commons::lexer::{EndMatcher, Itertools, Symbol, SymbolIterator, SymbolKind};
 
 /// Structure of a Unimarkup verbatim block element.
 #[derive(Debug, PartialEq, Eq, Clone)]

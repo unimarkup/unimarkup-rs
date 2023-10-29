@@ -37,7 +37,7 @@ pub fn test_lexer_snapshots() -> Vec<Trial> {
 }
 
 fn run_test_case(case: test_runner::test_file::TestCase) {
-    let mut symbols = unimarkup_commons::scanner::scan_str(&case.test.input);
+    let mut symbols = unimarkup_commons::lexer::scan_str(&case.test.input);
     symbols.pop(); // Remove EOI symbol for test cases
 
     let runner = SnapTestRunner::with_fn(&case.test.name, &symbols, |symbols| {

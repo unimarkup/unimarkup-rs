@@ -2,7 +2,7 @@
 
 use itertools::{Itertools, PeekingNext};
 
-use crate::scanner::{
+use crate::lexer::{
     new::SymbolIterator,
     token::{Token, TokenKind},
     SymbolKind,

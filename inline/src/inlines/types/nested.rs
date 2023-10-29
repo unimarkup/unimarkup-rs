@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use unimarkup_commons::scanner::span::Span;
+use unimarkup_commons::lexer::span::Span;
 
 use crate::Inline;
 

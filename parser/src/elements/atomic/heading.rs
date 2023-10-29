@@ -6,7 +6,7 @@ use unimarkup_inline::{Inline, ParseInlines};
 use crate::elements::blocks::Block;
 use crate::elements::Blocks;
 use crate::parser::{ElementParser, TokenizeOutput};
-use unimarkup_commons::scanner::{
+use unimarkup_commons::lexer::{
     EndMatcher, Itertools, PrefixMatcher, Symbol, SymbolIterator, SymbolKind,
 };
 

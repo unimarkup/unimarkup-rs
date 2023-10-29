@@ -1,4 +1,4 @@
-use unimarkup_commons::scanner::{
+use unimarkup_commons::lexer::{
     position::{Offset, Position},
     token::{implicit::ImplicitSubstitution, Token, TokenKind},
 };

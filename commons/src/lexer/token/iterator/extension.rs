@@ -1,6 +1,6 @@
 use itertools::PeekingNext;
 
-use crate::scanner::token::Token;
+use crate::lexer::token::Token;
 
 pub(crate) trait TokenIteratorExt<'input>:
     Iterator<Item = Token<'input>> + PeekingNext + Clone

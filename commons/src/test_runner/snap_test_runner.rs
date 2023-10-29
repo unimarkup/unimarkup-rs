@@ -1,4 +1,4 @@
-use crate::scanner::Symbol;
+use crate::lexer::Symbol;
 use serde::Serialize;
 
 pub use insta::{assert_snapshot, Settings};

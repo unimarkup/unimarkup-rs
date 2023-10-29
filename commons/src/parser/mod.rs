@@ -4,7 +4,7 @@ mod generator;
 pub use element::*;
 pub use generator::*;
 
-use crate::scanner::SymbolIterator;
+use crate::lexer::SymbolIterator;
 
 /// Parser as function that can parse Unimarkup content
 pub type ParserFn<T> = for<'i> fn(&mut SymbolIterator<'i>) -> Option<T>;

@@ -1,7 +1,7 @@
 mod kind;
 pub use kind::*;
 
-use crate::scanner::position::Offset;
+use crate::lexer::position::Offset;
 
 use self::iterator::TokenIteratorImplicits;
 

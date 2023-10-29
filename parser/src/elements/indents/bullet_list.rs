@@ -2,7 +2,7 @@
 
 use std::rc::Rc;
 
-use unimarkup_commons::scanner::{EndMatcher, PrefixMatcher, Symbol, SymbolKind};
+use unimarkup_commons::lexer::{EndMatcher, PrefixMatcher, Symbol, SymbolKind};
 use unimarkup_inline::{Inline, ParseInlines};
 
 use crate::{elements::blocks::Block, ElementParser, MainParser};
@@ -131,7 +131,7 @@ impl ElementParser for BulletList {
     type Token<'a> = self::BulletListEntry;
 
     fn tokenize<'i>(
-        input: &mut unimarkup_commons::scanner::SymbolIterator<'i>,
+        input: &mut unimarkup_commons::lexer::SymbolIterator<'i>,
     ) -> Option<crate::TokenizeOutput<Self::Token<'i>>> {
         let mut tokens = Vec::new();
 
@@ -179,7 +179,7 @@ impl ElementParser for BulletListEntry {
     type Token<'a> = self::EntryToken;
 
     fn tokenize<'i>(
-        input: &mut unimarkup_commons::scanner::SymbolIterator<'i>,
+        input: &mut unimarkup_commons::lexer::SymbolIterator<'i>,
     ) -> Option<crate::TokenizeOutput<Self::Token<'i>>> {
         let entry_keyword = BulletListEntryKeyword::try_from(input.next()?).ok()?;
 

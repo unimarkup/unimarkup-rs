@@ -2,7 +2,7 @@ mod resolver;
 mod token;
 
 pub use token::*;
-use unimarkup_commons::scanner::{
+use unimarkup_commons::lexer::{
     position,
     span::{Span, SpanLen},
     Symbol, SymbolKind,

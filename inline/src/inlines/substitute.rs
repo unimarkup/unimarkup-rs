@@ -3,7 +3,7 @@
 use fxhash::{FxHashMap, FxHashSet};
 
 use logid::evident::once_cell::sync::Lazy;
-use unimarkup_commons::scanner::{self, span::Span};
+use unimarkup_commons::lexer::{self, span::Span};
 
 /// ASCII Emojis that can be replaced with their Unicode versions in a Unimarkup text.
 pub const EMOJIS: [(&str, &str); 18] = [
@@ -113,9 +113,9 @@ impl<'sub> Substitutor<'sub> {
 
     pub(crate) fn get_subst_iter<I>(&self, iter: I) -> Option<Substitute<'sub>>
     where
-        I: Iterator<Item = &'sub scanner::Symbol<'sub>> + Clone,
+        I: Iterator<Item = &'sub lexer::Symbol<'sub>> + Clone,
     {
-        let slice = scanner::Symbol::flatten_iter(iter.clone())?;
+        let slice = lexer::Symbol::flatten_iter(iter.clone())?;
         let mut tmp_iter = iter;
         let first = tmp_iter.next()?;
         let start = first.start;
@@ -126,7 +126,7 @@ impl<'sub> Substitutor<'sub> {
         self.get_subst(slice, span)
     }
 
-    pub(crate) fn is_start_of_substitute(&self, symbol: &scanner::Symbol) -> bool {
+    pub(crate) fn is_start_of_substitute(&self, symbol: &lexer::Symbol) -> bool {
         self.first_grapheme.contains(symbol.as_str())
     }
 

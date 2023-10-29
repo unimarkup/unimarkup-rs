@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-use unimarkup_commons::scanner::span::{Span, SpanLen};
-use unimarkup_commons::scanner::{self, SymbolKind};
+use unimarkup_commons::lexer::span::{Span, SpanLen};
+use unimarkup_commons::lexer::{self, SymbolKind};
 
 use super::resolver::State;
 use super::ContentOption;
@@ -554,8 +554,8 @@ impl From<&Inline> for TokenKind {
     }
 }
 
-impl From<(&scanner::Symbol<'_>, usize)> for TokenKind {
-    fn from((symbol, len): (&scanner::Symbol, usize)) -> Self {
+impl From<(&lexer::Symbol<'_>, usize)> for TokenKind {
+    fn from((symbol, len): (&lexer::Symbol, usize)) -> Self {
         match len {
             1 => match symbol.kind {
                 SymbolKind::Star => Self::Italic,

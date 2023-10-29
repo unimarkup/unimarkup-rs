@@ -1,4 +1,4 @@
-use unimarkup_commons::scanner::{position::Position, span::Span};
+use unimarkup_commons::lexer::{position::Position, span::Span};
 
 use crate::{
     inline_parser,

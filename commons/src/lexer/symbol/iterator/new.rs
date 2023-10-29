@@ -1,6 +1,6 @@
 use itertools::{Itertools, PeekingNext};
 
-use crate::scanner::{Symbol, SymbolKind};
+use crate::lexer::{Symbol, SymbolKind};
 
 #[derive(Clone)]
 pub struct SymbolIterator<'input> {

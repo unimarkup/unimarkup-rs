@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use unimarkup_commons::scanner::{
+use unimarkup_commons::lexer::{
     token::{
         implicit::iterator::TokenIteratorImplicitExt,
         iterator::{IteratorEndFn, TokenIterator},

@@ -3,7 +3,7 @@
 
 use std::borrow::BorrowMut;
 
-use crate::scanner::{new::SymbolIterator, Symbol};
+use crate::lexer::{new::SymbolIterator, Symbol};
 
 use self::{extension::TokenIteratorExt, scope_root::TokenIteratorScopedRoot};
 
@@ -579,7 +579,7 @@ mod test {
 
     #[test]
     fn peek_while_index() {
-        let symbols = crate::scanner::scan_str("##++ ");
+        let symbols = crate::lexer::scan_str("##++ ");
 
         let mut iterator = TokenIterator::from(&*symbols);
         let token_cnt = iterator

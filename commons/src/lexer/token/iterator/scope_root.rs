@@ -1,6 +1,6 @@
 use itertools::PeekingNext;
 
-use crate::scanner::token::{implicit::iterator::TokenIteratorImplicitExt, Token};
+use crate::lexer::token::{implicit::iterator::TokenIteratorImplicitExt, Token};
 
 use super::{extension::TokenIteratorExt, TokenIterator};
 

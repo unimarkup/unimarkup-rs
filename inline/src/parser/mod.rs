@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, ops::Deref};
 
-use unimarkup_commons::scanner::span::Span;
+use unimarkup_commons::lexer::span::Span;
 
 use crate::{Inline, Token, TokenKind, Tokenize, Tokens};
 

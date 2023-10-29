@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use unimarkup_commons::scanner::token::{
+use unimarkup_commons::lexer::token::{
     implicit::iterator::TokenIteratorImplicitExt, iterator::EndMatcher,
 };
 

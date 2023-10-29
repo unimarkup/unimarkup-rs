@@ -1,4 +1,4 @@
-use unimarkup_commons::scanner::position::{Offset, Position};
+use unimarkup_commons::lexer::position::{Offset, Position};
 
 use crate::{
     element::Inline,

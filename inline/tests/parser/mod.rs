@@ -36,7 +36,7 @@ pub fn test_parser_snapshots() -> Vec<Trial> {
 }
 
 fn run_test_case(case: test_runner::test_file::TestCase) {
-    let symbols = unimarkup_commons::scanner::scan_str(&case.test.input);
+    let symbols = unimarkup_commons::lexer::scan_str(&case.test.input);
 
     let runner = SnapTestRunner::with_fn(&case.test.name, &symbols, |symbols| {
         let inlines: Vec<_> = symbols.parse_inlines().collect();

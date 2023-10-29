@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use unimarkup_commons::scanner::token::{iterator::EndMatcher, TokenKind};
+use unimarkup_commons::lexer::token::{iterator::EndMatcher, TokenKind};
 
 use crate::{
     inline_parser,
@@ -102,7 +102,7 @@ impl From<TextBox> for Inline {
 
 #[cfg(test)]
 mod test {
-    use unimarkup_commons::scanner::token::iterator::TokenIterator;
+    use unimarkup_commons::lexer::token::iterator::TokenIterator;
 
     use crate::{
         element::{
@@ -114,7 +114,7 @@ mod test {
 
     #[test]
     fn parse_textbox() {
-        let symbols = unimarkup_commons::scanner::scan_str("[textbox]");
+        let symbols = unimarkup_commons::lexer::scan_str("[textbox]");
         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
 
         let inline = super::parse(&mut token_iter).unwrap();
@@ -134,7 +134,7 @@ mod test {
 
     #[test]
     fn parse_hyperlink() {
-        let symbols = unimarkup_commons::scanner::scan_str("[](link)");
+        let symbols = unimarkup_commons::lexer::scan_str("[](link)");
         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
 
         let inline = super::parse(&mut token_iter).unwrap();

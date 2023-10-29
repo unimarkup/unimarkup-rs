@@ -1,6 +1,6 @@
 //! Inline parser
 
-use unimarkup_commons::scanner::token::iterator::TokenIterator;
+use unimarkup_commons::lexer::token::iterator::TokenIterator;
 
 use crate::{
     element::Inline,

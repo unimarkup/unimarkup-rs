@@ -1,4 +1,4 @@
-use crate::scanner::SymbolKind;
+use crate::lexer::SymbolKind;
 
 use super::implicit::ImplicitSubstitution;
 

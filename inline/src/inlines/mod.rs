@@ -8,7 +8,7 @@ mod substitute;
 pub mod types;
 
 use types::*;
-use unimarkup_commons::scanner::span::Span;
+use unimarkup_commons::lexer::span::Span;
 
 pub use content::*;
 pub use substitute::*;
