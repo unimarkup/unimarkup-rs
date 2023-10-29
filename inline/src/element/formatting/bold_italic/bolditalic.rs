@@ -28,7 +28,7 @@ pub fn parse(input: &mut InlineTokenIterator) -> Option<Inline> {
 
     if input.peek_kind()?.is_space() {
         // Split ambiguous in case of leading space. Bold wins
-        if open_token.kind == InlineTokenKind::ItalicBold {
+        if open_token.kind == InlineTokenKind::BoldItalic {
             let mut cached = open_token;
             cached.kind = InlineTokenKind::Italic;
 
@@ -42,7 +42,7 @@ pub fn parse(input: &mut InlineTokenIterator) -> Option<Inline> {
     }
 
     match open_token.kind {
-        InlineTokenKind::ItalicBold => {
+        InlineTokenKind::BoldItalic => {
             input.push_format(InlineTokenKind::Italic);
             input.push_format(InlineTokenKind::Bold);
         }
@@ -94,12 +94,12 @@ fn resolve_closing(
                 input.next()?;
                 input.pop_format(InlineTokenKind::Bold);
                 return Some(Bold { inner }.into());
-            } else if open_token.kind == InlineTokenKind::ItalicBold
-                && close_token.kind == InlineTokenKind::ItalicBold
+            } else if open_token.kind == InlineTokenKind::BoldItalic
+                && close_token.kind == InlineTokenKind::BoldItalic
             {
                 // open & close = italicbold => close italicbold and consume close and no second part
                 input.next()?;
-                input.pop_format(InlineTokenKind::ItalicBold);
+                input.pop_format(InlineTokenKind::BoldItalic);
                 return Some(
                     Bold {
                         inner: vec![Italic { inner }.into()],
@@ -107,7 +107,7 @@ fn resolve_closing(
                     .into(),
                 );
             } else if open_token.kind == InlineTokenKind::Bold
-                && close_token.kind == InlineTokenKind::ItalicBold
+                && close_token.kind == InlineTokenKind::BoldItalic
             {
                 // open = bold, close = italicbold => close bold, consume close, cache italic and no second part, because italic is handled by other parser
                 input.next()?;
@@ -117,7 +117,7 @@ fn resolve_closing(
                 input.cache_token(close_token);
                 return Some(Bold { inner }.into());
             } else if open_token.kind == InlineTokenKind::Italic
-                && close_token.kind == InlineTokenKind::ItalicBold
+                && close_token.kind == InlineTokenKind::BoldItalic
             {
                 // open = italic, close = italicbold => close italic, consume close, cache bold and no second part, because bold is handled by other parser
                 input.next()?;
@@ -126,7 +126,7 @@ fn resolve_closing(
                 close_token.kind = InlineTokenKind::Bold;
                 input.cache_token(close_token);
                 return Some(Italic { inner }.into());
-            } else if open_token.kind == InlineTokenKind::ItalicBold
+            } else if open_token.kind == InlineTokenKind::BoldItalic
                 && close_token.kind == InlineTokenKind::Bold
             {
                 // open = italicbold, close = bold => close bold, consume close and parse second part (split span of open)
@@ -137,7 +137,7 @@ fn resolve_closing(
 
                 open_token.kind = InlineTokenKind::Italic;
                 open_token
-            } else if open_token.kind == InlineTokenKind::ItalicBold
+            } else if open_token.kind == InlineTokenKind::BoldItalic
                 && close_token.kind == InlineTokenKind::Italic
             {
                 // open = italicbold, close = italic => close italic, consume close and parse second part
@@ -152,7 +152,7 @@ fn resolve_closing(
             } else {
                 // closing token is not compatible with bold or italic => other outer format closed
                 // close open format, but do not consume close
-                if open_token.kind == InlineTokenKind::ItalicBold {
+                if open_token.kind == InlineTokenKind::BoldItalic {
                     input.pop_format(InlineTokenKind::Italic);
                     input.pop_format(InlineTokenKind::Bold);
 
@@ -174,7 +174,7 @@ fn resolve_closing(
         None => {
             // close open format only and return
             // This is ok, because if ambiguous would have been split, peek() would have returned the partial closing token
-            if open_token.kind == InlineTokenKind::ItalicBold {
+            if open_token.kind == InlineTokenKind::BoldItalic {
                 input.pop_format(InlineTokenKind::Italic);
                 input.pop_format(InlineTokenKind::Bold);
 
@@ -220,7 +220,7 @@ fn resolve_closing(
                 input.pop_format(close_token.kind);
                 Some(Bold { inner: outer }.into())
             } else if updated_open.kind == InlineTokenKind::Italic
-                && close_token.kind == InlineTokenKind::ItalicBold
+                && close_token.kind == InlineTokenKind::BoldItalic
             {
                 // updated open = italic, close = italicbold => close italic, consume close, cache bold
                 input.next()?;
@@ -230,7 +230,7 @@ fn resolve_closing(
                 input.cache_token(close_token);
                 Some(Italic { inner: outer }.into())
             } else if updated_open.kind == InlineTokenKind::Bold
-                && close_token.kind == InlineTokenKind::ItalicBold
+                && close_token.kind == InlineTokenKind::BoldItalic
             {
                 // updated open = bold, close = italicbold => close bold, consume close, cache italic
                 input.next()?;

@@ -132,9 +132,12 @@ impl InlineParser {
 
 fn get_format_parser(kind: InlineTokenKind) -> Option<InlineParserFn> {
     match kind {
-        InlineTokenKind::Bold | InlineTokenKind::Italic | InlineTokenKind::ItalicBold => {
+        InlineTokenKind::Bold | InlineTokenKind::Italic | InlineTokenKind::BoldItalic => {
             Some(crate::element::formatting::bold_italic::parse)
         }
+        InlineTokenKind::Underline
+        | InlineTokenKind::Subscript
+        | InlineTokenKind::UnderlineSubscript => Some(crate::element::formatting::ambiguous::parse),
         InlineTokenKind::Strikethrough => Some(crate::element::formatting::strikethrough::parse),
         _ => None,
     }

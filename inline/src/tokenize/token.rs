@@ -37,7 +37,7 @@ impl<'input> InlineToken<'input> {
             | InlineTokenKind::EscapedWhitespace => &self.input[self.offset.start..self.offset.end],
             InlineTokenKind::Bold
             | InlineTokenKind::Italic
-            | InlineTokenKind::ItalicBold
+            | InlineTokenKind::BoldItalic
             | InlineTokenKind::Highlight
             | InlineTokenKind::Underline
             | InlineTokenKind::Subscript
@@ -80,7 +80,7 @@ pub enum InlineTokenKind {
     Italic,
 
     /// Ambiguous token, might be bold, italic, or both (`***`).
-    ItalicBold,
+    BoldItalic,
 
     /// Underline delimiter token (`__`);
     Underline,
@@ -170,7 +170,7 @@ impl InlineTokenKind {
     pub fn as_str(&self) -> &'static str {
         match *self {
             InlineTokenKind::Bold => "**",
-            InlineTokenKind::ItalicBold => "***",
+            InlineTokenKind::BoldItalic => "***",
             InlineTokenKind::Italic => "*",
             InlineTokenKind::Newline | InlineTokenKind::EscapedNewline => "\n",
             InlineTokenKind::Whitespace => " ",
@@ -266,7 +266,7 @@ impl InlineTokenKind {
             self,
             InlineTokenKind::Bold
                 | InlineTokenKind::Italic
-                | InlineTokenKind::ItalicBold
+                | InlineTokenKind::BoldItalic
                 | InlineTokenKind::Underline
                 | InlineTokenKind::Subscript
                 | InlineTokenKind::UnderlineSubscript
@@ -297,7 +297,7 @@ impl From<TokenKind> for InlineTokenKind {
                 } else if len == 2 {
                     InlineTokenKind::Bold
                 } else if len == 3 {
-                    InlineTokenKind::ItalicBold
+                    InlineTokenKind::BoldItalic
                 } else {
                     InlineTokenKind::Plain
                 }

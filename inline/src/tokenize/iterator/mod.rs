@@ -122,7 +122,7 @@ impl<'input> InlineTokenIterator<'input> {
     pub(crate) fn ambiguous_split(&mut self, token: &mut InlineToken<'input>) {
         let mut cached = token.to_owned();
 
-        let split = if token.kind == InlineTokenKind::ItalicBold {
+        let split = if token.kind == InlineTokenKind::BoldItalic {
             // TODO: handle spans correctly and update offset of "split" token for as_str()
 
             // Italic and bold might be both open, but bold wins split
@@ -168,7 +168,7 @@ impl<'input> InlineTokenIterator<'input> {
 
     pub(crate) fn format_is_open(&self, format: InlineTokenKind) -> bool {
         // check if ambiguous parts are open, because open ambiguous pushes both formats, but not itself
-        let ambiguous_open = (format == InlineTokenKind::ItalicBold
+        let ambiguous_open = (format == InlineTokenKind::BoldItalic
             && (self.open_formats.contains(&InlineTokenKind::Italic)
                 || self.open_formats.contains(&InlineTokenKind::Bold)))
             || (format == InlineTokenKind::UnderlineSubscript
