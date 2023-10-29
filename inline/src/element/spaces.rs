@@ -1,4 +1,4 @@
-use super::{Inline, InlineError};
+use super::Inline;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Whitespace {}
@@ -6,17 +6,6 @@ pub struct Whitespace {}
 impl From<Whitespace> for Inline {
     fn from(value: Whitespace) -> Self {
         Inline::Whitespace(value)
-    }
-}
-
-impl TryFrom<Inline> for Whitespace {
-    type Error = InlineError;
-
-    fn try_from(value: Inline) -> Result<Self, Self::Error> {
-        match value {
-            Inline::Whitespace(whitespace) => Ok(whitespace),
-            _ => Err(InlineError::ConversionMismatch),
-        }
     }
 }
 

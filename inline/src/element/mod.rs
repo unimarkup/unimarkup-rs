@@ -1,18 +1,8 @@
-use unimarkup_commons::parser::Parser;
-
 use self::{
     formatting::{
-        bold_italic::{Bold, Italic},
-        highlight::Highlight,
-        math::Math,
-        overline::Overline,
-        quote::Quote,
-        strikethrough::Strikethrough,
-        superscript::Superscript,
-        verbatim::Verbatim,
-        Subscript, Underline,
+        Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
+        Underline, Verbatim,
     },
-    multiple::Multiple,
     plain::{EscapedPlain, Plain},
     spaces::{EscapedNewline, EscapedWhitespace, Newline, Whitespace},
     substitution::named::NamedSubstitution,
@@ -20,13 +10,10 @@ use self::{
 };
 
 pub mod formatting;
-pub mod multiple;
 pub mod plain;
 pub mod spaces;
 pub mod substitution;
 pub mod textbox;
-
-pub trait InlineElement: Parser<Inline> + Into<Inline> + TryFrom<Inline> {}
 
 /// Supported Unimarkup inline elements.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,11 +57,6 @@ pub enum Inline {
     /// Named substitution ( i.e. `::heart::`).
     NamedSubstitution(NamedSubstitution),
 
-    /// Wrapper without any special formatting for multiple other [`Inline`]s.
-    ///
-    /// [`Inline`]: self::Inline
-    Multiple(Multiple),
-
     /// Verbatim (monospaced) content.
     Verbatim(Verbatim),
 
@@ -99,55 +81,10 @@ pub enum Inline {
 
 impl Inline {
     pub fn is_plain(&self) -> bool {
-        match self {
-            Inline::Plain(_) => true,
-            Inline::Multiple(multiple) => {
-                multiple.inner.last().map_or(false, |last| last.is_plain())
-            }
-            _ => false,
-        }
-    }
-
-    pub fn merge_plain(&mut self, plain: Plain) -> Result<(), InlineError> {
-        match self {
-            Inline::Plain(self_plain) => {
-                self_plain.content.push_str(&plain.content);
-                Ok(())
-            }
-            Inline::Multiple(multiple) => match multiple.inner.last_mut() {
-                Some(last) => last.merge_plain(plain),
-                None => Err(InlineError::MergeMismatch),
-            },
-            _ => Err(InlineError::MergeMismatch),
-        }
+        matches!(self, Inline::Plain(_))
     }
 
     pub fn is_whitespace(&self) -> bool {
-        match self {
-            Inline::Whitespace(_) => true,
-            Inline::Multiple(multiple) => multiple
-                .inner
-                .last()
-                .map_or(false, |last| last.is_whitespace()),
-            _ => false,
-        }
+        matches!(self, Inline::Whitespace(_))
     }
-
-    pub fn merge_whitespace(&mut self, _whitespace: Whitespace) -> Result<(), InlineError> {
-        match self {
-            // TODO: update spans here
-            Inline::Whitespace(_) => Ok(()),
-            Inline::Multiple(multiple) => match multiple.inner.last_mut() {
-                Some(last) => last.merge_whitespace(_whitespace),
-                None => Err(InlineError::MergeMismatch),
-            },
-            _ => Err(InlineError::MergeMismatch),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum InlineError {
-    MergeMismatch,
-    ConversionMismatch,
 }

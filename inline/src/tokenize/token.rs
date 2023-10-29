@@ -58,7 +58,7 @@ impl<'input> InlineToken<'input> {
             | InlineTokenKind::Whitespace
             | InlineTokenKind::Newline
             | InlineTokenKind::EscapedNewline
-            | InlineTokenKind::EOI => self.kind.as_str(),
+            | InlineTokenKind::Eoi => self.kind.as_str(),
             InlineTokenKind::Comment { .. }
             | InlineTokenKind::ImplicitSubstitution(_)
             | InlineTokenKind::Any
@@ -153,7 +153,7 @@ pub enum InlineTokenKind {
     /// Escaped textual token.
     EscapedPlain,
 
-    EOI,
+    Eoi,
 
     Comment {
         implicit_close: bool,
@@ -191,7 +191,7 @@ impl InlineTokenKind {
             InlineTokenKind::OpenBrace => "{",
             InlineTokenKind::CloseBrace => "}",
             InlineTokenKind::NamedSubstitution => "::",
-            InlineTokenKind::EOI => "",
+            InlineTokenKind::Eoi => "",
             InlineTokenKind::Plain
             | InlineTokenKind::EscapedPlain
             | InlineTokenKind::EscapedWhitespace
@@ -219,7 +219,7 @@ impl InlineTokenKind {
             InlineTokenKind::Newline
                 | InlineTokenKind::Whitespace
                 | InlineTokenKind::Plain
-                | InlineTokenKind::EOI
+                | InlineTokenKind::Eoi
                 | InlineTokenKind::Comment { .. }
                 | InlineTokenKind::ImplicitSubstitution(_)
                 | InlineTokenKind::EscapedNewline
@@ -257,7 +257,7 @@ impl InlineTokenKind {
     pub fn is_space(&self) -> bool {
         matches!(
             self,
-            InlineTokenKind::Newline | InlineTokenKind::Whitespace | InlineTokenKind::EOI
+            InlineTokenKind::Newline | InlineTokenKind::Whitespace | InlineTokenKind::Eoi
         )
     }
 
@@ -288,15 +288,30 @@ impl InlineTokenKind {
     }
 }
 
+pub const ITALIC_KEYWORD_LEN: usize = 1;
+pub const BOLD_KEYWORD_LEN: usize = 2;
+pub const BOLDITALIC_KEYWORD_LEN: usize = 3;
+pub const SUBSCRIPT_KEYWORD_LEN: usize = 1;
+pub const UNDERLINE_KEYWORD_LEN: usize = 2;
+pub const UNDERLINESUBSCRIPT_KEYWORD_LEN: usize = 3;
+pub const STRIKETHROUGH_KEYWORD_LEN: usize = 2;
+pub const HIGHLIGHT_KEYWORD_LEN: usize = 2;
+pub const QUOTE_KEYWORD_LEN: usize = 2;
+pub const MATH_KEYWORD_LEN: usize = 2;
+pub const NAMED_SUBSTITUTION_KEYWORD_LEN: usize = 2;
+pub const SUPERSCRIPT_KEYWORD_LEN: usize = 1;
+pub const VERBATIM_KEYWORD_LEN: usize = 1;
+pub const OVERLINE_KEYWORD_LEN: usize = 1;
+
 impl From<TokenKind> for InlineTokenKind {
     fn from(value: TokenKind) -> Self {
         match value {
             TokenKind::Star(len) => {
-                if len == 1 {
+                if len == ITALIC_KEYWORD_LEN {
                     InlineTokenKind::Italic
-                } else if len == 2 {
+                } else if len == BOLD_KEYWORD_LEN {
                     InlineTokenKind::Bold
-                } else if len == 3 {
+                } else if len == BOLDITALIC_KEYWORD_LEN {
                     InlineTokenKind::BoldItalic
                 } else {
                     InlineTokenKind::Plain
@@ -304,11 +319,11 @@ impl From<TokenKind> for InlineTokenKind {
             }
 
             TokenKind::Underline(len) => {
-                if len == 1 {
+                if len == SUBSCRIPT_KEYWORD_LEN {
                     InlineTokenKind::Subscript
-                } else if len == 2 {
+                } else if len == UNDERLINE_KEYWORD_LEN {
                     InlineTokenKind::Underline
-                } else if len == 3 {
+                } else if len == UNDERLINESUBSCRIPT_KEYWORD_LEN {
                     InlineTokenKind::UnderlineSubscript
                 } else {
                     InlineTokenKind::Plain
@@ -316,35 +331,35 @@ impl From<TokenKind> for InlineTokenKind {
             }
 
             TokenKind::Pipe(len) => {
-                if len == 2 {
+                if len == HIGHLIGHT_KEYWORD_LEN {
                     InlineTokenKind::Highlight
                 } else {
                     InlineTokenKind::Plain
                 }
             }
             TokenKind::Tilde(len) => {
-                if len == 2 {
+                if len == STRIKETHROUGH_KEYWORD_LEN {
                     InlineTokenKind::Strikethrough
                 } else {
                     InlineTokenKind::Plain
                 }
             }
             TokenKind::Quote(len) => {
-                if len == 2 {
+                if len == QUOTE_KEYWORD_LEN {
                     InlineTokenKind::Quote
                 } else {
                     InlineTokenKind::Plain
                 }
             }
             TokenKind::Dollar(len) => {
-                if len == 2 {
+                if len == MATH_KEYWORD_LEN {
                     InlineTokenKind::Math
                 } else {
                     InlineTokenKind::Plain
                 }
             }
             TokenKind::Colon(len) => {
-                if len == 2 {
+                if len == NAMED_SUBSTITUTION_KEYWORD_LEN {
                     InlineTokenKind::NamedSubstitution
                 } else {
                     InlineTokenKind::Plain
@@ -352,21 +367,21 @@ impl From<TokenKind> for InlineTokenKind {
             }
 
             TokenKind::Caret(len) => {
-                if len == 1 {
+                if len == SUPERSCRIPT_KEYWORD_LEN {
                     InlineTokenKind::Superscript
                 } else {
                     InlineTokenKind::Plain
                 }
             }
             TokenKind::Tick(len) => {
-                if len == 1 {
+                if len == VERBATIM_KEYWORD_LEN {
                     InlineTokenKind::Verbatim
                 } else {
                     InlineTokenKind::Plain
                 }
             }
             TokenKind::Overline(len) => {
-                if len == 1 {
+                if len == OVERLINE_KEYWORD_LEN {
                     InlineTokenKind::Overline
                 } else {
                     InlineTokenKind::Plain
@@ -381,7 +396,7 @@ impl From<TokenKind> for InlineTokenKind {
             TokenKind::CloseBrace => InlineTokenKind::CloseBrace,
             TokenKind::Whitespace => InlineTokenKind::Whitespace,
             TokenKind::Newline => InlineTokenKind::Newline,
-            TokenKind::EOI => InlineTokenKind::EOI,
+            TokenKind::EOI => InlineTokenKind::Eoi,
             TokenKind::EscapedPlain => InlineTokenKind::EscapedPlain,
             TokenKind::EscapedWhitespace => InlineTokenKind::EscapedWhitespace,
             TokenKind::EscapedNewline => InlineTokenKind::EscapedNewline,
@@ -401,6 +416,48 @@ impl From<TokenKind> for InlineTokenKind {
             | TokenKind::Plus(_)
             | TokenKind::PossibleDecorator
             | TokenKind::Punctuation => InlineTokenKind::Plain,
+        }
+    }
+}
+
+impl From<InlineTokenKind> for TokenKind {
+    fn from(value: InlineTokenKind) -> Self {
+        match value {
+            InlineTokenKind::Bold => TokenKind::Star(BOLD_KEYWORD_LEN),
+            InlineTokenKind::Italic => TokenKind::Star(ITALIC_KEYWORD_LEN),
+            InlineTokenKind::BoldItalic => TokenKind::Star(BOLDITALIC_KEYWORD_LEN),
+            InlineTokenKind::Underline => TokenKind::Underline(UNDERLINE_KEYWORD_LEN),
+            InlineTokenKind::Subscript => TokenKind::Underline(SUBSCRIPT_KEYWORD_LEN),
+            InlineTokenKind::UnderlineSubscript => {
+                TokenKind::Underline(UNDERLINESUBSCRIPT_KEYWORD_LEN)
+            }
+            InlineTokenKind::Superscript => TokenKind::Caret(SUPERSCRIPT_KEYWORD_LEN),
+            InlineTokenKind::Overline => TokenKind::Overline(OVERLINE_KEYWORD_LEN),
+            InlineTokenKind::Strikethrough => TokenKind::Tilde(STRIKETHROUGH_KEYWORD_LEN),
+            InlineTokenKind::Highlight => TokenKind::Pipe(HIGHLIGHT_KEYWORD_LEN),
+            InlineTokenKind::Verbatim => TokenKind::Tick(VERBATIM_KEYWORD_LEN),
+            InlineTokenKind::Quote => TokenKind::Quote(QUOTE_KEYWORD_LEN),
+            InlineTokenKind::Math => TokenKind::Dollar(MATH_KEYWORD_LEN),
+            InlineTokenKind::OpenParenthesis => TokenKind::OpenParenthesis,
+            InlineTokenKind::CloseParenthesis => TokenKind::CloseParenthesis,
+            InlineTokenKind::OpenBracket => TokenKind::OpenBracket,
+            InlineTokenKind::CloseBracket => TokenKind::CloseBracket,
+            InlineTokenKind::OpenBrace => TokenKind::OpenBrace,
+            InlineTokenKind::CloseBrace => TokenKind::CloseBrace,
+            InlineTokenKind::NamedSubstitution => TokenKind::Colon(NAMED_SUBSTITUTION_KEYWORD_LEN),
+            InlineTokenKind::Newline => TokenKind::Newline,
+            InlineTokenKind::EscapedNewline => TokenKind::EscapedNewline,
+            InlineTokenKind::Whitespace => TokenKind::Whitespace,
+            InlineTokenKind::EscapedWhitespace => TokenKind::EscapedWhitespace,
+            InlineTokenKind::Plain => TokenKind::Plain,
+            InlineTokenKind::EscapedPlain => TokenKind::EscapedPlain,
+            InlineTokenKind::Eoi => TokenKind::EOI,
+            InlineTokenKind::Comment { implicit_close } => TokenKind::Comment { implicit_close },
+            InlineTokenKind::ImplicitSubstitution(impl_subst) => {
+                TokenKind::ImplicitSubstitution(impl_subst)
+            }
+            InlineTokenKind::Any => TokenKind::Any,
+            InlineTokenKind::PossibleAttributes => TokenKind::PossibleAttributes,
         }
     }
 }

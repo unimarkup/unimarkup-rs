@@ -112,7 +112,7 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
         let mut token = Token::from(first_symbol);
 
         match first_kind {
-            SymbolKind::EOI => token.kind = TokenKind::EOI,
+            SymbolKind::Eoi => token.kind = TokenKind::EOI,
             SymbolKind::Whitespace | SymbolKind::Plain => {
                 let seq_len = self.sym_iter.peek_while_count(|s| s.kind == first_kind);
 
@@ -134,7 +134,7 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
                             SymbolKind::Whitespace => {
                                 token.kind = TokenKind::EscapedWhitespace;
                             }
-                            SymbolKind::Newline | SymbolKind::EOI => {
+                            SymbolKind::Newline | SymbolKind::Eoi => {
                                 token.kind = TokenKind::EscapedNewline;
                             }
                             _ => {
@@ -160,7 +160,7 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
 
                 let symbol_opt = self.sym_iter.peek();
                 if symbol_opt.map_or(false, |s| {
-                    s.kind == SymbolKind::Newline || s.kind == SymbolKind::EOI
+                    s.kind == SymbolKind::Newline || s.kind == SymbolKind::Eoi
                 }) {
                     let symbol = symbol_opt.expect("Checked above to be some symbol.");
                     token.offset.extend(symbol.offset);

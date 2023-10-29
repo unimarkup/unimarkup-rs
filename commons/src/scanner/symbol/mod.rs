@@ -24,7 +24,7 @@ pub enum SymbolKind {
     /// A line break literal (for example `\n` or '\r\n')
     Newline,
     /// End of Unimarkup document
-    EOI,
+    Eoi,
     /// The backslash (`\`) is used for escaping other symbols.
     Backslash,
     /// Hash symbol (#) used for headings
@@ -78,7 +78,7 @@ impl SymbolKind {
                 | SymbolKind::Whitespace
                 | SymbolKind::Plain
                 | SymbolKind::Dot
-                | SymbolKind::EOI
+                | SymbolKind::Eoi
         )
     }
 
@@ -107,7 +107,7 @@ impl SymbolKind {
     pub fn is_space(&self) -> bool {
         matches!(
             self,
-            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::EOI
+            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Eoi
         )
     }
 }
@@ -283,7 +283,7 @@ impl SymbolKind {
             SymbolKind::Tick => "`",
             SymbolKind::Whitespace => " ",
             SymbolKind::Newline => "\n",
-            SymbolKind::EOI => "",
+            SymbolKind::Eoi => "",
             SymbolKind::Backslash => "\\",
             SymbolKind::Star => "*",
             SymbolKind::Minus => "-",

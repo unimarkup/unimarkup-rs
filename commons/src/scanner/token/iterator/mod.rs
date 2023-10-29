@@ -82,7 +82,7 @@ pub enum TokenIteratorKind<'input> {
     /// The contained iterator is the parent iterator.
     Nested(Box<TokenIterator<'input>>),
     /// Iterator that converts symbols to tokens.
-    Root(TokenIteratorImplicits<'input>),
+    Root(Box<TokenIteratorImplicits<'input>>),
     /// Iterator to define a new scope root.
     /// Meaning that the scope for parent iterators remains unchanged.
     ScopedRoot(Box<TokenIteratorScopedRoot<'input>>),
@@ -109,7 +109,7 @@ impl<'input> TokenIterator<'input> {
         end_match: Option<IteratorEndFn>,
     ) -> Self {
         TokenIterator {
-            parent: TokenIteratorKind::Root(TokenIteratorImplicits::from(sym_iter)),
+            parent: TokenIteratorKind::Root(Box::new(TokenIteratorImplicits::from(sym_iter))),
             scope: 0,
             scoped: false,
             highest_peek_index: 0,
@@ -420,7 +420,7 @@ impl TokenIteratorImplicitExt for TokenIterator<'_> {
 impl<'input> From<SymbolIterator<'input>> for TokenIterator<'input> {
     fn from(value: SymbolIterator<'input>) -> Self {
         TokenIterator {
-            parent: TokenIteratorKind::Root(TokenIteratorImplicits::from(value)),
+            parent: TokenIteratorKind::Root(Box::new(TokenIteratorImplicits::from(value))),
             start_index: 0,
             match_index: 0,
             scope: 0,
@@ -573,11 +573,7 @@ impl<'input> PeekingNext for TokenIterator<'input> {
 
 #[cfg(test)]
 mod test {
-    use std::rc::Rc;
-
-    use itertools::{Itertools, PeekingNext};
-
-    use crate::scanner::{PrefixMatcher, SymbolKind};
+    use itertools::Itertools;
 
     use super::*;
 

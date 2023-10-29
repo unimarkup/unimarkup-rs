@@ -56,7 +56,7 @@ pub fn scan_str(input: &str) -> Vec<Symbol<'_>> {
 
     symbols.push(Symbol {
         input,
-        kind: SymbolKind::EOI,
+        kind: SymbolKind::Eoi,
         offset: Offset {
             start: prev_offset,
             end: prev_offset,

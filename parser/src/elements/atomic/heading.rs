@@ -145,7 +145,7 @@ impl ElementParser for Heading {
             .collect();
         let heading_end = move |matcher: &mut dyn EndMatcher| {
             matcher.consumed_is_empty_line()
-                || matcher.matches(&[SymbolKind::EOI])
+                || matcher.matches(&[SymbolKind::Eoi])
                 || level != HeadingLevel::Level6 && matcher.matches(&sub_heading_start)
         };
 

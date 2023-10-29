@@ -104,19 +104,19 @@ fn get_trademark_copyright_registered_plusmins_kind(
 }
 
 fn get_implicit_arrow<'input>(
-    implicit_iter: &mut TokenIteratorImplicits<'input>,
+    _implicit_iter: &mut TokenIteratorImplicits<'input>,
 ) -> Option<Token<'input>> {
     None
 }
 
 fn get_implicit_emoji<'input>(
-    implicit_iter: &mut TokenIteratorImplicits<'input>,
+    _implicit_iter: &mut TokenIteratorImplicits<'input>,
 ) -> Option<Token<'input>> {
     None
 }
 
 fn get_direct_uri<'input>(
-    implicit_iter: &mut TokenIteratorImplicits<'input>,
+    _implicit_iter: &mut TokenIteratorImplicits<'input>,
 ) -> Option<Token<'input>> {
     None
 }

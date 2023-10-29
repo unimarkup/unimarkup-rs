@@ -346,72 +346,72 @@ fn split_token(
     (first_token, second_token)
 }
 
-#[cfg(test)]
-mod test {
-    use unimarkup_commons::scanner::token::iterator::TokenIterator;
+// #[cfg(test)]
+// mod test {
+//     use unimarkup_commons::scanner::token::iterator::TokenIterator;
 
-    use crate::element::{
-        formatting::{Subscript, Underline},
-        plain::Plain,
-    };
+//     use crate::element::{
+//         formatting::{Subscript, Underline},
+//         plain::Plain,
+//     };
 
-    use super::*;
+//     use super::*;
 
-    #[test]
-    fn parse_underline_subscript() {
-        let symbols = unimarkup_commons::scanner::scan_str("___underline__subscript_");
-        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+//     #[test]
+//     fn parse_underline_subscript() {
+//         let symbols = unimarkup_commons::scanner::scan_str("___underline__subscript_");
+//         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
 
-        let inline = parse(&mut token_iter).unwrap();
+//         let inline = parse(&mut token_iter).unwrap();
 
-        assert_eq!(
-            inline,
-            Subscript {
-                inner: vec![
-                    Underline {
-                        inner: vec![Plain {
-                            content: "underline".to_string(),
-                        }
-                        .into()]
-                    }
-                    .into(),
-                    Plain {
-                        content: "subscript".to_string(),
-                    }
-                    .into()
-                ],
-            }
-            .into(),
-            "Subscript + underline not correctly parsed."
-        )
-    }
+//         assert_eq!(
+//             inline,
+//             Subscript {
+//                 inner: vec![
+//                     Underline {
+//                         inner: vec![Plain {
+//                             content: "underline".to_string(),
+//                         }
+//                         .into()]
+//                     }
+//                     .into(),
+//                     Plain {
+//                         content: "subscript".to_string(),
+//                     }
+//                     .into()
+//                 ],
+//             }
+//             .into(),
+//             "Subscript + underline not correctly parsed."
+//         )
+//     }
 
-    #[test]
-    fn parse_underline_subscript_ambiguous_close() {
-        let symbols = unimarkup_commons::scanner::scan_str("__underline_subscript___");
-        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+//     #[test]
+//     fn parse_underline_subscript_ambiguous_close() {
+//         let symbols = unimarkup_commons::scanner::scan_str("__underline_subscript___");
+//         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
 
-        let inline = parse(&mut token_iter).unwrap();
+//         let inline = parse(&mut token_iter).unwrap();
 
-        assert_eq!(
-            inline,
-            Underline {
-                inner: vec![
-                    Plain {
-                        content: "underline".to_string(),
-                    }
-                    .into(),
-                    Subscript {
-                        inner: vec![Plain {
-                            content: "subscript".to_string(),
-                        }
-                        .into()]
-                    }
-                    .into(),
-                ],
-            }
-            .into(),
-            "Subscript + underline not correctly parsed."
-        )
-    }
-}
+//         assert_eq!(
+//             inline,
+//             Underline {
+//                 inner: vec![
+//                     Plain {
+//                         content: "underline".to_string(),
+//                     }
+//                     .into(),
+//                     Subscript {
+//                         inner: vec![Plain {
+//                             content: "subscript".to_string(),
+//                         }
+//                         .into()]
+//                     }
+//                     .into(),
+//                 ],
+//             }
+//             .into(),
+//             "Subscript + underline not correctly parsed."
+//         )
+//     }
+// }

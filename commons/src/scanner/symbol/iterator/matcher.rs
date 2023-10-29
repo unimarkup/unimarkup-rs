@@ -83,7 +83,7 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
         let peek_index = self.peek_index();
 
         let next = self
-            .peeking_next(|s| matches!(s.kind, SymbolKind::Newline | SymbolKind::EOI))
+            .peeking_next(|s| matches!(s.kind, SymbolKind::Newline | SymbolKind::Eoi))
             .map(|s| s.kind);
 
         let is_empty_line = if Some(SymbolKind::Newline) == next {
@@ -92,7 +92,7 @@ impl<'input> EndMatcher for SymbolIterator<'input> {
                 .count();
 
             let new_line =
-                self.peeking_next(|s| matches!(s.kind, SymbolKind::Newline | SymbolKind::EOI));
+                self.peeking_next(|s| matches!(s.kind, SymbolKind::Newline | SymbolKind::Eoi));
 
             if Some(SymbolKind::Newline) == new_line.map(|s| s.kind) {
                 self.set_peek_index(self.peek_index() - 1); // Do not consume next newline to enable consumption of contiguous empty lines
@@ -191,7 +191,7 @@ impl<'input> PrefixMatcher for SymbolIterator<'input> {
             .count();
 
         let new_line =
-            self.peeking_next(|s| matches!(s.kind, SymbolKind::Newline | SymbolKind::EOI));
+            self.peeking_next(|s| matches!(s.kind, SymbolKind::Newline | SymbolKind::Eoi));
 
         self.set_peek_index(peek_index);
         new_line.is_some()

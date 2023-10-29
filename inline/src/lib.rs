@@ -12,4 +12,3 @@ pub use lexer::*;
 pub use parser::*;
 
 pub mod inline_parser;
-pub mod new_parser;

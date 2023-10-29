@@ -1,4 +1,4 @@
-use crate::element::{Inline, InlineError};
+use crate::element::Inline;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Hyperlink {
@@ -10,16 +10,5 @@ pub struct Hyperlink {
 impl From<Hyperlink> for Inline {
     fn from(value: Hyperlink) -> Self {
         Inline::Hyperlink(value)
-    }
-}
-
-impl TryFrom<Inline> for Hyperlink {
-    type Error = InlineError;
-
-    fn try_from(value: Inline) -> Result<Self, Self::Error> {
-        match value {
-            Inline::Hyperlink(hyperlink) => Ok(hyperlink),
-            _ => Err(InlineError::ConversionMismatch),
-        }
     }
 }

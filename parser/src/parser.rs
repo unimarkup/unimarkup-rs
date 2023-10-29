@@ -121,7 +121,7 @@ impl MainParser {
                 }
 
                 // stop parsing when end of input is reached
-                SymbolKind::EOI => break 'outer,
+                SymbolKind::Eoi => break 'outer,
 
                 // no parser will match, parse with default parser
                 _ if kind.is_not_keyword() => {
