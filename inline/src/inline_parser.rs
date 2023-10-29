@@ -139,6 +139,7 @@ fn get_format_parser(kind: InlineTokenKind) -> Option<InlineParserFn> {
         | InlineTokenKind::Subscript
         | InlineTokenKind::UnderlineSubscript => Some(crate::element::formatting::ambiguous::parse),
         InlineTokenKind::Strikethrough => Some(crate::element::formatting::strikethrough::parse),
+        InlineTokenKind::Superscript => Some(crate::element::formatting::parse_distinct_format),
         _ => None,
     }
 }

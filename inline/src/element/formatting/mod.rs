@@ -1,10 +1,14 @@
 use unimarkup_commons::scanner::position::Position;
 
-use crate::tokenize::token::InlineTokenKind;
+use crate::{
+    inline_parser,
+    tokenize::{iterator::InlineTokenIterator, token::InlineTokenKind},
+};
 
 use self::{
     bold_italic::{Bold, Italic},
     strikethrough::Strikethrough,
+    superscript::Superscript,
 };
 
 use super::Inline;
@@ -56,7 +60,7 @@ pub(crate) fn to_formatting(
 
         InlineTokenKind::Underline => Underline { inner }.into(),
         InlineTokenKind::Subscript => Subscript { inner }.into(),
-        InlineTokenKind::Superscript => todo!(),
+        InlineTokenKind::Superscript => Superscript { inner }.into(),
         InlineTokenKind::Overline => todo!(),
         InlineTokenKind::Strikethrough => Strikethrough { inner }.into(),
         InlineTokenKind::Highlight => todo!(),
@@ -71,4 +75,50 @@ pub(crate) fn to_formatting(
             kind
         ),
     }
+}
+
+pub fn parse_distinct_format(input: &mut InlineTokenIterator) -> Option<Inline> {
+    let open_token = input.next()?;
+
+    // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
+    if input.peek_kind()?.is_space() {
+        return None;
+    }
+
+    input.push_format(open_token.kind);
+
+    let inner = inline_parser::InlineParser::default().parse(input);
+
+    let attributes = None;
+    let mut end = Position::default();
+    let mut implicit_end = false;
+
+    // Only consuming token on open/close match, because closing token might be reserved for an outer open format.
+    if let Some(close_token) = input.peek() {
+        if close_token.kind == open_token.kind {
+            input.next()?;
+
+            //TODO: check for optional attributes here
+            end = close_token.end;
+        } else {
+            implicit_end = true;
+            end = close_token.start;
+        }
+    } else {
+        implicit_end = true;
+        end = input
+            .prev_token()
+            .expect("Previous token must exist here, because format was opened.")
+            .end;
+    }
+
+    input.pop_format(open_token.kind);
+    Some(to_formatting(
+        open_token.kind,
+        inner,
+        attributes,
+        open_token.start,
+        end,
+        implicit_end,
+    ))
 }
