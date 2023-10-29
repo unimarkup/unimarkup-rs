@@ -90,27 +90,25 @@ pub fn parse_distinct_format(input: &mut InlineTokenIterator) -> Option<Inline> 
     let inner = inline_parser::InlineParser::default().parse(input);
 
     let attributes = None;
-    let mut end = Position::default();
-    let mut implicit_end = false;
+    let mut implicit_end = true;
 
     // Only consuming token on open/close match, because closing token might be reserved for an outer open format.
-    if let Some(close_token) = input.peek() {
+    let end = if let Some(close_token) = input.peek() {
         if close_token.kind == open_token.kind {
             input.next()?;
+            implicit_end = false;
 
             //TODO: check for optional attributes here
-            end = close_token.end;
+            close_token.end
         } else {
-            implicit_end = true;
-            end = close_token.start;
+            close_token.start
         }
     } else {
-        implicit_end = true;
-        end = input
+        input
             .prev_token()
             .expect("Previous token must exist here, because format was opened.")
-            .end;
-    }
+            .end
+    };
 
     input.pop_format(open_token.kind);
     Some(to_formatting(
