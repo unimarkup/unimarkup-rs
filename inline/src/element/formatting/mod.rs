@@ -48,6 +48,7 @@ pub(crate) fn to_formatting(
     attributes: Option<Vec<Inline>>,
     start: Position,
     end: Position,
+    implicit_end: bool,
 ) -> Inline {
     match kind {
         InlineTokenKind::Bold => Bold { inner }.into(),

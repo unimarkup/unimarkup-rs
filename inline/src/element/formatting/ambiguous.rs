@@ -51,14 +51,24 @@ fn resolve_closing(
             if open_token.kind == counterpart(close_token.kind)
                 || open_token.kind == close_token.kind
             {
-                if open_token.kind == close_token.kind {
+                let (attributes, implicit_end) = if open_token.kind == close_token.kind {
                     // consume close, because this fn call opened and now closes the format
                     input.next()?;
 
                     // check for optional attributes here
-                }
+                    (None, false)
+                } else {
+                    (None, true)
+                };
 
-                return Some(close_format(input, open_token, inner, close_token.end));
+                return Some(close_format(
+                    input,
+                    open_token,
+                    inner,
+                    attributes,
+                    close_token.end,
+                    implicit_end,
+                ));
             } else if !is_ambiguous(open_token.kind)
                 && open_token.kind == ambiguous_part(close_token.kind)
             {
@@ -76,6 +86,7 @@ fn resolve_closing(
                     None, // check for optional attributes here
                     open_token.start,
                     close_token.end,
+                    false,
                 ));
             } else if open_token.kind == ambiguous_part(close_token.kind) {
                 // no cache, because "split" is on open token
@@ -87,6 +98,7 @@ fn resolve_closing(
                     None, // check for optional attributes here
                     open_token.start,
                     close_token.end,
+                    false,
                 ));
 
                 open_token.kind = counterpart(close_token.kind);
@@ -95,7 +107,14 @@ fn resolve_closing(
                 // Close open format, but do not consume close, because close is not compatible with open one
                 // This means that some outer format closed.
                 // => end of this format is at start of the closing token for the outer format
-                return Some(close_format(input, open_token, inner, close_token.start));
+                return Some(close_format(
+                    input,
+                    open_token,
+                    inner,
+                    None,
+                    close_token.start,
+                    true,
+                ));
             }
         }
         None => {
@@ -103,7 +122,14 @@ fn resolve_closing(
             // This is ok, because if ambiguous would have been split, peek() would have returned the partial closing token
 
             //TODO: Update end position
-            return Some(close_format(input, open_token, inner, open_token.start));
+            return Some(close_format(
+                input,
+                open_token,
+                inner,
+                None,
+                open_token.start,
+                true,
+            ));
         }
     };
 
@@ -136,6 +162,7 @@ fn resolve_closing(
                 None,
                 updated_open.start,
                 close_token.end,
+                false,
             ));
         }
     }
@@ -148,6 +175,7 @@ fn resolve_closing(
         None,
         updated_open.start,
         updated_open.end,
+        true,
     ))
 }
 
@@ -155,7 +183,9 @@ fn close_format(
     input: &mut InlineTokenIterator<'_>,
     open_token: InlineToken<'_>,
     inner: Vec<Inline>,
+    attributes: Option<Vec<Inline>>,
     end: Position,
+    implicit_end: bool,
 ) -> Inline {
     if is_ambiguous(open_token.kind) {
         input.pop_format(main_part(open_token.kind));
@@ -170,14 +200,23 @@ fn close_format(
                 None,
                 open_token.start,
                 end,
+                implicit_end,
             )],
-            None,
+            attributes,
             open_token.start,
             end,
+            implicit_end,
         )
     } else {
         input.pop_format(open_token.kind);
-        super::to_formatting(open_token.kind, inner, None, open_token.start, end)
+        super::to_formatting(
+            open_token.kind,
+            inner,
+            attributes,
+            open_token.start,
+            end,
+            implicit_end,
+        )
     }
 }
 
