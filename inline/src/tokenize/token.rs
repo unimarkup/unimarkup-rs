@@ -1,6 +1,6 @@
 use unimarkup_commons::lexer::{
     position::{Offset, Position},
-    token::{implicit::ImplicitSubstitution, Token, TokenKind},
+    token::{implicit::ImplicitSubstitution, Token, TokenKind, COMMENT_TOKEN_LEN},
 };
 
 /// Token lexed from Unimarkup text.
@@ -33,6 +33,7 @@ impl<'input> InlineToken<'input> {
     pub fn as_str(&self) -> &str {
         match self.kind {
             InlineTokenKind::Plain
+            | InlineTokenKind::Directuri
             | InlineTokenKind::EscapedPlain
             | InlineTokenKind::EscapedWhitespace => &self.input[self.offset.start..self.offset.end],
             InlineTokenKind::Bold
@@ -59,10 +60,16 @@ impl<'input> InlineToken<'input> {
             | InlineTokenKind::Newline
             | InlineTokenKind::EscapedNewline
             | InlineTokenKind::Eoi => self.kind.as_str(),
-            InlineTokenKind::Comment { .. }
-            | InlineTokenKind::ImplicitSubstitution(_)
-            | InlineTokenKind::Any
-            | InlineTokenKind::PossibleAttributes => panic!(
+            InlineTokenKind::Comment { implicit_close } => {
+                if implicit_close {
+                    &self.input[self.offset.start + COMMENT_TOKEN_LEN..self.offset.end]
+                } else {
+                    &self.input
+                        [self.offset.start + COMMENT_TOKEN_LEN..self.offset.end - COMMENT_TOKEN_LEN]
+                }
+            }
+            InlineTokenKind::ImplicitSubstitution(impl_subst) => impl_subst.orig(), // using `orig()` here, because `as_str()` is only called to convert to plain content
+            InlineTokenKind::Any | InlineTokenKind::PossibleAttributes => panic!(
                 "Tried to create &str from '{:?}', which has undefined &str representation.",
                 self
             ),
@@ -159,6 +166,7 @@ pub enum InlineTokenKind {
         implicit_close: bool,
     },
     ImplicitSubstitution(ImplicitSubstitution),
+    Directuri,
 
     // For matching
     Any,
@@ -197,6 +205,7 @@ impl InlineTokenKind {
             | InlineTokenKind::EscapedWhitespace
             | InlineTokenKind::Comment { .. }
             | InlineTokenKind::ImplicitSubstitution(_)
+            | InlineTokenKind::Directuri
             | InlineTokenKind::Any
             | InlineTokenKind::PossibleAttributes => panic!(
                 "Tried to create &str from '{:?}', which has undefined &str representation.",
@@ -222,6 +231,7 @@ impl InlineTokenKind {
                 | InlineTokenKind::Eoi
                 | InlineTokenKind::Comment { .. }
                 | InlineTokenKind::ImplicitSubstitution(_)
+                | InlineTokenKind::Directuri
                 | InlineTokenKind::EscapedNewline
                 | InlineTokenKind::EscapedWhitespace
                 | InlineTokenKind::EscapedPlain
@@ -404,6 +414,7 @@ impl From<TokenKind> for InlineTokenKind {
             TokenKind::ImplicitSubstitution(impl_subst) => {
                 InlineTokenKind::ImplicitSubstitution(impl_subst)
             }
+            TokenKind::DirectUri => InlineTokenKind::Directuri,
 
             TokenKind::Any => InlineTokenKind::Any,
             TokenKind::PossibleAttributes => InlineTokenKind::PossibleAttributes,
@@ -456,6 +467,7 @@ impl From<InlineTokenKind> for TokenKind {
             InlineTokenKind::ImplicitSubstitution(impl_subst) => {
                 TokenKind::ImplicitSubstitution(impl_subst)
             }
+            InlineTokenKind::Directuri => TokenKind::DirectUri,
             InlineTokenKind::Any => TokenKind::Any,
             InlineTokenKind::PossibleAttributes => TokenKind::PossibleAttributes,
         }

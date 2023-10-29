@@ -1,17 +1,15 @@
 use self::{
+    base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain, Whitespace},
     formatting::{
         Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
         Underline, Verbatim,
     },
-    plain::{EscapedPlain, Plain},
-    spaces::{EscapedNewline, EscapedWhitespace, Newline, Whitespace},
     substitution::named::NamedSubstitution,
     textbox::{hyperlink::Hyperlink, TextBox},
 };
 
+pub mod base;
 pub mod formatting;
-pub mod plain;
-pub mod spaces;
 pub mod substitution;
 pub mod textbox;
 

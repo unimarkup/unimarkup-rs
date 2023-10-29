@@ -29,6 +29,8 @@ macro_rules! scoped_parser {
                 .into();
             // ignore implicits, because only escapes and macros are allowed in following inlines
             scoped_iter.ignore_implicits();
+            context.keep_spaces = true;
+            context.macros_only = true;
             let inner = inline_parser::parse_with_macros_only(&mut scoped_iter, context);
             scoped_iter.allow_implicits();
 

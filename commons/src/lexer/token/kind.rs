@@ -2,6 +2,8 @@ use crate::lexer::SymbolKind;
 
 use super::implicit::ImplicitSubstitution;
 
+pub const COMMENT_TOKEN_LEN: usize = 2;
+
 /// The kind of the token found in Unimarkup document.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenKind {
@@ -51,6 +53,7 @@ pub enum TokenKind {
         implicit_close: bool,
     },
     ImplicitSubstitution(ImplicitSubstitution),
+    DirectUri,
 
     // For matching
     Any,
@@ -77,6 +80,7 @@ impl TokenKind {
                 | TokenKind::Punctuation
                 | TokenKind::Comment { .. }
                 | TokenKind::ImplicitSubstitution(_)
+                | TokenKind::DirectUri
                 | TokenKind::Any
                 | TokenKind::PossibleAttributes
                 | TokenKind::PossibleDecorator
@@ -177,6 +181,7 @@ impl From<TokenKind> for String {
             | TokenKind::EscapedWhitespace
             | TokenKind::ImplicitSubstitution(_)
             | TokenKind::Comment { .. }
+            | TokenKind::DirectUri
             | TokenKind::PossibleAttributes
             | TokenKind::PossibleDecorator
             | TokenKind::Any

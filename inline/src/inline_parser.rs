@@ -120,7 +120,7 @@ impl InlineParser {
             match inlines.last_mut() {
                 Some(last) => match last {
                     Inline::Plain(plain) if next.kind == InlineTokenKind::Plain => {
-                        plain.content.push_str(next.as_str());
+                        plain.push_str(next.as_str());
                     }
                     _ => inlines.push(next.into()),
                 },
