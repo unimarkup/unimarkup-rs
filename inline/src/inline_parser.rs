@@ -82,7 +82,7 @@ impl InlineParser {
 
             if kind.is_keyword() {
                 // Ambiguous token may be split to get possible valid partial token
-                input.ambiguous_split(&mut next);
+                crate::element::formatting::ambiguous::ambiguous_split(input, &mut next);
 
                 // If keyword was not handled above => convert token to plain
                 next.kind = InlineTokenKind::Plain;
@@ -160,7 +160,7 @@ mod test {
 
     use crate::{
         element::{
-            formatting::{bold_italic::Bold, strikethrough::Strikethrough},
+            formatting::{bold_italic::Bold, strikethrough::Strikethrough, Subscript, Underline},
             plain::Plain,
             textbox::TextBox,
         },
@@ -228,5 +228,42 @@ mod test {
             .into(),
             "Textbox with scoped Bold not correctly parsed."
         );
+    }
+
+    #[test]
+    fn parse_ambiguous_between() {
+        let symbols = unimarkup_commons::scanner::scan_str("__underline___subscript_");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+
+        let inlines = InlineParser::default().parse(&mut token_iter);
+
+        assert_eq!(
+            inlines.len(),
+            2,
+            "Parser did not return two inline elements."
+        );
+
+        assert_eq!(
+            inlines,
+            vec![
+                Underline {
+                    inner: vec![Plain {
+                        content: "underline".to_string(),
+                    }
+                    .into()],
+                }
+                .into(),
+                Subscript {
+                    inner: vec![Plain {
+                        content: "subscript".to_string(),
+                    }
+                    .into()],
+                }
+                .into()
+            ],
+            "Underline + subscript not correctly parsed."
+        );
+
+        assert_eq!(token_iter.next(), None, "Iterator not fully consumed.");
     }
 }
