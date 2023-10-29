@@ -1,4 +1,7 @@
-use unimarkup_commons::lexer::position::{Offset, Position};
+use unimarkup_commons::{
+    lexer::position::{Offset, Position},
+    parsing::Context,
+};
 
 use crate::{
     element::Inline,
@@ -9,7 +12,7 @@ use crate::{
     },
 };
 
-pub fn parse(input: &mut InlineTokenIterator) -> Option<Inline> {
+pub fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<Inline> {
     let mut open_token = input.next()?;
 
     if input.peek_kind()?.is_space() {
@@ -30,9 +33,9 @@ pub fn parse(input: &mut InlineTokenIterator) -> Option<Inline> {
         input.push_format(open_token.kind);
     }
 
-    let inner = inline_parser::InlineParser::default().parse(input);
+    let inner = inline_parser::InlineParser::default().parse(input, context);
 
-    resolve_closing(input, open_token, inner)
+    resolve_closing(input, context, open_token, inner)
 }
 
 /// Tries to split an ambiguous format, so an partial open format may close on next iteration.
@@ -58,6 +61,7 @@ pub(crate) fn ambiguous_split<'input>(
 
 fn resolve_closing(
     input: &mut InlineTokenIterator,
+    context: &mut Context,
     open_token: InlineToken<'_>,
     inner: Vec<Inline>,
 ) -> Option<Inline> {
@@ -154,7 +158,7 @@ fn resolve_closing(
         }
     };
 
-    outer.append(&mut inline_parser::InlineParser::default().parse(input));
+    outer.append(&mut inline_parser::InlineParser::default().parse(input, context));
 
     // Format will definitely close fully now => so remove from open formats
     input.pop_format(updated_open.kind);

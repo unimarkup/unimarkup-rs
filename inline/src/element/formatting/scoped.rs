@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
-use unimarkup_commons::lexer::token::{
-    implicit::iterator::TokenIteratorImplicitExt, iterator::EndMatcher,
+use unimarkup_commons::{
+    lexer::token::{implicit::iterator::TokenIteratorImplicitExt, iterator::EndMatcher},
+    parsing::Context,
 };
 
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
 
 macro_rules! scoped_parser {
     ($fn_name:ident, $kind:ident) => {
-        pub fn $fn_name(input: &mut InlineTokenIterator) -> Option<Inline> {
+        pub fn $fn_name(input: &mut InlineTokenIterator, context: &mut Context) -> Option<Inline> {
             let open_token = input.next()?;
 
             // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
@@ -28,7 +29,7 @@ macro_rules! scoped_parser {
                 .into();
             // ignore implicits, because only escapes and macros are allowed in following inlines
             scoped_iter.ignore_implicits();
-            let inner = inline_parser::parse_with_macros_only(&mut scoped_iter);
+            let inner = inline_parser::parse_with_macros_only(&mut scoped_iter, context);
             scoped_iter.allow_implicits();
 
             let prev_token = scoped_iter.prev_token().expect(

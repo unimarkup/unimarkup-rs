@@ -1,14 +1,14 @@
 //! Inline parser
 
-use unimarkup_commons::lexer::token::iterator::TokenIterator;
+use unimarkup_commons::{lexer::token::iterator::TokenIterator, parsing::Context};
 
 use crate::{
     element::Inline,
     tokenize::{iterator::InlineTokenIterator, token::InlineTokenKind},
 };
 
-/// Parser function scoped elements must provide
-pub type InlineParserFn = for<'i> fn(&mut InlineTokenIterator<'i>) -> Option<Inline>;
+/// Parser function type for inline element parsing.
+pub type InlineParserFn = for<'i> fn(&mut InlineTokenIterator<'i>, &mut Context) -> Option<Inline>;
 
 /// Main parser for Unimarkup inline elements.
 #[derive(Default, Clone)]
@@ -17,26 +17,38 @@ pub struct InlineParser {
 }
 
 /// Creates inline elements using the given token iterator.
-pub fn parse_inlines(token_iter: TokenIterator) -> Vec<Inline> {
-    InlineParser::default().parse(&mut InlineTokenIterator::from(
-        TokenIterator::with_scoped_root(token_iter),
-    ))
+pub fn parse_inlines(token_iter: TokenIterator, context: &mut Context) -> Vec<Inline> {
+    InlineParser::default().parse(
+        &mut InlineTokenIterator::from(TokenIterator::with_scoped_root(token_iter)),
+        context,
+    )
 }
 
 /// Creates inline elements using the given token iterator.
 /// All elements except escaped graphemes and macros are converted to plain content.
-pub fn parse_inlines_with_macros_only(token_iter: TokenIterator) -> Vec<Inline> {
-    InlineParser { macros_only: true }.parse(&mut InlineTokenIterator::from(
-        TokenIterator::with_scoped_root(token_iter),
-    ))
+pub fn parse_inlines_with_macros_only(
+    token_iter: TokenIterator,
+    context: &mut Context,
+) -> Vec<Inline> {
+    InlineParser { macros_only: true }.parse(
+        &mut InlineTokenIterator::from(TokenIterator::with_scoped_root(token_iter)),
+        context,
+    )
 }
 
-pub(crate) fn parse_with_macros_only(token_iter: &mut InlineTokenIterator) -> Vec<Inline> {
-    InlineParser { macros_only: true }.parse(token_iter)
+pub(crate) fn parse_with_macros_only(
+    token_iter: &mut InlineTokenIterator,
+    context: &mut Context,
+) -> Vec<Inline> {
+    InlineParser { macros_only: true }.parse(token_iter, context)
 }
 
 impl InlineParser {
-    pub(crate) fn parse(&self, input: &mut InlineTokenIterator) -> Vec<Inline> {
+    pub(crate) fn parse(
+        &self,
+        input: &mut InlineTokenIterator,
+        context: &mut Context,
+    ) -> Vec<Inline> {
         let mut inlines = Vec::default();
         let mut format_closes = false;
 
@@ -54,9 +66,11 @@ impl InlineParser {
             {
                 if let Some(parser_fn) = get_scoped_parser(kind, self.macros_only) {
                     let mut iter = input.clone();
-                    if let Some(res_inline) = parser_fn(&mut iter) {
+                    let mut inner_context = context.clone();
+                    if let Some(res_inline) = parser_fn(&mut iter, &mut inner_context) {
                         inlines.push(res_inline);
                         *input = iter;
+                        *context = inner_context;
                         continue 'outer;
                     }
                 }
@@ -69,9 +83,11 @@ impl InlineParser {
                 } else if !input.format_is_open(kind) {
                     if let Some(parser_fn) = get_format_parser(kind) {
                         let mut iter = input.clone();
-                        if let Some(res_inline) = parser_fn(&mut iter) {
+                        let mut inner_context = context.clone();
+                        if let Some(res_inline) = parser_fn(&mut iter, &mut inner_context) {
                             inlines.push(res_inline);
                             *input = iter;
+                            *context = inner_context;
                             continue 'outer;
                         }
                     }

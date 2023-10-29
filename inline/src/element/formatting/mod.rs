@@ -1,4 +1,7 @@
-use unimarkup_commons::lexer::{position::Position, span::Span};
+use unimarkup_commons::{
+    lexer::{position::Position, span::Span},
+    parsing::Context,
+};
 
 use crate::{
     inline_parser,
@@ -10,7 +13,10 @@ use super::Inline;
 pub mod ambiguous;
 pub mod scoped;
 
-pub fn parse_distinct_format(input: &mut InlineTokenIterator) -> Option<Inline> {
+pub fn parse_distinct_format(
+    input: &mut InlineTokenIterator,
+    context: &mut Context,
+) -> Option<Inline> {
     let open_token = input.next()?;
 
     // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
@@ -20,7 +26,7 @@ pub fn parse_distinct_format(input: &mut InlineTokenIterator) -> Option<Inline> 
 
     input.push_format(open_token.kind);
 
-    let inner = inline_parser::InlineParser::default().parse(input);
+    let inner = inline_parser::InlineParser::default().parse(input, context);
 
     let attributes = None;
     let mut implicit_end = true;
