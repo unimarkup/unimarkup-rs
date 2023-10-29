@@ -60,7 +60,11 @@ impl<'input> SymbolIterator<'input> {
     /// **Note:** This length does not consider parent iterators, or matching functions.
     /// Therefore, the returned number of [`Symbol`]s might differ, but cannot be larger than this length.
     pub fn max_len(&self) -> usize {
-        self.symbols[self.index.min(self.symbols.len().saturating_sub(2))..].len()
+        if self.symbols.is_empty() {
+            return 0;
+        }
+
+        self.symbols[self.index.min(self.symbols.len() - 1)..].len()
     }
 
     /// Returns `true` if no more [`Symbol`]s are available.

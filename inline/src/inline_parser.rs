@@ -111,14 +111,14 @@ impl InlineParser {
                 None => inlines.push(next.into()),
             }
 
-            // #[cfg(debug_assertions)]
-            // {
-            //     assert!(
-            //         input.max_len() < curr_len,
-            //         "Parser consumed no symbol in iteration."
-            //     );
-            //     curr_len = input.max_len();
-            // }
+            #[cfg(debug_assertions)]
+            {
+                assert!(
+                    input.max_len() < curr_len,
+                    "Parser consumed no symbol in iteration."
+                );
+                curr_len = input.max_len();
+            }
         }
 
         if !format_closes {
