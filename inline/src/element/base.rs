@@ -206,9 +206,11 @@ impl Plain {
         let content = if let InlineTokenKind::ImplicitSubstitution(subst) = token.kind {
             subst.subst()
         } else {
-            debug_assert_eq!(
-                token.kind,
-                InlineTokenKind::Plain,
+            debug_assert!(
+                matches!(
+                    token.kind,
+                    InlineTokenKind::Plain | InlineTokenKind::Whitespace
+                ),
                 "Tried to push kind '{:?}' to plain inline.",
                 token.kind
             );
