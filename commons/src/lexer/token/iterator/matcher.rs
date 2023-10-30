@@ -97,7 +97,7 @@ impl<'input> EndMatcher for TokenIterator<'input> {
 
                 // This could set the wrong symbol for prefix matches,
                 // but the previous symbol for prefix matches gets overwritten in `next()` anyways.
-                self.prev_token = self.prev_root_token().copied();
+                self.prev_token = self.prev_peeked().copied();
             }
         }
 
@@ -128,14 +128,14 @@ impl<'input> EndMatcher for TokenIterator<'input> {
         let matched = self.matches(sequence);
 
         if matched {
-            self.set_peek_index(self.match_index()); // To consume matched symbols for `peeking_next()`
+            self.set_peek_index(self.match_index()); // To consume matched tokens for `peeking_next()`
 
             if !self.peek_matching {
-                self.set_index(self.match_index()); // To consume matched symbols for `next()`
+                self.set_index(self.match_index()); // To consume matched tokens for `next()`
 
-                // This could set the wrong symbol for prefix matches,
-                // but the previous symbol for prefix matches gets overwritten in `next()` anyways.
-                self.prev_token = self.prev_root_token().copied();
+                // This sets the wrong token for prefix matches,
+                // but the previous token for prefix matches gets overwritten in `next()` anyways.
+                self.prev_token = self.prev_peeked().copied();
             }
         }
 

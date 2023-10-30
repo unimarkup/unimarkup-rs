@@ -11,6 +11,12 @@ pub struct TokenIteratorScopedRoot<'input> {
     scope: usize,
 }
 
+impl<'input> TokenIteratorScopedRoot<'input> {
+    pub(crate) fn prev_peeked(&self) -> Option<&Token<'input>> {
+        self.token_iter.prev_peeked()
+    }
+}
+
 impl TokenIteratorImplicitExt for TokenIteratorScopedRoot<'_> {
     fn ignore_implicits(&mut self) {
         self.token_iter.ignore_implicits();

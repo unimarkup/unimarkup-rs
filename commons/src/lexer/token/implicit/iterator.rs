@@ -10,6 +10,12 @@ use crate::lexer::{
     },
 };
 
+pub trait TokenIteratorImplicitExt {
+    fn ignore_implicits(&mut self);
+    fn allow_implicits(&mut self);
+    fn implicits_allowed(&self) -> bool;
+}
+
 /// The [`TokenIteratorRoot`] is the root iterator in any [`TokenIterator`](super::TokenIterator).
 /// It holds the actual [`Symbol`] slice.
 #[derive(Clone)]
@@ -31,10 +37,10 @@ pub struct TokenIteratorImplicits<'input> {
     allow_emoji: bool,
 }
 
-pub trait TokenIteratorImplicitExt {
-    fn ignore_implicits(&mut self);
-    fn allow_implicits(&mut self);
-    fn implicits_allowed(&self) -> bool;
+impl<'input> TokenIteratorImplicits<'input> {
+    pub(crate) fn prev_peeked(&self) -> Option<&Token<'input>> {
+        self.prev_peeked_token.as_ref()
+    }
 }
 
 impl<'input> TokenIteratorImplicitExt for TokenIteratorImplicits<'input> {

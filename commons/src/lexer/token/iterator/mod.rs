@@ -81,7 +81,8 @@ pub enum TokenIteratorKind<'input> {
     /// Defines an iterator as being nested.
     /// The contained iterator is the parent iterator.
     Nested(Box<TokenIterator<'input>>),
-    /// Iterator that converts symbols to tokens.
+    /// Iterator that resolves implicit substitutions.
+    /// It is the first layer above the conversion from symbols to tokens.
     Root(Box<TokenIteratorImplicits<'input>>),
     /// Iterator to define a new scope root.
     /// Meaning that the scope for parent iterators remains unchanged.
@@ -152,8 +153,8 @@ impl<'input> TokenIterator<'input> {
     pub fn max_len(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.max_len(),
-            TokenIteratorKind::Root(base) => base.max_len(),
-            TokenIteratorKind::ScopedRoot(root) => root.max_len(),
+            TokenIteratorKind::Root(root) => root.max_len(),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.max_len(),
         }
     }
 
@@ -171,8 +172,8 @@ impl<'input> TokenIterator<'input> {
     pub fn index(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.index(),
-            TokenIteratorKind::Root(base) => base.index(),
-            TokenIteratorKind::ScopedRoot(root) => root.index(),
+            TokenIteratorKind::Root(root) => root.index(),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.index(),
         }
     }
 
@@ -181,8 +182,8 @@ impl<'input> TokenIterator<'input> {
         if index >= self.start_index {
             match self.parent.borrow_mut() {
                 TokenIteratorKind::Nested(parent) => parent.set_index(index),
-                TokenIteratorKind::Root(base) => base.set_index(index),
-                TokenIteratorKind::ScopedRoot(root) => root.set_index(index),
+                TokenIteratorKind::Root(root) => root.set_index(index),
+                TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.set_index(index),
             }
         }
     }
@@ -191,8 +192,8 @@ impl<'input> TokenIterator<'input> {
     pub fn peek_index(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.peek_index(),
-            TokenIteratorKind::Root(base) => base.peek_index(),
-            TokenIteratorKind::ScopedRoot(root) => root.peek_index(),
+            TokenIteratorKind::Root(root) => root.peek_index(),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.peek_index(),
         }
     }
 
@@ -201,8 +202,8 @@ impl<'input> TokenIterator<'input> {
         if index >= self.index() {
             match self.parent.borrow_mut() {
                 TokenIteratorKind::Nested(parent) => parent.set_peek_index(index),
-                TokenIteratorKind::Root(base) => base.set_peek_index(index),
-                TokenIteratorKind::ScopedRoot(root) => root.set_peek_index(index),
+                TokenIteratorKind::Root(root) => root.set_peek_index(index),
+                TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.set_peek_index(index),
             }
         }
     }
@@ -243,16 +244,16 @@ impl<'input> TokenIterator<'input> {
     fn push_scope(&mut self, scope: usize) {
         match self.parent.borrow_mut() {
             TokenIteratorKind::Nested(parent) => parent.push_scope(scope),
-            TokenIteratorKind::Root(base) => base.set_scope(scope),
-            TokenIteratorKind::ScopedRoot(root) => root.set_scope(scope),
+            TokenIteratorKind::Root(root) => root.set_scope(scope),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.set_scope(scope),
         }
     }
 
     fn root_scope(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.root_scope(),
-            TokenIteratorKind::Root(base) => base.scope(),
-            TokenIteratorKind::ScopedRoot(root) => root.scope(),
+            TokenIteratorKind::Root(root) => root.scope(),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.scope(),
         }
     }
 
@@ -266,11 +267,11 @@ impl<'input> TokenIterator<'input> {
         self.prev_token.map(|s| s.kind)
     }
 
-    fn prev_root_token(&self) -> Option<&Token<'input>> {
+    pub(crate) fn prev_peeked(&self) -> Option<&Token<'input>> {
         match &self.parent {
-            TokenIteratorKind::Nested(parent) => parent.prev_root_token(),
-            TokenIteratorKind::Root(base) => base.prev_token(),
-            TokenIteratorKind::ScopedRoot(root) => root.prev_token(),
+            TokenIteratorKind::Nested(parent) => parent.prev_peeked(),
+            TokenIteratorKind::Root(root) => root.prev_peeked(),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.prev_peeked(),
         }
     }
 
@@ -479,8 +480,8 @@ impl<'input> Iterator for TokenIterator<'input> {
 
         let curr_token_opt = match &mut self.parent {
             TokenIteratorKind::Nested(parent) => parent.next(),
-            TokenIteratorKind::Root(base) => base.next(),
-            TokenIteratorKind::ScopedRoot(root) => root.next(),
+            TokenIteratorKind::Root(root) => root.next(),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.next(),
         };
 
         let kind = curr_token_opt?.kind;
@@ -551,8 +552,8 @@ impl<'input> PeekingNext for TokenIterator<'input> {
 
         let peeked_token_opt = match &mut self.parent {
             TokenIteratorKind::Nested(parent) => parent.peeking_next(accept),
-            TokenIteratorKind::Root(base) => base.peeking_next(accept),
-            TokenIteratorKind::ScopedRoot(root) => root.peeking_next(accept),
+            TokenIteratorKind::Root(root) => root.peeking_next(accept),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.peeking_next(accept),
         };
 
         // Prefix matching after `peeking_next()` to skip prefix symbols, but pass `Newline` to nested iterators.
@@ -585,6 +586,8 @@ impl<'input> PeekingNext for TokenIterator<'input> {
 
 #[cfg(test)]
 mod test {
+    use std::rc::Rc;
+
     use itertools::Itertools;
 
     use super::*;
@@ -630,106 +633,96 @@ mod test {
         );
     }
 
-    // #[test]
-    // fn peek_next() {
-    //     let symbols = crate::scanner::scan_str("#*");
+    #[test]
+    fn peek_next() {
+        let symbols = crate::lexer::scan_str("#*");
 
-    //     let mut iterator = SymbolIterator::from(&*symbols);
+        let mut iterator = TokenIterator::from(&*symbols);
 
-    //     let peeked_symbol = iterator.peeking_next(|_| true);
-    //     let next_symbol = iterator.next();
-    //     let next_peeked_symbol = iterator.peeking_next(|_| true);
-    //     let curr_index = iterator.index();
+        let peeked_symbol = iterator.peeking_next(|_| true);
+        let next_symbol = iterator.next();
+        let next_peeked_symbol = iterator.peeking_next(|_| true);
+        let curr_index = iterator.index();
 
-    //     assert_eq!(curr_index, 1, "Current index was not updated correctly.");
-    //     assert_eq!(
-    //         peeked_symbol.map(|s| s.kind),
-    //         Some(SymbolKind::Hash),
-    //         "peek_next() did not return hash symbol."
-    //     );
-    //     assert_eq!(
-    //         next_symbol.map(|s| s.kind),
-    //         Some(SymbolKind::Hash),
-    //         "next() did not return hash symbol."
-    //     );
-    //     assert_eq!(
-    //         next_peeked_symbol.map(|s| s.kind),
-    //         Some(SymbolKind::Star),
-    //         "Star symbol not peeked next."
-    //     );
-    //     assert_eq!(
-    //         iterator.next().map(|s| s.kind),
-    //         Some(SymbolKind::Star),
-    //         "Star symbol not returned."
-    //     );
-    // }
+        assert_eq!(curr_index, 1, "Current index was not updated correctly.");
+        assert_eq!(
+            peeked_symbol.map(|s| s.kind),
+            Some(TokenKind::Hash(1)),
+            "peek_next() did not return hash symbol."
+        );
+        assert_eq!(
+            next_symbol.map(|s| s.kind),
+            Some(TokenKind::Hash(1)),
+            "next() did not return hash symbol."
+        );
+        assert_eq!(
+            next_peeked_symbol.map(|s| s.kind),
+            Some(TokenKind::Star(1)),
+            "Star symbol not peeked next."
+        );
+        assert_eq!(
+            iterator.next().map(|s| s.kind),
+            Some(TokenKind::Star(1)),
+            "Star symbol not returned."
+        );
+    }
 
-    // #[test]
-    // fn reach_end() {
-    //     let symbols = crate::scanner::scan_str("text*");
+    #[test]
+    fn reach_end() {
+        let symbols = crate::lexer::scan_str("text*");
 
-    //     let mut iterator = TokenIterator::from(&*symbols).nest(
-    //         None,
-    //         Some(Rc::new(|matcher| matcher.matches(&[SymbolKind::Star]))),
-    //     );
+        let mut iterator = TokenIterator::from(&*symbols).nest(
+            None,
+            Some(Rc::new(|matcher| matcher.matches(&[TokenKind::Star(1)]))),
+        );
 
-    //     let taken_symkinds = iterator
-    //         .take_to_end()
-    //         .iter()
-    //         .map(|s| s.kind)
-    //         .collect::<Vec<_>>();
+        let taken_kinds = iterator
+            .take_to_end()
+            .iter()
+            .map(|s| s.kind)
+            .collect::<Vec<_>>();
 
-    //     assert!(iterator.end_reached(), "Iterator end was not reached.");
-    //     assert_eq!(
-    //         taken_symkinds,
-    //         vec![
-    //             SymbolKind::Plain,
-    //             SymbolKind::Plain,
-    //             SymbolKind::Plain,
-    //             SymbolKind::Plain
-    //         ],
-    //         "Symbols till end was reached are incorrect."
-    //     );
-    // }
+        assert!(iterator.end_reached(), "Iterator end was not reached.");
+        assert_eq!(
+            taken_kinds,
+            vec![TokenKind::Plain],
+            "Tokens till end was reached are incorrect."
+        );
+    }
 
-    // #[test]
-    // fn reach_consumed_end() {
-    //     let symbols = crate::scanner::scan_str("text*");
+    #[test]
+    fn reach_consumed_end() {
+        let symbols = crate::lexer::scan_str("text*");
 
-    //     let mut iterator = SymbolIterator::from(&*symbols).nest(
-    //         None,
-    //         Some(Rc::new(|matcher| {
-    //             matcher.consumed_matches(&[SymbolKind::Star])
-    //         })),
-    //     );
+        let mut iterator = TokenIterator::from(&*symbols).nest(
+            None,
+            Some(Rc::new(|matcher| {
+                matcher.consumed_matches(&[TokenKind::Star(1)])
+            })),
+        );
 
-    //     let taken_symkinds = iterator
-    //         .take_to_end()
-    //         .iter()
-    //         .map(|s| s.kind)
-    //         .collect::<Vec<_>>();
+        let taken_symkinds = iterator
+            .take_to_end()
+            .iter()
+            .map(|s| s.kind)
+            .collect::<Vec<_>>();
 
-    //     assert!(iterator.end_reached(), "Iterator end was not reached.");
-    //     assert!(
-    //         iterator.next().is_none(),
-    //         "Iterator returns symbol after end."
-    //     );
-    //     assert_eq!(
-    //         iterator.prev_symbol().unwrap().as_str(),
-    //         "*",
-    //         "Previous symbol was not the matched one."
-    //     );
-    //     assert_eq!(
-    //         taken_symkinds,
-    //         vec![
-    //             SymbolKind::Plain,
-    //             SymbolKind::Plain,
-    //             SymbolKind::Plain,
-    //             SymbolKind::Plain
-    //         ],
-    //         "Symbols till end was reached are incorrect."
-    //     );
-    // }
+        assert!(iterator.end_reached(), "Iterator end was not reached.");
+        assert!(
+            iterator.next().is_none(),
+            "Iterator returns token after end."
+        );
+        assert_eq!(
+            String::from(iterator.prev_token().unwrap().kind),
+            "*",
+            "Previous token was not the matched one."
+        );
+        assert_eq!(
+            taken_symkinds,
+            vec![TokenKind::Plain],
+            "Tokens till end was reached are incorrect."
+        );
+    }
 
     // #[test]
     // fn with_nested_and_parent_prefix() {
