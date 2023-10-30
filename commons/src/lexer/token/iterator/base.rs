@@ -160,13 +160,25 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
                 }
             }
 
-            SymbolKind::Newline => match self.make_blankline(token) {
-                Some(blankline) => {
-                    token = blankline;
+            SymbolKind::Newline => match self.sym_iter.peek_kind() {
+                // Skip over Newline before EOI
+                Some(SymbolKind::Eoi) => {
+                    return match self.peeking_next(accept) {
+                        Some(mut eoi) => {
+                            eoi.start = token.start;
+                            Some(eoi)
+                        }
+                        None => None,
+                    };
                 }
-                None => {
-                    token.kind = TokenKind::Newline;
-                }
+                _ => match self.make_blankline(token) {
+                    Some(blankline) => {
+                        token = blankline;
+                    }
+                    None => {
+                        token.kind = TokenKind::Newline;
+                    }
+                },
             },
 
             SymbolKind::TerminalPunctuation => {

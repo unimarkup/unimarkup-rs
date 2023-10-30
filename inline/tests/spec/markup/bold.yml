@@ -14,3 +14,33 @@ tests:
 
     html: |
       <strong>Bold</strong>
+
+  - name: bold-not-bold
+    description: |
+      Bold combined with plain.
+
+    input: |
+      **Bold** not bold.
+
+    html: |
+      <strong>Bold</strong> not bold.
+
+  - name: not-bold
+    description: |
+      Bold that's not correctly opened nor closed.
+
+    input: |
+      ** not bold **
+
+    html: |
+      ** not bold **
+
+  - name: implicit-closed-bold
+    description: |
+      Bold that's implicitly closed after invalid closing sequence.
+
+    input: |
+      **implicit bold **close
+
+    html: |
+      <strong>implicit bold **close</strong>

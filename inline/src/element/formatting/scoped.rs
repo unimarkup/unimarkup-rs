@@ -54,7 +54,11 @@ macro_rules! scoped_parser {
                 //TODO: Check for optional attributes here
                 (None, prev_token.end, false)
             } else {
-                (None, prev_token.start, true)
+                (
+                    None,
+                    $crate::element::helper::implicit_end_using_prev(prev_token),
+                    true,
+                )
             };
 
             scoped_iter.update(input);

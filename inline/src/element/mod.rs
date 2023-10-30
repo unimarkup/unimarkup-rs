@@ -10,6 +10,8 @@ use self::{
     textbox::{hyperlink::Hyperlink, TextBox},
 };
 
+mod helper;
+
 pub mod base;
 pub mod formatting;
 pub mod substitution;

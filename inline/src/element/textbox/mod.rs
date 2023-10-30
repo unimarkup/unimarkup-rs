@@ -129,7 +129,7 @@ pub(crate) fn parse(
                 },
                 None,
                 open_token.start,
-                link_close_token.end,
+                crate::element::helper::implicit_end_using_prev(&link_close_token),
             )
             .into(),
         );
@@ -140,7 +140,7 @@ pub(crate) fn parse(
             inner,
             attributes: None,
             start: open_token.start,
-            end: prev_token.end,
+            end: crate::element::helper::implicit_end_using_prev(&prev_token),
         }
         .into(),
     )

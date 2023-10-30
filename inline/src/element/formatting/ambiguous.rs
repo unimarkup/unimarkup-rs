@@ -130,6 +130,8 @@ fn resolve_closing(
                 // This means that some outer format closed.
                 // => end of this format is at start of the closing token for the outer format
                 // e.g. bold close = implicit before strikethrough end: ~~strike**bold~~
+
+                dbg!(&close_token.kind);
                 return Some(close_format(
                     input,
                     open_token,
@@ -149,10 +151,9 @@ fn resolve_closing(
                 open_token,
                 inner,
                 None,
-                input
-                    .prev_token()
-                    .expect("Previous token must exist, because at least the opening token came before.")
-                    .end,
+                crate::element::helper::implicit_end_using_prev(input.prev_token().expect(
+                    "Previous token must exist, because at least the opening token came before.",
+                )),
                 true,
             ));
         }
@@ -201,10 +202,11 @@ fn resolve_closing(
         outer,
         None,
         updated_open.start,
-        input
-            .prev_token()
-            .expect("Previous token must exist, because at least the opening token came before.")
-            .end,
+        crate::element::helper::implicit_end_using_prev(
+            input.prev_token().expect(
+                "Previous token must exist, because at least the opening token came before.",
+            ),
+        ),
         true,
     ))
 }
