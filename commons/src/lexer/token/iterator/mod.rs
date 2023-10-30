@@ -624,7 +624,7 @@ mod test {
         assert_eq!(curr_index, 5, "Current index was not updated correctly.");
         assert_eq!(
             whitespace_token.kind,
-            TokenKind::Whitespace,
+            TokenKind::Whitespace(1),
             "Whitespace after keywords was not detected."
         );
         assert!(
@@ -724,420 +724,468 @@ mod test {
         );
     }
 
-    // #[test]
-    // fn with_nested_and_parent_prefix() {
-    //     let symbols = crate::scanner::scan_str("a\n* *b");
+    #[test]
+    fn with_nested_and_parent_prefix() {
+        let symbols = crate::lexer::scan_str("a\n* *b");
 
-    //     let iterator = SymbolIterator::with(
-    //         &symbols,
-    //         Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-    //             matcher.consumed_prefix(&[SymbolKind::Star, SymbolKind::Whitespace])
-    //         })),
-    //         None,
-    //     );
+        let iterator = TokenIterator::with(
+            (&*symbols).into(),
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace(1)])
+            })),
+            None,
+        );
 
-    //     let mut inner = iterator.nest(
-    //         Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-    //             matcher.consumed_prefix(&[SymbolKind::Star])
-    //         })),
-    //         None,
-    //     );
+        let mut inner = iterator.nest(
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[TokenKind::Star(1)])
+            })),
+            None,
+        );
 
-    //     let sym_kinds = inner
-    //         .take_to_end()
-    //         .iter()
-    //         .map(|s| s.kind)
-    //         .collect::<Vec<_>>();
+        let sym_kinds = inner
+            .take_to_end()
+            .iter()
+            .map(|s| s.kind)
+            .collect::<Vec<_>>();
 
-    //     assert_eq!(
-    //         sym_kinds,
-    //         vec![
-    //             SymbolKind::Plain,
-    //             SymbolKind::Newline,
-    //             SymbolKind::Plain,
-    //             SymbolKind::EOI
-    //         ],
-    //         "Prefix symbols not correctly skipped"
-    //     );
-    // }
+        assert_eq!(
+            sym_kinds,
+            vec![
+                TokenKind::Plain,   // a
+                TokenKind::Newline, // \\n
+                TokenKind::Plain,   // b
+                TokenKind::Eoi
+            ],
+            "Prefix symbols not correctly skipped"
+        );
+    }
 
-    // #[test]
-    // fn nested_peek() {
-    //     let symbols = crate::scanner::scan_str("a\n* *b");
+    #[test]
+    fn nested_peek() {
+        let symbols = crate::lexer::scan_str("a\n* *b");
 
-    //     let iterator = SymbolIterator::with(
-    //         &symbols,
-    //         Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-    //             matcher.consumed_prefix(&[SymbolKind::Star, SymbolKind::Whitespace])
-    //         })),
-    //         None,
-    //     );
+        let iterator = TokenIterator::with(
+            (&*symbols).into(),
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace(1)])
+            })),
+            None,
+        );
 
-    //     let mut inner = iterator.nest(
-    //         Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-    //             matcher.consumed_prefix(&[SymbolKind::Star])
-    //         })),
-    //         None,
-    //     );
+        let mut inner = iterator.nest(
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[TokenKind::Star(1)])
+            })),
+            None,
+        );
 
-    //     let sym_1 = inner.peeking_next(|_| true);
-    //     assert_eq!(
-    //         "a",
-    //         sym_1.unwrap().as_str(),
-    //         "Peeking next symbol did not return 'a'."
-    //     );
-    //     let sym_2 = inner.peeking_next(|_| true);
-    //     assert_eq!(
-    //         "\n",
-    //         sym_2.unwrap().as_str(),
-    //         "Peeking next symbol did not return newline."
-    //     );
-    //     let sym_3 = inner.peeking_next(|_| true);
-    //     assert_eq!(
-    //         "b",
-    //         sym_3.unwrap().as_str(),
-    //         "Peeking next symbol did not return 'b'."
-    //     );
-    // }
+        let token_1 = inner.peeking_next(|_| true);
+        assert_eq!(
+            "a",
+            String::from(token_1.unwrap()),
+            "Peeking next token did not return 'a'."
+        );
+        let token_2 = inner.peeking_next(|_| true);
+        assert_eq!(
+            "\n",
+            String::from(token_2.unwrap()),
+            "Peeking next token did not return newline."
+        );
+        let token_3 = inner.peeking_next(|_| true);
+        assert_eq!(
+            "b",
+            String::from(token_3.unwrap()),
+            "Peeking next token did not return 'b'."
+        );
+    }
 
-    // #[test]
-    // fn outer_end_match_takes_precedence() {
-    //     let symbols = crate::scanner::scan_str("e+f-");
+    #[test]
+    fn outer_end_match_takes_precedence() {
+        let symbols = crate::lexer::scan_str("e+f-");
 
-    //     let mut iterator = SymbolIterator::with(
-    //         &symbols,
-    //         None,
-    //         Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-    //             matcher.matches(&[SymbolKind::Plus])
-    //         })),
-    //     );
+        let mut iterator = TokenIterator::with(
+            (&*symbols).into(),
+            None,
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.matches(&[TokenKind::Plus(1)])
+            })),
+        );
 
-    //     let mut inner = iterator.nest(
-    //         None,
-    //         Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-    //             matcher.matches(&[SymbolKind::Minus])
-    //         })),
-    //     );
+        let mut inner = iterator.nest(
+            None,
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.matches(&[TokenKind::Minus(1)])
+            })),
+        );
 
-    //     assert_eq!(
-    //         "e",
-    //         inner.peeking_next(|_| true).unwrap().as_str(),
-    //         "First peeked symbol is not 'e'."
-    //     );
-    //     assert!(
-    //         inner.peeking_next(|_| true).is_none(),
-    //         "Outer end did not take precedence with `peeking_next()`."
-    //     );
-    //     assert!(
-    //         !inner.end_reached(),
-    //         "Peeking end wrongfully set 'end_reached()'."
-    //     );
-    //     assert!(
-    //         inner.peeking_next(|_| true).is_none(),
-    //         "Successive peek over outer end returned symbol."
-    //     );
+        assert_eq!(
+            "e",
+            String::from(inner.peeking_next(|_| true).unwrap()),
+            "First peeked token is not 'e'."
+        );
+        assert!(
+            inner.peeking_next(|_| true).is_none(),
+            "Outer end did not take precedence with `peeking_next()`."
+        );
+        assert!(
+            !inner.end_reached(),
+            "Peeking end wrongfully set 'end_reached()'."
+        );
+        assert!(
+            inner.peeking_next(|_| true).is_none(),
+            "Successive peek over outer end returned token."
+        );
 
-    //     inner.reset_peek();
+        inner.reset_peek();
 
-    //     assert_eq!(
-    //         "e",
-    //         inner.next().unwrap().as_str(),
-    //         "First symbol is not 'e'."
-    //     );
-    //     assert!(
-    //         inner.next().is_none(),
-    //         "Outer end did not take precedence with `next()`."
-    //     );
-    //     assert!(
-    //         !inner.end_reached(),
-    //         "Reaching end set for inner, eventhough only outer reached end."
-    //     );
-    //     assert!(
-    //         inner.next().is_none(),
-    //         "Successive `next()` over outer end returned symbol."
-    //     );
+        assert_eq!(
+            "e",
+            String::from(inner.next().unwrap()),
+            "First token is not 'e'."
+        );
+        assert!(
+            inner.next().is_none(),
+            "Outer end did not take precedence with `next()`."
+        );
+        assert!(
+            !inner.end_reached(),
+            "Reaching end set for inner, eventhough only outer reached end."
+        );
+        assert!(
+            inner.next().is_none(),
+            "Successive `next()` over outer end returned token."
+        );
 
-    //     inner.update(&mut iterator);
+        inner.update(&mut iterator);
 
-    //     assert!(
-    //         iterator.end_reached(),
-    //         "`end_reached()` not set for outer iterator."
-    //     );
-    //     assert!(
-    //         iterator.next().is_none(),
-    //         "Successive `next()` over outer end returned symbol."
-    //     );
-    // }
+        assert!(
+            iterator.end_reached(),
+            "`end_reached()` not set for outer iterator."
+        );
+        assert!(
+            iterator.next().is_none(),
+            "Successive `next()` over outer end returned token."
+        );
+    }
 
-    // #[test]
-    // fn peek_and_next_return_same_symbols() {
-    //     let symbols = crate::scanner::scan_str("a\n* *b+-");
+    #[test]
+    fn peek_and_next_return_same_tokens() {
+        let symbols = crate::lexer::scan_str("a\n* *b+-");
 
-    //     let iterator = SymbolIterator::with(
-    //         &symbols,
-    //         Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-    //             matcher.consumed_prefix(&[SymbolKind::Star, SymbolKind::Whitespace])
-    //         })),
-    //         Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-    //             matcher.matches(&[SymbolKind::Plus])
-    //         })),
-    //     );
+        let iterator = TokenIterator::with(
+            (&*symbols).into(),
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace(1)])
+            })),
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.matches(&[TokenKind::Plus(1)])
+            })),
+        );
 
-    //     let mut inner = iterator.nest(
-    //         Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-    //             matcher.consumed_prefix(&[SymbolKind::Star])
-    //         })),
-    //         Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-    //             matcher.matches(&[SymbolKind::Minus])
-    //         })),
-    //     );
+        let mut inner = iterator.nest(
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[TokenKind::Star(1)])
+            })),
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.matches(&[TokenKind::Minus(1)])
+            })),
+        );
 
-    //     let peeked_symbols = inner.peeking_take_while(|_| true).collect::<Vec<_>>();
-    //     inner.reset_peek();
-    //     let next_symbols = inner.take_to_end();
+        let peeked_tokens = inner.peeking_take_while(|_| true).collect::<Vec<_>>();
+        inner.reset_peek();
+        let next_tokens = inner.take_to_end();
 
-    //     assert_eq!(
-    //         peeked_symbols, next_symbols,
-    //         "Peeked (left) and next (right) symbols differ."
-    //     );
-    // }
+        assert_eq!(
+            peeked_tokens, next_tokens,
+            "Peeked (left) and next (right) token differ."
+        );
+    }
 
-    // #[test]
-    // fn scoping() {
-    //     let symbols = crate::scanner::scan_str("[o [i] o]");
+    #[test]
+    fn scoping() {
+        let symbols = crate::lexer::scan_str("[o [i] o]");
 
-    //     let mut iterator = SymbolIterator::scoped(
-    //         &symbols,
-    //         None,
-    //         Some(Rc::new(|matcher| {
-    //             matcher.consumed_matches(&[SymbolKind::CloseBracket])
-    //         })),
-    //     );
+        let mut iterator = TokenIterator::with((&*symbols).into(), None, None);
 
-    //     iterator = iterator.dropping(1); // To skip first open bracket
-    //     let mut taken_outer = iterator
-    //         .by_ref()
-    //         // Note: This will skip the open bracket for both iterators, but this is ok for this test
-    //         .take_while(|s| s.kind != SymbolKind::OpenBracket)
-    //         .collect::<Vec<_>>();
+        iterator = iterator.dropping(1); // To skip first open bracket
 
-    //     let mut inner_iter = iterator.nest_with_scope(
-    //         None,
-    //         Some(Rc::new(|matcher| {
-    //             matcher.consumed_matches(&[SymbolKind::CloseBracket])
-    //         })),
-    //     );
+        // Nest like this, because TokenIterator does not provide a way to initialize with scoped = true
+        // which is intentional, because the lowest iterator layer should not be scoped
+        iterator = iterator.nest_with_scope(
+            None,
+            Some(Rc::new(|matcher| {
+                matcher.consumed_matches(&[TokenKind::CloseBracket])
+            })),
+        );
 
-    //     let taken_inner = inner_iter.take_to_end();
-    //     assert!(
-    //         inner_iter.end_reached(),
-    //         "Inner iterator end was not reached."
-    //     );
+        let mut taken_outer = iterator
+            .by_ref()
+            // Note: This will skip the open bracket for both iterators, but this is ok for this test
+            .take_while(|s| s.kind != TokenKind::OpenBracket)
+            .collect::<Vec<_>>();
 
-    //     inner_iter.update(&mut iterator);
+        let mut inner_iter = iterator.nest_with_scope(
+            None,
+            Some(Rc::new(|matcher| {
+                matcher.consumed_matches(&[TokenKind::CloseBracket])
+            })),
+        );
 
-    //     taken_outer.extend(iterator.take_to_end().iter());
+        let taken_inner = inner_iter.take_to_end();
+        assert!(
+            inner_iter.end_reached(),
+            "Inner iterator end was not reached."
+        );
 
-    //     assert!(iterator.end_reached(), "Iterator end was not reached.");
-    //     assert_eq!(
-    //         taken_inner.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-    //         vec!["i"],
-    //         "Inner symbols are incorrect."
-    //     );
-    //     assert_eq!(
-    //         taken_outer.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
-    //         vec!["o", " ", " ", "o"],
-    //         "Outer symbols are incorrect."
-    //     );
-    // }
+        inner_iter.update(&mut iterator);
 
-    // #[test]
-    // fn prefix_mismatch_returns_none_forever() {
-    //     let symbols = crate::scanner::scan_str("a\n  b\nc");
+        taken_outer.extend(iterator.take_to_end().iter());
 
-    //     let mut iterator = SymbolIterator::with(
-    //         &symbols,
-    //         Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-    //             matcher.consumed_prefix(&[SymbolKind::Whitespace, SymbolKind::Whitespace])
-    //         })),
-    //         None,
-    //     );
+        assert!(iterator.end_reached(), "Iterator end was not reached.");
+        assert_eq!(
+            taken_inner.iter().map(String::from).collect::<Vec<_>>(),
+            vec!["i"],
+            "Inner symbols are incorrect."
+        );
+        assert_eq!(
+            taken_outer.iter().map(String::from).collect::<Vec<_>>(),
+            vec!["o", " ", " ", "o"],
+            "Outer symbols are incorrect."
+        );
+    }
 
-    //     let sym_kinds = iterator
-    //         .take_to_end()
-    //         .iter()
-    //         .map(|s| s.kind)
-    //         .collect::<Vec<_>>();
+    #[test]
+    fn prefix_mismatch_returns_none_forever() {
+        let symbols = crate::lexer::scan_str("a\n  b\nc");
 
-    //     assert_eq!(
-    //         sym_kinds,
-    //         vec![SymbolKind::Plain, SymbolKind::Newline, SymbolKind::Plain,],
-    //         "Iterator did not stop on prefix mismatch"
-    //     );
-    //     assert!(
-    //         iterator.next().is_none(),
-    //         "Prefix mismatch not returning `None`."
-    //     );
-    //     assert!(
-    //         iterator.next().is_none(),
-    //         "Prefix mismatch not returning `None`."
-    //     );
-    // }
+        let mut iterator = TokenIterator::with(
+            (&*symbols).into(),
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[TokenKind::Whitespace(2)])
+            })),
+            None,
+        );
 
-    // #[test]
-    // fn match_any_symbol() {
-    //     let symbols = crate::scanner::scan_str("a* -\n:");
+        let sym_kinds = iterator
+            .take_to_end()
+            .iter()
+            .map(|s| s.kind)
+            .collect::<Vec<_>>();
 
-    //     let mut iterator = SymbolIterator::with(
-    //         &symbols,
-    //         None,
-    //         // Matches "\n:"
-    //         Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-    //             matcher.consumed_matches(&[SymbolKind::Any, SymbolKind::Colon])
-    //         })),
-    //     );
+        assert_eq!(
+            sym_kinds,
+            vec![TokenKind::Plain, TokenKind::Newline, TokenKind::Plain,],
+            "Iterator did not stop on prefix mismatch"
+        );
+        assert!(
+            iterator.next().is_none(),
+            "Prefix mismatch not returning `None`."
+        );
+        assert!(
+            iterator.next().is_none(),
+            "Prefix mismatch not returning `None`."
+        );
+    }
 
-    //     // Matches "a*"
-    //     let mut inner = iterator.nest(
-    //         None,
-    //         Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-    //             matcher.consumed_matches(&[SymbolKind::Any, SymbolKind::Star])
-    //         })),
-    //     );
-    //     inner.take_to_end();
-    //     assert!(
-    //         inner.end_reached(),
-    //         "First inner iterator did not reach end."
-    //     );
+    #[test]
+    fn match_any_symbol() {
+        let symbols = crate::lexer::scan_str("a* -\n:");
 
-    //     inner.update(&mut iterator);
+        let mut iterator = TokenIterator::with(
+            (&*symbols).into(),
+            None,
+            // Matches "\n:"
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.consumed_matches(&[TokenKind::Any, TokenKind::Colon(1)])
+            })),
+        );
 
-    //     // Matches " -"
-    //     let mut inner = iterator.nest(
-    //         None,
-    //         Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-    //             matcher.consumed_matches(&[SymbolKind::Any, SymbolKind::Minus])
-    //         })),
-    //     );
-    //     inner.take_to_end();
-    //     assert!(
-    //         inner.end_reached(),
-    //         "Second inner iterator did not reach end."
-    //     );
+        // Matches "a*"
+        let mut inner = iterator.nest(
+            None,
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.consumed_matches(&[TokenKind::Any, TokenKind::Star(1)])
+            })),
+        );
+        inner.take_to_end();
+        assert!(
+            inner.end_reached(),
+            "First inner iterator did not reach end."
+        );
 
-    //     inner.update(&mut iterator);
+        inner.update(&mut iterator);
 
-    //     iterator.take_to_end();
+        // Matches " -"
+        let mut inner = iterator.nest(
+            None,
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.consumed_matches(&[TokenKind::Any, TokenKind::Minus(1)])
+            })),
+        );
+        inner.take_to_end();
+        assert!(
+            inner.end_reached(),
+            "Second inner iterator did not reach end."
+        );
 
-    //     assert!(iterator.end_reached(), "Main iterator did not reach end.");
-    // }
+        inner.update(&mut iterator);
 
-    // #[test]
-    // fn prev_kind() {
-    //     let symbols = crate::scanner::scan_str("a *\n");
+        iterator.take_to_end();
 
-    //     let mut iterator = SymbolIterator::with(&symbols, None, None);
+        assert!(iterator.end_reached(), "Main iterator did not reach end.");
+    }
 
-    //     assert_eq!(
-    //         iterator.next().unwrap().as_str(),
-    //         "a",
-    //         "`next()` returned wrong symbol."
-    //     );
-    //     assert_eq!(
-    //         iterator.prev_kind().unwrap(),
-    //         SymbolKind::Plain,
-    //         "Previous SymbolKind not correctly stored."
-    //     );
+    #[test]
+    fn newline_before_eoi_skipped() {
+        let symbols = crate::lexer::scan_str("a\nb\n");
 
-    //     assert_eq!(
-    //         iterator.next().unwrap().as_str(),
-    //         " ",
-    //         "`next()` returned wrong symbol."
-    //     );
-    //     assert_eq!(
-    //         iterator.prev_kind().unwrap(),
-    //         SymbolKind::Whitespace,
-    //         "Previous SymbolKind not correctly stored."
-    //     );
+        let mut iterator = TokenIterator::with((&*symbols).into(), None, None);
 
-    //     assert_eq!(
-    //         iterator.next().unwrap().as_str(),
-    //         "*",
-    //         "`next()` returned wrong symbol."
-    //     );
-    //     assert_eq!(
-    //         iterator.prev_kind().unwrap(),
-    //         SymbolKind::Star,
-    //         "Previous SymbolKind not correctly stored."
-    //     );
+        assert_eq!(
+            String::from(iterator.next().unwrap()),
+            "a",
+            "`next()` returned wrong token."
+        );
+        assert_eq!(
+            iterator.prev_kind().unwrap(),
+            TokenKind::Plain,
+            "Previous TokenKind not correctly stored."
+        );
+        assert_eq!(
+            String::from(iterator.next().unwrap()),
+            "\n",
+            "`next()` returned wrong token."
+        );
+        assert_eq!(
+            iterator.prev_kind().unwrap(),
+            TokenKind::Newline,
+            "Previous TokenKind not correctly stored."
+        );
+        assert_eq!(
+            String::from(iterator.next().unwrap()),
+            "b",
+            "`next()` returned wrong token."
+        );
+        assert_eq!(
+            iterator.prev_kind().unwrap(),
+            TokenKind::Plain,
+            "Previous TokenKind not correctly stored."
+        );
 
-    //     assert_eq!(
-    //         iterator.next().unwrap().as_str(),
-    //         "\n",
-    //         "`next()` returned wrong symbol."
-    //     );
-    //     assert_eq!(
-    //         iterator.prev_kind().unwrap(),
-    //         SymbolKind::Newline,
-    //         "Previous SymbolKind not correctly stored."
-    //     );
-    // }
+        assert_eq!(
+            iterator.next().unwrap().kind,
+            TokenKind::Eoi,
+            "`next()` did not skip the Newline before EOI."
+        );
+    }
 
-    // #[test]
-    // fn prev_symbol_from_end_match() {
-    //     let symbols = crate::scanner::scan_str("a*+b");
+    #[test]
+    fn prev_kind() {
+        let symbols = crate::lexer::scan_str("a *\nb");
 
-    //     let mut iterator = SymbolIterator::with(
-    //         &symbols,
-    //         None,
-    //         Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-    //             matcher.consumed_matches(&[SymbolKind::Star, SymbolKind::Plus])
-    //         })),
-    //     );
+        let mut iterator = TokenIterator::with((&*symbols).into(), None, None);
 
-    //     let content = iterator
-    //         .take_to_end()
-    //         .iter()
-    //         .fold(String::new(), |mut combined, s| {
-    //             combined.push_str(s.as_str());
-    //             combined
-    //         });
+        assert_eq!(
+            String::from(iterator.next().unwrap()),
+            "a",
+            "`next()` returned wrong token."
+        );
+        assert_eq!(
+            iterator.prev_kind().unwrap(),
+            TokenKind::Plain,
+            "Previous TokenKind not correctly stored."
+        );
 
-    //     assert_eq!(content, "a", "End match returned wrong content.");
-    //     assert_eq!(
-    //         iterator.prev_symbol().unwrap().as_str(),
-    //         "+",
-    //         "Previous symbol not correctly updated from end match."
-    //     );
-    // }
+        assert_eq!(
+            String::from(iterator.next().unwrap()),
+            " ",
+            "`next()` returned wrong token."
+        );
+        assert_eq!(
+            iterator.prev_kind().unwrap(),
+            TokenKind::Whitespace(1),
+            "Previous TokenKind not correctly stored."
+        );
 
-    // #[test]
-    // fn prev_symbol_from_prefix_match() {
-    //     let symbols = crate::scanner::scan_str("\n*+b");
+        assert_eq!(
+            String::from(iterator.next().unwrap()),
+            "*",
+            "`next()` returned wrong token."
+        );
+        assert_eq!(
+            iterator.prev_kind().unwrap(),
+            TokenKind::Star(1),
+            "Previous TokenKind not correctly stored."
+        );
 
-    //     let mut iterator = SymbolIterator::with(
-    //         &symbols,
-    //         Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-    //             matcher.consumed_prefix(&[SymbolKind::Star, SymbolKind::Plus])
-    //         })),
-    //         None,
-    //     );
+        assert_eq!(
+            String::from(iterator.next().unwrap()),
+            "\n",
+            "`next()` returned wrong token."
+        );
+        assert_eq!(
+            iterator.prev_kind().unwrap(),
+            TokenKind::Newline,
+            "Previous TokenKind not correctly stored."
+        );
+    }
 
-    //     assert_eq!(
-    //         iterator.next().unwrap().as_str(),
-    //         "\n",
-    //         "`next()` returned wrong symbol."
-    //     );
-    //     // Previous symbol is not set for prefix symbols, because `Newline` symbol gets passed to nested iterators for their prefix match
-    //     assert_eq!(
-    //         iterator.prev_symbol().unwrap().as_str(),
-    //         "\n",
-    //         "Previous symbol not correctly updated from prefix match."
-    //     );
-    //     assert_eq!(
-    //         iterator.next().unwrap().as_str(),
-    //         "b",
-    //         "`next()` returned wrong symbol."
-    //     );
-    // }
+    #[test]
+    fn prev_token_from_end_match() {
+        let symbols = crate::lexer::scan_str("a*+b");
+
+        let mut iterator = TokenIterator::with(
+            (&*symbols).into(),
+            None,
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.consumed_matches(&[TokenKind::Star(1), TokenKind::Plus(1)])
+            })),
+        );
+
+        let content = iterator
+            .take_to_end()
+            .iter()
+            .fold(String::new(), |mut combined, s| {
+                combined.push_str(&String::from(s));
+                combined
+            });
+
+        assert_eq!(content, "a", "End match returned wrong content.");
+        assert_eq!(
+            iterator.prev_token().unwrap().kind,
+            TokenKind::Plus(1),
+            "Previous token not correctly updated from end match."
+        );
+    }
+
+    #[test]
+    fn prev_token_from_prefix_match() {
+        let symbols = crate::lexer::scan_str("\n*+b");
+
+        let mut iterator = TokenIterator::with(
+            (&*symbols).into(),
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Plus(1)])
+            })),
+            None,
+        );
+
+        assert_eq!(
+            iterator.next().unwrap().kind,
+            TokenKind::Newline,
+            "`next()` returned wrong token."
+        );
+        // Previous token is not set for prefix token, because `Newline` token gets passed to nested iterators for their prefix match
+        assert_eq!(
+            iterator.prev_token().unwrap().kind,
+            TokenKind::Newline,
+            "Previous token not correctly updated from prefix match."
+        );
+        assert_eq!(
+            String::from(iterator.next().unwrap()),
+            "b",
+            "`next()` returned wrong token."
+        );
+    }
 }

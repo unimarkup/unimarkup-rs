@@ -122,6 +122,7 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
                         .sym_iter
                         .peek_nth(seq_len - 1)
                         .expect("Peeked symbols above.");
+                    token.kind = TokenKind::from((first_kind, seq_len + 1)); // +1 because first symbol is same kind
                     token.offset.extend(last_symbol.offset);
                     token.end = last_symbol.end;
                 }

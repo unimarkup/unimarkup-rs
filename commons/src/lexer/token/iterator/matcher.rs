@@ -180,7 +180,7 @@ impl<'input> PrefixMatcher for TokenIterator<'input> {
 
         // NOTE: `Newline` at start is already ensured for prefix matches.
         let _whitespaces = self
-            .peeking_take_while(|s| s.kind == TokenKind::Whitespace)
+            .peeking_take_while(|s| matches!(s.kind, TokenKind::Whitespace(_)))
             .count();
 
         let new_line = self.peeking_next(|s| matches!(s.kind, TokenKind::Newline | TokenKind::Eoi));

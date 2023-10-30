@@ -32,7 +32,7 @@ pub enum TokenKind {
     CloseBrace,
 
     // Spaces
-    Whitespace,
+    Whitespace(usize),
     Newline,
     Blankline,
     Eoi,
@@ -69,7 +69,7 @@ impl TokenKind {
     pub fn is_not_keyword(&self) -> bool {
         matches!(
             self,
-            TokenKind::Whitespace
+            TokenKind::Whitespace(_)
                 | TokenKind::Newline
                 | TokenKind::Blankline
                 | TokenKind::Eoi
@@ -108,7 +108,7 @@ impl TokenKind {
     pub fn is_space(&self) -> bool {
         matches!(
             self,
-            TokenKind::Newline | TokenKind::Whitespace | TokenKind::Eoi | TokenKind::Blankline
+            TokenKind::Newline | TokenKind::Whitespace(_) | TokenKind::Eoi | TokenKind::Blankline
         )
     }
 
@@ -169,7 +169,7 @@ impl From<TokenKind> for String {
                 s.push_str(SymbolKind::Newline.as_str());
                 s
             }
-            TokenKind::Whitespace => {
+            TokenKind::Whitespace(_) => {
                 let mut s = String::with_capacity(SymbolKind::Whitespace.as_str().len());
                 s.push_str(SymbolKind::Whitespace.as_str());
                 s
@@ -204,7 +204,7 @@ impl From<SymbolKind> for TokenKind {
         match value {
             SymbolKind::Plain | SymbolKind::Backslash => TokenKind::Plain, // Backslash is incorrect, but will be corrected in iterator
             SymbolKind::TerminalPunctuation => TokenKind::TerminalPunctuation,
-            SymbolKind::Whitespace => TokenKind::Whitespace,
+            SymbolKind::Whitespace => TokenKind::Whitespace(1),
             SymbolKind::Newline => TokenKind::Newline,
             SymbolKind::Eoi => TokenKind::Eoi,
             SymbolKind::Hash => TokenKind::Hash(1),
@@ -239,7 +239,7 @@ impl From<(SymbolKind, usize)> for TokenKind {
         match kind {
             SymbolKind::Plain | SymbolKind::Backslash => TokenKind::Plain, // Backslash is incorrect, but will be corrected in iterator
             SymbolKind::TerminalPunctuation => TokenKind::TerminalPunctuation,
-            SymbolKind::Whitespace => TokenKind::Whitespace,
+            SymbolKind::Whitespace => TokenKind::Whitespace(len),
             SymbolKind::Newline => TokenKind::Newline,
             SymbolKind::Eoi => TokenKind::Eoi,
             SymbolKind::Hash => TokenKind::Hash(len),
