@@ -34,6 +34,7 @@ pub struct TokenIteratorImplicits<'input> {
 pub trait TokenIteratorImplicitExt {
     fn ignore_implicits(&mut self);
     fn allow_implicits(&mut self);
+    fn implicits_allowed(&self) -> bool;
 }
 
 impl<'input> TokenIteratorImplicitExt for TokenIteratorImplicits<'input> {
@@ -43,6 +44,10 @@ impl<'input> TokenIteratorImplicitExt for TokenIteratorImplicits<'input> {
 
     fn allow_implicits(&mut self) {
         self.allow_implicits = true;
+    }
+
+    fn implicits_allowed(&self) -> bool {
+        self.allow_implicits
     }
 }
 
@@ -118,7 +123,7 @@ impl<'input> Iterator for TokenIteratorImplicits<'input> {
     type Item = Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next = self.next_base_token(true);
+        let next = self.next_base_token(NextVariant::Next);
 
         if next.is_some() {
             self.prev_token = next;
@@ -139,7 +144,7 @@ impl<'input> PeekingNext for TokenIteratorImplicits<'input> {
         F: FnOnce(&Self::Item) -> bool,
     {
         let peek_index = self.base_iter.peek_index();
-        let token = self.next_base_token(true)?;
+        let token = self.next_base_token(NextVariant::Peek)?;
 
         if accept(&token) {
             self.prev_peeked_token = Some(token);
@@ -152,14 +157,15 @@ impl<'input> PeekingNext for TokenIteratorImplicits<'input> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NextVariant {
+    Next,
+    Peek,
+}
+
 impl<'input> TokenIteratorImplicits<'input> {
-    fn next_base_token(&mut self, is_peeking: bool) -> Option<Token<'input>> {
-        let mut token = if is_peeking {
-            self.base_iter.peeking_next(|_| true)?
-        } else {
-            self.base_iter.next()?
-        };
-        let kind = token.kind;
+    fn next_base_token(&mut self, variant: NextVariant) -> Option<Token<'input>> {
+        let kind = self.base_iter.peek_kind()?;
 
         if self.allow_implicits {
             if kind == TokenKind::TerminalPunctuation || kind.is_space() {
@@ -171,8 +177,8 @@ impl<'input> TokenIteratorImplicits<'input> {
 
             let mut implicit_iter = self.clone();
             if let Some(implicit_token) = super::get_implicit(&mut implicit_iter) {
-                token = implicit_token;
-                if is_peeking {
+                let token = implicit_token;
+                if variant == NextVariant::Peek {
                     self.set_peek_index(implicit_iter.peek_index());
                     // Must be set after peek index update, because setting peek index invalidates flags
                     self.allow_arrow = implicit_iter.allow_arrow;
@@ -190,13 +196,19 @@ impl<'input> TokenIteratorImplicits<'input> {
                 } else {
                     *self = implicit_iter;
                 }
+
+                return Some(token);
             }
         } else {
             self.allow_arrow = false;
             self.allow_emoji = false;
         }
 
-        Some(token)
+        if variant == NextVariant::Peek {
+            self.base_iter.peeking_next(|_| true)
+        } else {
+            self.base_iter.next()
+        }
     }
 }
 

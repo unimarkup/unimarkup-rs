@@ -1,12 +1,12 @@
 use unimarkup_commons::lexer::{position::Position, span::Span};
 
 use self::{
-    base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain, Whitespace},
+    base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
         Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
         Underline, Verbatim,
     },
-    substitution::{named::NamedSubstitution, DirectUri, ImplicitSubstitution},
+    substitution::{named::NamedSubstitution, DirectUri},
     textbox::{hyperlink::Hyperlink, TextBox},
 };
 
@@ -75,11 +75,12 @@ pub enum Inline {
     /// End of line (regular newline)
     Newline(Newline),
 
+    /// Implicit newline in case newlines should be kept, but it was not manually escaped.
+    /// e.g. in verbatim blocks
+    ImplicitNewline(Newline),
+
     /// Escaped newline.
     EscapedNewline(EscapedNewline),
-
-    /// Regular whitespace
-    Whitespace(Whitespace),
 
     /// Escaped whitespace.
     EscapedWhitespace(EscapedWhitespace),
@@ -90,18 +91,12 @@ pub enum Inline {
     /// Escaped plain text without any formatting.
     EscapedPlain(EscapedPlain),
 
-    ImplicitSubstitution(ImplicitSubstitution),
-
     DirectUri(DirectUri),
 }
 
 impl Inline {
     pub fn is_plain(&self) -> bool {
         matches!(self, Inline::Plain(_))
-    }
-
-    pub fn is_whitespace(&self) -> bool {
-        matches!(self, Inline::Whitespace(_))
     }
 
     pub fn variant_str(&self) -> &'static str {
@@ -120,12 +115,11 @@ impl Inline {
             Inline::Hyperlink(_) => "Hyperlink",
             Inline::Verbatim(_) => "Verbatim",
             Inline::Newline(_) => "Newline",
+            Inline::ImplicitNewline(_) => "ImplicitNewline",
             Inline::EscapedNewline(_) => "EscapedNewline",
-            Inline::Whitespace(_) => "Whitespace",
             Inline::EscapedWhitespace(_) => "EscapedWhitespace",
             Inline::Plain(_) => "Plain",
             Inline::EscapedPlain(_) => "EscapedPlain",
-            Inline::ImplicitSubstitution(_) => "ImplicitSubstitution",
             Inline::DirectUri(_) => "DirectUri",
             Inline::NamedSubstitution(_) => "NamedSubstitution",
         }
@@ -149,12 +143,11 @@ impl InlineElement for Inline {
             Inline::Hyperlink(inline) => inline.to_plain_string(),
             Inline::Verbatim(inline) => inline.to_plain_string(),
             Inline::Newline(inline) => inline.to_plain_string(),
+            Inline::ImplicitNewline(inline) => inline.to_plain_string(),
             Inline::EscapedNewline(inline) => inline.to_plain_string(),
-            Inline::Whitespace(inline) => inline.to_plain_string(),
             Inline::EscapedWhitespace(inline) => inline.to_plain_string(),
             Inline::Plain(inline) => inline.to_plain_string(),
             Inline::EscapedPlain(inline) => inline.to_plain_string(),
-            Inline::ImplicitSubstitution(inline) => inline.to_plain_string(),
             Inline::DirectUri(inline) => inline.to_plain_string(),
 
             Inline::NamedSubstitution(_) => todo!(),
@@ -177,12 +170,11 @@ impl InlineElement for Inline {
             Inline::Hyperlink(inline) => inline.start(),
             Inline::Verbatim(inline) => inline.start(),
             Inline::Newline(inline) => inline.start(),
+            Inline::ImplicitNewline(inline) => inline.start(),
             Inline::EscapedNewline(inline) => inline.start(),
-            Inline::Whitespace(inline) => inline.start(),
             Inline::EscapedWhitespace(inline) => inline.start(),
             Inline::Plain(inline) => inline.start(),
             Inline::EscapedPlain(inline) => inline.start(),
-            Inline::ImplicitSubstitution(inline) => inline.start(),
             Inline::DirectUri(inline) => inline.start(),
 
             Inline::NamedSubstitution(_) => todo!(),
@@ -205,12 +197,11 @@ impl InlineElement for Inline {
             Inline::Hyperlink(inline) => inline.end(),
             Inline::Verbatim(inline) => inline.end(),
             Inline::Newline(inline) => inline.end(),
+            Inline::ImplicitNewline(inline) => inline.end(),
             Inline::EscapedNewline(inline) => inline.end(),
-            Inline::Whitespace(inline) => inline.end(),
             Inline::EscapedWhitespace(inline) => inline.end(),
             Inline::Plain(inline) => inline.end(),
             Inline::EscapedPlain(inline) => inline.end(),
-            Inline::ImplicitSubstitution(inline) => inline.end(),
             Inline::DirectUri(inline) => inline.end(),
 
             Inline::NamedSubstitution(_) => todo!(),

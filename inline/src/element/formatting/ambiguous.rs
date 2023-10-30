@@ -1,6 +1,6 @@
 use unimarkup_commons::{
     lexer::position::{Offset, Position},
-    parsing::Context,
+    parsing::InlineContext,
 };
 
 use crate::{
@@ -9,7 +9,10 @@ use crate::{
     tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind, InlineToken},
 };
 
-pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<Inline> {
+pub(crate) fn parse(
+    input: &mut InlineTokenIterator,
+    context: &mut InlineContext,
+) -> Option<Inline> {
     let mut open_token = input.next()?;
 
     if input.peek_kind()?.is_space() {
@@ -58,7 +61,7 @@ pub(crate) fn ambiguous_split<'input>(
 
 fn resolve_closing(
     input: &mut InlineTokenIterator,
-    context: &mut Context,
+    context: &mut InlineContext,
     open_token: InlineToken<'_>,
     inner: Vec<Inline>,
 ) -> Option<Inline> {

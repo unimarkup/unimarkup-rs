@@ -13,11 +13,15 @@ pub struct TokenIteratorScopedRoot<'input> {
 
 impl TokenIteratorImplicitExt for TokenIteratorScopedRoot<'_> {
     fn ignore_implicits(&mut self) {
-        todo!()
+        self.token_iter.ignore_implicits();
     }
 
     fn allow_implicits(&mut self) {
-        todo!()
+        self.token_iter.allow_implicits();
+    }
+
+    fn implicits_allowed(&self) -> bool {
+        self.token_iter.implicits_allowed()
     }
 }
 

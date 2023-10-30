@@ -415,6 +415,14 @@ impl TokenIteratorImplicitExt for TokenIterator<'_> {
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.allow_implicits(),
         }
     }
+
+    fn implicits_allowed(&self) -> bool {
+        match &self.parent {
+            TokenIteratorKind::Nested(parent) => parent.implicits_allowed(),
+            TokenIteratorKind::Root(root) => root.implicits_allowed(),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.implicits_allowed(),
+        }
+    }
 }
 
 impl<'input> From<SymbolIterator<'input>> for TokenIterator<'input> {

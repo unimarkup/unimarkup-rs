@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
 use unimarkup_inline::element::{
     formatting::{
@@ -84,7 +82,7 @@ impl AsSnapshot for Snapshot<&Inline> {
                     | Inline::EscapedNewline(_)
                     | Inline::EscapedWhitespace(_)
                     | Inline::Newline(_)
-                    | Inline::Whitespace(_)
+                    | Inline::ImplicitNewline(_)
             ) {
                 res.push_str(indent);
                 res.push_str(&"^".repeat(self.span().len_grapheme().unwrap_or(1)));
@@ -112,12 +110,12 @@ fn inner_snapshot(inline: &Inline) -> String {
         Inline::TextBox(inline) => Snapshot::snap(inline.inner()),
         Inline::Hyperlink(inline) => Snapshot::snap(inline.inner()),
         Inline::Verbatim(inline) => Snapshot::snap(inline),
-        Inline::Newline(_) | Inline::EscapedNewline(_) => Snapshot::snap("\n"),
-        Inline::Whitespace(_) => Snapshot::snap(" "),
+        Inline::Newline(inline) => Snapshot::snap(inline.as_str()),
+        Inline::ImplicitNewline(inline) => Snapshot::snap(inline.as_str()),
+        Inline::EscapedNewline(inline) => Snapshot::snap(inline.as_str()),
         Inline::EscapedWhitespace(inline) => inline.space().clone(),
         Inline::Plain(inline) => inline.content().clone(),
         Inline::EscapedPlain(inline) => inline.content().clone(),
-        Inline::ImplicitSubstitution(inline) => Snapshot::snap(inline.subst()),
         Inline::DirectUri(inline) => inline.uri().to_string(),
 
         Inline::NamedSubstitution(_) => todo!(),

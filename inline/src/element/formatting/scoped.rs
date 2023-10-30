@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use unimarkup_commons::{
     lexer::token::{implicit::iterator::TokenIteratorImplicitExt, iterator::EndMatcher},
-    parsing::Context,
+    parsing::InlineContext,
 };
 
 use crate::{
@@ -15,7 +15,7 @@ macro_rules! scoped_parser {
     ($fn_name:ident, $kind:ident) => {
         pub(crate) fn $fn_name(
             input: &mut InlineTokenIterator,
-            context: &mut Context,
+            context: &mut InlineContext,
         ) -> Option<Inline> {
             let open_token = input.next()?;
 
@@ -30,14 +30,21 @@ macro_rules! scoped_parser {
                         && matcher.consumed_matches(&[InlineTokenKind::$kind.into()])
                 })))
                 .into();
-            // ignore implicits, because only escapes and macros are allowed in following inlines
-            scoped_iter.ignore_implicits();
-            context.keep_spaces = true;
-            context.macros_only = true;
+
+            // ignore implicits, because only escapes and logic elements are allowed in following inline verbatim
+            let prev_implicits_allowed = input.implicits_allowed();
+            input.ignore_implicits();
+
+            let prev_context_flags = context.flags;
+            context.flags.keep_whitespaces = true;
+            context.flags.logic_only = true;
+
             let inner = inline_parser::parse(&mut scoped_iter, context);
-            context.keep_spaces = false;
-            context.macros_only = false;
-            scoped_iter.allow_implicits();
+
+            context.flags = prev_context_flags;
+            if prev_implicits_allowed {
+                input.allow_implicits();
+            }
 
             let prev_token = scoped_iter.prev_token().expect(
                 "Previous token must exist, because peek above would else have returned None.",

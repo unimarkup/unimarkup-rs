@@ -1,4 +1,4 @@
-use unimarkup_commons::{lexer::position::Position, parsing::Context};
+use unimarkup_commons::{lexer::position::Position, parsing::InlineContext};
 
 use crate::{
     element::InlineElement,
@@ -13,7 +13,7 @@ pub mod scoped;
 
 pub(crate) fn parse_distinct_format(
     input: &mut InlineTokenIterator,
-    context: &mut Context,
+    context: &mut InlineContext,
 ) -> Option<Inline> {
     let open_token = input.next()?;
 

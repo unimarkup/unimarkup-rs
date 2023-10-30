@@ -1,18 +1,15 @@
-use unimarkup_commons::{lexer::position::Position, parsing::Context};
+use unimarkup_commons::{lexer::position::Position, parsing::InlineContext};
 
 use crate::{
     element::InlineElement,
     tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind, InlineToken},
 };
 
-use super::{
-    substitution::{DirectUri, ImplicitSubstitution},
-    Inline,
-};
+use super::{substitution::DirectUri, Inline};
 
 pub(crate) fn parse_base(
     input: &mut InlineTokenIterator,
-    context: &mut Context,
+    context: &mut InlineContext,
     inlines: &mut Vec<Inline>,
 ) {
     let mut next = input.next().expect("Peeked symbol before.");
@@ -22,66 +19,127 @@ pub(crate) fn parse_base(
         // Ambiguous token may be split to get possible valid partial token
         crate::element::formatting::ambiguous::ambiguous_split(input, &mut next);
 
-        // If keyword was not handled above => convert token to plain
+        // Keyword did not lead to inline element in inline parser => convert token to plain
         next.kind = InlineTokenKind::Plain;
         input.set_prev_token(next); // update prev token, because next changed afterwards
-    } else if (context.keep_spaces && kind == InlineTokenKind::Whitespace)
-        || (context.macros_only
-            && matches!(
-                kind,
-                InlineTokenKind::Comment { .. } | InlineTokenKind::ImplicitSubstitution(_)
-            ))
+    } else if context.flags.keep_whitespaces && kind == InlineTokenKind::Whitespace {
+        // Treating whitespace as plain will preserve the original whitespace, and not compress it to a single space.
+        next.kind = InlineTokenKind::Plain;
+        // Previous token is not updated, because format opening/closing validation needs whitespace information
+    } else if context.flags.logic_only
+        && matches!(
+            kind,
+            InlineTokenKind::ImplicitSubstitution(_) | InlineTokenKind::Directuri
+        )
     {
-        // Only escapes, newlines and macros remain as is in macro only mode
-        // This is used for example in verbatim context
         next.kind = InlineTokenKind::Plain;
-        input.set_prev_token(next); // update prev token, because next changed afterwards
+
+        #[cfg(debug_assertions)]
+        panic!(
+            "Kind '{:?}' in logic_only is not supported. Use token iterator's `ignore_implicits()` before entering *logic only* scope.",
+            kind
+        );
     }
 
     match inlines.last_mut() {
         Some(last) => match last {
-            Inline::Plain(plain) if next.kind == InlineTokenKind::Plain => {
+            Inline::Plain(plain)
+                if matches!(
+                    next.kind,
+                    InlineTokenKind::Plain
+                        | InlineTokenKind::Whitespace
+                        | InlineTokenKind::ImplicitSubstitution(_)
+                ) =>
+            {
                 plain.push_token(next);
             }
-            _ => inlines.push(next.into()),
+            _ => inlines.push(to_inline(input, context, next)),
         },
-        None => inlines.push(next.into()),
+        None => inlines.push(to_inline(input, context, next)),
     }
 }
 
-impl<'input> From<InlineToken<'input>> for Inline {
-    fn from(value: InlineToken<'input>) -> Self {
-        match value.kind {
-            InlineTokenKind::Newline => Inline::Newline(Newline::new(value.start, value.end)),
-            InlineTokenKind::EscapedNewline => {
-                Inline::EscapedNewline(EscapedNewline::new(value.start, value.end))
-            }
-            InlineTokenKind::Whitespace => {
-                Inline::Whitespace(Whitespace::new(value.start, value.end))
-            }
-            InlineTokenKind::EscapedWhitespace => Inline::EscapedWhitespace(
-                EscapedWhitespace::new(value.as_str().to_string(), value.start, value.end),
-            ),
-            InlineTokenKind::EscapedPlain => Inline::EscapedPlain(EscapedPlain::new(
-                value.as_str().to_string(),
-                value.start,
-                value.end,
-            )),
-            InlineTokenKind::ImplicitSubstitution(kind) => Inline::ImplicitSubstitution(
-                ImplicitSubstitution::new(kind, value.start, value.end),
-            ),
-            InlineTokenKind::Directuri => Inline::DirectUri(DirectUri::new(
-                value.as_str().to_string(),
-                value.start,
-                value.end,
-            )),
+fn to_inline(
+    token_iter: &mut InlineTokenIterator,
+    context: &InlineContext,
+    token: InlineToken<'_>,
+) -> Inline {
+    let prev_kind = token_iter.prev_kind();
 
-            // All other tokens are either created in parser, or did not resolve to an element => take as plain
-            _ => Inline::Plain(Plain::new(
-                value.as_str().to_string(),
-                value.start,
-                value.end,
-            )),
+    match token.kind {
+        InlineTokenKind::Newline => {
+            if context.flags.keep_newline {
+                Inline::ImplicitNewline(Newline::new(token.start, token.end))
+            } else {
+                Inline::Newline(Newline::new(token.start, token.end))
+            }
+        }
+        InlineTokenKind::EscapedNewline => {
+            Inline::EscapedNewline(EscapedNewline::new(token.start, token.end))
+        }
+
+        InlineTokenKind::EscapedWhitespace => Inline::EscapedWhitespace(EscapedWhitespace::new(
+            token.as_str().to_string(),
+            token.start,
+            token.end,
+        )),
+        InlineTokenKind::EscapedPlain => Inline::EscapedPlain(EscapedPlain::new(
+            token.as_str().to_string(),
+            token.start,
+            token.end,
+        )),
+        InlineTokenKind::Directuri => Inline::DirectUri(DirectUri::new(
+            token.as_str().to_string(),
+            token.start,
+            token.end,
+        )),
+
+        // No plain content before whitespace => could not merge with previous => creates new plain
+        InlineTokenKind::Whitespace => {
+            debug_assert!(
+                !context.flags.keep_whitespaces,
+                "Whitespace was not converted to `Plain` to preserve whitespace."
+            );
+
+            match prev_kind {
+                Some(InlineTokenKind::Newline) => {
+                    // Ignore whitespaces after newline, because newline already represents one space
+                    Inline::Plain(Plain::new(String::default(), token.start, token.end))
+                }
+                _ if matches!(
+                    token_iter.peek_kind(),
+                    Some(InlineTokenKind::Newline) | Some(InlineTokenKind::EscapedNewline)
+                ) =>
+                {
+                    // Ignore whitespaces before newline, because newline already represents one space
+                    Inline::Plain(Plain::new(String::default(), token.start, token.end))
+                }
+                _ => Inline::Plain(Plain::new(
+                    token.as_str().to_string(),
+                    token.start,
+                    token.end,
+                )),
+            }
+        }
+        // No plain content before subst => could not merge with previous => creates new plain
+        InlineTokenKind::ImplicitSubstitution(subst) => Inline::Plain(Plain::new(
+            subst.subst().to_string(),
+            token.start,
+            token.end,
+        )),
+        _ => {
+            debug_assert_eq!(
+                token.kind,
+                InlineTokenKind::Plain,
+                "Inline kind '{:?}' was not set to `Plain` before converting to `Inline`.",
+                token.kind
+            );
+
+            Inline::Plain(Plain::new(
+                token.as_str().to_string(),
+                token.start,
+                token.end,
+            ))
         }
     }
 }
@@ -139,21 +197,38 @@ base_inlines!(
     Plain has content: String,
     EscapedPlain has content: String,
     EscapedWhitespace has space: String,
-    Whitespace,
     Newline,
     EscapedNewline
 );
 
 impl Plain {
     pub(crate) fn push_token(&mut self, token: InlineToken<'_>) {
+        let content = if let InlineTokenKind::ImplicitSubstitution(subst) = token.kind {
+            subst.subst()
+        } else {
+            debug_assert_eq!(
+                token.kind,
+                InlineTokenKind::Plain,
+                "Tried to push kind '{:?}' to plain inline.",
+                token.kind
+            );
+            token.as_str()
+        };
+
         self.end = token.end;
-        self.content.push_str(token.as_str());
+        self.content.push_str(content);
     }
 }
 
 macro_rules! element_without_content {
     ($($element:ident),+) => {
         $(
+            impl $element {
+                pub fn as_str(&self) -> &'static str {
+                    InlineTokenKind::$element.as_str()
+                }
+            }
+
             impl InlineElement for $element {
                 fn to_plain_string(&self) -> String {
                     InlineTokenKind::$element.as_str().to_string()
@@ -171,4 +246,4 @@ macro_rules! element_without_content {
     };
 }
 
-element_without_content!(Whitespace, Newline, EscapedNewline);
+element_without_content!(Newline, EscapedNewline);

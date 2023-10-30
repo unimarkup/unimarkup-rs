@@ -5,7 +5,7 @@ use unimarkup_commons::{
         position::Position,
         token::{iterator::EndMatcher, TokenKind},
     },
-    parsing::Context,
+    parsing::InlineContext,
 };
 
 use crate::tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind};
@@ -48,7 +48,10 @@ impl TextBox {
     }
 }
 
-pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<Inline> {
+pub(crate) fn parse(
+    input: &mut InlineTokenIterator,
+    context: &mut InlineContext,
+) -> Option<Inline> {
     let open_token = input.next()?;
 
     if open_token.kind != InlineTokenKind::OpenBracket {

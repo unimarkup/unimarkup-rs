@@ -210,6 +210,22 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
 }
 
 impl<'input> TokenIteratorBase<'input> {
+    /// Returns the next [`Symbol`] without changing the current index.    
+    pub fn peek(&mut self) -> Option<Token<'input>> {
+        let peek_index = self.peek_index();
+
+        let token = self.peeking_next(|_| true);
+
+        self.set_peek_index(peek_index); // Note: Resetting index, because peek() must be idempotent
+
+        token
+    }
+
+    /// Returns the [`SymbolKind`] of the peeked [`Symbol`].
+    pub fn peek_kind(&mut self) -> Option<TokenKind> {
+        self.peek().map(|s| s.kind)
+    }
+
     fn make_blankline(&mut self, mut token: Token<'input>) -> Option<Token<'input>> {
         let peek_index = self.peek_index();
         let _whitespaces = self

@@ -231,4 +231,8 @@ impl TokenIteratorImplicitExt for InlineTokenIterator<'_> {
     fn allow_implicits(&mut self) {
         self.token_iter.allow_implicits();
     }
+
+    fn implicits_allowed(&self) -> bool {
+        self.token_iter.implicits_allowed()
+    }
 }
