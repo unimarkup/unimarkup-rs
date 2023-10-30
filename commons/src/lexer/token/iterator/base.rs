@@ -136,7 +136,15 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
                                 token.kind = TokenKind::EscapedWhitespace;
                             }
                             SymbolKind::Newline | SymbolKind::Eoi => {
-                                token.kind = TokenKind::EscapedNewline;
+                                // Only escape non-blanklines, to get correct block-end matching
+                                match self.make_blankline(token) {
+                                    Some(blankline) => {
+                                        token = blankline;
+                                    }
+                                    None => {
+                                        token.kind = TokenKind::EscapedNewline;
+                                    }
+                                }
                             }
                             _ => {
                                 token.kind = TokenKind::EscapedPlain;
@@ -152,26 +160,14 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
                 }
             }
 
-            SymbolKind::Newline => {
-                let peek_index = self.peek_index();
-                let _whitespaces = self
-                    .sym_iter
-                    .peeking_take_while(|s| s.kind == SymbolKind::Whitespace)
-                    .count();
-
-                let symbol_opt = self.sym_iter.peek();
-                if symbol_opt.map_or(false, |s| {
-                    s.kind == SymbolKind::Newline || s.kind == SymbolKind::Eoi
-                }) {
-                    let symbol = symbol_opt.expect("Checked above to be some symbol.");
-                    token.offset.extend(symbol.offset);
-                    token.end = symbol.end;
-                    token.kind = TokenKind::Blankline;
-                } else {
-                    // No blankline => do not skip whitespaces
-                    self.set_peek_index(peek_index);
+            SymbolKind::Newline => match self.make_blankline(token) {
+                Some(blankline) => {
+                    token = blankline;
                 }
-            }
+                None => {
+                    token.kind = TokenKind::Newline;
+                }
+            },
 
             SymbolKind::TerminalPunctuation => {
                 token.kind = TokenKind::TerminalPunctuation;
@@ -207,6 +203,32 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
             Some(token)
         } else {
             // reset peek to also reset peek of sym iterator, because sym peeking_next was without condition.
+            self.set_peek_index(peek_index);
+            None
+        }
+    }
+}
+
+impl<'input> TokenIteratorBase<'input> {
+    fn make_blankline(&mut self, mut token: Token<'input>) -> Option<Token<'input>> {
+        let peek_index = self.peek_index();
+        let _whitespaces = self
+            .sym_iter
+            .peeking_take_while(|s| s.kind == SymbolKind::Whitespace)
+            .count();
+
+        let symbol_opt = self.sym_iter.peek();
+
+        if symbol_opt.map_or(false, |s| {
+            s.kind == SymbolKind::Newline || s.kind == SymbolKind::Eoi
+        }) {
+            let symbol = symbol_opt.expect("Checked above to be some symbol.");
+            token.offset.extend(symbol.offset);
+            token.end = symbol.end;
+            token.kind = TokenKind::Blankline;
+            Some(token)
+        } else {
+            // No blankline => do not skip whitespaces
             self.set_peek_index(peek_index);
             None
         }

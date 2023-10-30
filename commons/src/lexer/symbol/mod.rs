@@ -271,10 +271,16 @@ impl From<&str> for SymbolKind {
 impl SymbolKind {
     pub fn as_str(&self) -> &str {
         match self {
-            SymbolKind::Plain | SymbolKind::TerminalPunctuation => panic!(
-                "Tried to create &str from '{:?}', which has undefined &str representation.",
-                self
-            ),
+            SymbolKind::Plain | SymbolKind::TerminalPunctuation => {
+                #[cfg(debug_assertions)]
+                panic!(
+                    "Tried to create &str from '{:?}', which has undefined &str representation.",
+                    self
+                );
+
+                #[cfg(not(debug_assertions))]
+                ""
+            }
             SymbolKind::Hash => "#",
             SymbolKind::Tick => "`",
             SymbolKind::Whitespace => " ",

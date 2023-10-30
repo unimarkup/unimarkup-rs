@@ -185,10 +185,16 @@ impl From<TokenKind> for String {
             | TokenKind::PossibleAttributes
             | TokenKind::PossibleDecorator
             | TokenKind::Any
-            | TokenKind::Eoi => panic!(
-                "Tried to create String from '{:?}', which has undefined String representation.",
-                value
-            ),
+            | TokenKind::Eoi => {
+                #[cfg(debug_assertions)]
+                panic!(
+                    "Tried to create String from '{:?}', which has undefined String representation.",
+                    value
+                );
+
+                #[cfg(not(debug_assertions))]
+                String::new()
+            }
         }
     }
 }

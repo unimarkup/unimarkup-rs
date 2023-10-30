@@ -130,10 +130,16 @@ impl InlineTokenKind {
             | InlineTokenKind::ImplicitSubstitution(_)
             | InlineTokenKind::Directuri
             | InlineTokenKind::Any
-            | InlineTokenKind::PossibleAttributes => panic!(
-                "Tried to create &str from '{:?}', which has undefined &str representation.",
-                self
-            ),
+            | InlineTokenKind::PossibleAttributes => {
+                #[cfg(debug_assertions)]
+                panic!(
+                    "Tried to create &str from '{:?}', which has undefined &str representation.",
+                    self
+                );
+
+                #[cfg(not(debug_assertions))]
+                ""
+            }
         }
     }
 

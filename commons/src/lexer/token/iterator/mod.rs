@@ -475,8 +475,12 @@ impl<'input> Iterator for TokenIterator<'input> {
             TokenIteratorKind::ScopedRoot(root) => root.next(),
         };
 
-        // Prefix matching after `peeking_next()` to skip prefix symbols, but pass `Newline` to nested iterators.
-        if in_scope && curr_token_opt?.kind == TokenKind::Newline && self.prefix_match.is_some() {
+        let kind = curr_token_opt?.kind;
+        // Prefix matching after `peeking_next()` to skip prefix symbols, but pass (escaped) `Newline` to nested iterators.
+        if in_scope
+            && matches!(kind, TokenKind::Newline | TokenKind::EscapedNewline)
+            && self.prefix_match.is_some()
+        {
             let prefix_match = self
                 .prefix_match
                 .clone()

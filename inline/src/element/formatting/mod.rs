@@ -143,10 +143,22 @@ macro_rules! format_to_inline{
                 }
                 .into(),
             )+
-            _ => panic!(
-                "Tried to create inline format from non-format kind '{:?}'",
-                kind
-            ),
+            _ => {
+                    #[cfg(debug_assertions)]
+                    panic!(
+                        "Tried to create inline format from non-format kind '{:?}'",
+                        kind
+                    );
+
+                    #[cfg(not(debug_assertions))]
+                    Plain::new(
+                        "",
+                        attributes,
+                        start,
+                        end,
+                    )
+                    .into()
+                },
             }
         }
     }
