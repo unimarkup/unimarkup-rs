@@ -8,12 +8,15 @@ use unimarkup_commons::{
 use crate::{
     element::Inline,
     inline_parser,
-    tokenize::{iterator::InlineTokenIterator, token::InlineTokenKind},
+    tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind},
 };
 
 macro_rules! scoped_parser {
     ($fn_name:ident, $kind:ident) => {
-        pub fn $fn_name(input: &mut InlineTokenIterator, context: &mut Context) -> Option<Inline> {
+        pub(crate) fn $fn_name(
+            input: &mut InlineTokenIterator,
+            context: &mut Context,
+        ) -> Option<Inline> {
             let open_token = input.next()?;
 
             // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
@@ -31,7 +34,9 @@ macro_rules! scoped_parser {
             scoped_iter.ignore_implicits();
             context.keep_spaces = true;
             context.macros_only = true;
-            let inner = inline_parser::parse_with_macros_only(&mut scoped_iter, context);
+            let inner = inline_parser::parse(&mut scoped_iter, context);
+            context.keep_spaces = false;
+            context.macros_only = false;
             scoped_iter.allow_implicits();
 
             let prev_token = scoped_iter.prev_token().expect(

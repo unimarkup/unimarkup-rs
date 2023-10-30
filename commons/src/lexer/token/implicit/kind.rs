@@ -1,7 +1,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ImplicitSubstitution {
-    Arrow(ArrowSubsitution),
-    Emoji(EmojiSubstitution),
+pub enum ImplicitSubstitutionKind {
+    Arrow(ArrowSubsitutionKind),
+    Emoji(EmojiSubstitutionKind),
     Trademark,
     Copyright,
     Registered,
@@ -11,38 +11,38 @@ pub enum ImplicitSubstitution {
     EmDash,
 }
 
-impl ImplicitSubstitution {
+impl ImplicitSubstitutionKind {
     pub fn orig(&self) -> &'static str {
         match self {
-            ImplicitSubstitution::Arrow(_) => todo!(),
-            ImplicitSubstitution::Emoji(_) => todo!(),
-            ImplicitSubstitution::Trademark => "(TM)",
-            ImplicitSubstitution::Copyright => "((C))",
-            ImplicitSubstitution::Registered => "((R))",
-            ImplicitSubstitution::HorizontalEllipsis => "...",
-            ImplicitSubstitution::PlusMinus => "(+-)",
-            ImplicitSubstitution::EnDash => "--",
-            ImplicitSubstitution::EmDash => "---",
+            ImplicitSubstitutionKind::Arrow(_) => todo!(),
+            ImplicitSubstitutionKind::Emoji(_) => todo!(),
+            ImplicitSubstitutionKind::Trademark => "(TM)",
+            ImplicitSubstitutionKind::Copyright => "((C))",
+            ImplicitSubstitutionKind::Registered => "((R))",
+            ImplicitSubstitutionKind::HorizontalEllipsis => "...",
+            ImplicitSubstitutionKind::PlusMinus => "(+-)",
+            ImplicitSubstitutionKind::EnDash => "--",
+            ImplicitSubstitutionKind::EmDash => "---",
         }
     }
 
     pub fn subst(&self) -> &'static str {
         match self {
-            ImplicitSubstitution::Arrow(_) => todo!(),
-            ImplicitSubstitution::Emoji(_) => todo!(),
-            ImplicitSubstitution::Trademark => "™",
-            ImplicitSubstitution::Copyright => "©",
-            ImplicitSubstitution::Registered => "®",
-            ImplicitSubstitution::HorizontalEllipsis => "…",
-            ImplicitSubstitution::PlusMinus => "±",
-            ImplicitSubstitution::EnDash => "–",
-            ImplicitSubstitution::EmDash => "—",
+            ImplicitSubstitutionKind::Arrow(_) => todo!(),
+            ImplicitSubstitutionKind::Emoji(_) => todo!(),
+            ImplicitSubstitutionKind::Trademark => "™",
+            ImplicitSubstitutionKind::Copyright => "©",
+            ImplicitSubstitutionKind::Registered => "®",
+            ImplicitSubstitutionKind::HorizontalEllipsis => "…",
+            ImplicitSubstitutionKind::PlusMinus => "±",
+            ImplicitSubstitutionKind::EnDash => "–",
+            ImplicitSubstitutionKind::EmDash => "—",
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ArrowSubsitution {}
+pub enum ArrowSubsitutionKind {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum EmojiSubstitution {}
+pub enum EmojiSubstitutionKind {}

@@ -74,11 +74,7 @@ impl SymbolKind {
     pub fn is_not_keyword(&self) -> bool {
         matches!(
             self,
-            SymbolKind::Newline
-                | SymbolKind::Whitespace
-                | SymbolKind::Plain
-                | SymbolKind::Dot
-                | SymbolKind::Eoi
+            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Plain | SymbolKind::Eoi
         )
     }
 

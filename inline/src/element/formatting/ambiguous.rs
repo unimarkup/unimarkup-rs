@@ -6,13 +6,10 @@ use unimarkup_commons::{
 use crate::{
     element::Inline,
     inline_parser,
-    tokenize::{
-        iterator::InlineTokenIterator,
-        token::{InlineToken, InlineTokenKind},
-    },
+    tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind, InlineToken},
 };
 
-pub fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<Inline> {
+pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<Inline> {
     let mut open_token = input.next()?;
 
     if input.peek_kind()?.is_space() {
@@ -33,7 +30,7 @@ pub fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<I
         input.push_format(open_token.kind);
     }
 
-    let inner = inline_parser::InlineParser::default().parse(input, context);
+    let inner = inline_parser::parse(input, context);
 
     resolve_closing(input, context, open_token, inner)
 }
@@ -158,7 +155,7 @@ fn resolve_closing(
         }
     };
 
-    outer.append(&mut inline_parser::InlineParser::default().parse(input, context));
+    outer.append(&mut inline_parser::parse(input, context));
 
     // Format will definitely close fully now => so remove from open formats
     input.pop_format(updated_open.kind);

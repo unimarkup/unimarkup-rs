@@ -107,6 +107,7 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
+        let peek_index = self.peek_index();
         let first_symbol = self.sym_iter.peeking_next(|_| true)?;
         let first_kind = first_symbol.kind;
         let mut token = Token::from(first_symbol);
@@ -172,6 +173,10 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
                 }
             }
 
+            SymbolKind::TerminalPunctuation => {
+                token.kind = TokenKind::TerminalPunctuation;
+            }
+
             _ if first_kind.is_parenthesis() => {
                 // TokenKind already set in `From` impl
                 // Multiple parenthesis are not combined, because each parenthesis may create a new scope
@@ -201,6 +206,8 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
         if accept(&token) {
             Some(token)
         } else {
+            // reset peek to also reset peek of sym iterator, because sym peeking_next was without condition.
+            self.set_peek_index(peek_index);
             None
         }
     }

@@ -38,7 +38,7 @@ impl<'input> From<&Symbol<'input>> for Token<'input> {
 impl From<&Token<'_>> for String {
     fn from(value: &Token<'_>) -> Self {
         match value.kind {
-            TokenKind::Plain | TokenKind::Punctuation | TokenKind::Whitespace => {
+            TokenKind::Plain | TokenKind::TerminalPunctuation | TokenKind::Whitespace => {
                 value.input[value.offset.start..value.offset.end].to_string()
             }
             TokenKind::EscapedPlain | TokenKind::EscapedWhitespace => {

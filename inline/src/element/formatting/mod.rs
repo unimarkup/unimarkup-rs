@@ -3,7 +3,7 @@ use unimarkup_commons::{lexer::position::Position, parsing::Context};
 use crate::{
     element::InlineElement,
     inline_parser,
-    tokenize::{iterator::InlineTokenIterator, token::InlineTokenKind},
+    tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind},
 };
 
 use super::Inline;
@@ -11,7 +11,7 @@ use super::Inline;
 pub mod ambiguous;
 pub mod scoped;
 
-pub fn parse_distinct_format(
+pub(crate) fn parse_distinct_format(
     input: &mut InlineTokenIterator,
     context: &mut Context,
 ) -> Option<Inline> {
@@ -24,7 +24,7 @@ pub fn parse_distinct_format(
 
     input.push_format(open_token.kind);
 
-    let inner = inline_parser::InlineParser::default().parse(input, context);
+    let inner = inline_parser::parse(input, context);
 
     let attributes = None;
     let mut implicit_end = true;

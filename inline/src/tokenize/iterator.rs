@@ -8,7 +8,7 @@ use unimarkup_commons::lexer::{
     PeekingNext,
 };
 
-use super::token::{InlineToken, InlineTokenKind};
+use super::{kind::InlineTokenKind, InlineToken};
 
 /// The [`TokenIterator`] provides an iterator over [`Token`]s.
 /// It allows to add matcher functions to notify the iterator,
@@ -19,7 +19,7 @@ use super::token::{InlineToken, InlineTokenKind};
 /// In other words, wrapped iterators control which [`Token`]s will be passed to their nested iterator.
 /// Therefore, each nested iterator only sees those [`Token`]s that are relevant to its scope.
 #[derive(Clone)]
-pub struct InlineTokenIterator<'input> {
+pub(crate) struct InlineTokenIterator<'input> {
     /// The [`TokenIterator`] of this iterator.
     token_iter: TokenIterator<'input>,
     cached_token: Option<InlineToken<'input>>,
@@ -47,24 +47,8 @@ impl<'input> From<InlineTokenIterator<'input>> for TokenIterator<'input> {
 }
 
 impl<'input> InlineTokenIterator<'input> {
-    /// Creates a new [`TokenIterator`] from the given [`TokenIterator`].
-    /// This iterator is created without matching functions.
-    pub fn new(sym_iter: TokenIterator<'input>) -> Self {
-        InlineTokenIterator::from(sym_iter)
-    }
-
     pub fn max_len(&self) -> usize {
         self.token_iter.max_len()
-    }
-
-    /// Returns the index this iterator was started from the [`Symbol`] slice of the root iterator.
-    pub fn start_index(&self) -> usize {
-        self.token_iter.start_index()
-    }
-
-    /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
-    pub fn index(&self) -> usize {
-        self.token_iter.index()
     }
 
     /// Resets peek to get `peek() == next()`.
@@ -149,12 +133,6 @@ impl<'input> InlineTokenIterator<'input> {
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
     pub fn nest_with_scope(&self, end_match: Option<IteratorEndFn>) -> TokenIterator<'input> {
         self.token_iter.nest_with_scope(None, end_match)
-    }
-
-    //TODO: delete function
-    /// Merge the parent iterator of the given symbol iterator to take the progress of it.
-    pub fn merge(&mut self, token_iter: TokenIterator<'input>) {
-        token_iter.update(&mut self.token_iter);
     }
 
     /// Updates the given parent iterator to take the progress of the nested iterator.

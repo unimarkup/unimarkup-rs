@@ -6,7 +6,7 @@ use self::{
         Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
         Underline, Verbatim,
     },
-    substitution::named::NamedSubstitution,
+    substitution::{named::NamedSubstitution, DirectUri, ImplicitSubstitution},
     textbox::{hyperlink::Hyperlink, TextBox},
 };
 
@@ -89,6 +89,10 @@ pub enum Inline {
 
     /// Escaped plain text without any formatting.
     EscapedPlain(EscapedPlain),
+
+    ImplicitSubstitution(ImplicitSubstitution),
+
+    DirectUri(DirectUri),
 }
 
 impl Inline {
@@ -121,8 +125,9 @@ impl Inline {
             Inline::EscapedWhitespace(_) => "EscapedWhitespace",
             Inline::Plain(_) => "Plain",
             Inline::EscapedPlain(_) => "EscapedPlain",
-
-            Inline::NamedSubstitution(_) => todo!(),
+            Inline::ImplicitSubstitution(_) => "ImplicitSubstitution",
+            Inline::DirectUri(_) => "DirectUri",
+            Inline::NamedSubstitution(_) => "NamedSubstitution",
         }
     }
 }
@@ -149,6 +154,8 @@ impl InlineElement for Inline {
             Inline::EscapedWhitespace(inline) => inline.to_plain_string(),
             Inline::Plain(inline) => inline.to_plain_string(),
             Inline::EscapedPlain(inline) => inline.to_plain_string(),
+            Inline::ImplicitSubstitution(inline) => inline.to_plain_string(),
+            Inline::DirectUri(inline) => inline.to_plain_string(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }
@@ -175,6 +182,8 @@ impl InlineElement for Inline {
             Inline::EscapedWhitespace(inline) => inline.start(),
             Inline::Plain(inline) => inline.start(),
             Inline::EscapedPlain(inline) => inline.start(),
+            Inline::ImplicitSubstitution(inline) => inline.start(),
+            Inline::DirectUri(inline) => inline.start(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }
@@ -201,6 +210,8 @@ impl InlineElement for Inline {
             Inline::EscapedWhitespace(inline) => inline.end(),
             Inline::Plain(inline) => inline.end(),
             Inline::EscapedPlain(inline) => inline.end(),
+            Inline::ImplicitSubstitution(inline) => inline.end(),
+            Inline::DirectUri(inline) => inline.end(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }

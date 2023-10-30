@@ -4,70 +4,57 @@ use unimarkup_commons::{lexer::token::iterator::TokenIterator, parsing::Context}
 
 use crate::{
     element::Inline,
-    tokenize::{iterator::InlineTokenIterator, token::InlineTokenKind},
+    tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind},
 };
 
 /// Parser function type for inline element parsing.
-pub type InlineParserFn = for<'i> fn(&mut InlineTokenIterator<'i>, &mut Context) -> Option<Inline>;
-
-/// Main parser for Unimarkup inline elements.
-#[derive(Default, Clone)]
-pub struct InlineParser {
-    macros_only: bool,
-}
+pub(crate) type InlineParserFn =
+    for<'i> fn(&mut InlineTokenIterator<'i>, &mut Context) -> Option<Inline>;
 
 /// Creates inline elements using the given token iterator.
 pub fn parse_inlines<'input>(
     token_iter: impl Into<TokenIterator<'input>>,
     context: &mut Context,
 ) -> Vec<Inline> {
-    InlineParser::default().parse(
+    parse(
         &mut InlineTokenIterator::from(TokenIterator::with_scoped_root(token_iter.into())),
         context,
     )
 }
 
-/// Creates inline elements using the given token iterator.
-/// All elements except escaped graphemes and macros are converted to plain content.
-pub(crate) fn parse_inlines_with_macros_only(
-    token_iter: TokenIterator,
-    context: &mut Context,
-) -> Vec<Inline> {
-    InlineParser { macros_only: true }.parse(
-        &mut InlineTokenIterator::from(TokenIterator::with_scoped_root(token_iter)),
-        context,
-    )
-}
+pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Vec<Inline> {
+    let mut inlines = Vec::default();
+    let mut format_closes = false;
 
-pub(crate) fn parse_with_macros_only(
-    token_iter: &mut InlineTokenIterator,
-    context: &mut Context,
-) -> Vec<Inline> {
-    InlineParser { macros_only: true }.parse(token_iter, context)
-}
+    #[cfg(debug_assertions)]
+    let mut curr_len = input.max_len();
 
-impl InlineParser {
-    pub(crate) fn parse(
-        &self,
-        input: &mut InlineTokenIterator,
-        context: &mut Context,
-    ) -> Vec<Inline> {
-        let mut inlines = Vec::default();
-        let mut format_closes = false;
+    input.reset_peek();
 
-        #[cfg(debug_assertions)]
-        let mut curr_len = input.max_len();
+    'outer: while let Some(kind) = input.peek_kind() {
+        if kind == InlineTokenKind::Eoi {
+            break 'outer;
+        }
 
-        input.reset_peek();
-
-        'outer: while let Some(kind) = input.peek_kind() {
-            if kind == InlineTokenKind::Eoi {
-                break 'outer;
+        if (!context.macros_only && kind.is_scoped_format_keyword()) || kind.is_open_parenthesis() {
+            if let Some(parser_fn) = get_scoped_parser(kind, context.macros_only) {
+                let mut iter = input.clone();
+                let mut inner_context = context.clone();
+                if let Some(res_inline) = parser_fn(&mut iter, &mut inner_context) {
+                    inlines.push(res_inline);
+                    *input = iter;
+                    *context = inner_context;
+                    continue 'outer;
+                }
             }
-
-            if (!self.macros_only && kind.is_scoped_format_keyword()) || kind.is_open_parenthesis()
-            {
-                if let Some(parser_fn) = get_scoped_parser(kind, self.macros_only) {
+        } else if !context.macros_only && kind.is_format_keyword() {
+            // An open format closes => unwrap to closing format element
+            // closing token is not consumed here => the element parser needs this info
+            if input.format_closes(kind) {
+                format_closes = true;
+                break 'outer;
+            } else if !input.format_is_open(kind) {
+                if let Some(parser_fn) = get_format_parser(kind) {
                     let mut iter = input.clone();
                     let mut inner_context = context.clone();
                     if let Some(res_inline) = parser_fn(&mut iter, &mut inner_context) {
@@ -77,76 +64,27 @@ impl InlineParser {
                         continue 'outer;
                     }
                 }
-            } else if !self.macros_only && kind.is_format_keyword() {
-                // An open format closes => unwrap to closing format element
-                // closing token is not consumed here => the element parser needs this info
-                if input.format_closes(kind) {
-                    format_closes = true;
-                    break 'outer;
-                } else if !input.format_is_open(kind) {
-                    if let Some(parser_fn) = get_format_parser(kind) {
-                        let mut iter = input.clone();
-                        let mut inner_context = context.clone();
-                        if let Some(res_inline) = parser_fn(&mut iter, &mut inner_context) {
-                            inlines.push(res_inline);
-                            *input = iter;
-                            *context = inner_context;
-                            continue 'outer;
-                        }
-                    }
-                }
-            }
-
-            let mut next = input.next().expect("Peeked symbol before.");
-
-            if kind.is_keyword() {
-                // Ambiguous token may be split to get possible valid partial token
-                crate::element::formatting::ambiguous::ambiguous_split(input, &mut next);
-
-                // If keyword was not handled above => convert token to plain
-                next.kind = InlineTokenKind::Plain;
-                input.set_prev_token(next); // update prev token, because next changed afterwards
-            } else if self.macros_only
-                && matches!(
-                    kind,
-                    InlineTokenKind::Comment { .. }
-                        | InlineTokenKind::ImplicitSubstitution(_)
-                        | InlineTokenKind::Whitespace
-                )
-            {
-                // Only escapes, newlines and macros remain as is in macro only mode
-                // This is used for example in verbatim context
-                next.kind = InlineTokenKind::Plain;
-                input.set_prev_token(next); // update prev token, because next changed afterwards
-            }
-
-            match inlines.last_mut() {
-                Some(last) => match last {
-                    Inline::Plain(plain) if next.kind == InlineTokenKind::Plain => {
-                        plain.push_token(next);
-                    }
-                    _ => inlines.push(next.into()),
-                },
-                None => inlines.push(next.into()),
-            }
-
-            #[cfg(debug_assertions)]
-            {
-                assert!(
-                    input.max_len() < curr_len,
-                    "Parser consumed no symbol in iteration."
-                );
-                curr_len = input.max_len();
             }
         }
 
-        if !format_closes {
-            // To consume tokens in end matching, but do not consume closing formatting tokens
-            let _ = input.next();
-        }
+        crate::element::base::parse_base(input, context, &mut inlines);
 
-        inlines
+        #[cfg(debug_assertions)]
+        {
+            assert!(
+                input.max_len() < curr_len,
+                "Parser consumed no symbol in iteration."
+            );
+            curr_len = input.max_len();
+        }
     }
+
+    if !format_closes {
+        // To consume tokens in end matching, but do not consume closing formatting tokens
+        let _ = input.next();
+    }
+
+    inlines
 }
 
 fn get_format_parser(kind: InlineTokenKind) -> Option<InlineParserFn> {
@@ -183,14 +121,14 @@ fn get_scoped_parser(kind: InlineTokenKind, macros_only: bool) -> Option<InlineP
 mod test {
     use unimarkup_commons::{lexer::token::iterator::TokenIterator, parsing::Context};
 
-    use crate::{inline_parser::InlineParser, tokenize::iterator::InlineTokenIterator};
+    use crate::tokenize::iterator::InlineTokenIterator;
 
     #[test]
     fn parse_strikethrough_in_unclosed_bold() {
-        let symbols = unimarkup_commons::lexer::scan_str("**bold**[*italic* `verbati  m`]");
+        let symbols = unimarkup_commons::lexer::scan_str("(tm)");
         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
 
-        let inlines = InlineParser::default().parse(&mut token_iter, &mut Context::default());
+        let inlines = super::parse(&mut token_iter, &mut Context::default());
 
         dbg!(&inlines);
         // assert_eq!(

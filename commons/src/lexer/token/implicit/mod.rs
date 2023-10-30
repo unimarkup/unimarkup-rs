@@ -45,13 +45,15 @@ pub fn get_implicit<'input>(
             }
             TokenKind::Dot(3) => {
                 first_token.kind =
-                    TokenKind::ImplicitSubstitution(ImplicitSubstitution::HorizontalEllipsis);
+                    TokenKind::ImplicitSubstitution(ImplicitSubstitutionKind::HorizontalEllipsis);
             }
             TokenKind::Minus(2) => {
-                first_token.kind = TokenKind::ImplicitSubstitution(ImplicitSubstitution::EnDash);
+                first_token.kind =
+                    TokenKind::ImplicitSubstitution(ImplicitSubstitutionKind::EnDash);
             }
             TokenKind::Minus(3) => {
-                first_token.kind = TokenKind::ImplicitSubstitution(ImplicitSubstitution::EmDash);
+                first_token.kind =
+                    TokenKind::ImplicitSubstitution(ImplicitSubstitutionKind::EmDash);
             }
             _ => return None,
         }
@@ -62,7 +64,7 @@ pub fn get_implicit<'input>(
 
 fn get_trademark_copyright_registered_plusmins_kind(
     implicit_iter: &mut TokenIteratorImplicits,
-) -> Option<ImplicitSubstitution> {
+) -> Option<ImplicitSubstitutionKind> {
     // First open parenthesis already consumed, lase closing parenthesis is checked in `get_implicit`
     let outer_token = implicit_iter.base_iter.next()?;
     match outer_token.kind {
@@ -72,9 +74,9 @@ fn get_trademark_copyright_registered_plusmins_kind(
             if inner_token.kind == TokenKind::Plain {
                 let content = String::from(inner_token).to_lowercase();
                 let subst = if content == "c" {
-                    Some(ImplicitSubstitution::Copyright)
+                    Some(ImplicitSubstitutionKind::Copyright)
                 } else if content == "r" {
-                    Some(ImplicitSubstitution::Registered)
+                    Some(ImplicitSubstitutionKind::Registered)
                 } else {
                     return None;
                 };
@@ -92,9 +94,9 @@ fn get_trademark_copyright_registered_plusmins_kind(
         TokenKind::Plain => {
             let content = String::from(outer_token).to_lowercase();
             if content == "tm" {
-                Some(ImplicitSubstitution::Trademark)
+                Some(ImplicitSubstitutionKind::Trademark)
             } else if content == "+-" || content == "-+" {
-                Some(ImplicitSubstitution::PlusMinus)
+                Some(ImplicitSubstitutionKind::PlusMinus)
             } else {
                 None
             }

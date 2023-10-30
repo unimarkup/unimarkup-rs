@@ -117,6 +117,8 @@ fn inner_snapshot(inline: &Inline) -> String {
         Inline::EscapedWhitespace(inline) => inline.space().clone(),
         Inline::Plain(inline) => inline.content().clone(),
         Inline::EscapedPlain(inline) => inline.content().clone(),
+        Inline::ImplicitSubstitution(inline) => Snapshot::snap(inline.subst()),
+        Inline::DirectUri(inline) => inline.uri().to_string(),
 
         Inline::NamedSubstitution(_) => todo!(),
     }

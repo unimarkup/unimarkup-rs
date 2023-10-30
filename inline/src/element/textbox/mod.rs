@@ -8,10 +8,7 @@ use unimarkup_commons::{
     parsing::Context,
 };
 
-use crate::{
-    inline_parser,
-    tokenize::{iterator::InlineTokenIterator, token::InlineTokenKind},
-};
+use crate::tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind};
 
 use self::hyperlink::Hyperlink;
 
@@ -51,7 +48,7 @@ impl TextBox {
     }
 }
 
-pub fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<Inline> {
+pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<Inline> {
     let open_token = input.next()?;
 
     if open_token.kind != InlineTokenKind::OpenBracket {
@@ -71,7 +68,7 @@ pub fn parse(input: &mut InlineTokenIterator, context: &mut Context) -> Option<I
 
     // No variant matched => must be regular textbox or hyperlink
 
-    let inner = inline_parser::InlineParser::default().parse(&mut scoped_iter, context);
+    let inner = crate::inline_parser::parse(&mut scoped_iter, context);
 
     let prev_token = if inner.is_empty() {
         open_token

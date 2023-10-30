@@ -1,6 +1,6 @@
 use crate::lexer::SymbolKind;
 
-use super::implicit::ImplicitSubstitution;
+use super::implicit::ImplicitSubstitutionKind;
 
 pub const COMMENT_TOKEN_LEN: usize = 2;
 
@@ -45,14 +45,14 @@ pub enum TokenKind {
     // Plain
     #[default]
     Plain,
-    Punctuation,
+    TerminalPunctuation,
 
     // Specials
     Comment {
         // Set to `true` if comment was implicitly closed at end of line
         implicit_close: bool,
     },
-    ImplicitSubstitution(ImplicitSubstitution),
+    ImplicitSubstitution(ImplicitSubstitutionKind),
     DirectUri,
 
     // For matching
@@ -77,7 +77,7 @@ impl TokenKind {
                 | TokenKind::EscapedWhitespace
                 | TokenKind::EscapedNewline
                 | TokenKind::Plain
-                | TokenKind::Punctuation
+                | TokenKind::TerminalPunctuation
                 | TokenKind::Comment { .. }
                 | TokenKind::ImplicitSubstitution(_)
                 | TokenKind::DirectUri
@@ -113,7 +113,7 @@ impl TokenKind {
     }
 
     pub fn is_plain(&self) -> bool {
-        matches!(self, TokenKind::Plain | TokenKind::Punctuation)
+        matches!(self, TokenKind::Plain | TokenKind::TerminalPunctuation)
     }
 }
 
@@ -176,7 +176,7 @@ impl From<TokenKind> for String {
             }
             TokenKind::Blankline => "\n\n".to_string(),
             TokenKind::Plain
-            | TokenKind::Punctuation
+            | TokenKind::TerminalPunctuation
             | TokenKind::EscapedPlain
             | TokenKind::EscapedWhitespace
             | TokenKind::ImplicitSubstitution(_)
@@ -197,7 +197,7 @@ impl From<SymbolKind> for TokenKind {
     fn from(value: SymbolKind) -> Self {
         match value {
             SymbolKind::Plain | SymbolKind::Backslash => TokenKind::Plain, // Backslash is incorrect, but will be corrected in iterator
-            SymbolKind::TerminalPunctuation => TokenKind::Punctuation,
+            SymbolKind::TerminalPunctuation => TokenKind::TerminalPunctuation,
             SymbolKind::Whitespace => TokenKind::Whitespace,
             SymbolKind::Newline => TokenKind::Newline,
             SymbolKind::Eoi => TokenKind::Eoi,
@@ -232,7 +232,7 @@ impl From<(SymbolKind, usize)> for TokenKind {
 
         match kind {
             SymbolKind::Plain | SymbolKind::Backslash => TokenKind::Plain, // Backslash is incorrect, but will be corrected in iterator
-            SymbolKind::TerminalPunctuation => TokenKind::Punctuation,
+            SymbolKind::TerminalPunctuation => TokenKind::TerminalPunctuation,
             SymbolKind::Whitespace => TokenKind::Whitespace,
             SymbolKind::Newline => TokenKind::Newline,
             SymbolKind::Eoi => TokenKind::Eoi,

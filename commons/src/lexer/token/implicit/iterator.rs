@@ -80,6 +80,12 @@ impl<'input> TokenIteratorExt<'input> for TokenIteratorImplicits<'input> {
     /// Sets the peek index of this iterator to the given index.
     fn set_peek_index(&mut self, index: usize) {
         self.base_iter.set_peek_index(index);
+
+        if self.peek_index() != index {
+            // Jumping arround by index invalidates implicits lookahead
+            self.allow_arrow = false;
+            self.allow_emoji = false;
+        }
     }
 
     fn reset_peek(&mut self) {
@@ -112,10 +118,7 @@ impl<'input> Iterator for TokenIteratorImplicits<'input> {
     type Item = Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.base_iter.reset_peek();
-
-        let next = self.peeking_next(|_| true);
-        self.base_iter.set_index(self.base_iter.peek_index());
+        let next = self.next_base_token(true);
 
         if next.is_some() {
             self.prev_token = next;
@@ -135,11 +138,31 @@ impl<'input> PeekingNext for TokenIteratorImplicits<'input> {
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
-        let mut token = self.base_iter.peeking_next(|_| true)?;
+        let peek_index = self.base_iter.peek_index();
+        let token = self.next_base_token(true)?;
+
+        if accept(&token) {
+            self.prev_peeked_token = Some(token);
+            Some(token)
+        } else {
+            // reset peek to also reset peek of base iterator, because base peeking_next was without condition.
+            self.set_peek_index(peek_index);
+            None
+        }
+    }
+}
+
+impl<'input> TokenIteratorImplicits<'input> {
+    fn next_base_token(&mut self, is_peeking: bool) -> Option<Token<'input>> {
+        let mut token = if is_peeking {
+            self.base_iter.peeking_next(|_| true)?
+        } else {
+            self.base_iter.next()?
+        };
         let kind = token.kind;
 
         if self.allow_implicits {
-            if kind == TokenKind::Punctuation || kind.is_space() {
+            if kind == TokenKind::TerminalPunctuation || kind.is_space() {
                 // reached end of arrow/emoji sequence
                 // => next arrow/emoji must ensure it is followed by another arrow/emoji, terminal punctuation, or space.
                 self.allow_arrow = false;
@@ -149,25 +172,39 @@ impl<'input> PeekingNext for TokenIteratorImplicits<'input> {
             let mut implicit_iter = self.clone();
             if let Some(implicit_token) = super::get_implicit(&mut implicit_iter) {
                 token = implicit_token;
-                *self = implicit_iter;
+                if is_peeking {
+                    self.set_peek_index(implicit_iter.peek_index());
+                    // Must be set after peek index update, because setting peek index invalidates flags
+                    self.allow_arrow = implicit_iter.allow_arrow;
+                    self.allow_emoji = implicit_iter.allow_emoji;
+
+                    // Implicit check is done on the base iterator, so pev tokens of self must remain unchanged
+                    debug_assert_eq!(
+                        self.prev_peeked_token, implicit_iter.prev_peeked_token,
+                        "Previous peeked token differs in implicit iter from self."
+                    );
+                    debug_assert_eq!(
+                        self.prev_token, implicit_iter.prev_token,
+                        "Previous token differs in implicit iter from self."
+                    );
+                } else {
+                    *self = implicit_iter;
+                }
             }
         } else {
             self.allow_arrow = false;
             self.allow_emoji = false;
         }
 
-        if accept(&token) {
-            self.prev_peeked_token = Some(token);
-            Some(token)
-        } else {
-            None
-        }
+        Some(token)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::lexer::token::{implicit::ImplicitSubstitution, iterator::TokenIterator, TokenKind};
+    use crate::lexer::token::{
+        implicit::ImplicitSubstitutionKind, iterator::TokenIterator, TokenKind,
+    };
 
     #[test]
     fn trademark_substitution() {
@@ -176,9 +213,11 @@ mod test {
 
         let token = token_iter.next().unwrap();
 
+        dbg!(&token);
+
         assert_eq!(
             token.kind,
-            TokenKind::ImplicitSubstitution(ImplicitSubstitution::Trademark),
+            TokenKind::ImplicitSubstitution(ImplicitSubstitutionKind::Trademark),
             "Trademark token was not detected."
         );
     }
