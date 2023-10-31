@@ -27,10 +27,10 @@ pub(crate) fn parse(
     }
 
     if is_ambiguous(open_token.kind) {
-        input.push_format(main_part(open_token.kind));
-        input.push_format(sub_part(open_token.kind));
+        input.open_format(&main_part(open_token.kind));
+        input.open_format(&sub_part(open_token.kind));
     } else {
-        input.push_format(open_token.kind);
+        input.open_format(&open_token.kind);
     }
 
     let inner = inline_parser::parse(input, context);
@@ -83,9 +83,9 @@ fn resolve_closing(
                     (None, close_token.start, true)
                 };
 
-                return Some(close_format(
-                    input,
+                return Some(to_inline(
                     open_token,
+                    input,
                     inner,
                     attributes,
                     end,
@@ -96,7 +96,7 @@ fn resolve_closing(
             {
                 // e.g. close = 3 stars between: **bold***italic*
                 input.next()?;
-                input.pop_format(open_token.kind);
+                input.close_format(&open_token.kind);
 
                 let (closing_token, cached_token) = split_token(close_token, open_token.kind);
                 input.cache_token(cached_token);
@@ -113,7 +113,7 @@ fn resolve_closing(
                 // no cache, because "split" is on open token
                 // e.g. close = 2 stars between: ***bold**italic*
                 input.next()?;
-                input.pop_format(close_token.kind);
+                input.close_format(&close_token.kind);
                 outer.push(super::to_formatting(
                     close_token.kind,
                     inner,
@@ -130,9 +130,9 @@ fn resolve_closing(
                 // This means that some outer format closed.
                 // => end of this format is at start of the closing token for the outer format
                 // e.g. bold close = implicit before strikethrough end: ~~strike**bold~~
-                return Some(close_format(
-                    input,
+                return Some(to_inline(
                     open_token,
+                    input,
                     inner,
                     None,
                     close_token.start,
@@ -144,9 +144,9 @@ fn resolve_closing(
             // close open format only and return
             // This is ok, because if ambiguous would have been split, peek() would have returned the partial closing token
             // e.g. implicit close in scoped context: [**bold]
-            return Some(close_format(
-                input,
+            return Some(to_inline(
                 open_token,
+                input,
                 inner,
                 None,
                 crate::element::helper::implicit_end_using_prev(&input.prev_token().expect(
@@ -160,7 +160,7 @@ fn resolve_closing(
     outer.append(&mut inline_parser::parse(input, context));
 
     // Format will definitely close fully now => so remove from open formats
-    input.pop_format(updated_open.kind);
+    input.close_format(&updated_open.kind);
 
     if let Some(close_token) = input.peek() {
         // open token was updated to either main or sub part from ambiguous
@@ -209,17 +209,17 @@ fn resolve_closing(
     ))
 }
 
-fn close_format(
-    input: &mut InlineTokenIterator<'_>,
+fn to_inline(
     open_token: InlineToken<'_>,
+    input: &mut InlineTokenIterator<'_>,
     inner: Vec<Inline>,
     attributes: Option<Vec<Inline>>,
     end: Position,
     implicit_end: bool,
 ) -> Inline {
     if is_ambiguous(open_token.kind) {
-        input.pop_format(main_part(open_token.kind));
-        input.pop_format(sub_part(open_token.kind));
+        input.close_format(&main_part(open_token.kind));
+        input.close_format(&sub_part(open_token.kind));
 
         let (outer_token, inner_token) = split_token(open_token, main_part(open_token.kind));
 
@@ -239,7 +239,7 @@ fn close_format(
             implicit_end,
         )
     } else {
-        input.pop_format(open_token.kind);
+        input.close_format(&open_token.kind);
         super::to_formatting(
             open_token.kind,
             inner,
@@ -289,7 +289,7 @@ fn sub_part(kind: InlineTokenKind) -> InlineTokenKind {
     }
 }
 
-fn is_ambiguous(kind: InlineTokenKind) -> bool {
+pub(crate) fn is_ambiguous(kind: InlineTokenKind) -> bool {
     matches!(
         kind,
         InlineTokenKind::BoldItalic | InlineTokenKind::UnderlineSubscript

@@ -22,7 +22,7 @@ pub(crate) fn parse_distinct_format(
         return None;
     }
 
-    input.push_format(open_token.kind);
+    input.open_format(&open_token.kind);
 
     let inner = inline_parser::parse(input, context);
 
@@ -47,7 +47,7 @@ pub(crate) fn parse_distinct_format(
             .end
     };
 
-    input.pop_format(open_token.kind);
+    input.close_format(&open_token.kind);
     Some(to_formatting(
         open_token.kind,
         inner,
@@ -190,3 +190,37 @@ format_to_inline!(
     Quote,
     Math
 );
+
+const BOLD_INDEX: usize = 0;
+const ITALIC_INDEX: usize = 1;
+const UNDERLINE_INDEX: usize = 2;
+const SUBSCRIPT_INDEX: usize = 3;
+const SUPERSCRIPT_INDEX: usize = 4;
+const STRIKETHROUGH_INDEX: usize = 5;
+const HIGHLIGHT_INDEX: usize = 6;
+const OVERLINE_INDEX: usize = 7;
+const QUOTE_INDEX: usize = 8;
+pub(crate) const NR_OF_UNSCOPED_FORMATS: usize = 9;
+
+pub(crate) type OpenFormatMap = [bool; NR_OF_UNSCOPED_FORMATS];
+
+pub(crate) fn map_index(kind: &InlineTokenKind) -> usize {
+    match kind {
+        InlineTokenKind::Bold => BOLD_INDEX,
+        InlineTokenKind::Italic => ITALIC_INDEX,
+        InlineTokenKind::Underline => UNDERLINE_INDEX,
+        InlineTokenKind::Subscript => SUBSCRIPT_INDEX,
+        InlineTokenKind::Superscript => SUPERSCRIPT_INDEX,
+        InlineTokenKind::Strikethrough => STRIKETHROUGH_INDEX,
+        InlineTokenKind::Highlight => HIGHLIGHT_INDEX,
+        InlineTokenKind::Overline => OVERLINE_INDEX,
+        InlineTokenKind::Quote => QUOTE_INDEX,
+        _ => {
+            #[cfg(debug_assertions)]
+            panic!("Kind '{:?}' has no index in open format map.", kind);
+
+            #[cfg(not(debug_assertions))]
+            0
+        }
+    }
+}

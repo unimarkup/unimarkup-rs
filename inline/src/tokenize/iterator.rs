@@ -1,11 +1,13 @@
-use std::collections::HashSet;
-
 use unimarkup_commons::lexer::{
     token::{
         implicit::iterator::TokenIteratorImplicitExt,
         iterator::{IteratorEndFn, TokenIterator},
     },
     PeekingNext,
+};
+
+use crate::element::formatting::{
+    ambiguous::is_ambiguous, map_index, OpenFormatMap, NR_OF_UNSCOPED_FORMATS,
 };
 
 use super::{kind::InlineTokenKind, InlineToken};
@@ -25,7 +27,7 @@ pub(crate) struct InlineTokenIterator<'input> {
     cached_token: Option<InlineToken<'input>>,
     updated_prev: Option<InlineToken<'input>>,
     peeked_cache: bool,
-    open_formats: HashSet<InlineTokenKind>,
+    open_formats: OpenFormatMap,
 }
 
 impl<'input> From<TokenIterator<'input>> for InlineTokenIterator<'input> {
@@ -35,7 +37,7 @@ impl<'input> From<TokenIterator<'input>> for InlineTokenIterator<'input> {
             cached_token: None,
             updated_prev: None,
             peeked_cache: false,
-            open_formats: HashSet::default(),
+            open_formats: [false; NR_OF_UNSCOPED_FORMATS],
         }
     }
 }
@@ -98,12 +100,12 @@ impl<'input> InlineTokenIterator<'input> {
         self.cached_token = Some(token)
     }
 
-    pub(crate) fn push_format(&mut self, format: InlineTokenKind) {
-        self.open_formats.insert(format);
+    pub(crate) fn open_format(&mut self, format: &InlineTokenKind) {
+        self.open_formats[map_index(format)] = true;
     }
 
-    pub(crate) fn pop_format(&mut self, format: InlineTokenKind) -> bool {
-        self.open_formats.remove(&format)
+    pub(crate) fn close_format(&mut self, format: &InlineTokenKind) {
+        self.open_formats[map_index(format)] = false;
     }
 
     pub(crate) fn format_closes(&mut self, format: InlineTokenKind) -> bool {
@@ -118,13 +120,12 @@ impl<'input> InlineTokenIterator<'input> {
     pub(crate) fn format_is_open(&self, format: InlineTokenKind) -> bool {
         // check if ambiguous parts are open, because open ambiguous pushes both formats, but not itself
         let ambiguous_open = (format == InlineTokenKind::BoldItalic
-            && (self.open_formats.contains(&InlineTokenKind::Italic)
-                || self.open_formats.contains(&InlineTokenKind::Bold)))
+            && (self.open_formats[map_index(&InlineTokenKind::Italic)]
+                || self.open_formats[map_index(&InlineTokenKind::Bold)]))
             || (format == InlineTokenKind::UnderlineSubscript
-                && (self.open_formats.contains(&InlineTokenKind::Underline)
-                    || self.open_formats.contains(&InlineTokenKind::Subscript)));
-
-        self.open_formats.contains(&format) || ambiguous_open
+                && (self.open_formats[map_index(&InlineTokenKind::Underline)]
+                    || self.open_formats[map_index(&InlineTokenKind::Subscript)]));
+        ambiguous_open || (!is_ambiguous(format) && self.open_formats[map_index(&format)])
     }
 
     /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
@@ -147,18 +148,6 @@ impl<'input> InlineTokenIterator<'input> {
         parent.cached_token = self.cached_token;
         parent.peeked_cache = self.peeked_cache;
         self.token_iter.update(&mut parent.token_iter);
-    }
-
-    /// Tries to skip symbols until one of the end functions signals the end.
-    ///
-    /// **Note:** This function might not reach the iterator end.
-    ///
-    /// If no symbols are left, or no given line prefix is matched, the iterator may stop before an end is reached.
-    /// Use [`Self::end_reached()`] to check if the end was actually reached.
-    pub fn skip_to_end(mut self) -> Self {
-        let _last_symbol = self.by_ref().last();
-
-        self
     }
 
     /// Collects and returns all tokens until one of the end functions signals the end,
@@ -249,14 +238,4 @@ impl TokenIteratorImplicitExt for InlineTokenIterator<'_> {
     fn implicits_allowed(&self) -> bool {
         self.token_iter.implicits_allowed()
     }
-}
-
-#[cfg(test)]
-mod test {
-    use super::InlineTokenIterator;
-
-    // #[test]
-    // fn prev_token_after_consumed_match() {
-    //     let outer_iter = InlineTokenIterator::from("`inner`outer");
-    // }
 }
