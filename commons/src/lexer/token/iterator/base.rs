@@ -114,7 +114,7 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
 
         match first_kind {
             SymbolKind::Eoi => token.kind = TokenKind::Eoi,
-            SymbolKind::Whitespace | SymbolKind::Plain => {
+            SymbolKind::Plain => {
                 let seq_len = self.sym_iter.peek_while_count(|s| s.kind == first_kind);
 
                 if seq_len > 0 {
@@ -122,10 +122,13 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
                         .sym_iter
                         .peek_nth(seq_len - 1)
                         .expect("Peeked symbols above.");
-                    token.kind = TokenKind::from((first_kind, seq_len + 1)); // +1 because first symbol is same kind
                     token.offset.extend(last_symbol.offset);
                     token.end = last_symbol.end;
                 }
+            }
+            SymbolKind::Whitespace => {
+                // Multiple whitespace cannot be consumed, because most prefix matching is done per single space
+                // Kind is already set in From impl above.
             }
             SymbolKind::Backslash => {
                 let escaped_symbol_opt = self.sym_iter.peeking_next(|_| true);

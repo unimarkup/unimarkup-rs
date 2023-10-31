@@ -32,8 +32,8 @@ macro_rules! scoped_parser {
                 .into();
 
             // ignore implicits, because only escapes and logic elements are allowed in following inline verbatim
-            let prev_implicits_allowed = input.implicits_allowed();
-            input.ignore_implicits();
+            let prev_implicits_allowed = scoped_iter.implicits_allowed();
+            scoped_iter.ignore_implicits();
 
             let prev_context_flags = context.flags;
             context.flags.keep_whitespaces = true;
@@ -43,14 +43,18 @@ macro_rules! scoped_parser {
 
             context.flags = prev_context_flags;
             if prev_implicits_allowed {
-                input.allow_implicits();
+                scoped_iter.allow_implicits();
             }
 
-            let prev_token = scoped_iter.prev_token().expect(
+            let end_reached = scoped_iter.end_reached();
+            scoped_iter.update(input);
+
+            // Previous token not from scoped iter, because consumed end is not available in its scope
+            let prev_token = input.prev_token().expect(
                 "Previous token must exist, because peek above would else have returned None.",
             );
 
-            let (attributes, end, implicit_end) = if scoped_iter.end_reached() {
+            let (attributes, end, implicit_end) = if end_reached {
                 //TODO: Check for optional attributes here
                 (None, prev_token.end, false)
             } else {
@@ -60,8 +64,6 @@ macro_rules! scoped_parser {
                     true,
                 )
             };
-
-            scoped_iter.update(input);
 
             Some(super::to_formatting(
                 open_token.kind,

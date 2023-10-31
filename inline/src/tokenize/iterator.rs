@@ -62,10 +62,12 @@ impl<'input> InlineTokenIterator<'input> {
     /// Returns the next [`Token`] without changing the current index.    
     pub fn peek(&mut self) -> Option<InlineToken<'input>> {
         let peek_index = self.token_iter.peek_index();
+        let peeked_cache = self.peeked_cache;
 
         let token = self.peeking_next(|_| true);
 
         self.token_iter.set_peek_index(peek_index); // Note: Resetting index, because peek() must be idempotent
+        self.peeked_cache = peeked_cache;
 
         token
     }
@@ -136,9 +138,11 @@ impl<'input> InlineTokenIterator<'input> {
     }
 
     /// Updates the given parent iterator to take the progress of the nested iterator.
-    ///
-    /// **Note:** Only updates the parent if `self` is nested.
     pub fn update(self, parent: &mut Self) {
+        // Open formats intentionally not updated, because formats are only valid per scope.
+        parent.prev_token = self.prev_token;
+        parent.cached_token = self.cached_token;
+        parent.peeked_cache = self.peeked_cache;
         self.token_iter.update(&mut parent.token_iter);
     }
 
@@ -177,7 +181,7 @@ impl<'input> Iterator for InlineTokenIterator<'input> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.reset_peek();
-        self.peeked_cache = false;
+        self.peeked_cache = true;
 
         if let Some(token) = self.cached_token {
             self.prev_token = Some(token);
@@ -203,15 +207,19 @@ impl<'input> Iterator for InlineTokenIterator<'input> {
 }
 
 impl<'input> PeekingNext for InlineTokenIterator<'input> {
-    fn peeking_next<F>(&mut self, _accept: F) -> Option<Self::Item>
+    fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
         if !self.peeked_cache {
             if let Some(token) = self.cached_token {
-                self.peeked_cache = true;
-                return Some(token);
+                if accept(&token) {
+                    self.peeked_cache = true;
+                    return Some(token);
+                } else {
+                    return None;
+                }
             }
         }
 
@@ -219,7 +227,14 @@ impl<'input> PeekingNext for InlineTokenIterator<'input> {
             return None;
         }
 
-        Some(InlineToken::from(&self.token_iter.peeking_next(|_| true)?))
+        let peek_index = self.token_iter.peek_index();
+        let token = InlineToken::from(&self.token_iter.peeking_next(|_| true)?);
+        if accept(&token) {
+            Some(token)
+        } else {
+            self.token_iter.set_peek_index(peek_index);
+            None
+        }
     }
 }
 
@@ -235,4 +250,14 @@ impl TokenIteratorImplicitExt for InlineTokenIterator<'_> {
     fn implicits_allowed(&self) -> bool {
         self.token_iter.implicits_allowed()
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::InlineTokenIterator;
+
+    // #[test]
+    // fn prev_token_after_consumed_match() {
+    //     let outer_iter = InlineTokenIterator::from("`inner`outer");
+    // }
 }

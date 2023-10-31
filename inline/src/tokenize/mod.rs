@@ -76,7 +76,7 @@ impl<'input> InlineToken<'input> {
                 }
             }
             InlineTokenKind::ImplicitSubstitution(impl_subst) => impl_subst.orig(), // using `orig()` here, because `as_str()` is only called to convert to plain content
-            InlineTokenKind::Any | InlineTokenKind::PossibleAttributes => {
+            InlineTokenKind::Any | InlineTokenKind::Space | InlineTokenKind::PossibleAttributes => {
                 #[cfg(debug_assertions)]
                 panic!(
                     "Tried to create &str from '{:?}', which has undefined &str representation.",

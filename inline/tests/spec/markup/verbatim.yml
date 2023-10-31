@@ -1,0 +1,76 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: verbatim
+description: Test lexing and parsing of text with verbatim inline formatting.
+
+tests:
+  - name: simple-verbatim
+    description: |
+      Simple verbatim content.
+
+    input: |
+      `Verbatim`
+
+    html: |
+      <code>Verbatim</code>
+
+  - name: verbatim-not-verbatim
+    description: |
+      Verbatim combined with plain.
+
+    input: |
+      `Verbatim` not verbatim.
+
+    html: |
+      <code>Verbatim</code> not verbatim.
+
+  - name: not-verbatim
+    description: |
+      Verbatim that's not correctly opened nor closed.
+
+    input: |
+      ` not verbatim `
+
+    html: |
+      ` not verbatim `
+
+  - name: implicit-closed-verbatim
+    description: |
+      Verbatim that's implicitly closed.
+
+    input: |
+      `implicit verbatim
+
+    html: |
+      <code>implicit verbatim</code>
+
+  - name: not-opened-verbatim
+    description: |
+      Verbatim that's not correctly opened.
+
+    input: |
+      ` not verbatim`
+
+    html: |
+      ` not verbatim`
+
+  - name: escaped-verbatim
+    description: |
+      Verbatim that's escaped.
+
+    input: |
+      \`not verbatim\`
+
+    html: |
+      `not verbatim`
+
+  - name: verbatim-in-middle
+    description: |
+      Verbatim that's found in middle of a text.
+
+    input: |
+      The next `word` is verbatim.
+
+    html: |
+      The next <code>word</code> is verbatim.

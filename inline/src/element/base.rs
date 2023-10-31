@@ -1,4 +1,7 @@
-use unimarkup_commons::{lexer::position::Position, parsing::InlineContext};
+use unimarkup_commons::{
+    lexer::{position::Position, Itertools},
+    parsing::InlineContext,
+};
 
 use crate::{
     element::InlineElement,
@@ -22,10 +25,24 @@ pub(crate) fn parse_base(
         // Keyword did not lead to inline element in inline parser => convert token to plain
         next.kind = InlineTokenKind::Plain;
         input.set_prev_token(next); // update prev token, because next changed afterwards
-    } else if context.flags.keep_whitespaces && kind == InlineTokenKind::Whitespace {
-        // Treating whitespace as plain will preserve the original whitespace, and not compress it to a single space.
-        next.kind = InlineTokenKind::Plain;
+    } else if matches!(kind, InlineTokenKind::Whitespace) {
         // Previous token is not updated, because format opening/closing validation needs whitespace information
+        // Compresses multiple contiguous whitespaces into one.
+        if context.flags.keep_whitespaces {
+            // Converting to Plain to merge whitespace into plain content, preserving it as is.
+            next.kind = InlineTokenKind::Plain;
+        } else {
+            let whitespace_cnt = input
+                .peeking_take_while(|t| t.kind == InlineTokenKind::Whitespace)
+                .count();
+            if whitespace_cnt > 0 {
+                let last_whitespace = input
+                    .nth(whitespace_cnt - 1)
+                    .expect("Peeking above returned whitespaces."); // -1 because nth starts counting at 0
+                next.offset.end = last_whitespace.offset.end;
+                next.end = last_whitespace.end
+            }
+        }
     } else if context.flags.logic_only
         && matches!(
             kind,
@@ -46,10 +63,14 @@ pub(crate) fn parse_base(
             Inline::Plain(plain)
                 if matches!(
                     next.kind,
-                    InlineTokenKind::Plain
-                        | InlineTokenKind::Whitespace
-                        | InlineTokenKind::ImplicitSubstitution(_)
-                ) =>
+                    InlineTokenKind::Plain | InlineTokenKind::ImplicitSubstitution(_)
+                ) || (next.kind == InlineTokenKind::Whitespace
+                    && input.peek_kind().map_or(false, |k| {
+                        !matches!(
+                            k,
+                            InlineTokenKind::Newline | InlineTokenKind::EscapedNewline
+                        )
+                    })) =>
             {
                 plain.push_token(next);
             }

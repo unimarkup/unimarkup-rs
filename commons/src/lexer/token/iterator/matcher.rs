@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use itertools::{Itertools, PeekingNext};
 
-use crate::lexer::token::TokenKind;
+use crate::lexer::token::{Token, TokenKind};
 
 use super::TokenIterator;
 
@@ -78,6 +78,19 @@ pub trait PrefixMatcher {
     fn only_spaces_until_newline(&mut self) -> bool;
 }
 
+fn matches_kind(token: &Token<'_>, kind: &TokenKind) -> bool {
+    match kind {
+        TokenKind::Any => true,
+        // TokenKind::PossibleAttributes => todo!(),
+        // TokenKind::PossibleDecorator => todo!(),
+        TokenKind::Space => match token.kind {
+            TokenKind::Whitespace => String::from(token) == " ",
+            _ => false,
+        },
+        _ => token.kind == *kind,
+    }
+}
+
 impl<'input> EndMatcher for TokenIterator<'input> {
     fn is_blank_line(&mut self) -> bool {
         matches!(
@@ -109,11 +122,9 @@ impl<'input> EndMatcher for TokenIterator<'input> {
         let peek_index = self.peek_index();
 
         for kind in sequence {
-            let next_token_opt = self.peeking_next(|s| s.kind == *kind);
+            let next_token_opt = self.peeking_next(|s| matches_kind(s, kind));
 
-            //TODO: check for possible attribute and decorator tokens
-
-            if next_token_opt.is_none() && kind != &TokenKind::Any {
+            if next_token_opt.is_none() {
                 self.set_peek_index(peek_index);
                 return false;
             }
@@ -180,7 +191,7 @@ impl<'input> PrefixMatcher for TokenIterator<'input> {
 
         // NOTE: `Newline` at start is already ensured for prefix matches.
         let _whitespaces = self
-            .peeking_take_while(|s| matches!(s.kind, TokenKind::Whitespace(_)))
+            .peeking_take_while(|s| matches!(s.kind, TokenKind::Whitespace))
             .count();
 
         let new_line = self.peeking_next(|s| matches!(s.kind, TokenKind::Newline | TokenKind::Eoi));

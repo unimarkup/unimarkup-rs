@@ -169,7 +169,7 @@ impl<'input> TokenIterator<'input> {
     }
 
     /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
-    pub fn index(&self) -> usize {
+    pub(super) fn index(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.index(),
             TokenIteratorKind::Root(root) => root.index(),
@@ -178,7 +178,7 @@ impl<'input> TokenIterator<'input> {
     }
 
     /// Sets the current index of this iterator to the given index.
-    pub fn set_index(&mut self, index: usize) {
+    pub(super) fn set_index(&mut self, index: usize) {
         if index >= self.start_index {
             match self.parent.borrow_mut() {
                 TokenIteratorKind::Nested(parent) => parent.set_index(index),
@@ -208,11 +208,11 @@ impl<'input> TokenIterator<'input> {
         }
     }
 
-    pub fn match_index(&self) -> usize {
+    pub(super) fn match_index(&self) -> usize {
         self.match_index
     }
 
-    pub fn set_match_index(&mut self, index: usize) {
+    pub(super) fn set_match_index(&mut self, index: usize) {
         if index >= self.index() {
             self.match_index = index;
         }
@@ -624,7 +624,7 @@ mod test {
         assert_eq!(curr_index, 5, "Current index was not updated correctly.");
         assert_eq!(
             whitespace_token.kind,
-            TokenKind::Whitespace(1),
+            TokenKind::Whitespace,
             "Whitespace after keywords was not detected."
         );
         assert!(
@@ -731,7 +731,7 @@ mod test {
         let iterator = TokenIterator::with(
             (&*symbols).into(),
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-                matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace(1)])
+                matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace])
             })),
             None,
         );
@@ -768,7 +768,7 @@ mod test {
         let iterator = TokenIterator::with(
             (&*symbols).into(),
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-                matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace(1)])
+                matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace])
             })),
             None,
         );
@@ -876,7 +876,7 @@ mod test {
         let iterator = TokenIterator::with(
             (&*symbols).into(),
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-                matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace(1)])
+                matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace])
             })),
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                 matcher.matches(&[TokenKind::Plus(1)])
@@ -962,7 +962,7 @@ mod test {
         let mut iterator = TokenIterator::with(
             (&*symbols).into(),
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-                matcher.consumed_prefix(&[TokenKind::Whitespace(2)])
+                matcher.consumed_prefix(&[TokenKind::Space, TokenKind::Space])
             })),
             None,
         );
@@ -1104,7 +1104,7 @@ mod test {
         );
         assert_eq!(
             iterator.prev_kind().unwrap(),
-            TokenKind::Whitespace(1),
+            TokenKind::Whitespace,
             "Previous TokenKind not correctly stored."
         );
 

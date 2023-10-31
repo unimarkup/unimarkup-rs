@@ -77,8 +77,6 @@ impl AsSnapshot for Snapshot<&Inline> {
             if matches!(
                 self.0,
                 Inline::Plain(_)
-                    | Inline::EscapedPlain(_)
-                    | Inline::Verbatim(_)
                     | Inline::EscapedNewline(_)
                     | Inline::EscapedWhitespace(_)
                     | Inline::Newline(_)

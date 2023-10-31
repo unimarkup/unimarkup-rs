@@ -93,6 +93,7 @@ pub enum InlineTokenKind {
 
     // For matching
     Any,
+    Space,
     PossibleAttributes,
 }
 
@@ -130,6 +131,7 @@ impl InlineTokenKind {
             | InlineTokenKind::ImplicitSubstitution(_)
             | InlineTokenKind::Directuri
             | InlineTokenKind::Any
+            | InlineTokenKind::Space
             | InlineTokenKind::PossibleAttributes => {
                 #[cfg(debug_assertions)]
                 panic!(
@@ -346,6 +348,7 @@ impl From<TokenKind> for InlineTokenKind {
             TokenKind::DirectUri => InlineTokenKind::Directuri,
 
             TokenKind::Any => InlineTokenKind::Any,
+            TokenKind::Space => InlineTokenKind::Space,
             TokenKind::PossibleAttributes => InlineTokenKind::PossibleAttributes,
 
             TokenKind::Plain
@@ -397,6 +400,7 @@ impl From<InlineTokenKind> for TokenKind {
             }
             InlineTokenKind::Directuri => TokenKind::DirectUri,
             InlineTokenKind::Any => TokenKind::Any,
+            InlineTokenKind::Space => TokenKind::Space,
             InlineTokenKind::PossibleAttributes => TokenKind::PossibleAttributes,
         }
     }
