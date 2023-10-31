@@ -487,6 +487,7 @@ impl<'input> Iterator for TokenIterator<'input> {
         if self.prefix_mismatch || self.end_reached() {
             return None;
         }
+        self.reset_peek();
 
         let in_scope = !self.scoped || self.scope == self.root_scope();
         let allow_end_matching = in_scope && (self.highest_peek_index <= self.index());
@@ -646,7 +647,7 @@ mod test {
             TokenKind::Plus(2),
             "Plus symbols in input not correctly detected."
         );
-        assert_eq!(curr_index, 5, "Current index was not updated correctly.");
+        assert_eq!(curr_index, 3, "Current index was not updated correctly.");
         assert_eq!(
             whitespace_token.kind,
             TokenKind::Whitespace,
