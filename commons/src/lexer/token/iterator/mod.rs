@@ -354,8 +354,12 @@ impl<'input> TokenIterator<'input> {
                 "Updated iterator is not the actual parent of this iterator."
             );
             self_parent.push_scope(self_parent.scope);
+            // Take the previous token from the nested iterator to get consumed tokens.
+            let prev = self.prev_token;
 
             *parent = *self_parent;
+
+            parent.prev_token = prev;
         }
     }
 

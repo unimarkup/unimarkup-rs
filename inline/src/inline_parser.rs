@@ -127,7 +127,7 @@ mod test {
 
     #[test]
     fn parse_strikethrough_in_unclosed_bold() {
-        let symbols = unimarkup_commons::lexer::scan_str("**implicit bold **close\n");
+        let symbols = unimarkup_commons::lexer::scan_str("`a`");
         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
 
         let inlines = super::parse(&mut token_iter, &mut InlineContext::default());

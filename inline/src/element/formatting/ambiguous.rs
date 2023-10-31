@@ -151,7 +151,7 @@ fn resolve_closing(
                 open_token,
                 inner,
                 None,
-                crate::element::helper::implicit_end_using_prev(input.prev_token().expect(
+                crate::element::helper::implicit_end_using_prev(&input.prev_token().expect(
                     "Previous token must exist, because at least the opening token came before.",
                 )),
                 true,
@@ -203,7 +203,7 @@ fn resolve_closing(
         None,
         updated_open.start,
         crate::element::helper::implicit_end_using_prev(
-            input.prev_token().expect(
+            &input.prev_token().expect(
                 "Previous token must exist, because at least the opening token came before.",
             ),
         ),

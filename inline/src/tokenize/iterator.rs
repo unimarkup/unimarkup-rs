@@ -23,7 +23,7 @@ pub(crate) struct InlineTokenIterator<'input> {
     /// The [`TokenIterator`] of this iterator.
     token_iter: TokenIterator<'input>,
     cached_token: Option<InlineToken<'input>>,
-    prev_token: Option<InlineToken<'input>>,
+    updated_prev: Option<InlineToken<'input>>,
     peeked_cache: bool,
     open_formats: HashSet<InlineTokenKind>,
 }
@@ -33,7 +33,7 @@ impl<'input> From<TokenIterator<'input>> for InlineTokenIterator<'input> {
         InlineTokenIterator {
             token_iter: value,
             cached_token: None,
-            prev_token: None,
+            updated_prev: None,
             peeked_cache: false,
             open_formats: HashSet::default(),
         }
@@ -78,12 +78,15 @@ impl<'input> InlineTokenIterator<'input> {
     }
 
     /// Returns the previous symbol this iterator returned via `next()` or `consumed_matches()`.
-    pub fn prev_token(&self) -> Option<&InlineToken<'input>> {
-        self.prev_token.as_ref()
+    pub fn prev_token(&self) -> Option<InlineToken<'input>> {
+        match self.updated_prev {
+            Some(updated) => Some(updated),
+            None => self.token_iter.prev_token().map(InlineToken::from),
+        }
     }
 
-    pub fn set_prev_token(&mut self, token: InlineToken<'input>) {
-        self.prev_token = Some(token);
+    pub(crate) fn set_prev_token(&mut self, token: InlineToken<'input>) {
+        self.updated_prev = Some(token);
     }
 
     /// Returns the [`TokenKind`] of the previous symbol this iterator returned via `next()` or `consumed_matches()`.
@@ -140,7 +143,7 @@ impl<'input> InlineTokenIterator<'input> {
     /// Updates the given parent iterator to take the progress of the nested iterator.
     pub fn update(self, parent: &mut Self) {
         // Open formats intentionally not updated, because formats are only valid per scope.
-        parent.prev_token = self.prev_token;
+        parent.updated_prev = self.updated_prev;
         parent.cached_token = self.cached_token;
         parent.peeked_cache = self.peeked_cache;
         self.token_iter.update(&mut parent.token_iter);
@@ -182,9 +185,10 @@ impl<'input> Iterator for InlineTokenIterator<'input> {
     fn next(&mut self) -> Option<Self::Item> {
         self.reset_peek();
         self.peeked_cache = true;
+        self.updated_prev = None;
 
         if let Some(token) = self.cached_token {
-            self.prev_token = Some(token);
+            self.updated_prev = Some(token);
             self.cached_token = None;
             return Some(token);
         }
@@ -193,12 +197,7 @@ impl<'input> Iterator for InlineTokenIterator<'input> {
             return None;
         }
 
-        let next = InlineToken::from(&self.token_iter.next()?);
-
-        // Converted token from inner to also get possibly consumed tokens
-        self.prev_token = self.token_iter.prev_token().map(InlineToken::from);
-
-        Some(next)
+        Some(InlineToken::from(&self.token_iter.next()?))
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {

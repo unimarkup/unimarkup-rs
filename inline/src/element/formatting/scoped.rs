@@ -49,18 +49,17 @@ macro_rules! scoped_parser {
             let end_reached = scoped_iter.end_reached();
             scoped_iter.update(input);
 
-            // Previous token not from scoped iter, because consumed end is not available in its scope
             let prev_token = input.prev_token().expect(
                 "Previous token must exist, because peek above would else have returned None.",
             );
-
+            dbg!(&prev_token);
             let (attributes, end, implicit_end) = if end_reached {
                 //TODO: Check for optional attributes here
                 (None, prev_token.end, false)
             } else {
                 (
                     None,
-                    $crate::element::helper::implicit_end_using_prev(prev_token),
+                    $crate::element::helper::implicit_end_using_prev(&prev_token),
                     true,
                 )
             };

@@ -76,7 +76,7 @@ pub(crate) fn parse(
     let prev_token = if inner.is_empty() {
         open_token
     } else {
-        *scoped_iter
+        scoped_iter
             .prev_token()
             .expect("Inlines in textbox => previous token must exist.")
     };
@@ -111,7 +111,7 @@ pub(crate) fn parse(
         let link_close_token = if link_text.is_empty() && !link_iter.end_reached() {
             prev_token
         } else {
-            *link_iter.prev_token().expect(
+            link_iter.prev_token().expect(
                 "Link text has content or closing parenthesis found => previous token must exist.",
             )
         };
