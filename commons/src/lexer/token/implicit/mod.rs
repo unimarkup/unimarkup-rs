@@ -3,11 +3,7 @@ pub use kind::*;
 
 use crate::lexer::position::Offset;
 
-use self::iterator::TokenIteratorImplicits;
-
-use super::{Token, TokenKind};
-
-pub mod iterator;
+use super::{iterator::implicit::TokenIteratorImplicits, Token, TokenKind};
 
 pub fn get_implicit<'input>(
     implicit_iter: &mut TokenIteratorImplicits<'input>,

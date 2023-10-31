@@ -1,8 +1,5 @@
 use unimarkup_commons::lexer::{
-    token::{
-        implicit::iterator::TokenIteratorImplicitExt,
-        iterator::{IteratorEndFn, TokenIterator},
-    },
+    token::iterator::{implicit::TokenIteratorImplicitExt, IteratorEndFn, TokenIterator},
     PeekingNext,
 };
 

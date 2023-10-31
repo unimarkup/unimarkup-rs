@@ -1,10 +1,10 @@
 use itertools::PeekingNext;
 
-use crate::lexer::token::{implicit::iterator::TokenIteratorImplicitExt, Token};
+use crate::lexer::token::Token;
 
-use super::{extension::TokenIteratorExt, TokenIterator};
+use super::{extension::TokenIteratorExt, implicit::TokenIteratorImplicitExt, TokenIterator};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TokenIteratorScopedRoot<'input> {
     /// The [`Symbol`] slice the iterator was created for.
     token_iter: TokenIterator<'input>,

@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use unimarkup_commons::{
-    lexer::token::{implicit::iterator::TokenIteratorImplicitExt, iterator::EndMatcher},
+    lexer::token::iterator::{implicit::TokenIteratorImplicitExt, EndMatcher},
     parsing::InlineContext,
 };
 

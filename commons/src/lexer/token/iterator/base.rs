@@ -12,7 +12,7 @@ use super::extension::TokenIteratorExt;
 
 /// The [`TokenIteratorRoot`] is the root iterator in any [`TokenIterator`](super::TokenIterator).
 /// It holds the actual [`Symbol`] slice.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TokenIteratorBase<'input> {
     /// The [`Symbol`] slice the iterator was created for.
     sym_iter: SymbolIterator<'input>,
@@ -115,13 +115,12 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
         match first_kind {
             SymbolKind::Eoi => token.kind = TokenKind::Eoi,
             SymbolKind::Plain => {
-                let seq_len = self.sym_iter.peek_while_count(|s| s.kind == first_kind);
-
-                if seq_len > 0 {
-                    let last_symbol = self
-                        .sym_iter
-                        .peek_nth(seq_len - 1)
-                        .expect("Peeked symbols above.");
+                // Consume contiguous plain symbols
+                if let Some(last_symbol) = self
+                    .sym_iter
+                    .peeking_take_while(|s| s.kind == first_kind)
+                    .last()
+                {
                     token.offset.extend(last_symbol.offset);
                     token.end = last_symbol.end;
                 }
@@ -196,15 +195,16 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
 
             // Might be inline formatting token
             _ if first_kind.is_keyword() => {
-                let contiguous_keyword_cnt =
-                    self.sym_iter.peek_while_count(|s| s.kind == first_kind);
+                let mut contiguous_keyword_cnt = 0;
+                let contgiuous_keywords = self.sym_iter.peeking_take_while(|s| {
+                    let accept = s.kind == first_kind;
+                    if accept {
+                        contiguous_keyword_cnt += 1;
+                    }
+                    accept
+                });
 
-                if contiguous_keyword_cnt > 0 {
-                    let last_symbol = self
-                        .sym_iter
-                        .peek_nth(contiguous_keyword_cnt - 1)
-                        .expect("Peeked symbols above");
-
+                if let Some(last_symbol) = contgiuous_keywords.last() {
                     token.kind = TokenKind::from((first_kind, contiguous_keyword_cnt + 1)); // +1 because first symbol is same keyword
                     token.offset.extend(last_symbol.offset);
                     token.end = last_symbol.end;

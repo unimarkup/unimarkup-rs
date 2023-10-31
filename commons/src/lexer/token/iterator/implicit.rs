@@ -18,10 +18,10 @@ pub trait TokenIteratorImplicitExt {
 
 /// The [`TokenIteratorRoot`] is the root iterator in any [`TokenIterator`](super::TokenIterator).
 /// It holds the actual [`Symbol`] slice.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TokenIteratorImplicits<'input> {
     /// The [`Symbol`] slice the iterator was created for.
-    pub(super) base_iter: TokenIteratorBase<'input>,
+    pub(crate) base_iter: TokenIteratorBase<'input>,
     prev_token: Option<Token<'input>>,
     prev_peeked_token: Option<Token<'input>>,
     allow_implicits: bool,
@@ -182,7 +182,9 @@ impl<'input> TokenIteratorImplicits<'input> {
             }
 
             let mut implicit_iter = self.clone();
-            if let Some(implicit_token) = super::get_implicit(&mut implicit_iter) {
+            if let Some(implicit_token) =
+                crate::lexer::token::implicit::get_implicit(&mut implicit_iter)
+            {
                 let token = implicit_token;
                 if variant == NextVariant::Peek {
                     self.set_peek_index(implicit_iter.peek_index());
@@ -230,8 +232,6 @@ mod test {
         let mut token_iter = TokenIterator::from(&*symbols);
 
         let token = token_iter.next().unwrap();
-
-        dbg!(&token);
 
         assert_eq!(
             token.kind,

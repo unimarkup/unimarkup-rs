@@ -5,16 +5,19 @@ use std::borrow::BorrowMut;
 
 use crate::lexer::{new::SymbolIterator, Symbol};
 
-use self::{extension::TokenIteratorExt, scope_root::TokenIteratorScopedRoot};
-
-use super::{
-    implicit::iterator::{TokenIteratorImplicitExt, TokenIteratorImplicits},
-    Token, TokenKind,
+use self::{
+    extension::TokenIteratorExt,
+    implicit::{TokenIteratorImplicitExt, TokenIteratorImplicits},
+    scope_root::TokenIteratorScopedRoot,
 };
 
+use super::{Token, TokenKind};
+
+mod cache;
 mod matcher;
 
 pub(crate) mod extension;
+pub mod implicit;
 
 pub mod base;
 pub mod scope_root;
@@ -75,8 +78,26 @@ pub struct TokenIterator<'input> {
     prev_token: Option<Token<'input>>,
 }
 
+impl std::fmt::Debug for TokenIterator<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TokenIterator")
+            .field("parent", &self.parent)
+            .field("start_index", &self.start_index)
+            .field("match_index", &self.match_index)
+            .field("scope", &self.scope)
+            .field("scoped", &self.scoped)
+            .field("highest_peek_index", &self.highest_peek_index)
+            .field("iter_end", &self.iter_end)
+            .field("prefix_mismatch", &self.prefix_mismatch)
+            .field("next_matching", &self.next_matching)
+            .field("peek_matching", &self.peek_matching)
+            .field("prev_token", &self.prev_token)
+            .finish()
+    }
+}
+
 /// The [`TokenIteratorKind`] defines the kind of a [`SymbolIterator`].
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum TokenIteratorKind<'input> {
     /// Defines an iterator as being nested.
     /// The contained iterator is the parent iterator.

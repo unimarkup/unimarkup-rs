@@ -1,8 +1,8 @@
-use itertools::{Itertools, PeekingNext};
+use itertools::PeekingNext;
 
 use crate::lexer::{Symbol, SymbolKind};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct SymbolIterator<'input> {
     /// The [`Symbol`] slice the iterator was created for.
     symbols: &'input [Symbol<'input>],
@@ -115,27 +115,5 @@ impl<'input> SymbolIterator<'input> {
     /// Returns the [`SymbolKind`] of the peeked [`Symbol`].
     pub fn peek_kind(&mut self) -> Option<SymbolKind> {
         self.peek().map(|s| s.kind)
-    }
-
-    pub fn peek_nth(&mut self, n: usize) -> Option<&'input Symbol<'input>> {
-        let mut symbol = self.peeking_next(|_| true);
-
-        for _ in 0..n {
-            symbol = self.peeking_next(|_| true);
-            symbol?;
-        }
-
-        symbol
-    }
-
-    pub fn peek_while_count<F>(&mut self, accept: F) -> usize
-    where
-        Self: Sized + Iterator<Item = &'input Symbol<'input>>,
-        F: FnMut(&&'input Symbol<'input>) -> bool,
-    {
-        let peek_index = self.peek_index();
-        let cnt = self.peeking_take_while(accept).count();
-        self.set_peek_index(peek_index);
-        cnt
     }
 }
