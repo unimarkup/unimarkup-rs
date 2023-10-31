@@ -151,9 +151,8 @@ macro_rules! format_to_inline{
                     );
 
                     #[cfg(not(debug_assertions))]
-                    Plain::new(
-                        "",
-                        attributes,
+                    $crate::element::base::Plain::new(
+                        "".to_string(),
                         start,
                         end,
                     )

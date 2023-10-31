@@ -174,7 +174,7 @@ impl Symbol<'_> {
     /// # Examples
     ///
     /// ```
-    /// use unimarkup_commons::scanner::{scan_str, Symbol};
+    /// use unimarkup_commons::lexer::{scan_str, Symbol};
     ///
     /// let input = "This is a string";
     /// let symbols: Vec<_> = scan_str(input);

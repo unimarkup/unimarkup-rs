@@ -130,8 +130,6 @@ fn resolve_closing(
                 // This means that some outer format closed.
                 // => end of this format is at start of the closing token for the outer format
                 // e.g. bold close = implicit before strikethrough end: ~~strike**bold~~
-
-                dbg!(&close_token.kind);
                 return Some(close_format(
                     input,
                     open_token,

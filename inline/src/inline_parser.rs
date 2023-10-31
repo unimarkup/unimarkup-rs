@@ -149,6 +149,37 @@ mod test {
 
         assert_eq!(token_iter.next(), None, "Iterator not fully consumed.");
     }
+
+    #[test]
+    fn perf() {
+        let content = &"Some ***text* bold**\n".repeat(10000);
+
+        let start_scan = std::time::Instant::now();
+        let symbols = unimarkup_commons::lexer::scan_str(content);
+        let end_scan = std::time::Instant::now();
+
+        let start_inlines = std::time::Instant::now();
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+        let inlines = super::parse(&mut token_iter, &mut InlineContext::default());
+        let end_inlines = std::time::Instant::now();
+
+        println!(
+        "Content length: {}\nLines: {}\nInlines: {}\nScanning took: {}ms\nInline parsing took: {}ms",
+        content.len(),
+        content.lines().count(),
+        inlines.len(),
+        end_scan
+            .checked_duration_since(start_scan)
+            .unwrap()
+            .as_millis(),
+        end_inlines
+            .checked_duration_since(start_inlines)
+            .unwrap()
+            .as_millis(),
+        );
+
+        assert!(inlines[0].is_plain(), "First inline was not plain.");
+    }
 }
 //     #[test]
 //     fn parse_textbox_scoped_bold() {
