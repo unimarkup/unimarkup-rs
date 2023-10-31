@@ -40,12 +40,10 @@ pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut InlineContext
             || kind.is_open_parenthesis()
         {
             if let Some(parser_fn) = get_scoped_parser(kind, context.flags.logic_only) {
-                let mut iter = input.clone();
-                let mut inner_context = context.clone();
-                if let Some(res_inline) = parser_fn(&mut iter, &mut inner_context) {
+                if let Some(res_inline) = parser_fn(input, context) {
+                    // TODO: add dbg assertion to ensure parser fn either returned Some, or did **not** move main index
+
                     inlines.push(res_inline);
-                    *input = iter;
-                    *context = inner_context;
                     continue 'outer;
                 }
             }
@@ -57,12 +55,8 @@ pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut InlineContext
                 break 'outer;
             } else if !input.format_is_open(kind) {
                 if let Some(parser_fn) = get_format_parser(kind) {
-                    let mut iter = input.clone();
-                    let mut inner_context = context.clone();
-                    if let Some(res_inline) = parser_fn(&mut iter, &mut inner_context) {
+                    if let Some(res_inline) = parser_fn(input, context) {
                         inlines.push(res_inline);
-                        *input = iter;
-                        *context = inner_context;
                         continue 'outer;
                     }
                 }

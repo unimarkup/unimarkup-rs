@@ -54,9 +54,12 @@ pub(crate) fn parse(
 ) -> Option<Inline> {
     let open_token = input.next()?;
 
-    if open_token.kind != InlineTokenKind::OpenBracket {
-        return None;
-    }
+    debug_assert_eq!(
+        open_token.kind,
+        InlineTokenKind::OpenBracket,
+        "Called TextBox parser on open kind '{:?}'.",
+        open_token.kind
+    );
 
     let mut scoped_iter: InlineTokenIterator<'_> = input
         .nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
@@ -85,7 +88,9 @@ pub(crate) fn parse(
 
     // check for `()`
     if end_reached && input.peek_kind() == Some(InlineTokenKind::OpenParenthesis) {
-        input.next()?; // Consume open parenthesis
+        input
+            .next()
+            .expect("Peeked before, so `next` must return Some."); // Consume open parenthesis
         let mut link_iter: InlineTokenIterator<'_> = input
             .nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                 matcher.consumed_matches(&[TokenKind::CloseParenthesis])

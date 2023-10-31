@@ -1,7 +1,10 @@
 use std::rc::Rc;
 
 use unimarkup_commons::{
-    lexer::token::iterator::{implicit::TokenIteratorImplicitExt, EndMatcher},
+    lexer::{
+        token::iterator::{implicit::TokenIteratorImplicitExt, EndMatcher},
+        PeekingNext,
+    },
     parsing::InlineContext,
 };
 
@@ -17,12 +20,14 @@ macro_rules! scoped_parser {
             input: &mut InlineTokenIterator,
             context: &mut InlineContext,
         ) -> Option<Inline> {
-            let open_token = input.next()?;
+            let open_token = input.peeking_next(|_| true)?;
 
             // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
             if input.peek_kind()?.is_space() {
                 return None;
             }
+
+            input.next(); // consume open token => now it will lead to Some(inline)
 
             let mut scoped_iter: InlineTokenIterator<'_> = input
                 .nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {

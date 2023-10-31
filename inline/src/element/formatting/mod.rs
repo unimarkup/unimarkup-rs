@@ -1,4 +1,7 @@
-use unimarkup_commons::{lexer::position::Position, parsing::InlineContext};
+use unimarkup_commons::{
+    lexer::{position::Position, PeekingNext},
+    parsing::InlineContext,
+};
 
 use crate::{
     element::InlineElement,
@@ -15,12 +18,14 @@ pub(crate) fn parse_distinct_format(
     input: &mut InlineTokenIterator,
     context: &mut InlineContext,
 ) -> Option<Inline> {
-    let open_token = input.next()?;
+    let open_token = input.peeking_next(|_| true)?;
 
     // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
     if input.peek_kind()?.is_space() {
         return None;
     }
+
+    input.next(); // consume open token => now it will lead to Some(inline)
 
     input.open_format(&open_token.kind);
 
@@ -32,7 +37,9 @@ pub(crate) fn parse_distinct_format(
     // Only consuming token on open/close match, because closing token might be reserved for an outer open format.
     let end = if let Some(close_token) = input.peek() {
         if close_token.kind == open_token.kind {
-            input.next()?;
+            input
+                .next()
+                .expect("Peeked before, so `next` must return Some.");
             implicit_end = false;
 
             //TODO: check for optional attributes here

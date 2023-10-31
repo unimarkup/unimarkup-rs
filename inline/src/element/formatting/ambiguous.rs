@@ -1,5 +1,8 @@
 use unimarkup_commons::{
-    lexer::position::{Offset, Position},
+    lexer::{
+        position::{Offset, Position},
+        PeekingNext,
+    },
     parsing::InlineContext,
 };
 
@@ -13,17 +16,21 @@ pub(crate) fn parse(
     input: &mut InlineTokenIterator,
     context: &mut InlineContext,
 ) -> Option<Inline> {
-    let mut open_token = input.next()?;
+    let mut open_token = input.peeking_next(|_| true)?;
 
     if input.peek_kind()?.is_space() {
         // Split ambiguous in case of leading space. Main wins
         if is_ambiguous(open_token.kind) {
+            input.next(); // consume open token before split
+
             let (first_token, second_token) = split_token(open_token, main_part(open_token.kind));
             input.cache_token(second_token);
             open_token = first_token;
         } else {
             return None;
         }
+    } else {
+        input.next(); // consume open token => now it will lead to Some(inline)
     }
 
     if is_ambiguous(open_token.kind) {
@@ -74,7 +81,9 @@ fn resolve_closing(
             {
                 let (attributes, end, implicit_end) = if open_token.kind == close_token.kind {
                     // consume close, because this fn call opened and now closes the format
-                    input.next()?;
+                    input
+                        .next()
+                        .expect("Peeked before, so `next` must return Some.");
 
                     // check for optional attributes here
                     (None, close_token.end, false)
@@ -95,7 +104,9 @@ fn resolve_closing(
                 && close_token.kind == ambiguous_part(open_token.kind)
             {
                 // e.g. close = 3 stars between: **bold***italic*
-                input.next()?;
+                input
+                    .next()
+                    .expect("Peeked before, so `next` must return Some.");
                 input.close_format(&open_token.kind);
 
                 let (closing_token, cached_token) = split_token(close_token, open_token.kind);
@@ -112,7 +123,9 @@ fn resolve_closing(
             } else if open_token.kind == ambiguous_part(close_token.kind) {
                 // no cache, because "split" is on open token
                 // e.g. close = 2 stars between: ***bold**italic*
-                input.next()?;
+                input
+                    .next()
+                    .expect("Peeked before, so `next` must return Some.");
                 input.close_format(&close_token.kind);
                 outer.push(super::to_formatting(
                     close_token.kind,
@@ -165,7 +178,9 @@ fn resolve_closing(
     if let Some(close_token) = input.peek() {
         // open token was updated to either main or sub part from ambiguous
         if compatible(updated_open.kind, close_token.kind) {
-            input.next()?;
+            input
+                .next()
+                .expect("Peeked before, so `next` must return Some.");
 
             let (attributes, end) = if is_ambiguous(close_token.kind) {
                 // ambiguous token gets split, because only part of it is used to close this open format

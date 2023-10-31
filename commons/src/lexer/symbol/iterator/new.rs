@@ -103,13 +103,7 @@ impl<'input> SymbolIterator<'input> {
 
     /// Returns the next [`Symbol`] without changing the current index.    
     pub fn peek(&mut self) -> Option<&'input Symbol<'input>> {
-        let peek_index = self.peek_index();
-
-        let symbol = self.peeking_next(|_| true);
-
-        self.set_peek_index(peek_index); // Note: Resetting index, because peek() must be idempotent
-
-        symbol
+        self.symbols.get(self.peek_index)
     }
 
     /// Returns the [`SymbolKind`] of the peeked [`Symbol`].

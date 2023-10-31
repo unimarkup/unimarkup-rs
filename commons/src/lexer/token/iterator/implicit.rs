@@ -181,32 +181,32 @@ impl<'input> TokenIteratorImplicits<'input> {
                 self.allow_emoji = false;
             }
 
-            let mut implicit_iter = self.clone();
-            if let Some(implicit_token) =
-                crate::lexer::token::implicit::get_implicit(&mut implicit_iter)
-            {
-                let token = implicit_token;
-                if variant == NextVariant::Peek {
-                    self.set_peek_index(implicit_iter.peek_index());
-                    // Must be set after peek index update, because setting peek index invalidates flags
-                    self.allow_arrow = implicit_iter.allow_arrow;
-                    self.allow_emoji = implicit_iter.allow_emoji;
+            // let mut implicit_iter = self.clone();
+            // if let Some(implicit_token) =
+            //     crate::lexer::token::implicit::get_implicit(&mut implicit_iter)
+            // {
+            //     let token = implicit_token;
+            //     if variant == NextVariant::Peek {
+            //         self.set_peek_index(implicit_iter.peek_index());
+            //         // Must be set after peek index update, because setting peek index invalidates flags
+            //         self.allow_arrow = implicit_iter.allow_arrow;
+            //         self.allow_emoji = implicit_iter.allow_emoji;
 
-                    // Implicit check is done on the base iterator, so pev tokens of self must remain unchanged
-                    debug_assert_eq!(
-                        self.prev_peeked_token, implicit_iter.prev_peeked_token,
-                        "Previous peeked token differs in implicit iter from self."
-                    );
-                    debug_assert_eq!(
-                        self.prev_token, implicit_iter.prev_token,
-                        "Previous token differs in implicit iter from self."
-                    );
-                } else {
-                    *self = implicit_iter;
-                }
+            //         // Implicit check is done on the base iterator, so pev tokens of self must remain unchanged
+            //         debug_assert_eq!(
+            //             self.prev_peeked_token, implicit_iter.prev_peeked_token,
+            //             "Previous peeked token differs in implicit iter from self."
+            //         );
+            //         debug_assert_eq!(
+            //             self.prev_token, implicit_iter.prev_token,
+            //             "Previous token differs in implicit iter from self."
+            //         );
+            //     } else {
+            //         *self = implicit_iter;
+            //     }
 
-                return Some(token);
-            }
+            //     return Some(token);
+            // }
         } else {
             self.allow_arrow = false;
             self.allow_emoji = false;

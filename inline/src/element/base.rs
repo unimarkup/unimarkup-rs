@@ -15,7 +15,7 @@ pub(crate) fn parse_base(
     context: &mut InlineContext,
     inlines: &mut Vec<Inline>,
 ) {
-    let mut next = input.next().expect("Peeked symbol before.");
+    let mut next = input.next().expect("Peeked symbol in inline parser.");
     let kind = next.kind;
 
     if kind.is_keyword() {
