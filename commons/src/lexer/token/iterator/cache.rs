@@ -40,7 +40,7 @@ impl<'input> CachedTokenIterator<'input> {
 
     fn cached_token_at(&mut self, peek_index: usize) -> Option<Token<'input>> {
         let base_index = self.index();
-        if base_index >= peek_index {
+        if base_index > peek_index {
             return None;
         }
 
@@ -63,7 +63,7 @@ impl<'input> CachedTokenIterator<'input> {
         }
 
         if cached_token.is_some() {
-            self.set_peek_index(self.peek_index() + index_skips);
+            self.set_peek_index(peek_index + index_skips);
         }
 
         cached_token
@@ -259,6 +259,74 @@ mod test {
                 TokenKind::Whitespace
             ],
             "Take while returned wrong tokens."
+        )
+    }
+
+    #[test]
+    fn cached_tokens_spanning_multiple_symbols() {
+        let symbols = crate::lexer::scan_str("**bold** plain");
+        let mut cached_iter = CachedTokenIterator::from(SymbolIterator::from(&*symbols));
+
+        let peeked_cnt = cached_iter.peeking_take_while(|_| true).count();
+
+        assert_eq!(
+            cached_iter.cache.len(),
+            cached_iter.peek_index(),
+            "Iterator did not cache tokens + redirects."
+        );
+
+        let tokens = cached_iter
+            .take_while(|t| t.kind != TokenKind::Tilde(1))
+            .map(|t| t.kind)
+            .collect_vec();
+
+        assert_eq!(
+            tokens.len(),
+            peeked_cnt,
+            "Peek and take while did not return the same number of tokens."
+        );
+
+        assert_eq!(
+            tokens,
+            vec![
+                TokenKind::Star(2),
+                TokenKind::Plain,
+                TokenKind::Star(2),
+                TokenKind::Whitespace,
+                TokenKind::Plain,
+                TokenKind::Eoi,
+            ],
+            "Take while returned wrong tokens."
+        )
+    }
+
+    #[test]
+    fn cached_tokens_peeked() {
+        let symbols = crate::lexer::scan_str("**bold** plain");
+        let mut cached_iter = CachedTokenIterator::from(SymbolIterator::from(&*symbols));
+
+        let first_peeked_tokens = cached_iter
+            .peeking_take_while(|_| true)
+            .map(|t| t.kind)
+            .collect_vec();
+        let peek_index = cached_iter.peek_index();
+
+        cached_iter.reset_peek();
+
+        assert_eq!(
+            cached_iter.cache.len(),
+            peek_index,
+            "Iterator removed cached tokens + redirects on peek reset."
+        );
+
+        let second_peeked_tokens = cached_iter
+            .peeking_take_while(|_| true)
+            .map(|t| t.kind)
+            .collect_vec();
+
+        assert_eq!(
+            first_peeked_tokens, second_peeked_tokens,
+            "Second peek while did not return same tokens as first."
         )
     }
 }
