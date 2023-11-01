@@ -169,7 +169,6 @@ impl<'input> Iterator for InlineTokenIterator<'input> {
     type Item = InlineToken<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.reset_peek();
         self.peeked_cache = true;
         self.updated_prev = None;
 

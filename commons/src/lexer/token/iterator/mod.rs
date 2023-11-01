@@ -24,6 +24,14 @@ use helper::PeekingNext;
 pub use itertools as helper;
 pub use matcher::*;
 
+#[derive(Debug, Clone)]
+struct PeekedToken<'input> {
+    /// The token that was peeked using `peek`.
+    pub token: Token<'input>,
+    /// Index that the iterator had after calling peeking_next.
+    pub peeked_peeking_index: usize,
+}
+
 /// The [`TokenIterator`] provides an iterator over [`Symbol`]s.
 /// It allows to add matcher functions to notify the iterator,
 /// when an end of an element is reached, or what prefixes to strip on a new line.
@@ -74,6 +82,7 @@ pub struct TokenIterator<'input> {
     ///
     /// Symbols matched with prefix matching are skipped, because `Newline` symbol is passed to all nested iterators.
     prev_token: Option<Token<'input>>,
+    peeked_token: Option<PeekedToken<'input>>,
 }
 
 impl std::fmt::Debug for TokenIterator<'_> {
@@ -90,6 +99,7 @@ impl std::fmt::Debug for TokenIterator<'_> {
             .field("next_matching", &self.next_matching)
             .field("peek_matching", &self.peek_matching)
             .field("prev_token", &self.prev_token)
+            .field("peeked_token", &self.peeked_token)
             .finish()
     }
 }
@@ -142,6 +152,7 @@ impl<'input> TokenIterator<'input> {
             next_matching: false,
             peek_matching: false,
             prev_token: None,
+            peeked_token: None,
         }
     }
 
@@ -162,6 +173,7 @@ impl<'input> TokenIterator<'input> {
             next_matching: false,
             peek_matching: false,
             prev_token: None,
+            peeked_token: None,
         }
     }
 
@@ -188,7 +200,7 @@ impl<'input> TokenIterator<'input> {
     }
 
     /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
-    pub(super) fn index(&self) -> usize {
+    pub fn index(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.index(),
             TokenIteratorKind::Root(root) => root.index(),
@@ -197,8 +209,15 @@ impl<'input> TokenIterator<'input> {
     }
 
     /// Sets the current index of this iterator to the given index.
-    pub(super) fn set_index(&mut self, index: usize) {
-        if index >= self.start_index {
+    pub fn set_index(&mut self, index: usize) {
+        debug_assert!(
+            self.index() <= index,
+            "Tried to move the iterator backward."
+        );
+
+        if self.start_index < index {
+            self.peeked_token = None;
+
             match self.parent.borrow_mut() {
                 TokenIteratorKind::Nested(parent) => parent.set_index(index),
                 TokenIteratorKind::Root(root) => root.set_index(index),
@@ -218,7 +237,14 @@ impl<'input> TokenIterator<'input> {
 
     /// Sets the peek index of this iterator to the given index.
     pub fn set_peek_index(&mut self, index: usize) {
-        if index >= self.index() {
+        debug_assert!(
+            self.index() <= index,
+            "Tried to move iterator peek backward."
+        );
+
+        if index >= self.index() && self.peek_index() != index {
+            self.peeked_token = None;
+
             match self.parent.borrow_mut() {
                 TokenIteratorKind::Nested(parent) => parent.set_peek_index(index),
                 TokenIteratorKind::Root(root) => root.set_peek_index(index),
@@ -246,13 +272,29 @@ impl<'input> TokenIterator<'input> {
 
     /// Returns the next [`Symbol`] without changing the current index.    
     pub fn peek(&mut self) -> Option<Token<'input>> {
-        let peek_index = self.peek_index();
+        match self.peeked_token {
+            Some(PeekedToken {
+                token,
+                peeked_peeking_index: _,
+            }) => Some(token),
+            None => {
+                let peek_index = self.peek_index();
 
-        let token = self.peeking_next(|_| true);
+                let token = self.peeking_next(|_| true);
+                let peeked_peeking_index = self.peek_index();
 
-        self.set_peek_index(peek_index); // Note: Resetting index, because peek() must be idempotent
+                self.set_peek_index(peek_index); // Note: Resetting index, because peek() must be idempotent
 
-        token
+                if let Some(peeked_token) = token {
+                    self.peeked_token = Some(PeekedToken {
+                        token: peeked_token,
+                        peeked_peeking_index,
+                    });
+                }
+
+                token
+            }
+        }
     }
 
     /// Returns the [`SymbolKind`] of the peeked [`Symbol`].
@@ -322,6 +364,7 @@ impl<'input> TokenIterator<'input> {
             next_matching: self.next_matching,
             peek_matching: self.peek_matching,
             prev_token: None,
+            peeked_token: None,
         }
     }
 
@@ -358,6 +401,7 @@ impl<'input> TokenIterator<'input> {
             next_matching: self.next_matching,
             peek_matching: self.peek_matching,
             prev_token: None,
+            peeked_token: None,
         }
     }
 
@@ -439,6 +483,7 @@ impl<'input> From<SymbolIterator<'input>> for TokenIterator<'input> {
             next_matching: false,
             peek_matching: false,
             prev_token: None,
+            peeked_token: None,
         }
     }
 }
@@ -456,6 +501,21 @@ impl<'input> Iterator for TokenIterator<'input> {
     type Item = Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if let Some(PeekedToken {
+            token,
+            peeked_peeking_index,
+        }) = std::mem::take(&mut self.peeked_token)
+        {
+            debug_assert_eq!(
+                self.index(),
+                self.peek_index(),
+                "Saved peeked token was not reset on peek index change."
+            );
+
+            self.set_index(peeked_peeking_index);
+            return Some(token);
+        }
+
         if self.prefix_mismatch || self.end_reached() {
             return None;
         }
@@ -521,6 +581,19 @@ impl<'input> PeekingNext for TokenIterator<'input> {
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
+        if let Some(PeekedToken {
+            token,
+            peeked_peeking_index,
+        }) = self.peeked_token
+        {
+            if self.peek_index() == self.index() {
+                self.set_peek_index(peeked_peeking_index);
+                return Some(token);
+            } else {
+                self.peeked_token = None;
+            }
+        }
+
         if self.prefix_mismatch || self.end_reached() {
             return None;
         }

@@ -19,12 +19,14 @@ pub struct TokenIteratorBase<'input> {
     /// The [`Symbol`] slice the iterator was created for.
     sym_iter: SymbolIterator<'input>,
     /// The highest scope any nested iterator based on this root iterator is in.
-    pub(super) scope: usize,
+    scope: usize,
     prev_token: Option<Token<'input>>,
+    /// The token that was returned from the last call of peeking_next()
     prev_peeked: Option<Token<'input>>,
     cache: VecDeque<Token<'input>>,
     index: usize,
     peek_index: usize,
+    sym_is_empty: bool,
 }
 
 impl<'input> TokenIteratorExt<'input> for TokenIteratorBase<'input> {
@@ -40,7 +42,7 @@ impl<'input> TokenIteratorExt<'input> for TokenIteratorBase<'input> {
 
     /// Returns `true` if no more [`Symbol`]s are available.
     fn is_empty(&self) -> bool {
-        self.max_len() == 0
+        self.sym_is_empty
     }
 
     /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
@@ -50,6 +52,8 @@ impl<'input> TokenIteratorExt<'input> for TokenIteratorBase<'input> {
 
     /// Sets the current index of this iterator to the given index.
     fn set_index(&mut self, index: usize) {
+        debug_assert!(self.index <= index, "Tried to move the iterator backward.");
+
         if self.index < index {
             let index_jump = index - self.index;
             let tokens_to_skip = index_jump.saturating_sub(self.cache.len());
@@ -72,9 +76,11 @@ impl<'input> TokenIteratorExt<'input> for TokenIteratorBase<'input> {
 
     /// Sets the peek index of this iterator to the given index.
     fn set_peek_index(&mut self, index: usize) {
-        if self.index <= index {
+        if self.index <= index && self.peek_index != index {
             self.peek_index = index;
         }
+
+        debug_assert!(self.index <= index, "Tried to move iterator peek backward.");
     }
 
     fn reset_peek(&mut self) {
@@ -97,9 +103,10 @@ impl<'input> From<SymbolIterator<'input>> for TokenIteratorBase<'input> {
             scope: 0,
             prev_token: None,
             prev_peeked: None,
-            cache: VecDeque::default(),
+            cache: VecDeque::with_capacity(32),
             index: 0,
             peek_index: 0,
+            sym_is_empty: false,
         }
     }
 }
@@ -108,23 +115,27 @@ impl<'input> Iterator for TokenIteratorBase<'input> {
     type Item = Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.sym_iter.is_empty() {
+        if self.sym_is_empty && self.cache.is_empty() {
             return None;
         }
 
         let next = self.cache.pop_front().or_else(|| self.next_from_symbols());
+
         self.index += 1;
         self.peek_index = self.index;
 
         if next.is_some() {
             self.prev_token = next;
+        } else {
+            // Cache empty and no next token from symbol => symbol iterator must be empty
+            self.sym_is_empty = true;
         }
 
         next
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.sym_iter.size_hint()
+        (0, Some(self.max_len()))
     }
 }
 
@@ -134,7 +145,8 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
-        if self.sym_iter.is_empty() {
+        if self.sym_is_empty || self.sym_iter.is_empty() {
+            self.sym_is_empty = true;
             return None;
         }
 
@@ -161,15 +173,16 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
 }
 
 impl<'input> TokenIteratorBase<'input> {
-    /// Returns the next [`Symbol`] without changing the current index.    
+    /// Returns the next [`Symbol`] without changing the current index.
     pub fn peek(&mut self) -> Option<Token<'input>> {
-        let peek_index = self.peek_index();
+        // Returns a copy of the token, because retrieving a reference, and inserting in cache would be in conflict.
+        let rel_cache_index = self.peek_index - self.index;
 
-        let token = self.peeking_next(|_| true);
-
-        self.set_peek_index(peek_index); // Note: Resetting index, because peek() must be idempotent
-
-        token
+        self.cache.get(rel_cache_index).copied().or_else(|| {
+            let new_token = self.next_from_symbols()?;
+            self.cache.push_back(new_token);
+            Some(new_token)
+        })
     }
 
     /// Returns the [`SymbolKind`] of the peeked [`Symbol`].

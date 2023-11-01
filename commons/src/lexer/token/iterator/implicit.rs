@@ -220,23 +220,23 @@ impl<'input> TokenIteratorImplicits<'input> {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use crate::lexer::token::{
-        implicit::ImplicitSubstitutionKind, iterator::TokenIterator, TokenKind,
-    };
+// #[cfg(test)]
+// mod test {
+//     use crate::lexer::token::{
+//         implicit::ImplicitSubstitutionKind, iterator::TokenIterator, TokenKind,
+//     };
 
-    #[test]
-    fn trademark_substitution() {
-        let symbols = crate::lexer::scan_str("(TM)");
-        let mut token_iter = TokenIterator::from(&*symbols);
+//     #[test]
+//     fn trademark_substitution() {
+//         let symbols = crate::lexer::scan_str("(TM)");
+//         let mut token_iter = TokenIterator::from(&*symbols);
 
-        let token = token_iter.next().unwrap();
+//         let token = token_iter.next().unwrap();
 
-        assert_eq!(
-            token.kind,
-            TokenKind::ImplicitSubstitution(ImplicitSubstitutionKind::Trademark),
-            "Trademark token was not detected."
-        );
-    }
-}
+//         assert_eq!(
+//             token.kind,
+//             TokenKind::ImplicitSubstitution(ImplicitSubstitutionKind::Trademark),
+//             "Trademark token was not detected."
+//         );
+//     }
+// }

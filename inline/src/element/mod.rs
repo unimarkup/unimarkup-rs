@@ -6,7 +6,7 @@ use self::{
         Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
         Underline, Verbatim,
     },
-    substitution::{named::NamedSubstitution, DirectUri},
+    substitution::{named::NamedSubstitution, DirectUri, ImplicitSubstitution},
     textbox::{hyperlink::Hyperlink, TextBox},
 };
 
@@ -93,6 +93,8 @@ pub enum Inline {
     /// Escaped plain text without any formatting.
     EscapedPlain(EscapedPlain),
 
+    ImplicitSubstitution(ImplicitSubstitution),
+
     DirectUri(DirectUri),
 }
 
@@ -124,6 +126,7 @@ impl Inline {
             Inline::EscapedPlain(_) => "EscapedPlain",
             Inline::DirectUri(_) => "DirectUri",
             Inline::NamedSubstitution(_) => "NamedSubstitution",
+            Inline::ImplicitSubstitution(_) => "ImplicitSubstitution",
         }
     }
 }
@@ -151,6 +154,7 @@ impl InlineElement for Inline {
             Inline::Plain(inline) => inline.to_plain_string(),
             Inline::EscapedPlain(inline) => inline.to_plain_string(),
             Inline::DirectUri(inline) => inline.to_plain_string(),
+            Inline::ImplicitSubstitution(inline) => inline.to_plain_string(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }
@@ -178,6 +182,7 @@ impl InlineElement for Inline {
             Inline::Plain(inline) => inline.start(),
             Inline::EscapedPlain(inline) => inline.start(),
             Inline::DirectUri(inline) => inline.start(),
+            Inline::ImplicitSubstitution(inline) => inline.start(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }
@@ -205,6 +210,7 @@ impl InlineElement for Inline {
             Inline::Plain(inline) => inline.end(),
             Inline::EscapedPlain(inline) => inline.end(),
             Inline::DirectUri(inline) => inline.end(),
+            Inline::ImplicitSubstitution(inline) => inline.end(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }
