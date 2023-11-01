@@ -61,7 +61,7 @@ pub(crate) fn parse(
         open_token.kind
     );
 
-    let mut scoped_iter: InlineTokenIterator<'_> = input
+    let mut scoped_iter: InlineTokenIterator<'_, '_> = input
         .nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
             matcher.consumed_matches(&[TokenKind::CloseBracket])
         })))
@@ -91,7 +91,7 @@ pub(crate) fn parse(
         input
             .next()
             .expect("Peeked before, so `next` must return Some."); // Consume open parenthesis
-        let mut link_iter: InlineTokenIterator<'_> = input
+        let mut link_iter: InlineTokenIterator<'_, '_> = input
             .nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                 matcher.consumed_matches(&[TokenKind::CloseParenthesis])
             })))

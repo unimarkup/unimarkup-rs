@@ -26,7 +26,7 @@ macro_rules! scoped_parser {
 
             input.next(); // consume open token => now it will lead to Some(inline)
 
-            let mut scoped_iter: InlineTokenIterator<'_> = input
+            let mut scoped_iter: InlineTokenIterator<'_, '_> = input
                 .nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                     !matcher.prev_is_space()
                         && matcher.consumed_matches(&[InlineTokenKind::$kind.into()])

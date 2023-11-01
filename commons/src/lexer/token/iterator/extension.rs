@@ -2,10 +2,10 @@ use itertools::PeekingNext;
 
 use crate::lexer::token::Token;
 
-pub(crate) trait TokenIteratorExt<'input>:
-    Iterator<Item = Token<'input>> + PeekingNext + Clone
+pub(crate) trait TokenIteratorExt<'input, T>:
+    Iterator<Item = T> + PeekingNext + Clone
 {
-    fn prev_token(&self) -> Option<&Token<'input>>;
+    fn prev(&self) -> Option<&Token<'input>>;
 
     fn max_len(&self) -> usize;
 

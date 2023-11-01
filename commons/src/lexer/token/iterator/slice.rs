@@ -1,40 +1,42 @@
 use itertools::PeekingNext;
 
-use crate::lexer::{Symbol, SymbolKind};
+use crate::lexer::token::{Token, TokenKind};
 
 #[derive(Debug, Clone)]
-pub struct SymbolIterator<'slice, 'input> {
+pub struct TokenSliceIterator<'slice, 'input> {
     /// The [`Symbol`] slice the iterator was created for.
-    symbols: &'slice [Symbol<'input>],
+    tokens: &'slice [Token<'input>],
     /// The current index of the iterator inside the [`Symbol`] slice.
-    pub(super) index: usize,
+    index: usize,
     /// The peek index of the iterator inside the [`Symbol`] slice.
-    pub(super) peek_index: usize,
+    peek_index: usize,
+    scope: usize,
 }
 
-impl<'slice, 'input, T> From<T> for SymbolIterator<'slice, 'input>
+impl<'slice, 'input, T> From<T> for TokenSliceIterator<'slice, 'input>
 where
-    T: Into<&'slice [Symbol<'input>]>,
+    T: Into<&'slice [Token<'input>]>,
 {
     fn from(value: T) -> Self {
-        SymbolIterator {
-            symbols: value.into(),
+        TokenSliceIterator {
+            tokens: value.into(),
             index: 0,
             peek_index: 0,
+            scope: 0,
         }
     }
 }
 
-impl<'slice, 'input> Iterator for SymbolIterator<'slice, 'input> {
-    type Item = &'slice Symbol<'input>;
+impl<'slice, 'input> Iterator for TokenSliceIterator<'slice, 'input> {
+    type Item = &'slice Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let symbol = self.symbols.get(self.index)?;
+        let token = self.tokens.get(self.index)?;
 
         self.index += 1;
         self.peek_index = self.index;
 
-        Some(symbol)
+        Some(token)
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -42,29 +44,29 @@ impl<'slice, 'input> Iterator for SymbolIterator<'slice, 'input> {
     }
 }
 
-impl<'slice, 'input> PeekingNext for SymbolIterator<'slice, 'input> {
+impl<'slice, 'input> PeekingNext for TokenSliceIterator<'slice, 'input> {
     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
-        let symbol = self.symbols.get(self.peek_index).filter(accept)?;
+        let token = self.tokens.get(self.peek_index).filter(accept)?;
         self.peek_index += 1;
-        Some(symbol)
+        Some(token)
     }
 }
 
-impl<'slice, 'input> SymbolIterator<'slice, 'input> {
+impl<'slice, 'input> TokenSliceIterator<'slice, 'input> {
     /// Returns the maximum length of the remaining [`Symbol`]s this iterator might return.
     ///
     /// **Note:** This length does not consider parent iterators, or matching functions.
     /// Therefore, the returned number of [`Symbol`]s might differ, but cannot be larger than this length.
     pub fn max_len(&self) -> usize {
-        if self.symbols.is_empty() {
+        if self.tokens.is_empty() {
             return 0;
         }
 
-        self.symbols[self.index.min(self.symbols.len() - 1)..].len()
+        self.tokens[self.index.min(self.tokens.len() - 1)..].len()
     }
 
     /// Returns `true` if no more [`Symbol`]s are available.
@@ -102,12 +104,36 @@ impl<'slice, 'input> SymbolIterator<'slice, 'input> {
     }
 
     /// Returns the next [`Symbol`] without changing the current index.    
-    pub fn peek(&mut self) -> Option<&'slice Symbol<'input>> {
-        self.symbols.get(self.peek_index)
+    pub fn peek(&mut self) -> Option<&'slice Token<'input>> {
+        self.tokens.get(self.peek_index)
     }
 
     /// Returns the [`SymbolKind`] of the peeked [`Symbol`].
-    pub fn peek_kind(&mut self) -> Option<SymbolKind> {
+    pub fn peek_kind(&mut self) -> Option<TokenKind> {
         self.peek().map(|s| s.kind)
+    }
+
+    pub fn scope(&self) -> usize {
+        self.scope
+    }
+
+    pub fn set_scope(&mut self, scope: usize) {
+        self.scope = scope;
+    }
+
+    pub fn prev(&self) -> Option<&Token<'input>> {
+        if self.index > 0 {
+            self.tokens.get(self.index - 1)
+        } else {
+            None
+        }
+    }
+
+    pub fn prev_peeked(&self) -> Option<&Token<'input>> {
+        if self.peek_index > 0 {
+            self.tokens.get(self.peek_index - 1)
+        } else {
+            None
+        }
     }
 }

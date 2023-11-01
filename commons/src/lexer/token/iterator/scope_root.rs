@@ -5,23 +5,25 @@ use crate::lexer::token::Token;
 use super::{extension::TokenIteratorExt, TokenIterator};
 
 #[derive(Debug, Clone)]
-pub struct TokenIteratorScopedRoot<'input> {
+pub struct TokenIteratorScopedRoot<'slice, 'input> {
     /// The [`Symbol`] slice the iterator was created for.
-    token_iter: TokenIterator<'input>,
+    token_iter: TokenIterator<'slice, 'input>,
     scope: usize,
 }
 
-impl<'input> TokenIteratorScopedRoot<'input> {
-    pub(crate) fn prev_peeked(&self) -> Option<&Token<'input>> {
-        self.token_iter.prev_peeked()
-    }
-}
+// impl<'slice, 'input> TokenIteratorScopedRoot<'slice, 'input> {
+//     pub(super) fn prev_peeked(&self) -> Option<&Token<'input>> {
+//         self.token_iter.prev_peeked()
+//     }
+// }
 
-impl<'input> TokenIteratorExt<'input> for TokenIteratorScopedRoot<'input> {
+impl<'slice, 'input> TokenIteratorExt<'input, &'slice Token<'input>>
+    for TokenIteratorScopedRoot<'slice, 'input>
+{
     /// Returns the symbol that is directly before the current index.
     /// If no previous symbol exists, `None`` is returned.
-    fn prev_token(&self) -> Option<&Token<'input>> {
-        self.token_iter.prev_token()
+    fn prev(&self) -> Option<&Token<'input>> {
+        self.token_iter.prev()
     }
 
     fn max_len(&self) -> usize {
@@ -66,8 +68,10 @@ impl<'input> TokenIteratorExt<'input> for TokenIteratorScopedRoot<'input> {
     }
 }
 
-impl<'input> From<TokenIterator<'input>> for TokenIteratorScopedRoot<'input> {
-    fn from(value: TokenIterator<'input>) -> Self {
+impl<'slice, 'input> From<TokenIterator<'slice, 'input>>
+    for TokenIteratorScopedRoot<'slice, 'input>
+{
+    fn from(value: TokenIterator<'slice, 'input>) -> Self {
         TokenIteratorScopedRoot {
             token_iter: value,
             scope: 0,
@@ -75,8 +79,8 @@ impl<'input> From<TokenIterator<'input>> for TokenIteratorScopedRoot<'input> {
     }
 }
 
-impl<'input> Iterator for TokenIteratorScopedRoot<'input> {
-    type Item = Token<'input>;
+impl<'slice, 'input> Iterator for TokenIteratorScopedRoot<'slice, 'input> {
+    type Item = &'slice Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.token_iter.next()
@@ -87,7 +91,7 @@ impl<'input> Iterator for TokenIteratorScopedRoot<'input> {
     }
 }
 
-impl<'input> PeekingNext for TokenIteratorScopedRoot<'input> {
+impl<'slice, 'input> PeekingNext for TokenIteratorScopedRoot<'slice, 'input> {
     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,

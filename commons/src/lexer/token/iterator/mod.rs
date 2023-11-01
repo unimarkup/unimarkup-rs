@@ -3,16 +3,15 @@
 
 use std::borrow::BorrowMut;
 
-use crate::lexer::{new::SymbolIterator, Symbol};
-
 use self::{
-    base::TokenIteratorBase, extension::TokenIteratorExt, scope_root::TokenIteratorScopedRoot,
+    extension::TokenIteratorExt, scope_root::TokenIteratorScopedRoot, slice::TokenSliceIterator,
 };
 
 use super::{Token, TokenKind};
 
 mod cache;
 mod matcher;
+mod slice;
 
 pub(crate) mod extension;
 pub mod implicit;
@@ -24,14 +23,6 @@ use helper::PeekingNext;
 pub use itertools as helper;
 pub use matcher::*;
 
-#[derive(Debug, Clone)]
-struct PeekedToken<'input> {
-    /// The token that was peeked using `peek`.
-    pub token: Token<'input>,
-    /// Index that the iterator had after calling peeking_next.
-    pub peeked_peeking_index: usize,
-}
-
 /// The [`TokenIterator`] provides an iterator over [`Symbol`]s.
 /// It allows to add matcher functions to notify the iterator,
 /// when an end of an element is reached, or what prefixes to strip on a new line.
@@ -41,9 +32,9 @@ struct PeekedToken<'input> {
 /// In other words, wrapped iterators control which [`Symbol`]s will be passed to their nested iterator.
 /// Therefore, each nested iterator only sees those [`Symbol`]s that are relevant to its scope.
 #[derive(Clone)]
-pub struct TokenIterator<'input> {
+pub struct TokenIterator<'slice, 'input> {
     /// The [`TokenIteratorKind`] of this iterator.
-    parent: TokenIteratorKind<'input>,
+    parent: TokenIteratorKind<'slice, 'input>,
     /// The index inside the [`Symbol`]s of the root iterator.
     start_index: usize,
     /// The match index of the iterator inside the [`Symbol`] slice.
@@ -54,7 +45,7 @@ pub struct TokenIterator<'input> {
     /// Flag set to `true` if this iterator pushed a new scope.
     scoped: bool,
     /// Index used to skip end matchings in case subsequent symbols already passed end matching for previous `peeking_next` calls.
-    highest_peek_index: usize,
+    skip_end_until_idx: usize,
     /// Optional matching function that is used to automatically skip matched prefixes after a new line.
     prefix_match: Option<IteratorPrefixFn>,
     /// Optional matching function that is used to indicate the end of this iterator.
@@ -77,15 +68,10 @@ pub struct TokenIterator<'input> {
     ///
     /// Used to prevent consumed matching while peeking.
     peek_matching: bool,
-    /// The previous symbol this iterator returned with `next()` or `consumed_matches()`.
-    /// It is only updated if `next()` returns Some`, or `consumed_matches()` matched.
-    ///
-    /// Symbols matched with prefix matching are skipped, because `Newline` symbol is passed to all nested iterators.
-    prev_token: Option<Token<'input>>,
-    peeked_token: Option<PeekedToken<'input>>,
+    prefix_start: Option<Token<'input>>,
 }
 
-impl std::fmt::Debug for TokenIterator<'_> {
+impl std::fmt::Debug for TokenIterator<'_, '_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TokenIterator")
             .field("parent", &self.parent)
@@ -93,38 +79,30 @@ impl std::fmt::Debug for TokenIterator<'_> {
             .field("match_index", &self.match_index)
             .field("scope", &self.scope)
             .field("scoped", &self.scoped)
-            .field("highest_peek_index", &self.highest_peek_index)
+            .field("highest_peek_index", &self.skip_end_until_idx)
             .field("iter_end", &self.iter_end)
             .field("prefix_mismatch", &self.prefix_mismatch)
             .field("next_matching", &self.next_matching)
             .field("peek_matching", &self.peek_matching)
-            .field("prev_token", &self.prev_token)
-            .field("peeked_token", &self.peeked_token)
             .finish()
     }
 }
 
 /// The [`TokenIteratorKind`] defines the kind of a [`SymbolIterator`].
 #[derive(Debug, Clone)]
-pub enum TokenIteratorKind<'input> {
+pub enum TokenIteratorKind<'slice, 'input> {
     /// Defines an iterator as being nested.
     /// The contained iterator is the parent iterator.
-    Nested(Box<TokenIterator<'input>>),
+    Nested(Box<TokenIterator<'slice, 'input>>),
     /// Iterator that resolves implicit substitutions.
     /// It is the first layer above the conversion from symbols to tokens.
-    Root(Box<TokenIteratorBase<'input>>),
+    Root(Box<TokenSliceIterator<'slice, 'input>>),
     /// Iterator to define a new scope root.
     /// Meaning that the scope for parent iterators remains unchanged.
-    ScopedRoot(Box<TokenIteratorScopedRoot<'input>>),
+    ScopedRoot(Box<TokenIteratorScopedRoot<'slice, 'input>>),
 }
 
-impl<'input> TokenIterator<'input> {
-    /// Creates a new [`SymbolIterator`] from the given [`Symbol`] slice.
-    /// This iterator is created without matching functions.
-    pub fn new(sym_iter: SymbolIterator<'input>) -> Self {
-        TokenIterator::from(sym_iter)
-    }
-
+impl<'slice, 'input> TokenIterator<'slice, 'input> {
     /// Creates a new [`SymbolIterator`] from the given [`Symbol`] slice,
     /// and the given matching functions.
     ///
@@ -134,15 +112,15 @@ impl<'input> TokenIterator<'input> {
     /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
     pub fn with(
-        sym_iter: SymbolIterator<'input>,
+        tokens: impl Into<&'slice [Token<'input>]>,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
     ) -> Self {
         TokenIterator {
-            parent: TokenIteratorKind::Root(Box::new(TokenIteratorBase::from(sym_iter))),
+            parent: TokenIteratorKind::Root(Box::new(TokenSliceIterator::from(tokens))),
             scope: 0,
             scoped: false,
-            highest_peek_index: 0,
+            skip_end_until_idx: 0,
             start_index: 0,
             match_index: 0,
             prefix_match,
@@ -151,20 +129,21 @@ impl<'input> TokenIterator<'input> {
             prefix_mismatch: false,
             next_matching: false,
             peek_matching: false,
-            prev_token: None,
-            peeked_token: None,
+            prefix_start: None,
         }
     }
 
-    pub fn with_scoped_root(token_iter: TokenIterator<'input>) -> Self {
+    pub fn with_scoped_root(token_iter: TokenIterator<'slice, 'input>) -> Self {
+        let start_index = token_iter.start_index;
+
         TokenIterator {
             parent: TokenIteratorKind::ScopedRoot(Box::new(TokenIteratorScopedRoot::from(
                 token_iter,
             ))),
             scope: 0,
             scoped: false,
-            highest_peek_index: 0,
-            start_index: 0,
+            skip_end_until_idx: 0,
+            start_index,
             match_index: 0,
             prefix_match: None,
             end_match: None,
@@ -172,8 +151,7 @@ impl<'input> TokenIterator<'input> {
             prefix_mismatch: false,
             next_matching: false,
             peek_matching: false,
-            prev_token: None,
-            peeked_token: None,
+            prefix_start: None,
         }
     }
 
@@ -216,8 +194,6 @@ impl<'input> TokenIterator<'input> {
         );
 
         if self.start_index < index {
-            self.peeked_token = None;
-
             match self.parent.borrow_mut() {
                 TokenIteratorKind::Nested(parent) => parent.set_index(index),
                 TokenIteratorKind::Root(root) => root.set_index(index),
@@ -243,8 +219,6 @@ impl<'input> TokenIterator<'input> {
         );
 
         if index >= self.index() && self.peek_index() != index {
-            self.peeked_token = None;
-
             match self.parent.borrow_mut() {
                 TokenIteratorKind::Nested(parent) => parent.set_peek_index(index),
                 TokenIteratorKind::Root(root) => root.set_peek_index(index),
@@ -271,30 +245,13 @@ impl<'input> TokenIterator<'input> {
     }
 
     /// Returns the next [`Symbol`] without changing the current index.    
-    pub fn peek(&mut self) -> Option<Token<'input>> {
-        match self.peeked_token {
-            Some(PeekedToken {
-                token,
-                peeked_peeking_index: _,
-            }) => Some(token),
-            None => {
-                let peek_index = self.peek_index();
+    pub fn peek(&mut self) -> Option<&Token<'input>> {
+        let peek_index = self.peek_index();
 
-                let token = self.peeking_next(|_| true);
-                let peeked_peeking_index = self.peek_index();
+        let token = self.peeking_next(|_| true);
 
-                self.set_peek_index(peek_index); // Note: Resetting index, because peek() must be idempotent
-
-                if let Some(peeked_token) = token {
-                    self.peeked_token = Some(PeekedToken {
-                        token: peeked_token,
-                        peeked_peeking_index,
-                    });
-                }
-
-                token
-            }
-        }
+        self.set_peek_index(peek_index); // Note: Resetting index, because peek() must be idempotent
+        token
     }
 
     /// Returns the [`SymbolKind`] of the peeked [`Symbol`].
@@ -319,21 +276,22 @@ impl<'input> TokenIterator<'input> {
     }
 
     /// Returns the previous symbol this iterator returned via `next()` or `consumed_matches()`.
-    pub fn prev_token(&self) -> Option<&Token<'input>> {
-        self.prev_token.as_ref()
+    pub fn prev(&self) -> Option<&Token<'input>> {
+        // Previous token was a newline that caused prefix match to consume tokens.
+        if self.prefix_start.is_some() {
+            return self.prefix_start.as_ref();
+        }
+
+        match &self.parent {
+            TokenIteratorKind::Nested(parent) => parent.prev(),
+            TokenIteratorKind::Root(root) => root.prev(),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.prev(),
+        }
     }
 
     /// Returns the [`SymbolKind`] of the previous symbol this iterator returned via `next()` or `consumed_matches()`.
     pub fn prev_kind(&self) -> Option<TokenKind> {
-        self.prev_token.map(|s| s.kind)
-    }
-
-    pub(crate) fn prev_peeked(&self) -> Option<&Token<'input>> {
-        match &self.parent {
-            TokenIteratorKind::Nested(parent) => parent.prev_peeked(),
-            TokenIteratorKind::Root(root) => root.prev_peeked(),
-            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.prev_peeked(),
-        }
+        self.prev().map(|s| s.kind)
     }
 
     /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
@@ -349,22 +307,21 @@ impl<'input> TokenIterator<'input> {
         &self,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
-    ) -> TokenIterator<'input> {
+    ) -> TokenIterator<'slice, 'input> {
         TokenIterator {
             parent: TokenIteratorKind::Nested(Box::new(self.clone())),
             start_index: self.index(),
             match_index: self.match_index,
             scope: self.scope,
             scoped: false,
-            highest_peek_index: self.index(),
+            skip_end_until_idx: self.index(),
             prefix_match,
             end_match,
             iter_end: self.iter_end,
             prefix_mismatch: self.prefix_mismatch,
             next_matching: self.next_matching,
             peek_matching: self.peek_matching,
-            prev_token: None,
-            peeked_token: None,
+            prefix_start: self.prefix_start,
         }
     }
 
@@ -382,7 +339,7 @@ impl<'input> TokenIterator<'input> {
         &self,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
-    ) -> TokenIterator<'input> {
+    ) -> TokenIterator<'slice, 'input> {
         let scope = self.scope + 1;
         let mut parent = self.clone();
         parent.push_scope(scope);
@@ -393,15 +350,14 @@ impl<'input> TokenIterator<'input> {
             match_index: self.match_index,
             scope,
             scoped: true,
-            highest_peek_index: self.index(),
+            skip_end_until_idx: self.index(),
             prefix_match,
             end_match,
             iter_end: self.iter_end,
             prefix_mismatch: self.prefix_mismatch,
             next_matching: self.next_matching,
             peek_matching: self.peek_matching,
-            prev_token: None,
-            peeked_token: None,
+            prefix_start: self.prefix_start,
         }
     }
 
@@ -417,12 +373,8 @@ impl<'input> TokenIterator<'input> {
                 "Updated iterator is not the actual parent of this iterator."
             );
             self_parent.push_scope(self_parent.scope);
-            // Take the previous token from the nested iterator to get consumed tokens.
-            let prev = self.prev_token;
 
             *parent = *self_parent;
-
-            parent.prev_token = prev;
         }
     }
 
@@ -438,7 +390,7 @@ impl<'input> TokenIterator<'input> {
         self
     }
 
-    pub fn peek_nth(&mut self, n: usize) -> Option<Token<'input>> {
+    pub fn peek_nth(&mut self, n: usize) -> Option<&Token<'input>> {
         let mut token = self.peeking_next(|_| true);
 
         for _ in 0..n {
@@ -454,8 +406,8 @@ impl<'input> TokenIterator<'input> {
     pub fn take_to_end(&mut self) -> Vec<Token<'input>> {
         let mut tokens = Vec::new();
 
-        for symbol in self.by_ref() {
-            tokens.push(symbol);
+        for token in self.by_ref() {
+            tokens.push(*token);
         }
 
         tokens
@@ -467,54 +419,43 @@ impl<'input> TokenIterator<'input> {
     }
 }
 
-impl<'input> From<SymbolIterator<'input>> for TokenIterator<'input> {
-    fn from(value: SymbolIterator<'input>) -> Self {
+impl<'slice, 'input, T> From<T> for TokenIterator<'slice, 'input>
+where
+    T: Into<&'slice [Token<'input>]>,
+{
+    fn from(value: T) -> Self {
         TokenIterator {
-            parent: TokenIteratorKind::Root(Box::new(TokenIteratorBase::from(value))),
+            parent: TokenIteratorKind::Root(Box::new(TokenSliceIterator::from(value))),
             start_index: 0,
             match_index: 0,
             scope: 0,
             scoped: false,
-            highest_peek_index: 0,
+            skip_end_until_idx: 0,
             prefix_match: None,
             end_match: None,
             iter_end: false,
             prefix_mismatch: false,
             next_matching: false,
             peek_matching: false,
-            prev_token: None,
-            peeked_token: None,
+            prefix_start: None,
         }
     }
 }
 
-impl<'input, T> From<T> for TokenIterator<'input>
-where
-    T: Into<&'input [Symbol<'input>]>,
-{
-    fn from(value: T) -> Self {
-        TokenIterator::from(SymbolIterator::from(value))
-    }
-}
+// impl<'input, T> From<T> for TokenIterator<'input>
+// where
+//     T: Into<&'input [Symbol<'input>]>,
+// {
+//     fn from(value: T) -> Self {
+//         TokenIterator::from(SymbolIterator::from(value))
+//     }
+// }
 
-impl<'input> Iterator for TokenIterator<'input> {
-    type Item = Token<'input>;
+impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input> {
+    type Item = &'slice Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(PeekedToken {
-            token,
-            peeked_peeking_index,
-        }) = std::mem::take(&mut self.peeked_token)
-        {
-            debug_assert_eq!(
-                self.index(),
-                self.peek_index(),
-                "Saved peeked token was not reset on peek index change."
-            );
-
-            self.set_index(peeked_peeking_index);
-            return Some(token);
-        }
+        self.prefix_start = None;
 
         if self.prefix_mismatch || self.end_reached() {
             return None;
@@ -522,7 +463,7 @@ impl<'input> Iterator for TokenIterator<'input> {
         self.reset_peek();
 
         let in_scope = !self.scoped || self.scope == self.root_scope();
-        let allow_end_matching = in_scope && (self.highest_peek_index <= self.index());
+        let allow_end_matching = in_scope && (self.skip_end_until_idx <= self.index());
 
         if allow_end_matching {
             if let Some(end_fn) = self.end_match.clone() {
@@ -542,28 +483,31 @@ impl<'input> Iterator for TokenIterator<'input> {
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.next(),
         };
 
-        let kind = curr_token_opt?.kind;
-        // Prefix matching after `peeking_next()` to skip prefix symbols, but pass (escaped) `Newline` to nested iterators.
-        if in_scope
-            && matches!(kind, TokenKind::Newline | TokenKind::EscapedNewline)
-            && self.prefix_match.is_some()
-        {
-            let prefix_match = self
-                .prefix_match
-                .clone()
-                .expect("Prefix match checked above to be some.");
-            self.next_matching = true;
+        // Prefix matching after `next()` to skip prefix symbols, but pass (escaped) `Newline` to nested iterators.
+        if matches!(
+            curr_token_opt.map(|t| t.kind),
+            Some(TokenKind::Newline) | Some(TokenKind::EscapedNewline)
+        ) {
+            // To store the newline token at the start of a possible prefix match.
+            // Needed for `prev()`, because prefix match implicitly consumes tokens,
+            // but these tokens should not be visible to child iterators.
+            // Every newline is stored, because parent iterators may have prefix matches.
+            self.prefix_start = curr_token_opt.copied();
 
-            // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
-            if !prefix_match(self) {
-                self.prefix_mismatch = true;
-                self.next_matching = false;
-                return None;
+            if in_scope && self.prefix_match.is_some() {
+                let prefix_match = self
+                    .prefix_match
+                    .clone()
+                    .expect("Prefix match checked above to be some.");
+                self.next_matching = true;
+
+                // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
+                if !prefix_match(self) {
+                    self.prefix_mismatch = true;
+                    self.next_matching = false;
+                    return None;
+                }
             }
-        }
-
-        if curr_token_opt.is_some() {
-            self.prev_token = curr_token_opt;
         }
 
         self.next_matching = false;
@@ -575,25 +519,12 @@ impl<'input> Iterator for TokenIterator<'input> {
     }
 }
 
-impl<'input> PeekingNext for TokenIterator<'input> {
+impl<'slice, 'input> PeekingNext for TokenIterator<'slice, 'input> {
     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,
         F: FnOnce(&Self::Item) -> bool,
     {
-        if let Some(PeekedToken {
-            token,
-            peeked_peeking_index,
-        }) = self.peeked_token
-        {
-            if self.peek_index() == self.index() {
-                self.set_peek_index(peeked_peeking_index);
-                return Some(token);
-            } else {
-                self.peeked_token = None;
-            }
-        }
-
         if self.prefix_mismatch || self.end_reached() {
             return None;
         }
@@ -601,7 +532,7 @@ impl<'input> PeekingNext for TokenIterator<'input> {
         // Note: Only end matching can be optimized, because once an end is reached, subsequent calls return None,
         // which might not be the case for prefix matching.
         let in_scope = !self.scoped || self.scope == self.root_scope();
-        let allow_end_matching = in_scope && (self.highest_peek_index <= self.peek_index());
+        let allow_end_matching = in_scope && (self.skip_end_until_idx <= self.peek_index());
 
         if allow_end_matching && !self.next_matching && !self.peek_matching {
             if let Some(end_fn) = self.end_match.clone() {
@@ -617,7 +548,7 @@ impl<'input> PeekingNext for TokenIterator<'input> {
                     return None;
                 }
 
-                self.highest_peek_index = self.highest_peek_index.max(self.peek_index());
+                self.skip_end_until_idx = self.skip_end_until_idx.max(self.peek_index());
             }
         }
 
@@ -661,13 +592,15 @@ mod test {
 
     use itertools::Itertools;
 
+    use crate::lexer::token::lex_str;
+
     use super::*;
 
     #[test]
     fn peek_while_index() {
-        let symbols = crate::lexer::scan_str("##++ ");
+        let tokens = lex_str("##++ ");
 
-        let mut iterator = TokenIterator::from(&*symbols);
+        let mut iterator = TokenIterator::from(&*tokens);
         let token_cnt = iterator
             .peeking_take_while(|token| token.kind.is_keyword())
             .count();
@@ -706,9 +639,9 @@ mod test {
 
     #[test]
     fn peek_next() {
-        let symbols = crate::lexer::scan_str("#*");
+        let tokens = lex_str("#*");
 
-        let mut iterator = TokenIterator::from(&*symbols);
+        let mut iterator = TokenIterator::from(&*tokens);
 
         let peeked_symbol = iterator.peeking_next(|_| true);
         let next_symbol = iterator.next();
@@ -740,9 +673,9 @@ mod test {
 
     #[test]
     fn reach_end() {
-        let symbols = crate::lexer::scan_str("text*");
+        let tokens = lex_str("text*");
 
-        let mut iterator = TokenIterator::from(&*symbols).nest(
+        let mut iterator = TokenIterator::from(&*tokens).nest(
             None,
             Some(Rc::new(|matcher| matcher.matches(&[TokenKind::Star(1)]))),
         );
@@ -763,9 +696,9 @@ mod test {
 
     #[test]
     fn reach_consumed_end() {
-        let symbols = crate::lexer::scan_str("text*");
+        let tokens = lex_str("text*");
 
-        let mut iterator = TokenIterator::from(&*symbols).nest(
+        let mut iterator = TokenIterator::from(&*tokens).nest(
             None,
             Some(Rc::new(|matcher| {
                 matcher.consumed_matches(&[TokenKind::Star(1)])
@@ -784,7 +717,7 @@ mod test {
             "Iterator returns token after end."
         );
         assert_eq!(
-            String::from(iterator.prev_token().unwrap().kind),
+            String::from(iterator.prev().unwrap().kind),
             "*",
             "Previous token was not the matched one."
         );
@@ -797,10 +730,10 @@ mod test {
 
     #[test]
     fn with_nested_and_parent_prefix() {
-        let symbols = crate::lexer::scan_str("a\n* *b");
+        let tokens = lex_str("a\n* *b");
 
         let iterator = TokenIterator::with(
-            (&*symbols).into(),
+            &*tokens,
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace])
             })),
@@ -834,10 +767,10 @@ mod test {
 
     #[test]
     fn nested_peek() {
-        let symbols = crate::lexer::scan_str("a\n* *b");
+        let tokens = lex_str("a\n* *b");
 
         let iterator = TokenIterator::with(
-            (&*symbols).into(),
+            &*tokens,
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace])
             })),
@@ -873,10 +806,10 @@ mod test {
 
     #[test]
     fn outer_end_match_takes_precedence() {
-        let symbols = crate::lexer::scan_str("e+f-");
+        let tokens = lex_str("e+f-");
 
         let mut iterator = TokenIterator::with(
-            (&*symbols).into(),
+            &*tokens,
             None,
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                 matcher.matches(&[TokenKind::Plus(1)])
@@ -942,10 +875,10 @@ mod test {
 
     #[test]
     fn peek_and_next_return_same_tokens() {
-        let symbols = crate::lexer::scan_str("a\n* *b+-");
+        let tokens = lex_str("a\n* *b+-");
 
         let iterator = TokenIterator::with(
-            (&*symbols).into(),
+            &*tokens,
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace])
             })),
@@ -963,7 +896,10 @@ mod test {
             })),
         );
 
-        let peeked_tokens = inner.peeking_take_while(|_| true).collect::<Vec<_>>();
+        let peeked_tokens = inner
+            .peeking_take_while(|_| true)
+            .copied()
+            .collect::<Vec<_>>();
         inner.reset_peek();
         let next_tokens = inner.take_to_end();
 
@@ -975,9 +911,9 @@ mod test {
 
     #[test]
     fn scoping() {
-        let symbols = crate::lexer::scan_str("[o [i] o]");
+        let tokens = lex_str("[o [i] o]");
 
-        let mut iterator = TokenIterator::with((&*symbols).into(), None, None);
+        let mut iterator = TokenIterator::with(&*tokens, None, None);
 
         iterator = iterator.dropping(1); // To skip first open bracket
 
@@ -1011,16 +947,25 @@ mod test {
 
         inner_iter.update(&mut iterator);
 
-        taken_outer.extend(iterator.take_to_end().iter());
+        let end = iterator.take_to_end();
+        taken_outer.extend(end.iter());
 
         assert!(iterator.end_reached(), "Iterator end was not reached.");
         assert_eq!(
-            taken_inner.iter().map(String::from).collect::<Vec<_>>(),
+            taken_inner
+                .iter()
+                .copied()
+                .map(String::from)
+                .collect::<Vec<_>>(),
             vec!["i"],
             "Inner symbols are incorrect."
         );
         assert_eq!(
-            taken_outer.iter().map(String::from).collect::<Vec<_>>(),
+            taken_outer
+                .iter()
+                .copied()
+                .map(String::from)
+                .collect::<Vec<_>>(),
             vec!["o", " ", " ", "o"],
             "Outer symbols are incorrect."
         );
@@ -1028,10 +973,10 @@ mod test {
 
     #[test]
     fn prefix_mismatch_returns_none_forever() {
-        let symbols = crate::lexer::scan_str("a\n  b\nc");
+        let tokens = lex_str("a\n  b\nc");
 
         let mut iterator = TokenIterator::with(
-            (&*symbols).into(),
+            &*tokens,
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(&[TokenKind::Space, TokenKind::Space])
             })),
@@ -1061,10 +1006,10 @@ mod test {
 
     #[test]
     fn match_any_symbol() {
-        let symbols = crate::lexer::scan_str("a* -\n:");
+        let tokens = lex_str("a* -\n:");
 
         let mut iterator = TokenIterator::with(
-            (&*symbols).into(),
+            &*tokens,
             None,
             // Matches "\n:"
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
@@ -1109,9 +1054,9 @@ mod test {
 
     #[test]
     fn newline_before_eoi_skipped() {
-        let symbols = crate::lexer::scan_str("a\nb\n");
+        let tokens = lex_str("a\nb\n");
 
-        let mut iterator = TokenIterator::with((&*symbols).into(), None, None);
+        let mut iterator = TokenIterator::with(&*tokens, None, None);
 
         assert_eq!(
             String::from(iterator.next().unwrap()),
@@ -1153,9 +1098,9 @@ mod test {
 
     #[test]
     fn prev_kind() {
-        let symbols = crate::lexer::scan_str("a *\nb");
+        let tokens = lex_str("a *\nb");
 
-        let mut iterator = TokenIterator::with((&*symbols).into(), None, None);
+        let mut iterator = TokenIterator::with(&*tokens, None, None);
 
         assert_eq!(
             String::from(iterator.next().unwrap()),
@@ -1204,10 +1149,10 @@ mod test {
 
     #[test]
     fn prev_token_from_end_match() {
-        let symbols = crate::lexer::scan_str("a*+b");
+        let tokens = lex_str("a*+b");
 
         let mut iterator = TokenIterator::with(
-            (&*symbols).into(),
+            &*tokens,
             None,
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                 matcher.consumed_matches(&[TokenKind::Star(1), TokenKind::Plus(1)])
@@ -1218,13 +1163,13 @@ mod test {
             .take_to_end()
             .iter()
             .fold(String::new(), |mut combined, s| {
-                combined.push_str(&String::from(s));
+                combined.push_str(&String::from(*s));
                 combined
             });
 
         assert_eq!(content, "a", "End match returned wrong content.");
         assert_eq!(
-            iterator.prev_token().unwrap().kind,
+            iterator.prev().unwrap().kind,
             TokenKind::Plus(1),
             "Previous token not correctly updated from end match."
         );
@@ -1232,10 +1177,10 @@ mod test {
 
     #[test]
     fn prev_token_from_prefix_match() {
-        let symbols = crate::lexer::scan_str("\n*+b");
+        let tokens = lex_str("\n*+b");
 
         let mut iterator = TokenIterator::with(
-            (&*symbols).into(),
+            &*tokens,
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Plus(1)])
             })),
@@ -1249,7 +1194,7 @@ mod test {
         );
         // Previous token is not set for prefix token, because `Newline` token gets passed to nested iterators for their prefix match
         assert_eq!(
-            iterator.prev_token().unwrap().kind,
+            iterator.prev().unwrap().kind,
             TokenKind::Newline,
             "Previous token not correctly updated from prefix match."
         );

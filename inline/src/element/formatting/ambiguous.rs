@@ -48,7 +48,7 @@ pub(crate) fn parse(
 /// Tries to split an ambiguous format, so an partial open format may close on next iteration.
 /// This is achieved by adapting the positions of the given ambiguous token, and caching the partial token.
 pub(crate) fn ambiguous_split<'input>(
-    token_iter: &mut InlineTokenIterator<'input>,
+    token_iter: &mut InlineTokenIterator<'_, 'input>,
     token: &mut InlineToken<'input>,
 ) {
     if is_ambiguous(token.kind) {
@@ -66,10 +66,10 @@ pub(crate) fn ambiguous_split<'input>(
     }
 }
 
-fn resolve_closing(
-    input: &mut InlineTokenIterator,
+fn resolve_closing<'input>(
+    input: &mut InlineTokenIterator<'_, 'input>,
     context: &mut InlineContext,
-    open_token: InlineToken<'_>,
+    open_token: InlineToken<'input>,
     inner: Vec<Inline>,
 ) -> Option<Inline> {
     let mut outer: Vec<Inline> = Vec::default();
@@ -224,9 +224,9 @@ fn resolve_closing(
     ))
 }
 
-fn to_inline(
-    open_token: InlineToken<'_>,
-    input: &mut InlineTokenIterator<'_>,
+fn to_inline<'input>(
+    open_token: InlineToken<'input>,
+    input: &mut InlineTokenIterator<'_, 'input>,
     inner: Vec<Inline>,
     attributes: Option<Vec<Inline>>,
     end: Position,

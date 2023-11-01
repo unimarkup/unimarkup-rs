@@ -1,356 +1,457 @@
-use std::collections::VecDeque;
-
-use itertools::PeekingNext;
-
-use crate::lexer::{new::SymbolIterator, token::Token};
-
-use super::{
-    extension::TokenIteratorExt,
-    implicit::{TokenIteratorImplicitExt, TokenIteratorImplicits},
-};
-
-#[derive(Debug, Clone)]
-pub struct CachedTokenIterator<'input> {
-    iter: TokenIteratorImplicits<'input>,
-    prev_token: Option<Token<'input>>,
-    prev_peeked_token: Option<Token<'input>>,
-    cache: VecDeque<CacheEntry<'input>>,
-}
-
-impl<'input> CachedTokenIterator<'input> {
-    pub(crate) fn prev_peeked(&self) -> Option<&Token<'input>> {
-        self.prev_peeked_token.as_ref()
-    }
-
-    /// Returns and pops the first cached token from the cache.
-    fn next_cached_token(&mut self) -> Option<Token<'input>> {
-        while !self.cache.is_empty() {
-            // Increase index of base iterator to "cover" same distance
-            self.iter.set_index(self.iter.index() + 1);
-
-            if let Some(CacheEntry::Token(token)) = self.cache.pop_front() {
-                return Some(token);
-            }
-        }
-
-        debug_assert!(false, "No token found in cache.");
-
-        None
-    }
-
-    fn cached_token_at(&mut self, peek_index: usize) -> Option<Token<'input>> {
-        let base_index = self.index();
-        if base_index > peek_index {
-            return None;
-        }
-
-        let rel_cache_index = peek_index - base_index;
-        if rel_cache_index >= self.cache.len() {
-            return None;
-        }
-
-        let contiguous_cache = &self.cache.make_contiguous()[rel_cache_index..];
-        let mut cached_token = None;
-        let mut index_skips = 0;
-
-        for cache_entry in contiguous_cache {
-            index_skips += 1;
-
-            if let CacheEntry::Token(token) = cache_entry {
-                cached_token = Some(*token);
-                break;
-            }
-        }
-
-        if cached_token.is_some() {
-            self.set_peek_index(peek_index + index_skips);
-        }
-
-        cached_token
-    }
-}
-
-impl<'input> From<SymbolIterator<'input>> for CachedTokenIterator<'input> {
-    fn from(value: SymbolIterator<'input>) -> Self {
-        CachedTokenIterator {
-            iter: value.into(),
-            prev_token: None,
-            prev_peeked_token: None,
-            cache: VecDeque::new(),
-        }
-    }
-}
-
-impl<'input> TokenIteratorExt<'input> for CachedTokenIterator<'input> {
-    fn prev_token(&self) -> Option<&Token<'input>> {
-        self.prev_token.as_ref()
-    }
-
-    fn max_len(&self) -> usize {
-        self.iter.max_len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.iter.is_empty()
-    }
-
-    fn index(&self) -> usize {
-        self.iter.index()
-    }
-
-    fn set_index(&mut self, index: usize) {
-        if self.index() <= index {
-            // pop tokens from cache up until new index position
-            self.cache
-                .drain(0..self.cache.len().min(index - self.index()));
-            self.set_index(index);
-        }
-    }
-
-    fn peek_index(&self) -> usize {
-        self.iter.peek_index()
-    }
-
-    fn set_peek_index(&mut self, index: usize) {
-        self.iter.set_peek_index(index);
-    }
-
-    fn reset_peek(&mut self) {
-        self.iter.reset_peek();
-    }
-
-    fn scope(&self) -> usize {
-        self.iter.scope()
-    }
-
-    fn set_scope(&mut self, scope: usize) {
-        self.iter.set_scope(scope);
-    }
-}
-
-impl<'input> TokenIteratorImplicitExt for CachedTokenIterator<'input> {
-    fn ignore_implicits(&mut self) {
-        if self.implicits_allowed() {
-            // invalidate cache, because cached implicits might become invalid
-            self.cache = VecDeque::default();
-        }
-
-        self.iter.ignore_implicits();
-    }
-
-    fn allow_implicits(&mut self) {
-        self.iter.allow_implicits();
-    }
-
-    fn implicits_allowed(&self) -> bool {
-        self.iter.implicits_allowed()
-    }
-}
-
-impl<'input> Iterator for CachedTokenIterator<'input> {
-    type Item = Token<'input>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let next = if self.cache.is_empty() {
-            self.iter.next()
-        } else {
-            self.next_cached_token()
-        };
-
-        if next.is_some() {
-            self.prev_token = next;
-        }
-
-        next
-    }
-}
-
-impl<'input> PeekingNext for CachedTokenIterator<'input> {
-    fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
-    where
-        Self: Sized,
-        F: FnOnce(&Self::Item) -> bool,
-    {
-        let mut start_peek_index = self.peek_index();
-
-        // Is peek index in cache range?
-        let peeked_token = if let Some(cached_token) = self.cached_token_at(start_peek_index) {
-            if accept(&cached_token) {
-                Some(cached_token)
-            } else {
-                None
-            }
-        } else {
-            // peek not in cache => get new token and cache it
-            let token = self.iter.peeking_next(accept)?;
-            let new_peek_index = self.iter.peek_index();
-
-            // +1 because peeking_next increases index at least by 1
-            while start_peek_index + 1 < new_peek_index {
-                self.cache.push_back(CacheEntry::Redirect);
-                start_peek_index += 1;
-            }
-
-            self.cache.push_back(CacheEntry::Token(token));
-            Some(token)
-        };
-
-        if peeked_token.is_some() {
-            self.prev_peeked_token = peeked_token;
-        }
-
-        peeked_token
-    }
-}
-
-#[derive(Debug, Clone)]
-enum CacheEntry<'input> {
-    Token(Token<'input>),
-    /// Indicates that the actual token is found at higher index in the cache.
-    Redirect,
-}
-
-#[cfg(test)]
-mod test {
-    use itertools::Itertools;
-
-    use crate::lexer::{
-        new::SymbolIterator,
-        token::{iterator::extension::TokenIteratorExt, TokenKind},
-    };
-
-    use super::CachedTokenIterator;
-
-    // #[test]
-    // fn peek_while_cached() {
-    //     let symbols = crate::lexer::scan_str("*+ # - ~");
-    //     let mut cached_iter = CachedTokenIterator::from(SymbolIterator::from(&*symbols));
-
-    //     let peeked_cnt = cached_iter
-    //         .peeking_take_while(|t| t.kind != TokenKind::Tilde(1))
-    //         .count();
-
-    //     assert_eq!(
-    //         cached_iter.cache.len(),
-    //         cached_iter.peek_index(),
-    //         "Iterator did not cache tokens."
-    //     );
-
-    //     let tokens = cached_iter
-    //         .take_while(|t| t.kind != TokenKind::Tilde(1))
-    //         .map(|t| t.kind)
-    //         .collect_vec();
-
-    //     assert_eq!(
-    //         tokens.len(),
-    //         peeked_cnt,
-    //         "Peek and take while did not return the same number of tokens."
-    //     );
-
-    //     assert_eq!(
-    //         tokens,
-    //         vec![
-    //             TokenKind::Star(1),
-    //             TokenKind::Plus(1),
-    //             TokenKind::Whitespace,
-    //             TokenKind::Hash(1),
-    //             TokenKind::Whitespace,
-    //             TokenKind::Minus(1),
-    //             TokenKind::Whitespace
-    //         ],
-    //         "Take while returned wrong tokens."
-    //     )
-    // }
-
-    // #[test]
-    // fn cached_tokens_spanning_multiple_symbols() {
-    //     let symbols = crate::lexer::scan_str("**bold** plain");
-    //     let mut cached_iter = CachedTokenIterator::from(SymbolIterator::from(&*symbols));
-
-    //     let peeked_cnt = cached_iter.peeking_take_while(|_| true).count();
-
-    //     assert_eq!(
-    //         cached_iter.cache.len(),
-    //         cached_iter.peek_index(),
-    //         "Iterator did not cache tokens + redirects."
-    //     );
-
-    //     let tokens = cached_iter
-    //         .take_while(|t| t.kind != TokenKind::Tilde(1))
-    //         .map(|t| t.kind)
-    //         .collect_vec();
-
-    //     assert_eq!(
-    //         tokens.len(),
-    //         peeked_cnt,
-    //         "Peek and take while did not return the same number of tokens."
-    //     );
-
-    //     assert_eq!(
-    //         tokens,
-    //         vec![
-    //             TokenKind::Star(2),
-    //             TokenKind::Plain,
-    //             TokenKind::Star(2),
-    //             TokenKind::Whitespace,
-    //             TokenKind::Plain,
-    //             TokenKind::Eoi,
-    //         ],
-    //         "Take while returned wrong tokens."
-    //     )
-    // }
-
-    // #[test]
-    // fn cached_tokens_peeked() {
-    //     let symbols = crate::lexer::scan_str("**bold** plain");
-    //     let mut cached_iter = CachedTokenIterator::from(SymbolIterator::from(&*symbols));
-
-    //     let first_peeked_tokens = cached_iter
-    //         .peeking_take_while(|_| true)
-    //         .map(|t| t.kind)
-    //         .collect_vec();
-    //     let peek_index = cached_iter.peek_index();
-
-    //     cached_iter.reset_peek();
-
-    //     assert_eq!(
-    //         cached_iter.cache.len(),
-    //         peek_index,
-    //         "Iterator removed cached tokens + redirects on peek reset."
-    //     );
-
-    //     let second_peeked_tokens = cached_iter
-    //         .peeking_take_while(|_| true)
-    //         .map(|t| t.kind)
-    //         .collect_vec();
-
-    //     assert_eq!(
-    //         first_peeked_tokens, second_peeked_tokens,
-    //         "Second peek while did not return same tokens as first."
-    //     )
-    // }
-
-    // #[test]
-    // fn take_next_from_cache() {
-    //     let symbols = crate::lexer::scan_str("**bold** plain");
-    //     let mut cached_iter = CachedTokenIterator::from(SymbolIterator::from(&*symbols));
-
-    //     let _peeked_tokens = cached_iter
-    //         .peeking_take_while(|_| true)
-    //         .map(|t| t.kind)
-    //         .collect_vec();
-
-    //     let cached_token = cached_iter.next().unwrap();
-
-    //     assert_eq!(
-    //         cached_token.kind,
-    //         TokenKind::Star(2),
-    //         "First cached token was incorrect."
-    //     );
-    //     assert_eq!(
-    //         cached_iter.cache.len(),
-    //         ,
-    //         "First cached token was incorrect."
-    //     );
-    // }
-}
+// //! Contains the [`TokenIteratorRoot`] that is the root iterator in any [`TokenIterator`](super::TokenIterator).
+
+// use std::collections::VecDeque;
+
+// use itertools::{Itertools, PeekingNext};
+
+// use crate::lexer::{
+//     new::SymbolIterator,
+//     token::{Token, TokenKind},
+//     SymbolKind,
+// };
+
+// use super::extension::TokenIteratorExt;
+
+// /// The [`TokenIteratorRoot`] is the root iterator in any [`TokenIterator`](super::TokenIterator).
+// /// It holds the actual [`Symbol`] slice.
+// #[derive(Debug, Clone)]
+// pub struct TokenIteratorSliced<'input> {
+//     /// The [`Symbol`] slice the iterator was created for.
+//     sym_iter: SymbolIterator<'input>,
+//     /// The highest scope any nested iterator based on this root iterator is in.
+//     scope: usize,
+//     prev_token: Option<Token<'input>>,
+//     /// The token that was returned from the last call of peeking_next()
+//     prev_peeked: Option<Token<'input>>,
+//     cache: VecDeque<Token<'input>>,
+//     index: usize,
+//     peek_index: usize,
+//     sym_is_empty: bool,
+// }
+
+// impl<'input> TokenIteratorExt<'input> for TokenIteratorSliced<'input> {
+//     /// Returns the symbol that is directly before the current index.
+//     /// If no previous symbol exists, `None`` is returned.
+//     fn prev_token(&self) -> Option<&Token<'input>> {
+//         self.prev_token.as_ref()
+//     }
+
+//     fn max_len(&self) -> usize {
+//         self.sym_iter.max_len() + self.cache.len()
+//     }
+
+//     /// Returns `true` if no more [`Symbol`]s are available.
+//     fn is_empty(&self) -> bool {
+//         self.sym_is_empty
+//     }
+
+//     /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
+//     fn index(&self) -> usize {
+//         self.index
+//     }
+
+//     /// Sets the current index of this iterator to the given index.
+//     fn set_index(&mut self, index: usize) {
+//         debug_assert!(self.index <= index, "Tried to move the iterator backward.");
+
+//         if self.index < index {
+//             let index_jump = index - self.index;
+//             let tokens_to_skip = index_jump.saturating_sub(self.cache.len());
+//             self.cache.drain(0..self.cache.len().min(index_jump));
+
+//             if tokens_to_skip > 0 {
+//                 // Make sure to forward index jump to underlying iterator
+//                 self.dropping(tokens_to_skip);
+//             }
+
+//             self.index = index;
+//             self.peek_index = index;
+//         }
+//     }
+
+//     /// Returns the index used to peek.
+//     fn peek_index(&self) -> usize {
+//         self.peek_index
+//     }
+
+//     /// Sets the peek index of this iterator to the given index.
+//     fn set_peek_index(&mut self, index: usize) {
+//         if self.index <= index && self.peek_index != index {
+//             self.peek_index = index;
+//         }
+
+//         debug_assert!(self.index <= index, "Tried to move iterator peek backward.");
+//     }
+
+//     fn reset_peek(&mut self) {
+//         self.set_peek_index(self.index());
+//     }
+
+//     fn scope(&self) -> usize {
+//         self.scope
+//     }
+
+//     fn set_scope(&mut self, scope: usize) {
+//         self.scope = scope;
+//     }
+// }
+
+// impl<'input> From<SymbolIterator<'input>> for TokenIteratorSliced<'input> {
+//     fn from(value: SymbolIterator<'input>) -> Self {
+//         TokenIteratorSliced {
+//             sym_iter: value,
+//             scope: 0,
+//             prev_token: None,
+//             prev_peeked: None,
+//             cache: VecDeque::with_capacity(32),
+//             index: 0,
+//             peek_index: 0,
+//             sym_is_empty: false,
+//         }
+//     }
+// }
+
+// impl<'input> Iterator for TokenIteratorSliced<'input> {
+//     type Item = Token<'input>;
+
+//     fn next(&mut self) -> Option<Self::Item> {
+//         if self.sym_is_empty && self.cache.is_empty() {
+//             return None;
+//         }
+
+//         let next = self.cache.pop_front().or_else(|| self.next_from_symbols());
+
+//         self.index += 1;
+//         self.peek_index = self.index;
+
+//         if next.is_some() {
+//             self.prev_token = next;
+//         } else {
+//             // Cache empty and no next token from symbol => symbol iterator must be empty
+//             self.sym_is_empty = true;
+//         }
+
+//         next
+//     }
+
+//     fn size_hint(&self) -> (usize, Option<usize>) {
+//         (0, Some(self.max_len()))
+//     }
+// }
+
+// impl<'input> PeekingNext for TokenIteratorSliced<'input> {
+//     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
+//     where
+//         Self: Sized,
+//         F: FnOnce(&Self::Item) -> bool,
+//     {
+//         if self.sym_is_empty || self.sym_iter.is_empty() {
+//             self.sym_is_empty = true;
+//             return None;
+//         }
+
+//         debug_assert!(
+//             self.index <= self.peek_index,
+//             "Peek index cannot be smaller than main index."
+//         );
+//         let rel_cache_index = self.peek_index - self.index;
+
+//         let token = self.cache.get(rel_cache_index).copied().or_else(|| {
+//             let new_token = self.next_from_symbols()?;
+//             self.cache.push_back(new_token);
+//             Some(new_token)
+//         })?;
+
+//         if accept(&token) {
+//             self.prev_peeked = Some(token);
+//             self.peek_index += 1;
+//             Some(token)
+//         } else {
+//             None
+//         }
+//     }
+// }
+
+// impl<'input> TokenIteratorSliced<'input> {
+//     /// Returns the next [`Symbol`] without changing the current index.
+//     pub fn peek(&mut self) -> Option<Token<'input>> {
+//         // Returns a copy of the token, because retrieving a reference, and inserting in cache would be in conflict.
+//         let rel_cache_index = self.peek_index - self.index;
+
+//         self.cache.get(rel_cache_index).copied().or_else(|| {
+//             let new_token = self.next_from_symbols()?;
+//             self.cache.push_back(new_token);
+//             Some(new_token)
+//         })
+//     }
+
+//     /// Returns the [`SymbolKind`] of the peeked [`Symbol`].
+//     pub fn peek_kind(&mut self) -> Option<TokenKind> {
+//         self.peek().map(|s| s.kind)
+//     }
+
+//     pub fn prev_peeked(&self) -> Option<&Token<'input>> {
+//         self.prev_peeked.as_ref()
+//     }
+
+//     fn make_blankline(&mut self, mut token: Token<'input>) -> Option<Token<'input>> {
+//         let _whitespaces = self
+//             .sym_iter
+//             .peeking_take_while(|s| s.kind == SymbolKind::Whitespace)
+//             .count();
+
+//         let symbol_opt = self.sym_iter.peek();
+
+//         if symbol_opt.map_or(false, |s| {
+//             s.kind == SymbolKind::Newline || s.kind == SymbolKind::Eoi
+//         }) {
+//             // Consume peeked symbols without iterating over them again
+//             self.sym_iter.set_index(self.sym_iter.peek_index());
+
+//             let symbol = symbol_opt.expect("Checked above to be some symbol.");
+//             token.offset.extend(symbol.offset);
+//             token.end = symbol.end;
+//             token.kind = TokenKind::Blankline;
+//             Some(token)
+//         } else {
+//             // No blankline => do not skip whitespaces
+//             None
+//         }
+//     }
+
+//     fn next_from_symbols(&mut self) -> Option<Token<'input>> {
+//         let first_symbol = self.sym_iter.next()?;
+//         let first_kind = first_symbol.kind;
+//         let mut token = Token::from(first_symbol);
+
+//         match first_kind {
+//             SymbolKind::Eoi => token.kind = TokenKind::Eoi,
+//             SymbolKind::Plain => {
+//                 // Consume contiguous plain symbols
+//                 if let Some(last_symbol) = self
+//                     .sym_iter
+//                     .peeking_take_while(|s| s.kind == first_kind)
+//                     .last()
+//                 {
+//                     // Consume peeked symbols without iterating over them again
+//                     self.sym_iter.set_index(self.sym_iter.peek_index());
+//                     token.offset.extend(last_symbol.offset);
+//                     token.end = last_symbol.end;
+//                 }
+//             }
+//             SymbolKind::Whitespace => {
+//                 // Multiple whitespace cannot be consumed, because most prefix matching is done per single space
+//                 // Kind is already set in From impl above.
+//             }
+//             SymbolKind::Backslash => {
+//                 let escaped_symbol_opt = self.sym_iter.next();
+
+//                 match escaped_symbol_opt {
+//                     Some(escaped_symbol) => {
+//                         match escaped_symbol.kind {
+//                             SymbolKind::Whitespace => {
+//                                 token.kind = TokenKind::EscapedWhitespace;
+//                             }
+//                             SymbolKind::Newline | SymbolKind::Eoi => {
+//                                 // Only escape non-blanklines, to get correct block-end matching
+//                                 match self.make_blankline(token) {
+//                                     Some(blankline) => {
+//                                         token = blankline;
+//                                     }
+//                                     None => {
+//                                         token.kind = TokenKind::EscapedNewline;
+//                                     }
+//                                 }
+//                             }
+//                             _ => {
+//                                 token.kind = TokenKind::EscapedPlain;
+//                             }
+//                         };
+//                         token.offset.extend(escaped_symbol.offset);
+//                         token.end = escaped_symbol.end;
+//                     }
+//                     // No Symbol after backslash => ignore backslash at end of input
+//                     None => {
+//                         #[cfg(debug_assertions)]
+//                         panic!("No symbol after backslash! Missing EOI symbol at end.");
+
+//                         #[cfg(not(debug_assertions))]
+//                         return None;
+//                     }
+//                 }
+//             }
+
+//             SymbolKind::Newline => match self.sym_iter.peek() {
+//                 // Skip over Newline before EOI
+//                 Some(symbol) if symbol.kind == SymbolKind::Eoi => {
+//                     self.sym_iter.set_index(self.sym_iter.peek_index() + 1); // consume Newline in sym iter
+//                     token.kind = TokenKind::Eoi;
+//                     token.end = symbol.end;
+//                 }
+//                 _ => match self.make_blankline(token) {
+//                     Some(blankline) => {
+//                         token = blankline;
+//                     }
+//                     None => {
+//                         token.kind = TokenKind::Newline;
+//                     }
+//                 },
+//             },
+
+//             SymbolKind::TerminalPunctuation => {
+//                 token.kind = TokenKind::TerminalPunctuation;
+//             }
+
+//             _ if first_kind.is_parenthesis() => {
+//                 // TokenKind already set in `From` impl
+//                 // Multiple parenthesis are not combined, because each parenthesis may create a new scope
+//             }
+
+//             // Might be inline formatting token
+//             _ if first_kind.is_keyword() => {
+//                 let mut contiguous_keyword_cnt = 0;
+//                 let contgiuous_keywords = self.sym_iter.peeking_take_while(|s| {
+//                     let accept = s.kind == first_kind;
+//                     if accept {
+//                         contiguous_keyword_cnt += 1;
+//                     }
+//                     accept
+//                 });
+
+//                 if let Some(last_symbol) = contgiuous_keywords.last() {
+//                     // Consume peeked symbols without iterating over them again
+//                     self.sym_iter.set_index(self.sym_iter.peek_index());
+//                     token.kind = TokenKind::from((first_kind, contiguous_keyword_cnt + 1)); // +1 because first symbol is same keyword
+//                     token.offset.extend(last_symbol.offset);
+//                     token.end = last_symbol.end;
+//                 }
+//             }
+//             _ => {
+//                 token.kind = TokenKind::Plain;
+//             }
+//         }
+
+//         Some(token)
+//     }
+// }
+
+// #[cfg(test)]
+// mod test {
+//     use itertools::Itertools;
+
+//     use crate::lexer::{
+//         new::SymbolIterator,
+//         token::{iterator::extension::TokenIteratorExt, TokenKind},
+//     };
+
+//     use super::TokenIteratorBase;
+
+//     #[test]
+//     fn peek_while_cached() {
+//         let symbols = crate::lexer::scan_str("*+ # - ~");
+//         let mut base_iter = TokenIteratorBase::from(SymbolIterator::from(&*symbols));
+
+//         let peeked_cnt = base_iter
+//             .peeking_take_while(|t| t.kind != TokenKind::Tilde(1))
+//             .count();
+
+//         assert_eq!(
+//             base_iter.cache.len(),
+//             peeked_cnt + 1, // +1 because peeked token for condition is also cached
+//             "Iterator did not cache tokens."
+//         );
+
+//         let tokens = base_iter
+//             .take_while(|t| t.kind != TokenKind::Tilde(1))
+//             .map(|t| t.kind)
+//             .collect_vec();
+
+//         assert_eq!(
+//             tokens.len(),
+//             peeked_cnt,
+//             "Peek and take while did not return the same number of tokens."
+//         );
+
+//         assert_eq!(
+//             tokens,
+//             vec![
+//                 TokenKind::Star(1),
+//                 TokenKind::Plus(1),
+//                 TokenKind::Whitespace,
+//                 TokenKind::Hash(1),
+//                 TokenKind::Whitespace,
+//                 TokenKind::Minus(1),
+//                 TokenKind::Whitespace
+//             ],
+//             "Take while returned wrong tokens."
+//         )
+//     }
+
+//     #[test]
+//     fn cached_tokens_spanning_multiple_symbols() {
+//         let symbols = crate::lexer::scan_str("**bold** plain");
+//         let mut cached_iter = TokenIteratorBase::from(SymbolIterator::from(&*symbols));
+
+//         let peeked_cnt = cached_iter.peeking_take_while(|_| true).count();
+
+//         assert_eq!(
+//             cached_iter.cache.len(),
+//             cached_iter.peek_index(),
+//             "Iterator did not cache tokens."
+//         );
+
+//         let tokens = cached_iter
+//             .take_while(|t| t.kind != TokenKind::Tilde(1))
+//             .map(|t| t.kind)
+//             .collect_vec();
+
+//         assert_eq!(
+//             tokens.len(),
+//             peeked_cnt,
+//             "Peek and take while did not return the same number of tokens."
+//         );
+
+//         assert_eq!(
+//             tokens,
+//             vec![
+//                 TokenKind::Star(2),
+//                 TokenKind::Plain,
+//                 TokenKind::Star(2),
+//                 TokenKind::Whitespace,
+//                 TokenKind::Plain,
+//                 TokenKind::Eoi,
+//             ],
+//             "Take while returned wrong tokens."
+//         )
+//     }
+
+//     #[test]
+//     fn cached_tokens_peeked() {
+//         let symbols = crate::lexer::scan_str("**bold** plain");
+//         let mut base_iter = TokenIteratorBase::from(SymbolIterator::from(&*symbols));
+
+//         let first_peeked_tokens = base_iter
+//             .peeking_take_while(|_| true)
+//             .map(|t| t.kind)
+//             .collect_vec();
+//         let peek_index = base_iter.peek_index();
+
+//         base_iter.reset_peek();
+
+//         assert_eq!(
+//             base_iter.cache.len(),
+//             peek_index,
+//             "Iterator removed cached tokens on peek reset."
+//         );
+
+//         let second_peeked_tokens = base_iter
+//             .peeking_take_while(|_| true)
+//             .map(|t| t.kind)
+//             .collect_vec();
+
+//         assert_eq!(
+//             first_peeked_tokens, second_peeked_tokens,
+//             "Second peek while did not return same tokens as first."
+//         )
+//     }
+// }

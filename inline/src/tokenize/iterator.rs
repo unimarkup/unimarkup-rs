@@ -18,17 +18,17 @@ use super::{kind::InlineTokenKind, InlineToken};
 /// In other words, wrapped iterators control which [`Token`]s will be passed to their nested iterator.
 /// Therefore, each nested iterator only sees those [`Token`]s that are relevant to its scope.
 #[derive(Clone)]
-pub(crate) struct InlineTokenIterator<'input> {
+pub(crate) struct InlineTokenIterator<'slice, 'input> {
     /// The [`TokenIterator`] of this iterator.
-    token_iter: TokenIterator<'input>,
+    token_iter: TokenIterator<'slice, 'input>,
     cached_token: Option<InlineToken<'input>>,
     updated_prev: Option<InlineToken<'input>>,
     peeked_cache: bool,
     open_formats: OpenFormatMap,
 }
 
-impl<'input> From<TokenIterator<'input>> for InlineTokenIterator<'input> {
-    fn from(value: TokenIterator<'input>) -> Self {
+impl<'slice, 'input> From<TokenIterator<'slice, 'input>> for InlineTokenIterator<'slice, 'input> {
+    fn from(value: TokenIterator<'slice, 'input>) -> Self {
         InlineTokenIterator {
             token_iter: value,
             cached_token: None,
@@ -39,13 +39,13 @@ impl<'input> From<TokenIterator<'input>> for InlineTokenIterator<'input> {
     }
 }
 
-impl<'input> From<InlineTokenIterator<'input>> for TokenIterator<'input> {
-    fn from(value: InlineTokenIterator<'input>) -> Self {
+impl<'slice, 'input> From<InlineTokenIterator<'slice, 'input>> for TokenIterator<'slice, 'input> {
+    fn from(value: InlineTokenIterator<'slice, 'input>) -> Self {
         value.token_iter
     }
 }
 
-impl<'input> InlineTokenIterator<'input> {
+impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
     pub fn max_len(&self) -> usize {
         self.token_iter.max_len()
     }
@@ -85,7 +85,7 @@ impl<'input> InlineTokenIterator<'input> {
     pub fn prev_token(&self) -> Option<InlineToken<'input>> {
         match self.updated_prev {
             Some(updated) => Some(updated),
-            None => self.token_iter.prev_token().map(InlineToken::from),
+            None => self.token_iter.prev().map(InlineToken::from),
         }
     }
 
@@ -139,7 +139,10 @@ impl<'input> InlineTokenIterator<'input> {
     /// # Arguments
     ///
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
-    pub fn nest_with_scope(&self, end_match: Option<IteratorEndFn>) -> TokenIterator<'input> {
+    pub fn nest_with_scope(
+        &self,
+        end_match: Option<IteratorEndFn>,
+    ) -> TokenIterator<'slice, 'input> {
         self.token_iter.nest_with_scope(None, end_match)
     }
 
@@ -170,7 +173,7 @@ impl<'input> InlineTokenIterator<'input> {
     }
 }
 
-impl<'input> Iterator for InlineTokenIterator<'input> {
+impl<'slice, 'input> Iterator for InlineTokenIterator<'slice, 'input> {
     type Item = InlineToken<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -187,7 +190,7 @@ impl<'input> Iterator for InlineTokenIterator<'input> {
             return None;
         }
 
-        Some(InlineToken::from(&self.token_iter.next()?))
+        Some(InlineToken::from(self.token_iter.next()?))
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -195,7 +198,7 @@ impl<'input> Iterator for InlineTokenIterator<'input> {
     }
 }
 
-impl<'input> PeekingNext for InlineTokenIterator<'input> {
+impl<'slice, 'input> PeekingNext for InlineTokenIterator<'slice, 'input> {
     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,
@@ -217,7 +220,7 @@ impl<'input> PeekingNext for InlineTokenIterator<'input> {
         }
 
         let peek_index = self.token_iter.peek_index();
-        let token = InlineToken::from(&self.token_iter.peeking_next(|_| true)?);
+        let token = InlineToken::from(self.token_iter.peeking_next(|_| true)?);
         if accept(&token) {
             Some(token)
         } else {

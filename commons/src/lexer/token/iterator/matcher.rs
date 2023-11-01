@@ -91,7 +91,7 @@ fn matches_kind(token: &Token<'_>, kind: &TokenKind) -> bool {
     }
 }
 
-impl<'input> EndMatcher for TokenIterator<'input> {
+impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
     fn is_blank_line(&mut self) -> bool {
         matches!(
             self.peek_kind(),
@@ -107,10 +107,6 @@ impl<'input> EndMatcher for TokenIterator<'input> {
 
             if !self.peek_matching {
                 self.set_index(self.match_index()); // To consume matched symbols for `next()`
-
-                // This could set the wrong symbol for prefix matches,
-                // but the previous symbol for prefix matches gets overwritten in `next()` anyways.
-                self.prev_token = self.prev_peeked().copied();
             }
         }
 
@@ -143,10 +139,6 @@ impl<'input> EndMatcher for TokenIterator<'input> {
 
             if !self.peek_matching {
                 self.set_index(self.match_index()); // To consume matched tokens for `next()`
-
-                // This sets the wrong token for prefix matches,
-                // but the previous token for prefix matches gets overwritten in `next()` anyways.
-                self.prev_token = self.prev_peeked().copied();
             }
         }
 
@@ -164,7 +156,7 @@ impl<'input> EndMatcher for TokenIterator<'input> {
     }
 }
 
-impl<'input> PrefixMatcher for TokenIterator<'input> {
+impl<'slice, 'input> PrefixMatcher for TokenIterator<'slice, 'input> {
     fn consumed_prefix(&mut self, sequence: &[TokenKind]) -> bool {
         debug_assert!(
             !sequence.contains(&TokenKind::Newline),
