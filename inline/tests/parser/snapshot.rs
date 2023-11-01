@@ -117,6 +117,7 @@ fn inner_snapshot(inline: &Inline) -> String {
         Inline::DirectUri(inline) => inline.uri().to_string(),
 
         Inline::NamedSubstitution(_) => todo!(),
+        _ => todo!(),
     }
 }
 
