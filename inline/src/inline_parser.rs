@@ -40,12 +40,20 @@ pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut InlineContext
             || kind.is_open_parenthesis()
         {
             if let Some(parser_fn) = get_scoped_parser(kind, context.flags.logic_only) {
-                if let Some(res_inline) = parser_fn(input, context) {
-                    // TODO: add dbg assertion to ensure parser fn either returned Some, or did **not** move main index
+                #[cfg(debug_assertions)]
+                let index = input.index();
 
+                if let Some(res_inline) = parser_fn(input, context) {
                     inlines.push(res_inline);
                     continue 'outer;
                 }
+
+                // Every inline parser must only use `peeking_next` until it is certain to result in an inline element.
+                debug_assert_eq!(
+                    input.index(),
+                    index,
+                    "Scoped parser moved iterator, but did not return an inline."
+                );
             }
         } else if !context.flags.logic_only && kind.is_format_keyword() {
             // An open format closes => unwrap to closing format element
@@ -55,10 +63,20 @@ pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut InlineContext
                 break 'outer;
             } else if !input.format_is_open(kind) {
                 if let Some(parser_fn) = get_format_parser(kind) {
+                    #[cfg(debug_assertions)]
+                    let index = input.index();
+
                     if let Some(res_inline) = parser_fn(input, context) {
                         inlines.push(res_inline);
                         continue 'outer;
                     }
+
+                    // Every inline parser must only use `peeking_next` until it is certain to result in an inline element.
+                    debug_assert_eq!(
+                        input.index(),
+                        index,
+                        "Format parser moved iterator, but did not return an inline."
+                    );
                 }
             }
         }
