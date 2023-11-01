@@ -21,6 +21,7 @@ pub struct TokenIteratorBase<'input> {
     /// The highest scope any nested iterator based on this root iterator is in.
     pub(super) scope: usize,
     prev_token: Option<Token<'input>>,
+    prev_peeked: Option<Token<'input>>,
     cache: VecDeque<Token<'input>>,
     index: usize,
     peek_index: usize,
@@ -95,6 +96,7 @@ impl<'input> From<SymbolIterator<'input>> for TokenIteratorBase<'input> {
             sym_iter: value,
             scope: 0,
             prev_token: None,
+            prev_peeked: None,
             cache: VecDeque::default(),
             index: 0,
             peek_index: 0,
@@ -149,6 +151,7 @@ impl<'input> PeekingNext for TokenIteratorBase<'input> {
         })?;
 
         if accept(&token) {
+            self.prev_peeked = Some(token);
             self.peek_index += 1;
             Some(token)
         } else {
@@ -172,6 +175,10 @@ impl<'input> TokenIteratorBase<'input> {
     /// Returns the [`SymbolKind`] of the peeked [`Symbol`].
     pub fn peek_kind(&mut self) -> Option<TokenKind> {
         self.peek().map(|s| s.kind)
+    }
+
+    pub fn prev_peeked(&self) -> Option<&Token<'input>> {
+        self.prev_peeked.as_ref()
     }
 
     fn make_blankline(&mut self, mut token: Token<'input>) -> Option<Token<'input>> {

@@ -2,7 +2,7 @@ use itertools::PeekingNext;
 
 use crate::lexer::token::Token;
 
-use super::{extension::TokenIteratorExt, implicit::TokenIteratorImplicitExt, TokenIterator};
+use super::{extension::TokenIteratorExt, TokenIterator};
 
 #[derive(Debug, Clone)]
 pub struct TokenIteratorScopedRoot<'input> {
@@ -14,20 +14,6 @@ pub struct TokenIteratorScopedRoot<'input> {
 impl<'input> TokenIteratorScopedRoot<'input> {
     pub(crate) fn prev_peeked(&self) -> Option<&Token<'input>> {
         self.token_iter.prev_peeked()
-    }
-}
-
-impl TokenIteratorImplicitExt for TokenIteratorScopedRoot<'_> {
-    fn ignore_implicits(&mut self) {
-        self.token_iter.ignore_implicits();
-    }
-
-    fn allow_implicits(&mut self) {
-        self.token_iter.allow_implicits();
-    }
-
-    fn implicits_allowed(&self) -> bool {
-        self.token_iter.implicits_allowed()
     }
 }
 

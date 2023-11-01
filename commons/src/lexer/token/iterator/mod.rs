@@ -6,9 +6,7 @@ use std::borrow::BorrowMut;
 use crate::lexer::{new::SymbolIterator, Symbol};
 
 use self::{
-    extension::TokenIteratorExt,
-    implicit::{TokenIteratorImplicitExt, TokenIteratorImplicits},
-    scope_root::TokenIteratorScopedRoot,
+    base::TokenIteratorBase, extension::TokenIteratorExt, scope_root::TokenIteratorScopedRoot,
 };
 
 use super::{Token, TokenKind};
@@ -104,7 +102,7 @@ pub enum TokenIteratorKind<'input> {
     Nested(Box<TokenIterator<'input>>),
     /// Iterator that resolves implicit substitutions.
     /// It is the first layer above the conversion from symbols to tokens.
-    Root(Box<TokenIteratorImplicits<'input>>),
+    Root(Box<TokenIteratorBase<'input>>),
     /// Iterator to define a new scope root.
     /// Meaning that the scope for parent iterators remains unchanged.
     ScopedRoot(Box<TokenIteratorScopedRoot<'input>>),
@@ -131,7 +129,7 @@ impl<'input> TokenIterator<'input> {
         end_match: Option<IteratorEndFn>,
     ) -> Self {
         TokenIterator {
-            parent: TokenIteratorKind::Root(Box::new(TokenIteratorImplicits::from(sym_iter))),
+            parent: TokenIteratorKind::Root(Box::new(TokenIteratorBase::from(sym_iter))),
             scope: 0,
             scoped: false,
             highest_peek_index: 0,
@@ -425,36 +423,10 @@ impl<'input> TokenIterator<'input> {
     }
 }
 
-impl TokenIteratorImplicitExt for TokenIterator<'_> {
-    fn ignore_implicits(&mut self) {
-        match self.parent.borrow_mut() {
-            TokenIteratorKind::Nested(parent) => parent.ignore_implicits(),
-            TokenIteratorKind::Root(root) => root.ignore_implicits(),
-            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.ignore_implicits(),
-        }
-    }
-
-    fn allow_implicits(&mut self) {
-        match self.parent.borrow_mut() {
-            TokenIteratorKind::Nested(parent) => parent.allow_implicits(),
-            TokenIteratorKind::Root(root) => root.allow_implicits(),
-            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.allow_implicits(),
-        }
-    }
-
-    fn implicits_allowed(&self) -> bool {
-        match &self.parent {
-            TokenIteratorKind::Nested(parent) => parent.implicits_allowed(),
-            TokenIteratorKind::Root(root) => root.implicits_allowed(),
-            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.implicits_allowed(),
-        }
-    }
-}
-
 impl<'input> From<SymbolIterator<'input>> for TokenIterator<'input> {
     fn from(value: SymbolIterator<'input>) -> Self {
         TokenIterator {
-            parent: TokenIteratorKind::Root(Box::new(TokenIteratorImplicits::from(value))),
+            parent: TokenIteratorKind::Root(Box::new(TokenIteratorBase::from(value))),
             start_index: 0,
             match_index: 0,
             scope: 0,

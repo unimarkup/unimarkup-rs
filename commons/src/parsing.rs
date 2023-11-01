@@ -14,4 +14,6 @@ pub struct InlineContextFlags {
     pub keep_whitespaces: bool,
     /// Flag to indicate that a newline must be explicitly kept, and not converted to one space.
     pub keep_newline: bool,
+    /// Flag to indicate if implicit substitutions are allowed in the current context
+    pub allow_implicits: bool,
 }

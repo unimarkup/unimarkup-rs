@@ -1,10 +1,7 @@
 use std::rc::Rc;
 
 use unimarkup_commons::{
-    lexer::{
-        token::iterator::{implicit::TokenIteratorImplicitExt, EndMatcher},
-        PeekingNext,
-    },
+    lexer::{token::iterator::EndMatcher, PeekingNext},
     parsing::InlineContext,
 };
 
@@ -37,19 +34,14 @@ macro_rules! scoped_parser {
                 .into();
 
             // ignore implicits, because only escapes and logic elements are allowed in following inline verbatim
-            let prev_implicits_allowed = scoped_iter.implicits_allowed();
-            scoped_iter.ignore_implicits();
-
             let prev_context_flags = context.flags;
+            context.flags.allow_implicits = false;
             context.flags.keep_whitespaces = true;
             context.flags.logic_only = true;
 
             let inner = inline_parser::parse(&mut scoped_iter, context);
 
             context.flags = prev_context_flags;
-            if prev_implicits_allowed {
-                scoped_iter.allow_implicits();
-            }
 
             let end_reached = scoped_iter.end_reached();
             scoped_iter.update(input);

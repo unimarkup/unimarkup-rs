@@ -1,5 +1,5 @@
 use unimarkup_commons::lexer::{
-    token::iterator::{implicit::TokenIteratorImplicitExt, IteratorEndFn, TokenIterator},
+    token::iterator::{IteratorEndFn, TokenIterator},
     PeekingNext,
 };
 
@@ -220,19 +220,5 @@ impl<'input> PeekingNext for InlineTokenIterator<'input> {
             self.token_iter.set_peek_index(peek_index);
             None
         }
-    }
-}
-
-impl TokenIteratorImplicitExt for InlineTokenIterator<'_> {
-    fn ignore_implicits(&mut self) {
-        self.token_iter.ignore_implicits();
-    }
-
-    fn allow_implicits(&mut self) {
-        self.token_iter.allow_implicits();
-    }
-
-    fn implicits_allowed(&self) -> bool {
-        self.token_iter.implicits_allowed()
     }
 }
