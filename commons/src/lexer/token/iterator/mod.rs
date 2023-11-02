@@ -98,10 +98,10 @@ where
     Nested(&'p1 mut TokenIterator<'slice, 'input, 'p1, 'p2>),
     /// Iterator that resolves implicit substitutions.
     /// It is the first layer above the conversion from symbols to tokens.
-    Root(Box<TokenSliceIterator<'slice, 'input>>),
+    Root(TokenSliceIterator<'slice, 'input>),
     /// Iterator to define a new scope root.
     /// Meaning that the scope for parent iterators remains unchanged.
-    ScopedRoot(Box<TokenIteratorScopedRoot<'slice, 'input, 'p1, 'p2>>),
+    ScopedRoot(TokenIteratorScopedRoot<'slice, 'input, 'p1, 'p2>),
 }
 
 impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
@@ -119,7 +119,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
         end_match: Option<IteratorEndFn>,
     ) -> Self {
         TokenIterator {
-            parent: TokenIteratorKind::Root(Box::new(TokenSliceIterator::from(tokens))),
+            parent: TokenIteratorKind::Root(TokenSliceIterator::from(tokens)),
             scope: 0,
             scoped: false,
             skip_end_until_idx: 0,
@@ -139,7 +139,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
         let start_index = self.index();
 
         TokenIterator {
-            parent: TokenIteratorKind::ScopedRoot(Box::new(TokenIteratorScopedRoot::from(self))),
+            parent: TokenIteratorKind::ScopedRoot(TokenIteratorScopedRoot::from(self)),
             scope: 0,
             scoped: false,
             skip_end_until_idx: 0,
@@ -478,7 +478,7 @@ where
 {
     fn from(value: T) -> Self {
         TokenIterator {
-            parent: TokenIteratorKind::Root(Box::new(TokenSliceIterator::from(value))),
+            parent: TokenIteratorKind::Root(TokenSliceIterator::from(value)),
             start_index: 0,
             match_index: 0,
             scope: 0,
