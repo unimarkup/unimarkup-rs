@@ -5,14 +5,14 @@ use crate::lexer::token::Token;
 use super::{extension::TokenIteratorExt, TokenIterator};
 
 #[derive(Debug)]
-pub struct TokenIteratorScopedRoot<'slice, 'input, 'p1, 'p2> {
+pub struct TokenIteratorScopedRoot<'slice, 'input> {
     /// The [`Symbol`] slice the iterator was created for.
-    pub(super) token_iter: &'p1 mut TokenIterator<'slice, 'input, 'p1, 'p2>,
+    pub(super) token_iter: Box<TokenIterator<'slice, 'input>>,
     scope: usize,
 }
 
 impl<'slice, 'input> TokenIteratorExt<'slice, 'input, &'slice Token<'input>>
-    for TokenIteratorScopedRoot<'slice, 'input, '_, '_>
+    for TokenIteratorScopedRoot<'slice, 'input>
 {
     /// Returns the symbol that is directly before the current index.
     /// If no previous symbol exists, `None`` is returned.
@@ -62,18 +62,18 @@ impl<'slice, 'input> TokenIteratorExt<'slice, 'input, &'slice Token<'input>>
     }
 }
 
-impl<'slice, 'input, 'p1, 'p2> From<&'p1 mut TokenIterator<'slice, 'input, 'p1, 'p2>>
-    for TokenIteratorScopedRoot<'slice, 'input, 'p1, 'p2>
+impl<'slice, 'input> From<TokenIterator<'slice, 'input>>
+    for TokenIteratorScopedRoot<'slice, 'input>
 {
-    fn from(value: &'p1 mut TokenIterator<'slice, 'input, 'p1, 'p2>) -> Self {
+    fn from(value: TokenIterator<'slice, 'input>) -> Self {
         TokenIteratorScopedRoot {
-            token_iter: value,
+            token_iter: Box::new(value),
             scope: 0,
         }
     }
 }
 
-impl<'slice, 'input> Iterator for TokenIteratorScopedRoot<'slice, 'input, '_, '_> {
+impl<'slice, 'input> Iterator for TokenIteratorScopedRoot<'slice, 'input> {
     type Item = &'slice Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -85,7 +85,7 @@ impl<'slice, 'input> Iterator for TokenIteratorScopedRoot<'slice, 'input, '_, '_
     }
 }
 
-impl<'slice, 'input> PeekingNext for TokenIteratorScopedRoot<'slice, 'input, '_, '_> {
+impl<'slice, 'input> PeekingNext for TokenIteratorScopedRoot<'slice, 'input> {
     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,

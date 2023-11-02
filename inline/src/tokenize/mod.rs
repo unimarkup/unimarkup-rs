@@ -22,11 +22,12 @@ pub(crate) struct InlineToken<'input> {
     pub(crate) end: Position,
 }
 
-impl<'t, 'i> From<&Token<'t>> for InlineToken<'i>
+impl<'slice, 't, 'i> From<&'slice Token<'t>> for InlineToken<'i>
 where
+    't: 'slice,
     't: 'i,
 {
-    fn from(value: &Token<'t>) -> Self {
+    fn from(value: &'slice Token<'t>) -> Self {
         InlineToken {
             input: value.input,
             offset: value.offset,

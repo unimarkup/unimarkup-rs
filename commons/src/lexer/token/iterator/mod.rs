@@ -31,9 +31,10 @@ pub use matcher::*;
 /// *Transparent* meaning that the nested iterator does not see [`Symbol`]s consumed by the wrapped (parent) iterator.
 /// In other words, wrapped iterators control which [`Symbol`]s will be passed to their nested iterator.
 /// Therefore, each nested iterator only sees those [`Symbol`]s that are relevant to its scope.
-pub struct TokenIterator<'slice, 'input, 'p1, 'p2> {
+#[derive(Default)]
+pub struct TokenIterator<'slice, 'input> {
     /// The [`TokenIteratorKind`] of this iterator.
-    parent: TokenIteratorKind<'slice, 'input, 'p1, 'p2>,
+    parent: TokenIteratorKind<'slice, 'input>,
     /// The index inside the [`Symbol`]s of the root iterator.
     start_index: usize,
     /// The match index of the iterator inside the [`Symbol`] slice.
@@ -70,7 +71,7 @@ pub struct TokenIterator<'slice, 'input, 'p1, 'p2> {
     prefix_start: Option<&'slice Token<'input>>,
 }
 
-impl std::fmt::Debug for TokenIterator<'_, '_, '_, '_> {
+impl std::fmt::Debug for TokenIterator<'_, '_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TokenIterator")
             .field("parent", &self.parent)
@@ -89,22 +90,26 @@ impl std::fmt::Debug for TokenIterator<'_, '_, '_, '_> {
 
 /// The [`TokenIteratorKind`] defines the kind of a [`SymbolIterator`].
 #[derive(Debug)]
-pub enum TokenIteratorKind<'slice, 'input, 'p1, 'p2>
-where
-    'p2: 'p1,
-{
+pub enum TokenIteratorKind<'slice, 'input> {
     /// Defines an iterator as being nested.
     /// The contained iterator is the parent iterator.
-    Nested(&'p1 mut TokenIterator<'slice, 'input, 'p1, 'p2>),
+    Nested(Box<TokenIterator<'slice, 'input>>),
     /// Iterator that resolves implicit substitutions.
     /// It is the first layer above the conversion from symbols to tokens.
     Root(TokenSliceIterator<'slice, 'input>),
     /// Iterator to define a new scope root.
     /// Meaning that the scope for parent iterators remains unchanged.
-    ScopedRoot(TokenIteratorScopedRoot<'slice, 'input, 'p1, 'p2>),
+    ScopedRoot(TokenIteratorScopedRoot<'slice, 'input>),
+    None,
 }
 
-impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
+impl<'slice, 'input> Default for TokenIteratorKind<'slice, 'input> {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+impl<'slice, 'input> TokenIterator<'slice, 'input> {
     /// Creates a new [`SymbolIterator`] from the given [`Symbol`] slice,
     /// and the given matching functions.
     ///
@@ -136,14 +141,16 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
     }
 
     pub fn new_scope_root(
-        &'p1 mut self,
+        &mut self,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
-    ) -> Self {
+    ) -> TokenIterator<'slice, 'input> {
         let start_index = self.index();
 
         TokenIterator {
-            parent: TokenIteratorKind::ScopedRoot(TokenIteratorScopedRoot::from(self)),
+            parent: TokenIteratorKind::ScopedRoot(TokenIteratorScopedRoot::from(std::mem::take(
+                self,
+            ))),
             scope: 0,
             scoped: false,
             skip_end_until_idx: 0,
@@ -168,6 +175,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
             TokenIteratorKind::Nested(parent) => parent.max_len(),
             TokenIteratorKind::Root(root) => root.max_len(),
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.max_len(),
+            TokenIteratorKind::None => 0,
         }
     }
 
@@ -187,6 +195,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
             TokenIteratorKind::Nested(parent) => parent.index(),
             TokenIteratorKind::Root(root) => root.index(),
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.index(),
+            TokenIteratorKind::None => 0,
         }
     }
 
@@ -202,6 +211,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
                 TokenIteratorKind::Nested(parent) => parent.set_index(index),
                 TokenIteratorKind::Root(root) => root.set_index(index),
                 TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.set_index(index),
+                TokenIteratorKind::None => {}
             }
         }
     }
@@ -212,6 +222,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
             TokenIteratorKind::Nested(parent) => parent.peek_index(),
             TokenIteratorKind::Root(root) => root.peek_index(),
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.peek_index(),
+            TokenIteratorKind::None => 0,
         }
     }
 
@@ -227,6 +238,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
                 TokenIteratorKind::Nested(parent) => parent.set_peek_index(index),
                 TokenIteratorKind::Root(root) => root.set_peek_index(index),
                 TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.set_peek_index(index),
+                TokenIteratorKind::None => {}
             }
         }
     }
@@ -268,6 +280,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
             TokenIteratorKind::Nested(parent) => parent.set_curr_scope(scope),
             TokenIteratorKind::Root(root) => root.set_scope(scope),
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.set_scope(scope),
+            TokenIteratorKind::None => {}
         }
     }
 
@@ -276,6 +289,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
             TokenIteratorKind::Nested(parent) => parent.root_scope(),
             TokenIteratorKind::Root(root) => root.scope(),
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.scope(),
+            TokenIteratorKind::None => 0,
         }
     }
 
@@ -290,6 +304,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
             TokenIteratorKind::Nested(parent) => parent.prev(),
             TokenIteratorKind::Root(root) => root.prev(),
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.prev(),
+            TokenIteratorKind::None => None,
         }
     }
 
@@ -308,10 +323,10 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
     /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
     pub fn nest(
-        &'p1 mut self,
+        &mut self,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
-    ) -> Self {
+    ) -> TokenIterator<'slice, 'input> {
         let start_index = self.index();
         let scope = self.scope;
         let iter_end = self.iter_end;
@@ -319,7 +334,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
         let prefix_start = self.prefix_start;
 
         TokenIterator {
-            parent: TokenIteratorKind::Nested(self),
+            parent: TokenIteratorKind::Nested(Box::new(std::mem::take(self))),
             start_index,
             match_index: 0,
             scope,
@@ -346,10 +361,10 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
     /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
     pub fn nest_with_scope(
-        &'p1 mut self,
+        &mut self,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
-    ) -> Self {
+    ) -> TokenIterator<'slice, 'input> {
         let scope = self.scope + 1;
         self.set_curr_scope(scope);
 
@@ -359,7 +374,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
         let prefix_start = self.prefix_start;
 
         TokenIterator {
-            parent: TokenIteratorKind::Nested(self),
+            parent: TokenIteratorKind::Nested(Box::new(std::mem::take(self))),
             start_index,
             match_index: 0,
             scope,
@@ -382,7 +397,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
         )
     }
 
-    pub fn unfold(&'p1 mut self) -> Option<&'p2 mut Self> {
+    pub fn checked_unfold(&mut self) -> Option<&mut Self> {
         match self.parent.borrow_mut() {
             TokenIteratorKind::Nested(parent) => {
                 if self.scope != parent.scope {
@@ -390,12 +405,15 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
                 }
                 Some(parent)
             }
-            TokenIteratorKind::Root(_) => None,
-            TokenIteratorKind::ScopedRoot(scoped_root) => Some(scoped_root.token_iter),
+            TokenIteratorKind::Root(_) | TokenIteratorKind::None => {
+                debug_assert!(false, "Tried to unfold an iterator that was not nested.");
+                None
+            }
+            TokenIteratorKind::ScopedRoot(scoped_root) => Some(scoped_root.token_iter.borrow_mut()),
         }
     }
 
-    pub fn unfold_nested(&'p1 mut self) -> &'p2 mut Self {
+    pub fn unfold(&mut self) -> &mut Self {
         match self.parent.borrow_mut() {
             TokenIteratorKind::Nested(parent) => {
                 if self.scope != parent.scope {
@@ -403,10 +421,28 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
                 }
                 parent
             }
-            TokenIteratorKind::Root(_) => {
+            TokenIteratorKind::Root(_) | TokenIteratorKind::None => {
                 panic!("Tried to unfold an iterator that was not nested.")
             }
-            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.token_iter,
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.token_iter.borrow_mut(),
+        }
+    }
+
+    pub fn unfold_owned(mut self) -> Self {
+        match self.parent.borrow_mut() {
+            TokenIteratorKind::Nested(ref mut parent) => {
+                if self.scope != parent.scope {
+                    parent.set_curr_scope(parent.scope);
+                }
+                std::mem::take(parent)
+            }
+            TokenIteratorKind::Root(_) | TokenIteratorKind::None => {
+                debug_assert!(false, "Tried to unfold an iterator that was not nested.");
+                Self::default()
+            }
+            TokenIteratorKind::ScopedRoot(scoped_root) => {
+                std::mem::take(&mut scoped_root.token_iter)
+            }
         }
     }
 
@@ -451,7 +487,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
     }
 }
 
-impl<'slice, 'input, T> From<T> for TokenIterator<'slice, 'input, '_, '_>
+impl<'slice, 'input, T> From<T> for TokenIterator<'slice, 'input>
 where
     T: Into<&'slice [Token<'input>]>,
 {
@@ -483,7 +519,7 @@ where
 //     }
 // }
 
-impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input, '_, '_> {
+impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input> {
     type Item = &'slice Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -513,6 +549,7 @@ impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input, '_, '_> {
             TokenIteratorKind::Nested(parent) => parent.next(),
             TokenIteratorKind::Root(root) => root.next(),
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.next(),
+            TokenIteratorKind::None => return None,
         };
 
         // Prefix matching after `next()` to skip prefix symbols, but pass (escaped) `Newline` to nested iterators.
@@ -551,7 +588,7 @@ impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input, '_, '_> {
     }
 }
 
-impl<'slice, 'input> PeekingNext for TokenIterator<'slice, 'input, '_, '_> {
+impl<'slice, 'input> PeekingNext for TokenIterator<'slice, 'input> {
     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,
@@ -588,6 +625,7 @@ impl<'slice, 'input> PeekingNext for TokenIterator<'slice, 'input, '_, '_> {
             TokenIteratorKind::Nested(parent) => parent.peeking_next(accept),
             TokenIteratorKind::Root(root) => root.peeking_next(accept),
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.peeking_next(accept),
+            TokenIteratorKind::None => return None,
         };
 
         // Prefix matching after `peeking_next()` to skip prefix symbols, but pass `Newline` to nested iterators.
@@ -896,7 +934,7 @@ mod test {
         );
 
         // inner.update(&mut iterator);
-        let iterator = inner.unfold_nested();
+        let iterator = inner.unfold();
 
         assert!(
             iterator.end_reached(),
@@ -978,7 +1016,7 @@ mod test {
         );
 
         // inner_iter.update(&mut iterator);
-        let scoped_iterator = inner_iter.unfold_nested();
+        let scoped_iterator = inner_iter.unfold();
 
         let mut end = scoped_iterator.take_to_end();
         taken_outer.append(&mut end);
@@ -1067,7 +1105,7 @@ mod test {
         );
 
         // inner.update(&mut iterator);
-        let mut iterator = inner.unfold_nested();
+        let mut iterator = inner.unfold();
 
         // Matches " -"
         let mut inner = iterator.nest(
@@ -1083,7 +1121,7 @@ mod test {
         );
 
         // inner.update(&mut iterator);
-        iterator = inner.unfold_nested();
+        iterator = inner.unfold();
         iterator.take_to_end();
 
         assert!(iterator.end_reached(), "Main iterator did not reach end.");

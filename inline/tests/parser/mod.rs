@@ -42,8 +42,10 @@ fn run_test_case(case: test_runner::test_file::TestCase) {
 
     let runner = SnapTestRunner::with_fn(&case.test.name, &tokens, |slice| {
         let inlines: Vec<_> = unimarkup_inline::inline_parser::parse_inlines(
-            slice.into(),
+            &mut slice.into(),
             &mut InlineContext::default(),
+            None,
+            None,
         );
         Snapshot::snap(&inlines[..])
     })

@@ -61,14 +61,12 @@ pub(crate) fn parse(
         open_token.kind
     );
 
-    let mut scoped_iter: InlineTokenIterator<'_, '_> = input
-        .nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-            matcher.consumed_matches(&[TokenKind::CloseBracket])
-        })))
-        .into();
+    let mut scoped_iter = input.nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+        matcher.consumed_matches(&[TokenKind::CloseBracket])
+    })));
 
     if let Some(box_variant) = parse_box_variant(&mut scoped_iter) {
-        scoped_iter.update(input);
+        *input = scoped_iter.unfold();
         return Some(box_variant);
     }
 
@@ -84,18 +82,17 @@ pub(crate) fn parse(
             .expect("Inlines in textbox => previous token must exist.")
     };
     let end_reached = scoped_iter.end_reached();
-    scoped_iter.update(input);
+    *input = scoped_iter.unfold();
 
     // check for `()`
     if end_reached && input.peek_kind() == Some(InlineTokenKind::OpenParenthesis) {
         input
             .next()
             .expect("Peeked before, so `next` must return Some."); // Consume open parenthesis
-        let mut link_iter: InlineTokenIterator<'_, '_> = input
-            .nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+        let mut link_iter: InlineTokenIterator =
+            input.nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                 matcher.consumed_matches(&[TokenKind::CloseParenthesis])
-            })))
-            .into();
+            })));
 
         let link = link_iter.by_ref().take_while(|t| !t.kind.is_space()).fold(
             String::default(),
@@ -121,7 +118,7 @@ pub(crate) fn parse(
             )
         };
 
-        link_iter.update(input);
+        *input = link_iter.unfold();
 
         return Some(
             Hyperlink::new(

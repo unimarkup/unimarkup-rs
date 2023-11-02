@@ -17,7 +17,6 @@ use super::{kind::InlineTokenKind, InlineToken};
 /// *Transparent* meaning that the nested iterator does not see [`Token`]s consumed by the wrapped (parent) iterator.
 /// In other words, wrapped iterators control which [`Token`]s will be passed to their nested iterator.
 /// Therefore, each nested iterator only sees those [`Token`]s that are relevant to its scope.
-#[derive(Clone)]
 pub(crate) struct InlineTokenIterator<'slice, 'input> {
     /// The [`TokenIterator`] of this iterator.
     token_iter: TokenIterator<'slice, 'input>,
@@ -134,20 +133,12 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
     /// # Arguments
     ///
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
-    pub fn nest_with_scope(
-        &self,
-        end_match: Option<IteratorEndFn>,
-    ) -> TokenIterator<'slice, 'input> {
-        self.token_iter.nest_with_scope(None, end_match)
+    pub fn nest_with_scope(&mut self, end_match: Option<IteratorEndFn>) -> Self {
+        InlineTokenIterator::from(self.token_iter.nest_with_scope(None, end_match))
     }
 
-    /// Updates the given parent iterator to take the progress of the nested iterator.
-    pub fn update(self, parent: &mut Self) {
-        // Open formats intentionally not updated, because formats are only valid per scope.
-        parent.updated_prev = self.updated_prev;
-        parent.cached_token = self.cached_token;
-        parent.peeked_cache = self.peeked_cache;
-        self.token_iter.update(&mut parent.token_iter);
+    pub fn unfold(self) -> Self {
+        InlineTokenIterator::from(self.token_iter.unfold_owned())
     }
 
     /// Collects and returns all tokens until one of the end functions signals the end,

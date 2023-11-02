@@ -26,12 +26,11 @@ macro_rules! scoped_parser {
 
             input.next(); // consume open token => now it will lead to Some(inline)
 
-            let mut scoped_iter: InlineTokenIterator<'_, '_> = input
-                .nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+            let mut scoped_iter: InlineTokenIterator<'_, '_> =
+                input.nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                     !matcher.prev_is_space()
                         && matcher.consumed_matches(&[InlineTokenKind::$kind.into()])
-                })))
-                .into();
+                })));
 
             // ignore implicits, because only escapes and logic elements are allowed in following inline verbatim
             let prev_context_flags = context.flags;
@@ -44,7 +43,7 @@ macro_rules! scoped_parser {
             context.flags = prev_context_flags;
 
             let end_reached = scoped_iter.end_reached();
-            scoped_iter.update(input);
+            *input = scoped_iter.unfold();
 
             let prev_token = input.prev_token().expect(
                 "Previous token must exist, because peek above would else have returned None.",

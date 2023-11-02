@@ -2,7 +2,7 @@ use itertools::PeekingNext;
 
 use crate::lexer::token::{Token, TokenKind};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct TokenSliceIterator<'slice, 'input> {
     /// The [`Symbol`] slice the iterator was created for.
     tokens: &'slice [Token<'input>],

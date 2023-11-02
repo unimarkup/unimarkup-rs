@@ -1,6 +1,9 @@
 //! Inline parser
 
-use unimarkup_commons::{lexer::token::iterator::TokenIterator, parsing::InlineContext};
+use unimarkup_commons::{
+    lexer::token::iterator::{IteratorEndFn, IteratorPrefixFn, TokenIterator},
+    parsing::InlineContext,
+};
 
 use crate::{
     element::Inline,
@@ -12,14 +15,16 @@ pub(crate) type InlineParserFn =
     for<'s, 'i> fn(&mut InlineTokenIterator<'s, 'i>, &mut InlineContext) -> Option<Inline>;
 
 /// Creates inline elements using the given token iterator.
-pub fn parse_inlines(
-    token_iter: TokenIterator<'_, '_>,
+pub fn parse_inlines<'slice, 'input>(
+    token_iter: &mut TokenIterator<'slice, 'input>,
     context: &mut InlineContext,
+    prefix_match: Option<IteratorPrefixFn>,
+    end_match: Option<IteratorEndFn>,
 ) -> Vec<Inline> {
-    parse(
-        &mut InlineTokenIterator::from(TokenIterator::new_scope_root(token_iter)),
-        context,
-    )
+    let scoped_iter: TokenIterator<'slice, 'input> =
+        token_iter.new_scope_root(prefix_match, end_match);
+
+    parse(&mut InlineTokenIterator::from(scoped_iter), context)
 }
 
 pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut InlineContext) -> Vec<Inline> {
