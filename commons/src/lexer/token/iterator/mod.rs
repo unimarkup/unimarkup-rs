@@ -31,10 +31,9 @@ pub use matcher::*;
 /// *Transparent* meaning that the nested iterator does not see [`Symbol`]s consumed by the wrapped (parent) iterator.
 /// In other words, wrapped iterators control which [`Symbol`]s will be passed to their nested iterator.
 /// Therefore, each nested iterator only sees those [`Symbol`]s that are relevant to its scope.
-#[derive(Clone)]
-pub struct TokenIterator<'slice, 'input> {
+pub struct TokenIterator<'slice, 'input, 'p1, 'p2> {
     /// The [`TokenIteratorKind`] of this iterator.
-    parent: TokenIteratorKind<'slice, 'input>,
+    parent: TokenIteratorKind<'slice, 'input, 'p1, 'p2>,
     /// The index inside the [`Symbol`]s of the root iterator.
     start_index: usize,
     /// The match index of the iterator inside the [`Symbol`] slice.
@@ -71,7 +70,7 @@ pub struct TokenIterator<'slice, 'input> {
     prefix_start: Option<Token<'input>>,
 }
 
-impl std::fmt::Debug for TokenIterator<'_, '_> {
+impl std::fmt::Debug for TokenIterator<'_, '_, '_, '_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TokenIterator")
             .field("parent", &self.parent)
@@ -89,20 +88,23 @@ impl std::fmt::Debug for TokenIterator<'_, '_> {
 }
 
 /// The [`TokenIteratorKind`] defines the kind of a [`SymbolIterator`].
-#[derive(Debug, Clone)]
-pub enum TokenIteratorKind<'slice, 'input> {
+#[derive(Debug)]
+pub enum TokenIteratorKind<'slice, 'input, 'p1, 'p2>
+where
+    'p2: 'p1,
+{
     /// Defines an iterator as being nested.
     /// The contained iterator is the parent iterator.
-    Nested(Box<TokenIterator<'slice, 'input>>),
+    Nested(&'p1 mut TokenIterator<'slice, 'input, 'p1, 'p2>),
     /// Iterator that resolves implicit substitutions.
     /// It is the first layer above the conversion from symbols to tokens.
     Root(Box<TokenSliceIterator<'slice, 'input>>),
     /// Iterator to define a new scope root.
     /// Meaning that the scope for parent iterators remains unchanged.
-    ScopedRoot(Box<TokenIteratorScopedRoot<'slice, 'input>>),
+    ScopedRoot(Box<TokenIteratorScopedRoot<'slice, 'input, 'p1, 'p2>>),
 }
 
-impl<'slice, 'input> TokenIterator<'slice, 'input> {
+impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
     /// Creates a new [`SymbolIterator`] from the given [`Symbol`] slice,
     /// and the given matching functions.
     ///
@@ -133,13 +135,11 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         }
     }
 
-    pub fn with_scoped_root(token_iter: TokenIterator<'slice, 'input>) -> Self {
-        let start_index = token_iter.start_index;
+    pub fn with_scoped_root(&'p1 mut self) -> Self {
+        let start_index = self.index();
 
         TokenIterator {
-            parent: TokenIteratorKind::ScopedRoot(Box::new(TokenIteratorScopedRoot::from(
-                token_iter,
-            ))),
+            parent: TokenIteratorKind::ScopedRoot(Box::new(TokenIteratorScopedRoot::from(self))),
             scope: 0,
             scoped: false,
             skip_end_until_idx: 0,
@@ -259,9 +259,9 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         self.peek().map(|s| s.kind)
     }
 
-    fn push_scope(&mut self, scope: usize) {
+    fn set_curr_scope(&mut self, scope: usize) {
         match self.parent.borrow_mut() {
-            TokenIteratorKind::Nested(parent) => parent.push_scope(scope),
+            TokenIteratorKind::Nested(parent) => parent.set_curr_scope(scope),
             TokenIteratorKind::Root(root) => root.set_scope(scope),
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.set_scope(scope),
         }
@@ -304,24 +304,34 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
     pub fn nest(
-        &self,
+        &'p1 mut self,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
-    ) -> TokenIterator<'slice, 'input> {
+    ) -> Self {
+        let start_index = self.index();
+        let match_index = self.match_index;
+        let scope = self.scope;
+        // let skip_end_until_idx = self.index();
+        let iter_end = self.iter_end;
+        let prefix_mismatch = self.prefix_mismatch;
+        let next_matching = self.next_matching;
+        let peek_matching = self.peek_matching;
+        let prefix_start = self.prefix_start;
+
         TokenIterator {
-            parent: TokenIteratorKind::Nested(Box::new(self.clone())),
-            start_index: self.index(),
-            match_index: self.match_index,
-            scope: self.scope,
+            parent: TokenIteratorKind::Nested(self),
+            start_index,
+            match_index,
+            scope,
             scoped: false,
-            skip_end_until_idx: self.index(),
+            skip_end_until_idx: 0,
             prefix_match,
             end_match,
-            iter_end: self.iter_end,
-            prefix_mismatch: self.prefix_mismatch,
-            next_matching: self.next_matching,
-            peek_matching: self.peek_matching,
-            prefix_start: self.prefix_start,
+            iter_end,
+            prefix_mismatch,
+            next_matching,
+            peek_matching,
+            prefix_start,
         }
     }
 
@@ -336,47 +346,90 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
     pub fn nest_with_scope(
-        &self,
+        &'p1 mut self,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
-    ) -> TokenIterator<'slice, 'input> {
+    ) -> Self {
         let scope = self.scope + 1;
-        let mut parent = self.clone();
-        parent.push_scope(scope);
+        self.set_curr_scope(scope);
+
+        let start_index = self.index();
+        let match_index = self.match_index;
+        // let skip_end_until_idx = self.index();
+        let iter_end = self.iter_end;
+        let prefix_mismatch = self.prefix_mismatch;
+        let next_matching = self.next_matching;
+        let peek_matching = self.peek_matching;
+        let prefix_start = self.prefix_start;
 
         TokenIterator {
-            parent: TokenIteratorKind::Nested(Box::new(parent)),
-            start_index: self.index(),
-            match_index: self.match_index,
+            parent: TokenIteratorKind::Nested(self),
+            start_index,
+            match_index,
             scope,
             scoped: true,
-            skip_end_until_idx: self.index(),
+            skip_end_until_idx: 0,
             prefix_match,
             end_match,
-            iter_end: self.iter_end,
-            prefix_mismatch: self.prefix_mismatch,
-            next_matching: self.next_matching,
-            peek_matching: self.peek_matching,
-            prefix_start: self.prefix_start,
+            iter_end,
+            prefix_mismatch,
+            next_matching,
+            peek_matching,
+            prefix_start,
         }
     }
 
-    /// Updates the given parent iterator to take the progress of the nested iterator.
-    ///
-    /// **Note:** Only updates the parent if `self` is nested.
-    pub fn update(self, parent: &mut Self) {
-        if let TokenIteratorKind::Nested(mut self_parent) = self.parent {
-            // Make sure it actually is the parent.
-            // It is not possible to check more precisely, because other indices are expected to be different due to `clone()`.
-            debug_assert_eq!(
-                self_parent.start_index, parent.start_index,
-                "Updated iterator is not the actual parent of this iterator."
-            );
-            self_parent.push_scope(self_parent.scope);
+    pub fn is_nested(&self) -> bool {
+        matches!(
+            self.parent,
+            TokenIteratorKind::Nested(_) | TokenIteratorKind::ScopedRoot(_)
+        )
+    }
 
-            *parent = *self_parent;
+    pub fn unfold(&'p1 mut self) -> Option<&'p2 mut Self> {
+        match self.parent.borrow_mut() {
+            TokenIteratorKind::Nested(parent) => {
+                if self.scope != parent.scope {
+                    parent.set_curr_scope(parent.scope);
+                }
+                Some(parent)
+            }
+            TokenIteratorKind::Root(_) => None,
+            TokenIteratorKind::ScopedRoot(scoped_root) => Some(scoped_root.token_iter),
         }
     }
+
+    pub fn unfold_nested(&'p1 mut self) -> &'p2 mut Self {
+        match self.parent.borrow_mut() {
+            TokenIteratorKind::Nested(parent) => {
+                if self.scope != parent.scope {
+                    parent.set_curr_scope(parent.scope);
+                }
+                parent
+            }
+            TokenIteratorKind::Root(_) => {
+                panic!("Tried to unfold an iterator that was not nested.")
+            }
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.token_iter,
+        }
+    }
+
+    // /// Updates the given parent iterator to take the progress of the nested iterator.
+    // ///
+    // /// **Note:** Only updates the parent if `self` is nested.
+    // pub fn update(self, parent: &mut Self) {
+    //     if let TokenIteratorKind::Nested(mut self_parent) = self.parent {
+    //         // Make sure it actually is the parent.
+    //         // It is not possible to check more precisely, because other indices are expected to be different due to `clone()`.
+    //         debug_assert_eq!(
+    //             self_parent.start_index, parent.start_index,
+    //             "Updated iterator is not the actual parent of this iterator."
+    //         );
+    //         self_parent.push_scope(self_parent.scope);
+
+    //         *parent = *self_parent;
+    //     }
+    // }
 
     /// Tries to skip symbols until one of the end functions signals the end.
     ///
@@ -419,7 +472,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     }
 }
 
-impl<'slice, 'input, T> From<T> for TokenIterator<'slice, 'input>
+impl<'slice, 'input, T> From<T> for TokenIterator<'slice, 'input, '_, '_>
 where
     T: Into<&'slice [Token<'input>]>,
 {
@@ -451,7 +504,7 @@ where
 //     }
 // }
 
-impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input> {
+impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input, '_, '_> {
     type Item = &'slice Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -519,7 +572,7 @@ impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input> {
     }
 }
 
-impl<'slice, 'input> PeekingNext for TokenIterator<'slice, 'input> {
+impl<'slice, 'input> PeekingNext for TokenIterator<'slice, 'input, '_, '_> {
     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,
@@ -675,7 +728,8 @@ mod test {
     fn reach_end() {
         let tokens = lex_str("text*");
 
-        let mut iterator = TokenIterator::from(&*tokens).nest(
+        let mut base_iter = TokenIterator::from(&*tokens);
+        let mut iterator = base_iter.nest(
             None,
             Some(Rc::new(|matcher| matcher.matches(&[TokenKind::Star(1)]))),
         );
@@ -698,7 +752,8 @@ mod test {
     fn reach_consumed_end() {
         let tokens = lex_str("text*");
 
-        let mut iterator = TokenIterator::from(&*tokens).nest(
+        let mut base_iter = TokenIterator::from(&*tokens);
+        let mut iterator = base_iter.nest(
             None,
             Some(Rc::new(|matcher| {
                 matcher.consumed_matches(&[TokenKind::Star(1)])
@@ -732,7 +787,7 @@ mod test {
     fn with_nested_and_parent_prefix() {
         let tokens = lex_str("a\n* *b");
 
-        let iterator = TokenIterator::with(
+        let mut iterator = TokenIterator::with(
             &*tokens,
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace])
@@ -769,7 +824,7 @@ mod test {
     fn nested_peek() {
         let tokens = lex_str("a\n* *b");
 
-        let iterator = TokenIterator::with(
+        let mut iterator = TokenIterator::with(
             &*tokens,
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace])
@@ -861,7 +916,8 @@ mod test {
             "Successive `next()` over outer end returned token."
         );
 
-        inner.update(&mut iterator);
+        // inner.update(&mut iterator);
+        let iterator = inner.unfold_nested();
 
         assert!(
             iterator.end_reached(),
@@ -877,7 +933,7 @@ mod test {
     fn peek_and_next_return_same_tokens() {
         let tokens = lex_str("a\n* *b+-");
 
-        let iterator = TokenIterator::with(
+        let mut iterator = TokenIterator::with(
             &*tokens,
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(&[TokenKind::Star(1), TokenKind::Whitespace])
@@ -919,20 +975,21 @@ mod test {
 
         // Nest like this, because TokenIterator does not provide a way to initialize with scoped = true
         // which is intentional, because the lowest iterator layer should not be scoped
-        iterator = iterator.nest_with_scope(
+        let mut scoped_iterator = iterator.nest_with_scope(
             None,
             Some(Rc::new(|matcher| {
                 matcher.consumed_matches(&[TokenKind::CloseBracket])
             })),
         );
 
-        let mut taken_outer = iterator
+        let mut taken_outer = scoped_iterator
             .by_ref()
             // Note: This will skip the open bracket for both iterators, but this is ok for this test
             .take_while(|s| s.kind != TokenKind::OpenBracket)
+            .copied()
             .collect::<Vec<_>>();
 
-        let mut inner_iter = iterator.nest_with_scope(
+        let mut inner_iter = scoped_iterator.nest_with_scope(
             None,
             Some(Rc::new(|matcher| {
                 matcher.consumed_matches(&[TokenKind::CloseBracket])
@@ -945,12 +1002,16 @@ mod test {
             "Inner iterator end was not reached."
         );
 
-        inner_iter.update(&mut iterator);
+        // inner_iter.update(&mut iterator);
+        let scoped_iterator = inner_iter.unfold_nested();
 
-        let end = iterator.take_to_end();
-        taken_outer.extend(end.iter());
+        let mut end = scoped_iterator.take_to_end();
+        taken_outer.append(&mut end);
 
-        assert!(iterator.end_reached(), "Iterator end was not reached.");
+        assert!(
+            scoped_iterator.end_reached(),
+            "Iterator end was not reached."
+        );
         assert_eq!(
             taken_inner
                 .iter()
@@ -1030,7 +1091,8 @@ mod test {
             "First inner iterator did not reach end."
         );
 
-        inner.update(&mut iterator);
+        // inner.update(&mut iterator);
+        let mut iterator = inner.unfold_nested();
 
         // Matches " -"
         let mut inner = iterator.nest(
@@ -1045,8 +1107,8 @@ mod test {
             "Second inner iterator did not reach end."
         );
 
-        inner.update(&mut iterator);
-
+        // inner.update(&mut iterator);
+        iterator = inner.unfold_nested();
         iterator.take_to_end();
 
         assert!(iterator.end_reached(), "Main iterator did not reach end.");

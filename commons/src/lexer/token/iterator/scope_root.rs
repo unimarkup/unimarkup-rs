@@ -4,10 +4,10 @@ use crate::lexer::token::Token;
 
 use super::{extension::TokenIteratorExt, TokenIterator};
 
-#[derive(Debug, Clone)]
-pub struct TokenIteratorScopedRoot<'slice, 'input> {
+#[derive(Debug)]
+pub struct TokenIteratorScopedRoot<'slice, 'input, 'p1, 'p2> {
     /// The [`Symbol`] slice the iterator was created for.
-    token_iter: TokenIterator<'slice, 'input>,
+    pub(super) token_iter: &'p1 mut TokenIterator<'slice, 'input, 'p1, 'p2>,
     scope: usize,
 }
 
@@ -18,7 +18,7 @@ pub struct TokenIteratorScopedRoot<'slice, 'input> {
 // }
 
 impl<'slice, 'input> TokenIteratorExt<'input, &'slice Token<'input>>
-    for TokenIteratorScopedRoot<'slice, 'input>
+    for TokenIteratorScopedRoot<'slice, 'input, '_, '_>
 {
     /// Returns the symbol that is directly before the current index.
     /// If no previous symbol exists, `None`` is returned.
@@ -68,10 +68,10 @@ impl<'slice, 'input> TokenIteratorExt<'input, &'slice Token<'input>>
     }
 }
 
-impl<'slice, 'input> From<TokenIterator<'slice, 'input>>
-    for TokenIteratorScopedRoot<'slice, 'input>
+impl<'slice, 'input, 'p1, 'p2> From<&'p1 mut TokenIterator<'slice, 'input, 'p1, 'p2>>
+    for TokenIteratorScopedRoot<'slice, 'input, 'p1, 'p2>
 {
-    fn from(value: TokenIterator<'slice, 'input>) -> Self {
+    fn from(value: &'p1 mut TokenIterator<'slice, 'input, 'p1, 'p2>) -> Self {
         TokenIteratorScopedRoot {
             token_iter: value,
             scope: 0,
@@ -79,7 +79,7 @@ impl<'slice, 'input> From<TokenIterator<'slice, 'input>>
     }
 }
 
-impl<'slice, 'input> Iterator for TokenIteratorScopedRoot<'slice, 'input> {
+impl<'slice, 'input> Iterator for TokenIteratorScopedRoot<'slice, 'input, '_, '_> {
     type Item = &'slice Token<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -91,7 +91,7 @@ impl<'slice, 'input> Iterator for TokenIteratorScopedRoot<'slice, 'input> {
     }
 }
 
-impl<'slice, 'input> PeekingNext for TokenIteratorScopedRoot<'slice, 'input> {
+impl<'slice, 'input> PeekingNext for TokenIteratorScopedRoot<'slice, 'input, '_, '_> {
     fn peeking_next<F>(&mut self, accept: F) -> Option<Self::Item>
     where
         Self: Sized,

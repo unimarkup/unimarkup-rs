@@ -91,7 +91,7 @@ fn matches_kind(token: &Token<'_>, kind: &TokenKind) -> bool {
     }
 }
 
-impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
+impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input, '_, '_> {
     fn is_blank_line(&mut self) -> bool {
         matches!(
             self.peek_kind(),
@@ -156,7 +156,7 @@ impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
     }
 }
 
-impl<'slice, 'input> PrefixMatcher for TokenIterator<'slice, 'input> {
+impl<'slice, 'input> PrefixMatcher for TokenIterator<'slice, 'input, '_, '_> {
     fn consumed_prefix(&mut self, sequence: &[TokenKind]) -> bool {
         debug_assert!(
             !sequence.contains(&TokenKind::Newline),
