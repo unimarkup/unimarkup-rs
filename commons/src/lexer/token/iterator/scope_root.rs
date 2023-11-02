@@ -11,18 +11,12 @@ pub struct TokenIteratorScopedRoot<'slice, 'input, 'p1, 'p2> {
     scope: usize,
 }
 
-// impl<'slice, 'input> TokenIteratorScopedRoot<'slice, 'input> {
-//     pub(super) fn prev_peeked(&self) -> Option<&Token<'input>> {
-//         self.token_iter.prev_peeked()
-//     }
-// }
-
-impl<'slice, 'input> TokenIteratorExt<'input, &'slice Token<'input>>
+impl<'slice, 'input> TokenIteratorExt<'slice, 'input, &'slice Token<'input>>
     for TokenIteratorScopedRoot<'slice, 'input, '_, '_>
 {
     /// Returns the symbol that is directly before the current index.
     /// If no previous symbol exists, `None`` is returned.
-    fn prev(&self) -> Option<&Token<'input>> {
+    fn prev(&self) -> Option<&'slice Token<'input>> {
         self.token_iter.prev()
     }
 

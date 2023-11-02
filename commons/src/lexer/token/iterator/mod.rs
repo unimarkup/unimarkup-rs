@@ -67,7 +67,7 @@ pub struct TokenIterator<'slice, 'input, 'p1, 'p2> {
     ///
     /// Used to prevent consumed matching while peeking.
     peek_matching: bool,
-    prefix_start: Option<Token<'input>>,
+    prefix_start: Option<&'slice Token<'input>>,
 }
 
 impl std::fmt::Debug for TokenIterator<'_, '_, '_, '_> {
@@ -135,7 +135,11 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
         }
     }
 
-    pub fn with_scoped_root(&'p1 mut self) -> Self {
+    pub fn new_scope_root(
+        &'p1 mut self,
+        prefix_match: Option<IteratorPrefixFn>,
+        end_match: Option<IteratorEndFn>,
+    ) -> Self {
         let start_index = self.index();
 
         TokenIterator {
@@ -145,8 +149,8 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
             skip_end_until_idx: 0,
             start_index,
             match_index: 0,
-            prefix_match: None,
-            end_match: None,
+            prefix_match,
+            end_match,
             iter_end: false,
             prefix_mismatch: false,
             next_matching: false,
@@ -245,7 +249,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
     }
 
     /// Returns the next [`Symbol`] without changing the current index.    
-    pub fn peek(&mut self) -> Option<&Token<'input>> {
+    pub fn peek(&mut self) -> Option<&'slice Token<'input>> {
         let peek_index = self.peek_index();
 
         let token = self.peeking_next(|_| true);
@@ -276,10 +280,10 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
     }
 
     /// Returns the previous symbol this iterator returned via `next()` or `consumed_matches()`.
-    pub fn prev(&self) -> Option<&Token<'input>> {
+    pub fn prev(&self) -> Option<&'slice Token<'input>> {
         // Previous token was a newline that caused prefix match to consume tokens.
         if self.prefix_start.is_some() {
-            return self.prefix_start.as_ref();
+            return self.prefix_start;
         }
 
         match &self.parent {
@@ -309,19 +313,15 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
         end_match: Option<IteratorEndFn>,
     ) -> Self {
         let start_index = self.index();
-        let match_index = self.match_index;
         let scope = self.scope;
-        // let skip_end_until_idx = self.index();
         let iter_end = self.iter_end;
         let prefix_mismatch = self.prefix_mismatch;
-        let next_matching = self.next_matching;
-        let peek_matching = self.peek_matching;
         let prefix_start = self.prefix_start;
 
         TokenIterator {
             parent: TokenIteratorKind::Nested(self),
             start_index,
-            match_index,
+            match_index: 0,
             scope,
             scoped: false,
             skip_end_until_idx: 0,
@@ -329,8 +329,8 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
             end_match,
             iter_end,
             prefix_mismatch,
-            next_matching,
-            peek_matching,
+            next_matching: false,
+            peek_matching: false,
             prefix_start,
         }
     }
@@ -354,18 +354,14 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
         self.set_curr_scope(scope);
 
         let start_index = self.index();
-        let match_index = self.match_index;
-        // let skip_end_until_idx = self.index();
         let iter_end = self.iter_end;
         let prefix_mismatch = self.prefix_mismatch;
-        let next_matching = self.next_matching;
-        let peek_matching = self.peek_matching;
         let prefix_start = self.prefix_start;
 
         TokenIterator {
             parent: TokenIteratorKind::Nested(self),
             start_index,
-            match_index,
+            match_index: 0,
             scope,
             scoped: true,
             skip_end_until_idx: 0,
@@ -373,8 +369,8 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
             end_match,
             iter_end,
             prefix_mismatch,
-            next_matching,
-            peek_matching,
+            next_matching: false,
+            peek_matching: false,
             prefix_start,
         }
     }
@@ -414,23 +410,6 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
         }
     }
 
-    // /// Updates the given parent iterator to take the progress of the nested iterator.
-    // ///
-    // /// **Note:** Only updates the parent if `self` is nested.
-    // pub fn update(self, parent: &mut Self) {
-    //     if let TokenIteratorKind::Nested(mut self_parent) = self.parent {
-    //         // Make sure it actually is the parent.
-    //         // It is not possible to check more precisely, because other indices are expected to be different due to `clone()`.
-    //         debug_assert_eq!(
-    //             self_parent.start_index, parent.start_index,
-    //             "Updated iterator is not the actual parent of this iterator."
-    //         );
-    //         self_parent.push_scope(self_parent.scope);
-
-    //         *parent = *self_parent;
-    //     }
-    // }
-
     /// Tries to skip symbols until one of the end functions signals the end.
     ///
     /// **Note:** This function might not reach the iterator end.
@@ -443,7 +422,7 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
         self
     }
 
-    pub fn peek_nth(&mut self, n: usize) -> Option<&Token<'input>> {
+    pub fn peek_nth(&mut self, n: usize) -> Option<&'slice Token<'input>> {
         let mut token = self.peeking_next(|_| true);
 
         for _ in 0..n {
@@ -456,11 +435,11 @@ impl<'slice, 'input, 'p1, 'p2> TokenIterator<'slice, 'input, 'p1, 'p2> {
 
     /// Collects and returns all symbols until one of the end functions signals the end,
     /// or until no line prefix is matched after a new line.
-    pub fn take_to_end(&mut self) -> Vec<Token<'input>> {
+    pub fn take_to_end(&mut self) -> Vec<&'slice Token<'input>> {
         let mut tokens = Vec::new();
 
         for token in self.by_ref() {
-            tokens.push(*token);
+            tokens.push(token);
         }
 
         tokens
@@ -545,7 +524,7 @@ impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input, '_, '_> {
             // Needed for `prev()`, because prefix match implicitly consumes tokens,
             // but these tokens should not be visible to child iterators.
             // Every newline is stored, because parent iterators may have prefix matches.
-            self.prefix_start = curr_token_opt.copied();
+            self.prefix_start = curr_token_opt;
 
             if in_scope && self.prefix_match.is_some() {
                 let prefix_match = self
@@ -952,10 +931,7 @@ mod test {
             })),
         );
 
-        let peeked_tokens = inner
-            .peeking_take_while(|_| true)
-            .copied()
-            .collect::<Vec<_>>();
+        let peeked_tokens = inner.peeking_take_while(|_| true).collect::<Vec<_>>();
         inner.reset_peek();
         let next_tokens = inner.take_to_end();
 
@@ -986,7 +962,6 @@ mod test {
             .by_ref()
             // Note: This will skip the open bracket for both iterators, but this is ok for this test
             .take_while(|s| s.kind != TokenKind::OpenBracket)
-            .copied()
             .collect::<Vec<_>>();
 
         let mut inner_iter = scoped_iterator.nest_with_scope(

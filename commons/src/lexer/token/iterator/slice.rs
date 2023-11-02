@@ -121,7 +121,7 @@ impl<'slice, 'input> TokenSliceIterator<'slice, 'input> {
         self.scope = scope;
     }
 
-    pub fn prev(&self) -> Option<&Token<'input>> {
+    pub fn prev(&self) -> Option<&'slice Token<'input>> {
         if self.index > 0 {
             self.tokens.get(self.index - 1)
         } else {
@@ -129,7 +129,7 @@ impl<'slice, 'input> TokenSliceIterator<'slice, 'input> {
         }
     }
 
-    pub fn prev_peeked(&self) -> Option<&Token<'input>> {
+    pub fn prev_peeked(&self) -> Option<&'slice Token<'input>> {
         if self.peek_index > 0 {
             self.tokens.get(self.peek_index - 1)
         } else {

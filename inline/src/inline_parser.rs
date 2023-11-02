@@ -17,7 +17,7 @@ pub fn parse_inlines(
     context: &mut InlineContext,
 ) -> Vec<Inline> {
     parse(
-        &mut InlineTokenIterator::from(TokenIterator::with_scoped_root(token_iter)),
+        &mut InlineTokenIterator::from(TokenIterator::new_scope_root(token_iter)),
         context,
     )
 }
