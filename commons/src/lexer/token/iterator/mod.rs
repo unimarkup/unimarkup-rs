@@ -133,30 +133,6 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         }
     }
 
-    pub fn new_scope_root(
-        &self,
-        prefix_match: Option<IteratorPrefixFn>,
-        end_match: Option<IteratorEndFn>,
-    ) -> TokenIterator<'slice, 'input> {
-        let start_index = self.index();
-
-        TokenIterator {
-            parent: TokenIteratorKind::ScopedRoot(TokenIteratorScopedRoot::from(self.clone())),
-            scope: 0,
-            scoped: false,
-            skip_end_until_idx: 0,
-            start_index,
-            match_index: 0,
-            prefix_match,
-            end_match,
-            iter_end: false,
-            prefix_mismatch: false,
-            next_matching: false,
-            peek_matching: false,
-            prefix_start: None,
-        }
-    }
-
     /// Returns the maximum length of the remaining [`Symbol`]s this iterator might return.
     ///
     /// **Note:** This length does not consider parent iterators, or matching functions.
@@ -374,6 +350,30 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         }
     }
 
+    pub fn new_scope_root(
+        &self,
+        prefix_match: Option<IteratorPrefixFn>,
+        end_match: Option<IteratorEndFn>,
+    ) -> TokenIterator<'slice, 'input> {
+        let start_index = self.index();
+
+        TokenIterator {
+            parent: TokenIteratorKind::ScopedRoot(TokenIteratorScopedRoot::from(self.clone())),
+            scope: 0,
+            scoped: false,
+            skip_end_until_idx: 0,
+            start_index,
+            match_index: 0,
+            prefix_match,
+            end_match,
+            iter_end: false,
+            prefix_mismatch: false,
+            next_matching: false,
+            peek_matching: false,
+            prefix_start: None,
+        }
+    }
+
     pub fn is_nested(&self) -> bool {
         matches!(
             self.parent,
@@ -381,17 +381,17 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         )
     }
 
-    pub fn unfold(self, parent: &mut Self) {
-        if let TokenIteratorKind::Nested(mut self_parent) = self.parent {
+    pub fn progress(&mut self, child: Self) {
+        if let TokenIteratorKind::Nested(mut child_parent) = child.parent {
             // Make sure it actually is the parent.
             // It is not possible to check more precisely, because other indices are expected to be different due to `clone()`.
             debug_assert_eq!(
-                self_parent.start_index, parent.start_index,
-                "Given parent iterator is not the actual parent of this iterator."
+                child_parent.start_index, self.start_index,
+                "Self is not parent of given child iterator."
             );
-            self_parent.set_curr_scope(self_parent.scope);
+            child_parent.set_curr_scope(self.scope);
 
-            *parent = *self_parent;
+            *self = *child_parent;
         } else {
             debug_assert!(false, "Tried to unfold non-nested iterator.");
         }
@@ -883,7 +883,7 @@ mod test {
         );
 
         // inner.update(&mut iterator);
-        inner.unfold(&mut iterator);
+        iterator.progress(inner);
 
         assert!(
             iterator.end_reached(),
@@ -964,8 +964,7 @@ mod test {
             "Inner iterator end was not reached."
         );
 
-        // inner_iter.update(&mut iterator);
-        inner_iter.unfold(&mut scoped_iterator);
+        scoped_iterator.progress(inner_iter);
 
         let mut end = scoped_iterator.take_to_end();
         taken_outer.append(&mut end);
@@ -1053,8 +1052,7 @@ mod test {
             "First inner iterator did not reach end."
         );
 
-        // inner.update(&mut iterator);
-        inner.unfold(&mut iterator);
+        iterator.progress(inner);
 
         // Matches " -"
         let mut inner = iterator.nest(
@@ -1069,8 +1067,7 @@ mod test {
             "Second inner iterator did not reach end."
         );
 
-        // inner.update(&mut iterator);
-        inner.unfold(&mut iterator);
+        iterator.progress(inner);
         iterator.take_to_end();
 
         assert!(iterator.end_reached(), "Main iterator did not reach end.");

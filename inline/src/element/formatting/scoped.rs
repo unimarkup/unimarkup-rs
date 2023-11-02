@@ -43,7 +43,7 @@ macro_rules! scoped_parser {
             context.flags = prev_context_flags;
 
             let end_reached = scoped_iter.end_reached();
-            scoped_iter.unfold(input);
+            input.progress(scoped_iter);
 
             let prev_token = input.prev_token().expect(
                 "Previous token must exist, because peek above would else have returned None.",

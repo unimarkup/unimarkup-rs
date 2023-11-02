@@ -137,12 +137,12 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         InlineTokenIterator::from(self.token_iter.nest_with_scope(None, end_match))
     }
 
-    pub fn unfold(self, parent: &mut Self) {
+    pub fn progress(&mut self, child: Self) {
         // Open formats intentionally not updated, because formats are only valid per scope.
-        parent.updated_prev = self.updated_prev;
-        parent.cached_token = self.cached_token;
-        parent.peeked_cache = self.peeked_cache;
-        self.token_iter.unfold(&mut parent.token_iter);
+        self.updated_prev = child.updated_prev;
+        self.cached_token = child.cached_token;
+        self.peeked_cache = child.peeked_cache;
+        self.token_iter.progress(child.token_iter);
     }
 
     /// Collects and returns all tokens until one of the end functions signals the end,
