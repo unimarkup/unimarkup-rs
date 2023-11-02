@@ -4,7 +4,7 @@ use crate::lexer::token::Token;
 
 use super::{extension::TokenIteratorExt, TokenIterator};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TokenIteratorScopedRoot<'slice, 'input> {
     /// The [`Symbol`] slice the iterator was created for.
     pub(super) token_iter: Box<TokenIterator<'slice, 'input>>,

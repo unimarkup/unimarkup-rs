@@ -66,7 +66,7 @@ pub(crate) fn parse(
     })));
 
     if let Some(box_variant) = parse_box_variant(&mut scoped_iter) {
-        *input = scoped_iter.unfold();
+        scoped_iter.unfold(input);
         return Some(box_variant);
     }
 
@@ -82,7 +82,7 @@ pub(crate) fn parse(
             .expect("Inlines in textbox => previous token must exist.")
     };
     let end_reached = scoped_iter.end_reached();
-    *input = scoped_iter.unfold();
+    scoped_iter.unfold(input);
 
     // check for `()`
     if end_reached && input.peek_kind() == Some(InlineTokenKind::OpenParenthesis) {
@@ -118,7 +118,7 @@ pub(crate) fn parse(
             )
         };
 
-        *input = link_iter.unfold();
+        link_iter.unfold(input);
 
         return Some(
             Hyperlink::new(
