@@ -3,7 +3,6 @@ use std::panic;
 use crate::snapshot::Snapshot;
 use libtest_mimic::Trial;
 use unimarkup_commons::{
-    lexer::token::iterator::TokenIterator,
     parsing::InlineContext,
     test_runner::{self, snap_test_runner::SnapTestRunner},
 };
@@ -39,9 +38,7 @@ pub fn test_parser_snapshots() -> Vec<Trial> {
 }
 
 fn run_test_case(case: test_runner::test_file::TestCase) {
-    // let symbols = unimarkup_commons::lexer::scan_str(&case.test.input);
     let tokens = unimarkup_commons::lexer::token::lex_str(&case.test.input);
-    // let iter = TokenIterator::from(&*tokens);
 
     let runner = SnapTestRunner::with_fn(&case.test.name, &tokens, |slice| {
         let inlines: Vec<_> = unimarkup_inline::inline_parser::parse_inlines(

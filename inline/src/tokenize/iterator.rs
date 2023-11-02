@@ -50,11 +50,6 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         self.token_iter.max_len()
     }
 
-    #[cfg(debug_assertions)]
-    pub fn index(&self) -> usize {
-        self.token_iter.index()
-    }
-
     /// Resets peek to get `peek() == next()`.
     ///
     /// **Note:** Needed to reset peek index after using `peeking_next()`.

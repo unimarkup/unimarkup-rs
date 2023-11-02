@@ -17,7 +17,7 @@ pub fn parse_inlines(
     context: &mut InlineContext,
 ) -> Vec<Inline> {
     parse(
-        &mut InlineTokenIterator::from(TokenIterator::with_scoped_root(token_iter.into())),
+        &mut InlineTokenIterator::from(TokenIterator::with_scoped_root(token_iter)),
         context,
     )
 }
@@ -40,20 +40,10 @@ pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut InlineContext
             || kind.is_open_parenthesis()
         {
             if let Some(parser_fn) = get_scoped_parser(kind, context.flags.logic_only) {
-                // #[cfg(debug_assertions)]
-                // let index = input.index();
-
                 if let Some(res_inline) = parser_fn(input, context) {
                     inlines.push(res_inline);
                     continue 'outer;
                 }
-
-                // Every inline parser must only use `peeking_next` until it is certain to result in an inline element.
-                // debug_assert_eq!(
-                //     input.index(),
-                //     index,
-                //     "Scoped parser moved iterator, but did not return an inline."
-                // );
             }
         } else if !context.flags.logic_only && kind.is_format_keyword() {
             // An open format closes => unwrap to closing format element
@@ -63,20 +53,10 @@ pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut InlineContext
                 break 'outer;
             } else if !input.format_is_open(kind) {
                 if let Some(parser_fn) = get_format_parser(kind) {
-                    // #[cfg(debug_assertions)]
-                    // let index = input.index();
-
                     if let Some(res_inline) = parser_fn(input, context) {
                         inlines.push(res_inline);
                         continue 'outer;
                     }
-
-                    // Every inline parser must only use `peeking_next` until it is certain to result in an inline element.
-                    // debug_assert_eq!(
-                    //     input.index(),
-                    //     index,
-                    //     "Format parser moved iterator, but did not return an inline."
-                    // );
                 }
             }
         }
@@ -137,128 +117,16 @@ mod test {
 
     use crate::tokenize::iterator::InlineTokenIterator;
 
-    // #[test]
-    // fn parse_strikethrough_in_unclosed_bold() {
-    //     let symbols = unimarkup_commons::lexer::scan_str("`a`");
-    //     let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
+    #[test]
+    fn dummy_for_debugging() {
+        let tokens = unimarkup_commons::lexer::token::lex_str("`a`");
+        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*tokens));
 
-    //     let inlines = super::parse(&mut token_iter, &mut InlineContext::default());
+        let inlines = super::parse(&mut token_iter, &mut InlineContext::default());
 
-    //     dbg!(&inlines);
-    //     // assert_eq!(
-    //     //     Bold::try_from(inlines[0].clone()).unwrap(),
-    //     //     Bold {
-    //     //         inner: vec![Strikethrough {
-    //     //             inner: vec![Plain {
-    //     //                 content: "strikethrough".to_string(),
-    //     //             }
-    //     //             .into()],
-    //     //         }
-    //     //         .into()],
-    //     //     },
-    //     //     "Strikethrough not correctly parsed."
-    //     // );
+        // dbg!(&inlines);
 
-    //     assert_eq!(token_iter.next(), None, "Iterator not fully consumed.");
-    // }
-
-    // #[test]
-    // fn perf() {
-    //     let content = &"Some ***text* bold**\n".repeat(10000);
-
-    //     let start_scan = std::time::Instant::now();
-    //     let symbols = unimarkup_commons::lexer::scan_str(content);
-    //     let end_scan = std::time::Instant::now();
-
-    //     let start_inlines = std::time::Instant::now();
-    //     let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
-    //     let inlines = super::parse(&mut token_iter, &mut InlineContext::default());
-    //     let end_inlines = std::time::Instant::now();
-
-    //     println!(
-    //     "Content length: {}\nLines: {}\nInlines: {}\nScanning took: {}ms\nInline parsing took: {}ms",
-    //     content.len(),
-    //     content.lines().count(),
-    //     inlines.len(),
-    //     end_scan
-    //         .checked_duration_since(start_scan)
-    //         .unwrap()
-    //         .as_millis(),
-    //     end_inlines
-    //         .checked_duration_since(start_inlines)
-    //         .unwrap()
-    //         .as_millis(),
-    //     );
-
-    //     assert!(inlines[0].is_plain(), "First inline was not plain.");
-    // }
+        assert!(!inlines.is_empty(), "No inlines created.");
+        assert_eq!(token_iter.next(), None, "Iterator not fully consumed.");
+    }
 }
-//     #[test]
-//     fn parse_textbox_scoped_bold() {
-//         let symbols = unimarkup_commons::scanner::scan_str("**outer[**inner]");
-//         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
-
-//         let inlines = InlineParser::default().parse(&mut token_iter);
-
-//         assert_eq!(
-//             inlines[0],
-//             Bold {
-//                 inner: vec![
-//                     Plain {
-//                         content: "outer".to_string(),
-//                     }
-//                     .into(),
-//                     TextBox {
-//                         inner: vec![Bold {
-//                             inner: vec![Plain {
-//                                 content: "inner".to_string(),
-//                             }
-//                             .into()],
-//                         }
-//                         .into(),],
-//                     }
-//                     .into(),
-//                 ]
-//             }
-//             .into(),
-//             "Textbox with scoped Bold not correctly parsed."
-//         );
-//     }
-
-//     #[test]
-//     fn parse_ambiguous_between() {
-//         let symbols = unimarkup_commons::scanner::scan_str("__underline___subscript_");
-//         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
-
-//         let inlines = InlineParser::default().parse(&mut token_iter);
-
-//         assert_eq!(
-//             inlines.len(),
-//             2,
-//             "Parser did not return two inline elements."
-//         );
-
-//         assert_eq!(
-//             inlines,
-//             vec![
-//                 Underline {
-//                     inner: vec![Plain {
-//                         content: "underline".to_string(),
-//                     }
-//                     .into()],
-//                 }
-//                 .into(),
-//                 Subscript {
-//                     inner: vec![Plain {
-//                         content: "subscript".to_string(),
-//                     }
-//                     .into()],
-//                 }
-//                 .into()
-//             ],
-//             "Underline + subscript not correctly parsed."
-//         );
-
-//         assert_eq!(token_iter.next(), None, "Iterator not fully consumed.");
-//     }
-// }

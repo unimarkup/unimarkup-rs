@@ -1,4 +1,4 @@
-use crate::lexer::{token::Token, Symbol};
+use crate::lexer::token::Token;
 use serde::Serialize;
 
 pub use insta::{assert_snapshot, Settings};
