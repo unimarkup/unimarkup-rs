@@ -145,6 +145,10 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         self.token_iter.progress(child.token_iter);
     }
 
+    pub fn skip_to_peek(&mut self) {
+        self.token_iter.skip_to_peek();
+    }
+
     /// Collects and returns all tokens until one of the end functions signals the end,
     /// or until no line prefix is matched after a new line.
     pub fn take_to_end(&mut self) -> Vec<InlineToken<'input>> {

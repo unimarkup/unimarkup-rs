@@ -24,32 +24,28 @@ pub(crate) fn parse_base(
 
     if matches!(kind, InlineTokenKind::Whitespace) {
         // Previous token is not updated, because format opening/closing validation needs whitespace information
+        let prev_kind = input.prev_kind();
+
         // Compresses multiple contiguous whitespaces into one.
+        if let Some(last_whitespace) = input.peeking_take_while(|i| i.kind == kind).last() {
+            next.offset.end = last_whitespace.offset.end;
+            next.end = last_whitespace.end;
+            input.skip_to_peek();
+        }
+
         if context.flags.keep_whitespaces {
             // Converting whitespace to plain will preserve content as is
             next.kind = InlineTokenKind::Plain;
-        } else {
-            let prev_kind = input.prev_kind();
-
-            if let Some(last_whitespace) = input
-                .peeking_take_while(|t| t.kind == InlineTokenKind::Whitespace)
-                .last()
-            {
-                next.offset.end = last_whitespace.offset.end;
-                next.end = last_whitespace.end
-            }
-
-            if matches!(
-                prev_kind,
-                Some(InlineTokenKind::Newline) | Some(InlineTokenKind::EscapedNewline)
-            ) || matches!(
-                input.peek_kind(),
-                Some(InlineTokenKind::Newline) | Some(InlineTokenKind::EscapedNewline)
-            ) {
-                // Ignore whitespaces after newline, because newline already represents one space
-                // Ignore whitespaces before newline, because newline already represents one space
-                return;
-            }
+        } else if matches!(
+            prev_kind,
+            Some(InlineTokenKind::Newline) | Some(InlineTokenKind::EscapedNewline)
+        ) || matches!(
+            input.peek_kind(),
+            Some(InlineTokenKind::Newline) | Some(InlineTokenKind::EscapedNewline)
+        ) {
+            // Ignore whitespaces after newline, because newline already represents one space
+            // Ignore whitespaces before newline, because newline already represents one space
+            return;
         }
     }
 

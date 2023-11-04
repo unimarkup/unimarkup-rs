@@ -288,6 +288,10 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         self.prev().map(|s| s.kind)
     }
 
+    pub fn skip_to_peek(&mut self) {
+        self.set_index(self.peek_index());
+    }
+
     pub fn checkpoint(&self) -> Checkpoint<'slice, 'input> {
         Checkpoint {
             index: self.index(),
