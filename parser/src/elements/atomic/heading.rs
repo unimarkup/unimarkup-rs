@@ -1,14 +1,14 @@
 use std::rc::Rc;
 
 use strum_macros::*;
-use unimarkup_inline::{Inline, ParseInlines};
+use unimarkup_commons::lexer::token::iterator::{EndMatcher, PrefixMatcher};
+use unimarkup_commons::lexer::token::TokenKind;
+use unimarkup_inline::element::Inline;
+use unimarkup_inline::inline_parser;
 
-use crate::elements::blocks::Block;
 use crate::elements::Blocks;
-use crate::parser::{ElementParser, TokenizeOutput};
-use unimarkup_commons::lexer::{
-    EndMatcher, Itertools, PrefixMatcher, Symbol, SymbolIterator, SymbolKind,
-};
+use crate::{elements::blocks::Block, BlockParser};
+use unimarkup_commons::lexer::position::Position;
 
 use super::log_id::AtomicError;
 
@@ -105,111 +105,236 @@ pub struct Heading {
     /// Attributes of the heading.
     pub attributes: Option<String>,
 
-    /// Line number, where the heading occurs in
-    /// the Unimarkup document.
-    pub line_nr: usize,
+    pub start: Position,
+    pub end: Position,
 }
 
-/// HeadingToken for the [`ElementParser`]
-pub enum HeadingToken<'a> {
-    /// Level of the heading
-    Level(HeadingLevel),
+impl Heading {
+    pub(crate) fn parse<'s, 'i>(
+        mut parser: BlockParser<'s, 'i>,
+    ) -> (BlockParser<'s, 'i>, Option<Block>) {
+        let hashes_opt = parser.iter.next();
+        if hashes_opt.is_none() {
+            return (parser, None);
+        }
+        let hashes = hashes_opt.expect("Ensured above to be Some here.");
+        let hashes_len;
 
-    /// Content of the heading
-    Content(Vec<&'a Symbol<'a>>),
+        if let TokenKind::Hash(len) = hashes.kind {
+            // len == 0 is impossible, because TokenKind would not be of kind Hash in that case.
+            if len > 6 {
+                return (parser, None);
+            }
 
-    /// Marks the end of the heading
-    End,
-}
-
-impl ElementParser for Heading {
-    type Token<'a> = self::HeadingToken<'a>;
-
-    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<Self::Token<'i>>> {
-        let mut heading_start: Vec<SymbolKind> = input
-            .peeking_take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
-            .map(|s| s.kind)
-            .collect();
-
-        let level_depth = heading_start.len();
-        let level: HeadingLevel = HeadingLevel::try_from(level_depth).ok()?;
-        if input.by_ref().nth(level_depth)?.kind != SymbolKind::Whitespace {
-            return None;
+            hashes_len = len;
+        } else {
+            return (parser, None);
         }
 
-        heading_start.push(SymbolKind::Whitespace);
-
-        let sub_heading_start: Vec<SymbolKind> = std::iter::repeat(SymbolKind::Hash)
-            .take(heading_start.len())
-            .chain([SymbolKind::Whitespace])
-            .collect();
-        let heading_end = move |matcher: &mut dyn EndMatcher| {
-            matcher.consumed_is_empty_line()
-                || matcher.matches(&[SymbolKind::Eoi])
-                || level != HeadingLevel::Level6 && matcher.matches(&sub_heading_start)
-        };
-
-        let whitespace_indents: Vec<SymbolKind> = std::iter::repeat(SymbolKind::Whitespace)
-            .take(heading_start.len())
-            .collect();
-        let heading_prefix = move |matcher: &mut dyn PrefixMatcher| {
-            matcher.consumed_prefix(&heading_start) || matcher.consumed_prefix(&whitespace_indents)
-        };
-
-        let mut content_iter =
-            input.nest(Some(Rc::new(heading_prefix)), Some(Rc::new(heading_end)));
-        let content_symbols = content_iter.take_to_end();
-
-        // Line prefixes violated => invalid heading syntax
-        if !content_iter.end_reached() {
-            return None;
+        if !parser.iter.consumed_matches(&[TokenKind::Space]) {
+            return (parser, None);
         }
 
-        content_iter.update(input);
+        let (hashes_prefix, spaces_prefix) = heading_prefix_sequences(hashes_len);
+        let (child_hash_prefix, _) = heading_prefix_sequences(hashes_len + 1);
 
-        let output = TokenizeOutput {
-            tokens: vec![
-                HeadingToken::Level(level),
-                HeadingToken::Content(content_symbols),
-                HeadingToken::End,
-            ],
-        };
+        let inlines = inline_parser::parse_inlines(
+            &mut parser.iter,
+            &mut parser.context.inline,
+            Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
+                matcher.consumed_prefix(hashes_prefix) || matcher.consumed_prefix(spaces_prefix)
+            })),
+            Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.consumed_is_blank_line() || matcher.matches(child_hash_prefix)
+            })),
+        );
 
-        Some(output)
+        // TODO: make prefix-mismatch available from iterator
+        if !parser.iter.end_reached() {
+            return (parser, None);
+        }
+
+        //TODO: implement optional attribute parsing here
+
+        let heading_end = parser
+            .iter
+            .prev()
+            .expect("At least space after hash must be in prev if inlines was empty")
+            .end;
+
+        (
+            parser,
+            Some(Block::Heading(Heading {
+                id: String::default(),
+                level: HeadingLevel::try_from(hashes_len)
+                    .expect("Correct heading level ensured above."),
+                content: inlines,
+                attributes: None,
+                start: hashes.start,
+                end: heading_end,
+            })),
+        )
     }
+}
 
-    fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
-        let HeadingToken::Level(level) = input[0] else {
-            return None;
-        };
-        let HeadingToken::Content(ref symbols) = input[1] else {
-            return None;
-        };
-        let inline_start = symbols.get(0)?.start;
+const HEADING_LVL_1_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(1), TokenKind::Space];
+const HEADING_LVL_1_SPACE_PREFIX: [TokenKind; 2] = [TokenKind::Space, TokenKind::Space];
+const HEADING_LVL_2_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(2), TokenKind::Space];
+const HEADING_LVL_2_SPACE_PREFIX: [TokenKind; 3] =
+    [TokenKind::Space, TokenKind::Space, TokenKind::Space];
+const HEADING_LVL_3_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(3), TokenKind::Space];
+const HEADING_LVL_3_SPACE_PREFIX: [TokenKind; 4] = [
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+];
+const HEADING_LVL_4_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(4), TokenKind::Space];
+const HEADING_LVL_4_SPACE_PREFIX: [TokenKind; 5] = [
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+];
+const HEADING_LVL_5_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(5), TokenKind::Space];
+const HEADING_LVL_5_SPACE_PREFIX: [TokenKind; 6] = [
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+];
+const HEADING_LVL_6_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(6), TokenKind::Space];
+const HEADING_LVL_6_SPACE_PREFIX: [TokenKind; 7] = [
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Space,
+];
 
-        // TODO: Adapt inline lexer to also work with Vec<&'input Symbol>
-        let content = symbols
-            .iter()
-            .map(|&s| *s)
-            .collect::<Vec<Symbol<'_>>>()
-            .parse_inlines()
-            .collect();
-
-        let line_nr = inline_start.line;
-        let block = Self {
-            id: String::default(),
-            level,
-            content,
-            attributes: None,
-            line_nr,
-        };
-
-        Some(vec![Block::Heading(block)])
+const fn heading_prefix_sequences(
+    hashes_len: usize,
+) -> (&'static [TokenKind], &'static [TokenKind]) {
+    if hashes_len == 1 {
+        (&HEADING_LVL_1_HASH_PREFIX, &HEADING_LVL_1_SPACE_PREFIX)
+    } else if hashes_len == 2 {
+        (&HEADING_LVL_2_HASH_PREFIX, &HEADING_LVL_2_SPACE_PREFIX)
+    } else if hashes_len == 3 {
+        (&HEADING_LVL_3_HASH_PREFIX, &HEADING_LVL_3_SPACE_PREFIX)
+    } else if hashes_len == 4 {
+        (&HEADING_LVL_4_HASH_PREFIX, &HEADING_LVL_4_SPACE_PREFIX)
+    } else if hashes_len == 5 {
+        (&HEADING_LVL_5_HASH_PREFIX, &HEADING_LVL_5_SPACE_PREFIX)
+    } else {
+        (&HEADING_LVL_6_HASH_PREFIX, &HEADING_LVL_6_SPACE_PREFIX)
     }
 }
 
-impl AsRef<Self> for Heading {
-    fn as_ref(&self) -> &Self {
-        self
-    }
-}
+// /// HeadingToken for the [`ElementParser`]
+// pub enum HeadingToken<'a> {
+//     /// Level of the heading
+//     Level(HeadingLevel),
+
+//     /// Content of the heading
+//     Content(Vec<&'a Symbol<'a>>),
+
+//     /// Marks the end of the heading
+//     End,
+// }
+
+// impl ElementParser for Heading {
+//     type Token<'a> = self::HeadingToken<'a>;
+
+//     fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<Self::Token<'i>>> {
+//         let mut heading_start: Vec<SymbolKind> = input
+//             .peeking_take_while(|symbol| matches!(symbol.kind, SymbolKind::Hash))
+//             .map(|s| s.kind)
+//             .collect();
+
+//         let level_depth = heading_start.len();
+//         let level: HeadingLevel = HeadingLevel::try_from(level_depth).ok()?;
+//         if input.by_ref().nth(level_depth)?.kind != SymbolKind::Whitespace {
+//             return None;
+//         }
+
+//         heading_start.push(SymbolKind::Whitespace);
+
+//         let sub_heading_start: Vec<SymbolKind> = std::iter::repeat(SymbolKind::Hash)
+//             .take(heading_start.len())
+//             .chain([SymbolKind::Whitespace])
+//             .collect();
+//         let heading_end = move |matcher: &mut dyn EndMatcher| {
+//             matcher.consumed_is_empty_line()
+//                 || matcher.matches(&[SymbolKind::Eoi])
+//                 || level != HeadingLevel::Level6 && matcher.matches(&sub_heading_start)
+//         };
+
+//         let whitespace_indents: Vec<SymbolKind> = std::iter::repeat(SymbolKind::Whitespace)
+//             .take(heading_start.len())
+//             .collect();
+//         let heading_prefix = move |matcher: &mut dyn PrefixMatcher| {
+//             matcher.consumed_prefix(&heading_start) || matcher.consumed_prefix(&whitespace_indents)
+//         };
+
+//         let mut content_iter =
+//             input.nest(Some(Rc::new(heading_prefix)), Some(Rc::new(heading_end)));
+//         let content_symbols = content_iter.take_to_end();
+
+//         // Line prefixes violated => invalid heading syntax
+//         if !content_iter.end_reached() {
+//             return None;
+//         }
+
+//         content_iter.update(input);
+
+//         let output = TokenizeOutput {
+//             tokens: vec![
+//                 HeadingToken::Level(level),
+//                 HeadingToken::Content(content_symbols),
+//                 HeadingToken::End,
+//             ],
+//         };
+
+//         Some(output)
+//     }
+
+//     fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
+//         let HeadingToken::Level(level) = input[0] else {
+//             return None;
+//         };
+//         let HeadingToken::Content(ref symbols) = input[1] else {
+//             return None;
+//         };
+//         let inline_start = symbols.get(0)?.start;
+
+//         // TODO: Adapt inline lexer to also work with Vec<&'input Symbol>
+//         let content = symbols
+//             .iter()
+//             .map(|&s| *s)
+//             .collect::<Vec<Symbol<'_>>>()
+//             .parse_inlines()
+//             .collect();
+
+//         let line_nr = inline_start.line;
+//         let block = Self {
+//             id: String::default(),
+//             level,
+//             content,
+//             attributes: None,
+//             line_nr,
+//         };
+
+//         Some(vec![Block::Heading(block)])
+//     }
+// }
+
+// impl AsRef<Self> for Heading {
+//     fn as_ref(&self) -> &Self {
+//         self
+//     }
+// }

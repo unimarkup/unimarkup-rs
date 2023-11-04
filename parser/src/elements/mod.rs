@@ -4,6 +4,7 @@ pub mod atomic;
 pub mod blocks;
 pub mod enclosed;
 pub mod indents;
+pub mod kind;
 pub mod preamble;
 pub mod types;
 

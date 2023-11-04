@@ -102,6 +102,22 @@ pub enum TokenIteratorKind<'slice, 'input> {
     ScopedRoot(TokenIteratorScopedRoot<'slice, 'input>),
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct Checkpoint<'slice, 'input> {
+    index: usize,
+    start_index: usize,
+    skip_end_until_idx: usize,
+    prefix_start: Option<&'slice Token<'input>>,
+}
+
+impl<'slice, 'input> Checkpoint<'slice, 'input> {
+    pub fn skip_end_until(&mut self, index: usize) {
+        if self.skip_end_until_idx < index {
+            self.skip_end_until_idx = index;
+        }
+    }
+}
+
 impl<'slice, 'input> TokenIterator<'slice, 'input> {
     /// Creates a new [`SymbolIterator`] from the given [`Symbol`] slice,
     /// and the given matching functions.
@@ -270,6 +286,34 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     /// Returns the [`SymbolKind`] of the previous symbol this iterator returned via `next()` or `consumed_matches()`.
     pub fn prev_kind(&self) -> Option<TokenKind> {
         self.prev().map(|s| s.kind)
+    }
+
+    pub fn checkpoint(&self) -> Checkpoint<'slice, 'input> {
+        Checkpoint {
+            index: self.index(),
+            start_index: self.start_index,
+            skip_end_until_idx: self.skip_end_until_idx,
+            prefix_start: self.prefix_start,
+        }
+    }
+
+    pub fn rollback(&mut self, checkpoint: Checkpoint<'slice, 'input>) -> bool {
+        // Simple check to make sure checkpoint is done on iterator the checkpoint was created from
+        // Is not super accurate, but should be sufficient, because most parsers consume at least one token
+        // before nesting another iterator. Which leads to a different start index.
+        if self.start_index != checkpoint.start_index {
+            return false;
+        }
+
+        self.set_index(checkpoint.index);
+        self.skip_end_until_idx = checkpoint.skip_end_until_idx;
+        self.prefix_start = checkpoint.prefix_start;
+
+        // reset iterator flags to ensure moving backwards over the current index works
+        self.iter_end = false;
+        self.prefix_mismatch = false;
+
+        true
     }
 
     /// Nests this iterator, by creating a new iterator that has this iterator set as parent.

@@ -24,7 +24,13 @@ pub fn parse_inlines<'slice, 'input>(
     let scoped_iter: TokenIterator<'slice, 'input> =
         token_iter.new_scope_root(prefix_match, end_match);
 
-    parse(&mut InlineTokenIterator::from(scoped_iter), context)
+    let mut inline_iter = InlineTokenIterator::from(scoped_iter);
+    let inlines = parse(&mut inline_iter, context);
+
+    //TODO: change inlines to "iter chaining"
+    token_iter.progress(inline_iter.into());
+
+    inlines
 }
 
 pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut InlineContext) -> Vec<Inline> {
