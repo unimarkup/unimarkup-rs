@@ -61,6 +61,7 @@ pub type ParserFn = for<'i> fn(&mut SymbolIterator<'i>) -> Option<Blocks>;
 pub(crate) type BlockParserFn =
     for<'s, 'i> fn(BlockParser<'s, 'i>) -> (BlockParser<'s, 'i>, Option<Block>);
 
+#[derive(Debug)]
 pub(crate) struct BlockParser<'slice, 'input> {
     pub iter: TokenIterator<'slice, 'input>,
     pub context: BlockContext,
@@ -188,7 +189,7 @@ mod test {
 
     #[test]
     fn debugging_dummy() {
-        let tokens = unimarkup_commons::lexer::token::lex_str("# heading");
+        let tokens = unimarkup_commons::lexer::token::lex_str("# heading\nbad heading");
         let parser = BlockParser {
             iter: TokenIterator::from(&*tokens),
             context: BlockContext::default(),

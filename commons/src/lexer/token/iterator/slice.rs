@@ -81,8 +81,6 @@ impl<'slice, 'input> TokenSliceIterator<'slice, 'input> {
 
     /// Sets the current index of this iterator to the given index.
     pub(crate) fn set_index(&mut self, index: usize) {
-        // debug_assert!(self.index <= index, "Tried to move the iterator backward.");
-
         self.index = index;
         self.peek_index = index;
     }

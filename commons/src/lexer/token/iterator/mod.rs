@@ -182,17 +182,11 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
 
     /// Sets the current index of this iterator to the given index.
     pub fn set_index(&mut self, index: usize) {
-        // debug_assert!(
-        //     self.index() <= index,
-        //     "Tried to move the iterator backward."
-        // );
-
-        if self.start_index < index {
-            match self.parent.borrow_mut() {
-                TokenIteratorKind::Nested(parent) => parent.set_index(index),
-                TokenIteratorKind::Root(root) => root.set_index(index),
-                TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.set_index(index),
-            }
+        // Because of checkpoint/rollback, it is possible to move index freely around the token slice
+        match self.parent.borrow_mut() {
+            TokenIteratorKind::Nested(parent) => parent.set_index(index),
+            TokenIteratorKind::Root(root) => root.set_index(index),
+            TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.set_index(index),
         }
     }
 
@@ -207,11 +201,12 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
 
     /// Sets the peek index of this iterator to the given index.
     pub fn set_peek_index(&mut self, index: usize) {
-        // debug_assert!(
-        //     self.index() <= index,
-        //     "Tried to move iterator peek backward."
-        // );
+        debug_assert!(
+            self.index() <= index,
+            "Tried to move iterator peek backward."
+        );
 
+        // Index may be moved freely by checkpoint/rollback, but peek is still bound to main index
         if index >= self.index() && self.peek_index() != index {
             match self.parent.borrow_mut() {
                 TokenIteratorKind::Nested(parent) => parent.set_peek_index(index),
