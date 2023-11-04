@@ -24,7 +24,8 @@ impl Paragraph {
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                 matcher.consumed_is_blank_line()
             })),
-        );
+        )
+        .to_inlines();
 
         (parser, Block::Paragraph(Paragraph { content: inlines }))
     }

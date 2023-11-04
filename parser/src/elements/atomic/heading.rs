@@ -138,7 +138,7 @@ impl Heading {
         let (hashes_prefix, spaces_prefix) = heading_prefix_sequences(hashes_len);
         let (child_hash_prefix, _) = heading_prefix_sequences(hashes_len + 1);
 
-        let inlines = inline_parser::parse_inlines(
+        let parsed_inlines = inline_parser::parse_inlines(
             &mut parser.iter,
             &mut parser.context.inline,
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
@@ -149,8 +149,7 @@ impl Heading {
             })),
         );
 
-        // TODO: make prefix-mismatch available from iterator
-        if !parser.iter.end_reached() {
+        if parsed_inlines.prefix_mismatch() {
             return (parser, None);
         }
 
@@ -168,7 +167,7 @@ impl Heading {
                 id: String::default(),
                 level: HeadingLevel::try_from(hashes_len)
                     .expect("Correct heading level ensured above."),
-                content: inlines,
+                content: parsed_inlines.to_inlines(),
                 attributes: None,
                 start: hashes.start,
                 end: heading_end,

@@ -67,9 +67,9 @@ fn run_spec_test(case: test_runner::test_file::TestCase) {
 fn run_snap_test(case: test_runner::test_file::TestCase) {
     let mut cfg = unimarkup_commons::config::Config::default();
 
-    let symbols = unimarkup_commons::lexer::scan_str(&case.test.input);
+    let tokens = unimarkup_commons::lexer::token::lex_str(&case.test.input);
 
-    let mut snap_runner = SnapTestRunner::with_fn::<_, _>(&case.test.name, &symbols, |_input| {
+    let mut snap_runner = SnapTestRunner::with_fn::<_, _>(&case.test.name, &tokens, |_input| {
         let um = unimarkup_core::parser::parse_unimarkup(&case.test.input, &mut cfg);
 
         Snapshot(um.blocks).as_snapshot()

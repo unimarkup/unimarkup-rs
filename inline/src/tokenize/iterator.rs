@@ -165,6 +165,10 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
     pub fn end_reached(&self) -> bool {
         self.token_iter.end_reached()
     }
+
+    pub fn prefix_mismatch(&self) -> bool {
+        self.token_iter.prefix_mismatch()
+    }
 }
 
 impl<'slice, 'input> Iterator for InlineTokenIterator<'slice, 'input> {

@@ -65,28 +65,28 @@ impl From<TokenKind> for PossibleBlockStart {
             TokenKind::Dollar(_) => todo!(),
             TokenKind::Colon(_) => todo!(),
             TokenKind::Dot(_) => todo!(),
-            TokenKind::OpenParenthesis => todo!(),
-            TokenKind::CloseParenthesis => todo!(),
-            TokenKind::OpenBracket => todo!(),
-            TokenKind::CloseBracket => todo!(),
-            TokenKind::OpenBrace => todo!(),
-            TokenKind::CloseBrace => todo!(),
-            TokenKind::Whitespace => todo!(),
-            TokenKind::Newline => todo!(),
-            TokenKind::Blankline => todo!(),
-            TokenKind::Eoi => todo!(),
-            TokenKind::EscapedPlain => todo!(),
-            TokenKind::EscapedWhitespace => todo!(),
-            TokenKind::EscapedNewline => todo!(),
-            TokenKind::Plain => todo!(),
-            TokenKind::TerminalPunctuation => todo!(),
-            TokenKind::Comment { implicit_close } => todo!(),
-            TokenKind::ImplicitSubstitution(_) => todo!(),
-            TokenKind::DirectUri => todo!(),
-            TokenKind::Any => todo!(),
-            TokenKind::Space => todo!(),
-            TokenKind::PossibleAttributes => todo!(),
-            TokenKind::PossibleDecorator => todo!(),
+            TokenKind::OpenParenthesis
+            | TokenKind::CloseParenthesis
+            | TokenKind::OpenBracket
+            | TokenKind::CloseBracket
+            | TokenKind::OpenBrace
+            | TokenKind::CloseBrace
+            | TokenKind::Whitespace
+            | TokenKind::Newline
+            | TokenKind::Blankline
+            | TokenKind::Eoi
+            | TokenKind::EscapedPlain
+            | TokenKind::EscapedWhitespace
+            | TokenKind::EscapedNewline
+            | TokenKind::Plain
+            | TokenKind::TerminalPunctuation
+            | TokenKind::Comment { .. }
+            | TokenKind::ImplicitSubstitution(_)
+            | TokenKind::DirectUri
+            | TokenKind::Any
+            | TokenKind::Space
+            | TokenKind::PossibleAttributes
+            | TokenKind::PossibleDecorator => {}
         }
 
         PossibleBlockStart::Paragraph

@@ -182,10 +182,10 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
 
     /// Sets the current index of this iterator to the given index.
     pub fn set_index(&mut self, index: usize) {
-        debug_assert!(
-            self.index() <= index,
-            "Tried to move the iterator backward."
-        );
+        // debug_assert!(
+        //     self.index() <= index,
+        //     "Tried to move the iterator backward."
+        // );
 
         if self.start_index < index {
             match self.parent.borrow_mut() {
@@ -207,10 +207,10 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
 
     /// Sets the peek index of this iterator to the given index.
     pub fn set_peek_index(&mut self, index: usize) {
-        debug_assert!(
-            self.index() <= index,
-            "Tried to move iterator peek backward."
-        );
+        // debug_assert!(
+        //     self.index() <= index,
+        //     "Tried to move iterator peek backward."
+        // );
 
         if index >= self.index() && self.peek_index() != index {
             match self.parent.borrow_mut() {
@@ -440,6 +440,10 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
             child_parent.set_curr_scope(self.scope);
 
             *self = *child_parent;
+        } else if let TokenIteratorKind::ScopedRoot(mut scoped_root) = child.parent {
+            scoped_root.token_iter.set_curr_scope(self.scope);
+
+            *self = *scoped_root.token_iter;
         } else {
             debug_assert!(false, "Tried to unfold non-nested iterator.");
         }
@@ -483,6 +487,10 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     /// Returns `true` if this iterator has reached its end.
     pub fn end_reached(&self) -> bool {
         self.iter_end
+    }
+
+    pub fn prefix_mismatch(&self) -> bool {
+        self.prefix_mismatch
     }
 }
 

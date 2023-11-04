@@ -1,4 +1,12 @@
-use unimarkup_inline::types::*;
+use unimarkup_commons::lexer::{token::TokenKind, SymbolKind};
+use unimarkup_inline::element::{
+    base::{EscapedNewline, EscapedWhitespace, Newline, Plain},
+    formatting::{
+        Bold, Highlight, Italic, Overline, Quote, Strikethrough, Subscript, Superscript, Underline,
+        Verbatim,
+    },
+    InlineElement,
+};
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
 
 use crate::render::{Context, OutputFormat, Renderer};
@@ -224,7 +232,7 @@ impl Renderer<Html> for HtmlRenderer {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::Code,
             attributes: HtmlAttributes::default(),
-            content: Some(verbatim.inner().to_string()),
+            content: Some(verbatim.inner().to_plain_string()),
         }));
 
         Ok(html)
@@ -238,7 +246,7 @@ impl Renderer<Html> for HtmlRenderer {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::PlainContent,
             attributes: HtmlAttributes::default(),
-            content: Some(plain.inner().to_string()),
+            content: Some(plain.content().clone()),
         }));
 
         Ok(html)
@@ -252,7 +260,7 @@ impl Renderer<Html> for HtmlRenderer {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::PlainContent,
             attributes: HtmlAttributes::default(),
-            content: Some(unimarkup_inline::TokenKind::Whitespace.as_str().to_string()),
+            content: Some(SymbolKind::Whitespace.as_str().to_string()),
         }));
 
         Ok(html)
@@ -274,7 +282,7 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_escaped_whitespace(
         &mut self,
-        escaped_whitespace: &EscapedWhitespace,
+        _escaped_whitespace: &EscapedWhitespace,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
@@ -283,7 +291,7 @@ impl Renderer<Html> for HtmlRenderer {
                 name: "style".to_string(),
                 value: Some("white-space: pre-wrap;".to_string()),
             }]),
-            content: Some(escaped_whitespace.inner().to_string()),
+            content: Some(SymbolKind::Whitespace.as_str().to_string()),
         }));
 
         Ok(html)

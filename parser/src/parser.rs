@@ -180,6 +180,26 @@ fn get_parser_fn(start: PossibleBlockStart) -> &'static [BlockParserFn] {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use unimarkup_commons::lexer::token::iterator::TokenIterator;
+
+    use crate::{BlockContext, BlockParser};
+
+    #[test]
+    fn debugging_dummy() {
+        let tokens = unimarkup_commons::lexer::token::lex_str("# heading");
+        let parser = BlockParser {
+            iter: TokenIterator::from(&*tokens),
+            context: BlockContext::default(),
+        };
+
+        let (_, blocks) = BlockParser::parse(parser);
+
+        dbg!(blocks);
+    }
+}
+
 // /// Output of symbol tokenization by a parser of a block.
 // pub(crate) struct TokenizeOutput<T> {
 //     pub(crate) tokens: Vec<T>,

@@ -1,5 +1,6 @@
 use super::Snapshot;
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
+use unimarkup_inline::element::InlineElement;
 use unimarkup_parser::elements::atomic::Paragraph;
 
 impl AsSnapshot for Snapshot<&Paragraph> {
@@ -7,8 +8,10 @@ impl AsSnapshot for Snapshot<&Paragraph> {
         let content: String = self
             .content
             .iter()
-            .map(|inline| inline.as_string())
-            .collect();
+            .fold(String::default(), |mut s, inline| {
+                s.push_str(&inline.to_plain_string());
+                s
+            });
 
         let content = content.trim_end();
 

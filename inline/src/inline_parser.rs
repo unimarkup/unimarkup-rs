@@ -14,23 +14,50 @@ use crate::{
 pub(crate) type InlineParserFn =
     for<'s, 'i> fn(&mut InlineTokenIterator<'s, 'i>, &mut InlineContext) -> Option<Inline>;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedInlines {
+    inlines: Vec<Inline>,
+    end_reached: bool,
+    prefix_mismatch: bool,
+}
+
+impl ParsedInlines {
+    pub fn to_inlines(self) -> Vec<Inline> {
+        self.inlines
+    }
+
+    pub fn end_reached(&self) -> bool {
+        self.end_reached
+    }
+
+    pub fn prefix_mismatch(&self) -> bool {
+        self.prefix_mismatch
+    }
+}
+
 /// Creates inline elements using the given token iterator.
 pub fn parse_inlines<'slice, 'input>(
     token_iter: &mut TokenIterator<'slice, 'input>,
     context: &mut InlineContext,
     prefix_match: Option<IteratorPrefixFn>,
     end_match: Option<IteratorEndFn>,
-) -> Vec<Inline> {
+) -> ParsedInlines {
     let scoped_iter: TokenIterator<'slice, 'input> =
         token_iter.new_scope_root(prefix_match, end_match);
 
     let mut inline_iter = InlineTokenIterator::from(scoped_iter);
     let inlines = parse(&mut inline_iter, context);
 
+    let parsed_inlines = ParsedInlines {
+        inlines,
+        end_reached: inline_iter.end_reached(),
+        prefix_mismatch: inline_iter.prefix_mismatch(),
+    };
+
     //TODO: change inlines to "iter chaining"
     token_iter.progress(inline_iter.into());
 
-    inlines
+    parsed_inlines
 }
 
 pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut InlineContext) -> Vec<Inline> {

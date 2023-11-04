@@ -46,7 +46,8 @@ fn run_test_case(case: test_runner::test_file::TestCase) {
             &mut InlineContext::default(),
             None,
             None,
-        );
+        )
+        .to_inlines();
         Snapshot::snap(&inlines[..])
     })
     .with_info(format!(
