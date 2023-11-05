@@ -424,6 +424,17 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         )
     }
 
+    pub fn unfold(self) -> Self {
+        match self.parent {
+            TokenIteratorKind::Nested(parent) => *parent,
+            TokenIteratorKind::Root(_) => {
+                debug_assert!(false, "Tried to unfold non-nested iterator.");
+                self
+            }
+            TokenIteratorKind::ScopedRoot(scoped_root) => *scoped_root.token_iter,
+        }
+    }
+
     pub fn progress(&mut self, child: Self) {
         if let TokenIteratorKind::Nested(mut child_parent) = child.parent {
             // Make sure it actually is the parent.

@@ -5,6 +5,7 @@ use unimarkup_parser::elements::blocks::Block;
 use unimarkup_parser::elements::Blocks;
 
 mod bullet_list;
+mod heading;
 mod paragraph;
 mod verbatim;
 
@@ -42,6 +43,7 @@ impl AsSnapshot for Snapshot<&Block> {
             Block::Paragraph(block) => Snapshot(block).as_snapshot(),
             Block::BulletList(block) => Snapshot(block).as_snapshot(),
             Block::Verbatim(block) => Snapshot(block).as_snapshot(),
+            Block::Heading(block) => Snapshot(block).as_snapshot(),
             _ => unimplemented!("TODO: Implement snapshot for {:?}", self),
         }
     }

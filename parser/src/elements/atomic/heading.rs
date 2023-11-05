@@ -3,7 +3,8 @@ use std::rc::Rc;
 use strum_macros::*;
 use unimarkup_commons::lexer::token::iterator::{EndMatcher, PrefixMatcher};
 use unimarkup_commons::lexer::token::TokenKind;
-use unimarkup_inline::element::Inline;
+use unimarkup_commons::lexer::Itertools;
+use unimarkup_inline::element::{Inline, InlineElement};
 use unimarkup_inline::inline_parser;
 
 use crate::elements::Blocks;
@@ -153,6 +154,9 @@ impl Heading {
             return (parser, None);
         }
 
+        let content = parsed_inlines.to_inlines();
+        let id = as_id(&content);
+
         //TODO: implement optional attribute parsing here
 
         let heading_end = parser
@@ -164,16 +168,23 @@ impl Heading {
         (
             parser,
             Some(Block::Heading(Heading {
-                id: String::default(),
+                id,
                 level: HeadingLevel::try_from(hashes_len)
                     .expect("Correct heading level ensured above."),
-                content: parsed_inlines.to_inlines(),
+                content,
                 attributes: None,
                 start: hashes.start,
                 end: heading_end,
             })),
         )
     }
+}
+
+fn as_id(content: &Vec<Inline>) -> String {
+    let mut s = content.to_plain_string().to_lowercase();
+    s = s.replace(char::is_whitespace, "-");
+    s = s.replace(['\'', '"'], ""); // quotes removed to prevent early attribute closing
+    s.replace('\\', "") // backslash removed to prevent html escapes
 }
 
 const HEADING_LVL_1_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(1), TokenKind::Space];
