@@ -2,10 +2,8 @@ use std::panic;
 
 use crate::snapshot::Snapshot;
 use libtest_mimic::Trial;
-use unimarkup_commons::{
-    parsing::InlineContext,
-    test_runner::{self, snap_test_runner::SnapTestRunner},
-};
+use unimarkup_commons::test_runner::{self, snap_test_runner::SnapTestRunner};
+use unimarkup_inline::inline_parser::InlineContext;
 
 mod snapshot;
 

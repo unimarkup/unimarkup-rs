@@ -5,7 +5,7 @@ use std::rc::Rc;
 use unimarkup_commons::lexer::{EndMatcher, PrefixMatcher, Symbol, SymbolKind};
 use unimarkup_inline::element::Inline;
 
-use crate::elements::blocks::Block;
+use crate::elements::{blocks::Block, BlockElement};
 
 /// Structure of a Unimarkup bullet list element.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -14,6 +14,20 @@ pub struct BulletList {
     pub id: String,
     /// The list entries of this bullet list.
     pub entries: Vec<BulletListEntry>,
+}
+
+impl BlockElement for BulletList {
+    fn to_plain_string(&self) -> String {
+        todo!()
+    }
+
+    fn start(&self) -> unimarkup_commons::lexer::position::Position {
+        todo!()
+    }
+
+    fn end(&self) -> unimarkup_commons::lexer::position::Position {
+        todo!()
+    }
 }
 
 /// Structure of a Unimarkup bullet list entry.
@@ -29,6 +43,20 @@ pub struct BulletListEntry {
     pub body: Vec<Block>,
     /// The attributes set for this entry.
     pub attributes: String,
+}
+
+impl BlockElement for BulletListEntry {
+    fn to_plain_string(&self) -> String {
+        todo!()
+    }
+
+    fn start(&self) -> unimarkup_commons::lexer::position::Position {
+        todo!()
+    }
+
+    fn end(&self) -> unimarkup_commons::lexer::position::Position {
+        todo!()
+    }
 }
 
 /// Enum representing the keyword used to create a [`BulletListEntry`].

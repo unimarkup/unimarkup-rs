@@ -57,15 +57,19 @@ impl From<TokenKind> for PossibleBlockStart {
             }
             TokenKind::Underline(_) => todo!(),
             TokenKind::Caret(_) => todo!(),
-            TokenKind::Tick(_) => todo!(),
-            TokenKind::Overline(_) => todo!(),
-            TokenKind::Pipe(_) => todo!(),
-            TokenKind::Tilde(_) => todo!(),
-            TokenKind::Quote(_) => todo!(),
-            TokenKind::Dollar(_) => todo!(),
-            TokenKind::Colon(_) => todo!(),
-            TokenKind::Dot(_) => todo!(),
-            TokenKind::OpenParenthesis
+            TokenKind::Tick(len) => {
+                if len >= 3 {
+                    return PossibleBlockStart::VerbatimBlock;
+                }
+            }
+            TokenKind::Overline(_)
+            | TokenKind::Pipe(_)
+            | TokenKind::Tilde(_)
+            | TokenKind::Quote(_)
+            | TokenKind::Dollar(_)
+            | TokenKind::Colon(_)
+            | TokenKind::Dot(_)
+            | TokenKind::OpenParenthesis
             | TokenKind::CloseParenthesis
             | TokenKind::OpenBracket
             | TokenKind::CloseBracket

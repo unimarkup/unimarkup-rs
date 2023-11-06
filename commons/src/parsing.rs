@@ -1,19 +1,15 @@
-//! Contains the [`Context`] struct used while parsing Unimarkup content.
+//! Contains the [`Element`] trait every Unimarkup element must implement.
 
-/// Context to help with parsing Unimarkup inline content.
-#[derive(Debug, Default, Clone)]
-pub struct InlineContext {
-    pub flags: InlineContextFlags,
-}
+use crate::lexer::{position::Position, span::Span};
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct InlineContextFlags {
-    /// Flag to indicate that only escaped symbols and logic elements are allowed besides plain content.
-    pub logic_only: bool,
-    /// Flag to indicate that multiple contiguous whitespaces must not be combined.
-    pub keep_whitespaces: bool,
-    /// Flag to indicate that a newline must be explicitly kept, and not converted to one space.
-    pub keep_newline: bool,
-    /// Flag to indicate if implicit substitutions are allowed in the current context
-    pub allow_implicits: bool,
+pub trait Element {
+    fn to_plain_string(&self) -> String;
+    fn start(&self) -> Position;
+    fn end(&self) -> Position;
+    fn span(&self) -> Span {
+        Span {
+            start: self.start(),
+            end: self.end(),
+        }
+    }
 }

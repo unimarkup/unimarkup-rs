@@ -1,4 +1,7 @@
-use unimarkup_commons::lexer::{position::Position, span::Span};
+use unimarkup_commons::{
+    lexer::{position::Position, span::Span},
+    parsing::Element,
+};
 
 use self::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
@@ -17,6 +20,7 @@ pub mod formatting;
 pub mod substitution;
 pub mod textbox;
 
+// Needed to implement trait for Vec<Inline> in this crate
 pub trait InlineElement {
     fn to_plain_string(&self) -> String;
     fn start(&self) -> Position;
@@ -26,6 +30,20 @@ pub trait InlineElement {
             start: self.start(),
             end: self.end(),
         }
+    }
+}
+
+impl Element for dyn InlineElement {
+    fn to_plain_string(&self) -> String {
+        self.to_plain_string()
+    }
+
+    fn start(&self) -> Position {
+        self.start()
+    }
+
+    fn end(&self) -> Position {
+        self.end()
     }
 }
 

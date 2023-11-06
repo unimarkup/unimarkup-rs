@@ -1,13 +1,13 @@
 //! Module for parsing of Unimarkup elements.
 
-use logid::log;
-use unimarkup_commons::{
-    lexer::{
-        token::{iterator::TokenIterator, TokenKind},
-        EndMatcher, PeekingNext, SymbolIterator, SymbolKind,
+use unimarkup_commons::lexer::{
+    span::Span,
+    token::{
+        iterator::{IteratorEndFn, IteratorPrefixFn, TokenIterator},
+        TokenKind,
     },
-    parsing::InlineContext,
 };
+use unimarkup_inline::inline_parser::{InlineContext, InlineContextFlags};
 
 use crate::{
     document::Document,
@@ -19,7 +19,6 @@ use crate::{
         kind::PossibleBlockStart,
         Blocks,
     },
-    log_id::MainParserInfo,
     metadata::{Metadata, MetadataKind},
     security,
 };
@@ -55,9 +54,6 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     unimarkup
 }
 
-/// Parser as function that can parse Unimarkup content
-pub type ParserFn = for<'i> fn(&mut SymbolIterator<'i>) -> Option<Blocks>;
-
 pub(crate) type BlockParserFn =
     for<'s, 'i> fn(BlockParser<'s, 'i>) -> (BlockParser<'s, 'i>, Option<Block>);
 
@@ -65,22 +61,6 @@ pub(crate) type BlockParserFn =
 pub(crate) struct BlockParser<'slice, 'input> {
     pub iter: TokenIterator<'slice, 'input>,
     pub context: BlockContext,
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct BlockContext {
-    pub inline: InlineContext,
-    pub flags: BlockContextFlags,
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct BlockContextFlags {
-    /// Flag to indicate that only escaped symbols and logic elements are allowed besides plain content.
-    pub logic_only: bool,
-    /// Flag to indicate that multiple contiguous whitespaces must not be combined.
-    pub keep_whitespaces: bool,
-    /// Flag to indicate that a newline must be explicitly kept, and not converted to one space.
-    pub keep_newline: bool,
 }
 
 impl<'slice, 'input> BlockParser<'slice, 'input> {
@@ -103,7 +83,19 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
         'outer: while let Some(kind) = parser.iter.peek_kind() {
             if matches!(kind, TokenKind::Blankline | TokenKind::Newline) {
                 // skip newlines besides blanklines so new blocks can always assume that they start on a new line.
-                parser.iter.next();
+                let next = parser
+                    .iter
+                    .next()
+                    .expect("Must be some token, because peek returned some.");
+
+                // Keep blanklines between blocks
+                // Newlines before blocks are not needed, because every block must start at a new line.
+                if parser.context.flags.keep_newline && next.kind == TokenKind::Blankline {
+                    blocks.push(Block::Blankline(Span {
+                        start: next.start,
+                        end: next.end,
+                    }))
+                }
             } else if kind == TokenKind::Eoi {
                 break 'outer;
             } else {
@@ -114,7 +106,7 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
                     blocks.push(paragraph);
                 } else {
                     // Token might be start of a block element
-                    for parser_fn in get_parser_fn(block_start) {
+                    for parser_fn in get_parser_fn(block_start, &parser.context) {
                         let checkpoint = parser.iter.checkpoint();
                         let (updated_parser, block_opt) = parser_fn(parser);
                         parser = updated_parser;
@@ -156,28 +148,88 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
 
         (parser, blocks)
     }
+
+    pub fn nest_scoped(
+        mut self,
+        prefix_match: Option<IteratorPrefixFn>,
+        end_match: Option<IteratorEndFn>,
+    ) -> Self {
+        self.iter = self.iter.nest_with_scope(prefix_match, end_match);
+        self
+    }
+
+    pub fn unfold(mut self) -> Self {
+        self.iter = self.iter.unfold();
+        self
+    }
 }
 
-fn get_parser_fn(start: PossibleBlockStart) -> &'static [BlockParserFn] {
-    match start {
-        PossibleBlockStart::Heading(_) => &[Heading::parse],
-        PossibleBlockStart::ColumnBlock => todo!(), //&[implicit_column_parser, explicit_column_parser],
-        PossibleBlockStart::MathBlock => todo!(),
-        PossibleBlockStart::RenderBlock => todo!(),
-        PossibleBlockStart::VerbatimBlock => todo!(),
-        PossibleBlockStart::Table => todo!(),
-        PossibleBlockStart::BulletList => todo!(),
-        PossibleBlockStart::Digit => todo!(),
-        PossibleBlockStart::QuotationBlock => todo!(),
-        PossibleBlockStart::LineBlock => todo!(),
-        PossibleBlockStart::MediaInsert => todo!(),
-        PossibleBlockStart::RenderInsert => todo!(),
-        PossibleBlockStart::VerbatimInsert => todo!(),
-        PossibleBlockStart::HorizontalLine => todo!(),
-        PossibleBlockStart::LineBreak => todo!(),
-        PossibleBlockStart::Decoration | PossibleBlockStart::Paragraph => &[],
-        PossibleBlockStart::OpenBracket => todo!(),
-        PossibleBlockStart::OpenBrace => todo!(), //&[attribute_block_parser, block_macro_parser],
+fn get_parser_fn(start: PossibleBlockStart, context: &BlockContext) -> &'static [BlockParserFn] {
+    if context.flags.logic_only {
+        // if start == PossibleBlockStart::OpenBrace {
+        //     // TODO: return macro parser
+        //     &[] // &[block_macro_parser]
+        // } else {
+        //     &[]
+        // }
+        &[]
+    } else {
+        match start {
+            PossibleBlockStart::Heading(_) => &[Heading::parse],
+            PossibleBlockStart::ColumnBlock => todo!(), //&[implicit_column_parser, explicit_column_parser],
+            PossibleBlockStart::MathBlock => todo!(),
+            PossibleBlockStart::RenderBlock => todo!(),
+            PossibleBlockStart::VerbatimBlock => &[Verbatim::parse],
+            PossibleBlockStart::Table => todo!(),
+            PossibleBlockStart::BulletList => &[], //TODO: add bullet list parser
+            PossibleBlockStart::Digit => todo!(),
+            PossibleBlockStart::QuotationBlock => todo!(),
+            PossibleBlockStart::LineBlock => todo!(),
+            PossibleBlockStart::MediaInsert => todo!(),
+            PossibleBlockStart::RenderInsert => todo!(),
+            PossibleBlockStart::VerbatimInsert => todo!(),
+            PossibleBlockStart::HorizontalLine => todo!(),
+            PossibleBlockStart::LineBreak => todo!(),
+            PossibleBlockStart::Decoration | PossibleBlockStart::Paragraph => &[],
+            PossibleBlockStart::OpenBracket => todo!(),
+            PossibleBlockStart::OpenBrace => todo!(), //&[attribute_block_parser, block_macro_parser],
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct BlockContext {
+    pub flags: BlockContextFlags,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct BlockContextFlags {
+    /// Flag to indicate that only escaped symbols and logic elements are allowed besides plain content.
+    pub logic_only: bool,
+    /// Flag to indicate that multiple contiguous whitespaces must not be combined.
+    pub keep_whitespaces: bool,
+    /// Flag to indicate that a newline must be explicitly kept, and not converted to one space.
+    pub keep_newline: bool,
+}
+
+impl From<&BlockContext> for InlineContext {
+    fn from(value: &BlockContext) -> Self {
+        InlineContext {
+            flags: InlineContextFlags {
+                logic_only: value.flags.logic_only,
+                keep_whitespaces: value.flags.keep_whitespaces,
+                keep_newline: value.flags.keep_newline,
+                allow_implicits: value.flags.logic_only,
+            },
+        }
+    }
+}
+
+impl BlockContext {
+    pub fn update_from(&mut self, inline_context: InlineContext) {
+        //TODO: update block context
+
+        // Flags are not updated, because they only "propagate" block->inline, but not the other way.
     }
 }
 

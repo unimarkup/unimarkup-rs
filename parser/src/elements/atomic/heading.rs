@@ -7,7 +7,7 @@ use unimarkup_commons::lexer::Itertools;
 use unimarkup_inline::element::{Inline, InlineElement};
 use unimarkup_inline::inline_parser;
 
-use crate::elements::Blocks;
+use crate::elements::BlockElement;
 use crate::{elements::blocks::Block, BlockParser};
 use unimarkup_commons::lexer::position::Position;
 
@@ -51,6 +51,19 @@ impl From<HeadingLevel> for u8 {
             HeadingLevel::Level4 => 4,
             HeadingLevel::Level5 => 5,
             HeadingLevel::Level6 => 6,
+        }
+    }
+}
+
+impl HeadingLevel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            HeadingLevel::Level1 => "# ",
+            HeadingLevel::Level2 => "## ",
+            HeadingLevel::Level3 => "### ",
+            HeadingLevel::Level4 => "#### ",
+            HeadingLevel::Level5 => "##### ",
+            HeadingLevel::Level6 => "###### ",
         }
     }
 }
@@ -110,6 +123,26 @@ pub struct Heading {
     pub end: Position,
 }
 
+impl BlockElement for Heading {
+    fn to_plain_string(&self) -> String {
+        let prefix = self.level.as_str();
+        let content = self
+            .content
+            .to_plain_string()
+            .lines()
+            .join(&" ".repeat(prefix.len()));
+        format!("{prefix}{content}")
+    }
+
+    fn start(&self) -> Position {
+        self.start
+    }
+
+    fn end(&self) -> Position {
+        self.end
+    }
+}
+
 impl Heading {
     pub(crate) fn parse<'s, 'i>(
         mut parser: BlockParser<'s, 'i>,
@@ -141,7 +174,7 @@ impl Heading {
 
         let (iter, inline_context, parsed_inlines) = inline_parser::parse_inlines(
             parser.iter,
-            parser.context.inline,
+            (&parser.context).into(),
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(hashes_prefix) || matcher.consumed_prefix(spaces_prefix)
             })),
@@ -150,7 +183,7 @@ impl Heading {
             })),
         );
         parser.iter = iter;
-        parser.context.inline = inline_context;
+        parser.context.update_from(inline_context);
 
         if parsed_inlines.prefix_mismatch() {
             return (parser, None);
@@ -185,8 +218,8 @@ impl Heading {
 fn as_id(content: &Vec<Inline>) -> String {
     let mut s = content.to_plain_string().to_lowercase();
     s = s.replace(char::is_whitespace, "-");
-    s = s.replace(['\'', '"'], ""); // quotes removed to prevent early attribute closing
-    s.replace('\\', "") // backslash removed to prevent html escapes
+    s = s.replace('\\', ""); // backslash removed to prevent html escapes
+    s.replace(['\'', '"'], "") // quotes removed to prevent early attribute closing
 }
 
 const HEADING_LVL_1_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(1), TokenKind::Space];

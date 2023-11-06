@@ -1,9 +1,6 @@
 //! Inline parser
 
-use unimarkup_commons::{
-    lexer::token::iterator::{IteratorEndFn, IteratorPrefixFn, TokenIterator},
-    parsing::InlineContext,
-};
+use unimarkup_commons::lexer::token::iterator::{IteratorEndFn, IteratorPrefixFn, TokenIterator};
 
 use crate::{
     element::Inline,
@@ -63,6 +60,24 @@ impl ParsedInlines {
     pub fn prefix_mismatch(&self) -> bool {
         self.prefix_mismatch
     }
+}
+
+/// Context to help with parsing Unimarkup inline content.
+#[derive(Debug, Default, Clone)]
+pub struct InlineContext {
+    pub flags: InlineContextFlags,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct InlineContextFlags {
+    /// Flag to indicate that only escaped symbols and logic elements are allowed besides plain content.
+    pub logic_only: bool,
+    /// Flag to indicate that multiple contiguous whitespaces must not be combined.
+    pub keep_whitespaces: bool,
+    /// Flag to indicate that a newline must be explicitly kept, and not converted to one space.
+    pub keep_newline: bool,
+    /// Flag to indicate if implicit substitutions are allowed in the current context
+    pub allow_implicits: bool,
 }
 
 #[derive(Debug)]
@@ -193,9 +208,12 @@ fn get_scoped_parser(kind: InlineTokenKind, logic_only: bool) -> Option<InlinePa
 
 #[cfg(test)]
 mod test {
-    use unimarkup_commons::{lexer::token::iterator::TokenIterator, parsing::InlineContext};
+    use unimarkup_commons::lexer::token::iterator::TokenIterator;
 
-    use crate::{inline_parser::InlineParser, tokenize::iterator::InlineTokenIterator};
+    use crate::{
+        inline_parser::{InlineContext, InlineParser},
+        tokenize::iterator::InlineTokenIterator,
+    };
 
     #[test]
     fn dummy_for_debugging() {

@@ -1,11 +1,8 @@
-use unimarkup_commons::{
-    lexer::{position::Position, Itertools},
-    parsing::InlineContext,
-};
+use unimarkup_commons::lexer::{position::Position, Itertools};
 
 use crate::{
     element::InlineElement,
-    inline_parser::InlineParser,
+    inline_parser::{InlineContext, InlineParser},
     tokenize::{kind::InlineTokenKind, InlineToken},
 };
 
