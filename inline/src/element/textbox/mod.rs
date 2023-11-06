@@ -1,14 +1,12 @@
 use std::rc::Rc;
 
-use unimarkup_commons::{
-    lexer::{
-        position::Position,
-        token::{iterator::EndMatcher, TokenKind},
-    },
-    parsing::InlineContext,
+use unimarkup_commons::lexer::{
+    position::Position,
+    token::{iterator::EndMatcher, TokenKind},
+    PeekingNext,
 };
 
-use crate::tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind};
+use crate::{inline_parser::InlineParser, tokenize::kind::InlineTokenKind};
 
 use self::hyperlink::Hyperlink;
 
@@ -48,11 +46,15 @@ impl TextBox {
     }
 }
 
-pub(crate) fn parse(
-    input: &mut InlineTokenIterator,
-    context: &mut InlineContext,
-) -> Option<Inline> {
-    let open_token = input.next()?;
+pub(crate) fn parse<'slice, 'input>(
+    mut parser: InlineParser<'slice, 'input>,
+) -> (InlineParser<'slice, 'input>, Option<Inline>) {
+    let open_token_opt = parser.iter.peeking_next(|_| true);
+    if open_token_opt.is_none() {
+        return (parser, None);
+    }
+
+    let open_token = open_token_opt.expect("Checked above to be not None.");
 
     debug_assert_eq!(
         open_token.kind,
@@ -61,48 +63,60 @@ pub(crate) fn parse(
         open_token.kind
     );
 
-    let mut scoped_iter = input.nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+    let mut scoped_parser = parser.nest_scoped(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
         matcher.consumed_matches(&[TokenKind::CloseBracket])
     })));
 
-    if let Some(box_variant) = parse_box_variant(&mut scoped_iter) {
-        input.progress(scoped_iter);
-        return Some(box_variant);
+    let checkpoint = scoped_parser.iter.checkpoint();
+    let (updated_parser, box_variant_opt) = parse_box_variant(scoped_parser);
+    scoped_parser = updated_parser;
+
+    match box_variant_opt {
+        Some(box_variant) => {
+            return (scoped_parser.unfold(), Some(box_variant));
+        }
+        None => {
+            scoped_parser.iter.rollback(checkpoint);
+        }
     }
 
     // No variant matched => must be regular textbox or hyperlink
 
-    let inner = crate::inline_parser::parse(&mut scoped_iter, context);
+    let (updated_parser, inner) = InlineParser::parse(scoped_parser);
+    scoped_parser = updated_parser;
 
     let prev_token = if inner.is_empty() {
         open_token
     } else {
-        scoped_iter
+        scoped_parser
+            .iter
             .prev_token()
             .expect("Inlines in textbox => previous token must exist.")
     };
-    let end_reached = scoped_iter.end_reached();
-    input.progress(scoped_iter);
+    let end_reached = scoped_parser.iter.end_reached();
+    parser = scoped_parser.unfold();
 
     // check for `()`
-    if end_reached && input.peek_kind() == Some(InlineTokenKind::OpenParenthesis) {
-        input
+    if end_reached && parser.iter.peek_kind() == Some(InlineTokenKind::OpenParenthesis) {
+        parser
+            .iter
             .next()
             .expect("Peeked before, so `next` must return Some."); // Consume open parenthesis
-        let mut link_iter: InlineTokenIterator =
-            input.nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-                matcher.consumed_matches(&[TokenKind::CloseParenthesis])
-            })));
+        let mut link_parser = parser.nest_scoped(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+            matcher.consumed_matches(&[TokenKind::CloseParenthesis])
+        })));
 
-        let link = link_iter.by_ref().take_while(|t| !t.kind.is_space()).fold(
-            String::default(),
-            |mut combined, token| {
+        let link = link_parser
+            .iter
+            .by_ref()
+            .take_while(|t| !t.kind.is_space())
+            .fold(String::default(), |mut combined, token| {
                 combined.push_str(token.as_str());
                 combined
-            },
-        );
+            });
         let link_text =
-            link_iter
+            link_parser
+                .iter
                 .take_to_end()
                 .iter()
                 .fold(String::default(), |mut combined, token| {
@@ -110,48 +124,56 @@ pub(crate) fn parse(
                     combined
                 });
 
-        let link_close_token = if link_text.is_empty() && !link_iter.end_reached() {
+        let link_close_token = if link_text.is_empty() && !link_parser.iter.end_reached() {
             prev_token
         } else {
-            link_iter.prev_token().expect(
+            link_parser.iter.prev_token().expect(
                 "Link text has content or closing parenthesis found => previous token must exist.",
             )
         };
 
-        input.progress(link_iter);
+        parser = link_parser.unfold();
 
-        return Some(
-            Hyperlink::new(
-                inner,
-                link,
-                if link_text.is_empty() {
-                    None
-                } else {
-                    Some(link_text)
-                },
-                None,
-                open_token.start,
-                crate::element::helper::implicit_end_using_prev(&link_close_token),
-            )
-            .into(),
+        return (
+            parser,
+            Some(
+                Hyperlink::new(
+                    inner,
+                    link,
+                    if link_text.is_empty() {
+                        None
+                    } else {
+                        Some(link_text)
+                    },
+                    None,
+                    open_token.start,
+                    crate::element::helper::implicit_end_using_prev(&link_close_token),
+                )
+                .into(),
+            ),
         );
     }
 
-    Some(
-        TextBox {
-            inner,
-            attributes: None,
-            start: open_token.start,
-            end: crate::element::helper::implicit_end_using_prev(&prev_token),
-        }
-        .into(),
+    (
+        parser,
+        Some(
+            TextBox {
+                inner,
+                attributes: None,
+                start: open_token.start,
+                end: crate::element::helper::implicit_end_using_prev(&prev_token),
+            }
+            .into(),
+        ),
     )
 }
 
-fn parse_box_variant(_input: &mut InlineTokenIterator) -> Option<Inline> {
+fn parse_box_variant<'slice, 'input>(
+    parser: InlineParser<'slice, 'input>,
+) -> (InlineParser<'slice, 'input>, Option<Inline>) {
     //TODO: implement box variants like media insert...
 
-    None
+    (parser, None)
 }
 
 impl From<TextBox> for Inline {

@@ -1,43 +1,42 @@
-use unimarkup_commons::{
-    lexer::{position::Position, PeekingNext},
-    parsing::InlineContext,
-};
+use unimarkup_commons::lexer::{position::Position, PeekingNext};
 
-use crate::{
-    element::InlineElement,
-    inline_parser,
-    tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind},
-};
+use crate::{element::InlineElement, inline_parser::InlineParser, tokenize::kind::InlineTokenKind};
 
 use super::Inline;
 
 pub mod ambiguous;
 pub mod scoped;
 
-pub(crate) fn parse_distinct_format(
-    input: &mut InlineTokenIterator,
-    context: &mut InlineContext,
-) -> Option<Inline> {
-    let open_token = input.peeking_next(|_| true)?;
-
-    // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
-    if input.peek_kind()?.is_space() {
-        return None;
+pub(crate) fn parse_distinct_format<'s, 'i>(
+    mut parser: InlineParser<'s, 'i>,
+) -> (InlineParser<'s, 'i>, Option<Inline>) {
+    let open_token_opt = parser.iter.peeking_next(|_| true);
+    if open_token_opt.is_none() {
+        return (parser, None);
     }
 
-    input.next(); // consume open token => now it will lead to Some(inline)
+    let open_token = open_token_opt.expect("Checked above to be not None.");
 
-    input.open_format(&open_token.kind);
+    // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
+    if parser.iter.peek_kind().map_or(true, |t| t.is_space()) {
+        return (parser, None);
+    }
 
-    let inner = inline_parser::parse(input, context);
+    parser.iter.next(); // consume open token => now it will lead to Some(inline)
+
+    parser.iter.open_format(&open_token.kind);
+
+    let (updated_parser, inner) = InlineParser::parse(parser);
+    parser = updated_parser;
 
     let attributes = None;
     let mut implicit_end = true;
 
     // Only consuming token on open/close match, because closing token might be reserved for an outer open format.
-    let end = if let Some(close_token) = input.peek() {
+    let end = if let Some(close_token) = parser.iter.peek() {
         if close_token.kind == open_token.kind {
-            input
+            parser
+                .iter
                 .next()
                 .expect("Peeked before, so `next` must return Some.");
             implicit_end = false;
@@ -48,21 +47,26 @@ pub(crate) fn parse_distinct_format(
             close_token.start
         }
     } else {
-        input
+        parser
+            .iter
             .prev_token()
             .expect("Previous token must exist here, because format was opened.")
             .end
     };
 
-    input.close_format(&open_token.kind);
-    Some(to_formatting(
-        open_token.kind,
-        inner,
-        attributes,
-        open_token.start,
-        end,
-        implicit_end,
-    ))
+    parser.iter.close_format(&open_token.kind);
+
+    (
+        parser,
+        Some(to_formatting(
+            open_token.kind,
+            inner,
+            attributes,
+            open_token.start,
+            end,
+            implicit_end,
+        )),
+    )
 }
 
 macro_rules! inline_formats {

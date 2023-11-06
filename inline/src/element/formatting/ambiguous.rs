@@ -1,48 +1,50 @@
-use unimarkup_commons::{
-    lexer::{
-        position::{Offset, Position},
-        PeekingNext,
-    },
-    parsing::InlineContext,
+use unimarkup_commons::lexer::{
+    position::{Offset, Position},
+    PeekingNext,
 };
 
 use crate::{
     element::Inline,
-    inline_parser,
+    inline_parser::InlineParser,
     tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind, InlineToken},
 };
 
-pub(crate) fn parse(
-    input: &mut InlineTokenIterator,
-    context: &mut InlineContext,
-) -> Option<Inline> {
-    let mut open_token = input.peeking_next(|_| true)?;
+pub(crate) fn parse<'s, 'i>(
+    mut parser: InlineParser<'s, 'i>,
+) -> (InlineParser<'s, 'i>, Option<Inline>) {
+    let open_token_opt = parser.iter.peeking_next(|_| true);
+    if open_token_opt.is_none() {
+        return (parser, None);
+    }
 
-    if input.peek_kind()?.is_space() {
+    let mut open_token = open_token_opt.expect("Checked above to be not None.");
+
+    if parser.iter.peek_kind().map_or(true, |t| t.is_space()) {
         // Split ambiguous in case of leading space. Main wins
         if is_ambiguous(open_token.kind) {
-            input.next(); // consume open token before split
+            parser.iter.next(); // consume open token before split
 
             let (first_token, second_token) = split_token(open_token, main_part(open_token.kind));
-            input.cache_token(second_token);
+            parser.iter.cache_token(second_token);
             open_token = first_token;
         } else {
-            return None;
+            return (parser, None);
         }
     } else {
-        input.next(); // consume open token => now it will lead to Some(inline)
+        parser.iter.next(); // consume open token => now it will lead to Some(inline)
     }
 
     if is_ambiguous(open_token.kind) {
-        input.open_format(&main_part(open_token.kind));
-        input.open_format(&sub_part(open_token.kind));
+        parser.iter.open_format(&main_part(open_token.kind));
+        parser.iter.open_format(&sub_part(open_token.kind));
     } else {
-        input.open_format(&open_token.kind);
+        parser.iter.open_format(&open_token.kind);
     }
 
-    let inner = inline_parser::parse(input, context);
+    let (updated_parser, inner) = InlineParser::parse(parser);
+    parser = updated_parser;
 
-    resolve_closing(input, context, open_token, inner)
+    resolve_closing(parser, open_token, inner)
 }
 
 /// Tries to split an ambiguous format, so an partial open format may close on next iteration.
@@ -66,22 +68,22 @@ pub(crate) fn ambiguous_split<'input>(
     }
 }
 
-fn resolve_closing<'input>(
-    input: &mut InlineTokenIterator<'_, 'input>,
-    context: &mut InlineContext,
+fn resolve_closing<'slice, 'input>(
+    mut parser: InlineParser<'slice, 'input>,
     open_token: InlineToken<'input>,
     inner: Vec<Inline>,
-) -> Option<Inline> {
+) -> (InlineParser<'slice, 'input>, Option<Inline>) {
     let mut outer: Vec<Inline> = Vec::default();
 
-    let updated_open = match input.peek() {
+    let updated_open = match parser.iter.peek() {
         Some(close_token) => {
             if open_token.kind == counterpart(close_token.kind)
                 || open_token.kind == close_token.kind
             {
                 let (attributes, end, implicit_end) = if open_token.kind == close_token.kind {
                     // consume close, because this fn call opened and now closes the format
-                    input
+                    parser
+                        .iter
                         .next()
                         .expect("Peeked before, so `next` must return Some.");
 
@@ -92,41 +94,47 @@ fn resolve_closing<'input>(
                     (None, close_token.start, true)
                 };
 
-                return Some(to_inline(
+                let inline = to_inline(
                     open_token,
-                    input,
+                    &mut parser.iter,
                     inner,
                     attributes,
                     end,
                     implicit_end,
-                ));
+                );
+                return (parser, Some(inline));
             } else if is_ambiguous(close_token.kind)
                 && close_token.kind == ambiguous_part(open_token.kind)
             {
                 // e.g. close = 3 stars between: **bold***italic*
-                input
+                parser
+                    .iter
                     .next()
                     .expect("Peeked before, so `next` must return Some.");
-                input.close_format(&open_token.kind);
+                parser.iter.close_format(&open_token.kind);
 
                 let (closing_token, cached_token) = split_token(close_token, open_token.kind);
-                input.cache_token(cached_token);
+                parser.iter.cache_token(cached_token);
 
-                return Some(super::to_formatting(
-                    open_token.kind,
-                    inner,
-                    None,
-                    open_token.start,
-                    closing_token.end,
-                    false,
-                ));
+                return (
+                    parser,
+                    Some(super::to_formatting(
+                        open_token.kind,
+                        inner,
+                        None,
+                        open_token.start,
+                        closing_token.end,
+                        false,
+                    )),
+                );
             } else if open_token.kind == ambiguous_part(close_token.kind) {
                 // no cache, because "split" is on open token
                 // e.g. close = 2 stars between: ***bold**italic*
-                input
+                parser
+                    .iter
                     .next()
                     .expect("Peeked before, so `next` must return Some.");
-                input.close_format(&close_token.kind);
+                parser.iter.close_format(&close_token.kind);
                 outer.push(super::to_formatting(
                     close_token.kind,
                     inner,
@@ -143,42 +151,48 @@ fn resolve_closing<'input>(
                 // This means that some outer format closed.
                 // => end of this format is at start of the closing token for the outer format
                 // e.g. bold close = implicit before strikethrough end: ~~strike**bold~~
-                return Some(to_inline(
+                let inline = to_inline(
                     open_token,
-                    input,
+                    &mut parser.iter,
                     inner,
                     None,
                     close_token.start,
                     true,
-                ));
+                );
+                return (parser, Some(inline));
             }
         }
         None => {
             // close open format only and return
             // This is ok, because if ambiguous would have been split, peek() would have returned the partial closing token
             // e.g. implicit close in scoped context: [**bold]
-            return Some(to_inline(
+            let prev_token = parser.iter.prev_token().expect(
+                "Previous token must exist, because at least the opening token came before.",
+            );
+            let inline = to_inline(
                 open_token,
-                input,
+                &mut parser.iter,
                 inner,
                 None,
-                crate::element::helper::implicit_end_using_prev(&input.prev_token().expect(
-                    "Previous token must exist, because at least the opening token came before.",
-                )),
+                crate::element::helper::implicit_end_using_prev(&prev_token),
                 true,
-            ));
+            );
+            return (parser, Some(inline));
         }
     };
 
-    outer.append(&mut inline_parser::parse(input, context));
+    let (updated_parser, mut inlines) = InlineParser::parse(parser);
+    parser = updated_parser;
+    outer.append(&mut inlines);
 
     // Format will definitely close fully now => so remove from open formats
-    input.close_format(&updated_open.kind);
+    parser.iter.close_format(&updated_open.kind);
 
-    if let Some(close_token) = input.peek() {
+    if let Some(close_token) = parser.iter.peek() {
         // open token was updated to either main or sub part from ambiguous
         if compatible(updated_open.kind, close_token.kind) {
-            input
+            parser
+                .iter
                 .next()
                 .expect("Peeked before, so `next` must return Some.");
 
@@ -186,7 +200,7 @@ fn resolve_closing<'input>(
                 // ambiguous token gets split, because only part of it is used to close this open format
                 // e.g. first 2 stars of the 3 at end are taken, last star is cached: ***bold + italic* bold***
                 let (closing_token, cached_token) = split_token(close_token, updated_open.kind);
-                input.cache_token(cached_token);
+                parser.iter.cache_token(cached_token);
                 (None, closing_token.end)
             } else {
                 debug_assert!(
@@ -199,29 +213,35 @@ fn resolve_closing<'input>(
                 (None, close_token.end)
             };
 
-            return Some(super::to_formatting(
-                updated_open.kind,
-                outer,
-                attributes,
-                updated_open.start,
-                end,
-                false,
-            ));
+            return (
+                parser,
+                Some(super::to_formatting(
+                    updated_open.kind,
+                    outer,
+                    attributes,
+                    updated_open.start,
+                    end,
+                    false,
+                )),
+            );
         }
     }
 
-    Some(super::to_formatting(
-        updated_open.kind,
-        outer,
-        None,
-        updated_open.start,
-        crate::element::helper::implicit_end_using_prev(
-            &input.prev_token().expect(
-                "Previous token must exist, because at least the opening token came before.",
-            ),
-        ),
-        true,
-    ))
+    let prev_token = parser
+        .iter
+        .prev_token()
+        .expect("Previous token must exist, because at least the opening token came before.");
+    (
+        parser,
+        Some(super::to_formatting(
+            updated_open.kind,
+            outer,
+            None,
+            updated_open.start,
+            crate::element::helper::implicit_end_using_prev(&prev_token),
+            true,
+        )),
+    )
 }
 
 fn to_inline<'input>(

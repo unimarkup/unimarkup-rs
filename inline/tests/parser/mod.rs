@@ -41,13 +41,13 @@ fn run_test_case(case: test_runner::test_file::TestCase) {
     let tokens = unimarkup_commons::lexer::token::lex_str(&case.test.input);
 
     let runner = SnapTestRunner::with_fn(&case.test.name, &tokens, |slice| {
-        let inlines: Vec<_> = unimarkup_inline::inline_parser::parse_inlines(
-            &mut slice.into(),
-            &mut InlineContext::default(),
+        let (_, _, parsed_inlines) = unimarkup_inline::inline_parser::parse_inlines(
+            slice.into(),
+            InlineContext::default(),
             None,
             None,
-        )
-        .to_inlines();
+        );
+        let inlines = parsed_inlines.to_inlines();
         Snapshot::snap(&inlines[..])
     })
     .with_info(format!(

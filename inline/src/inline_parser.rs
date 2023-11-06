@@ -12,7 +12,37 @@ use crate::{
 
 /// Parser function type for inline element parsing.
 pub(crate) type InlineParserFn =
-    for<'s, 'i> fn(&mut InlineTokenIterator<'s, 'i>, &mut InlineContext) -> Option<Inline>;
+    for<'s, 'i> fn(InlineParser<'s, 'i>) -> (InlineParser<'s, 'i>, Option<Inline>);
+
+/// Creates inline elements using the given token iterator.
+pub fn parse_inlines<'slice, 'input>(
+    token_iter: TokenIterator<'slice, 'input>,
+    context: InlineContext,
+    prefix_match: Option<IteratorPrefixFn>,
+    end_match: Option<IteratorEndFn>,
+) -> (TokenIterator<'slice, 'input>, InlineContext, ParsedInlines) {
+    let scoped_iter: TokenIterator<'slice, 'input> =
+        token_iter.new_scope_root(prefix_match, end_match);
+
+    let mut inline_parser = InlineParser {
+        iter: InlineTokenIterator::from(scoped_iter),
+        context,
+    };
+    let (updated_parser, inlines) = InlineParser::parse(inline_parser);
+
+    let parsed_inlines = ParsedInlines {
+        inlines,
+        end_reached: updated_parser.iter.end_reached(),
+        prefix_mismatch: updated_parser.iter.prefix_mismatch(),
+    };
+    inline_parser = updated_parser.unfold();
+
+    (
+        inline_parser.iter.into(),
+        inline_parser.context,
+        parsed_inlines,
+    )
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedInlines {
@@ -35,88 +65,100 @@ impl ParsedInlines {
     }
 }
 
-/// Creates inline elements using the given token iterator.
-pub fn parse_inlines<'slice, 'input>(
-    token_iter: &mut TokenIterator<'slice, 'input>,
-    context: &mut InlineContext,
-    prefix_match: Option<IteratorPrefixFn>,
-    end_match: Option<IteratorEndFn>,
-) -> ParsedInlines {
-    let scoped_iter: TokenIterator<'slice, 'input> =
-        token_iter.new_scope_root(prefix_match, end_match);
-
-    let mut inline_iter = InlineTokenIterator::from(scoped_iter);
-    let inlines = parse(&mut inline_iter, context);
-
-    let parsed_inlines = ParsedInlines {
-        inlines,
-        end_reached: inline_iter.end_reached(),
-        prefix_mismatch: inline_iter.prefix_mismatch(),
-    };
-
-    //TODO: change inlines to "iter chaining"
-    token_iter.progress(inline_iter.into());
-
-    parsed_inlines
+#[derive(Debug)]
+pub(crate) struct InlineParser<'slice, 'input> {
+    pub iter: InlineTokenIterator<'slice, 'input>,
+    pub context: InlineContext,
 }
 
-pub(crate) fn parse(input: &mut InlineTokenIterator, context: &mut InlineContext) -> Vec<Inline> {
-    let mut inlines = Vec::default();
-    let mut format_closes = false;
+impl<'slice, 'input> InlineParser<'slice, 'input> {
+    pub(crate) fn parse(mut parser: Self) -> (Self, Vec<Inline>) {
+        let mut inlines = Vec::default();
+        let mut format_closes = false;
 
-    #[cfg(debug_assertions)]
-    let mut curr_len = input.max_len();
+        #[cfg(debug_assertions)]
+        let mut curr_len = parser.iter.max_len();
 
-    input.reset_peek();
+        parser.iter.reset_peek();
 
-    'outer: while let Some(kind) = input.peek_kind() {
-        if kind == InlineTokenKind::Eoi {
-            break 'outer;
-        }
-
-        if (!context.flags.logic_only && kind.is_scoped_format_keyword())
-            || kind.is_open_parenthesis()
-        {
-            if let Some(parser_fn) = get_scoped_parser(kind, context.flags.logic_only) {
-                if let Some(res_inline) = parser_fn(input, context) {
-                    inlines.push(res_inline);
-                    continue 'outer;
-                }
-            }
-        } else if !context.flags.logic_only && kind.is_format_keyword() {
-            // An open format closes => unwrap to closing format element
-            // closing token is not consumed here => the element parser needs this info
-            if input.format_closes(kind) {
-                format_closes = true;
+        'outer: while let Some(kind) = parser.iter.peek_kind() {
+            if kind == InlineTokenKind::Eoi {
                 break 'outer;
-            } else if !input.format_is_open(kind) {
-                if let Some(parser_fn) = get_format_parser(kind) {
-                    if let Some(res_inline) = parser_fn(input, context) {
-                        inlines.push(res_inline);
+            }
+
+            let parser_fn_opt = if (!parser.context.flags.logic_only
+                && kind.is_scoped_format_keyword())
+                || kind.is_open_parenthesis()
+            {
+                get_scoped_parser(kind, parser.context.flags.logic_only)
+            } else if !parser.context.flags.logic_only && kind.is_format_keyword() {
+                // An open format closes => unwrap to closing format element
+                // closing token is not consumed here => the element parser needs this info
+                if parser.iter.format_closes(kind) {
+                    format_closes = true;
+                    break 'outer;
+                } else if !parser.iter.format_is_open(kind) {
+                    get_format_parser(kind)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            if let Some(parser_fn) = parser_fn_opt {
+                let checkpoint = parser.iter.checkpoint();
+                let (updated_parser, inline_opt) = parser_fn(parser);
+                parser = updated_parser;
+                match inline_opt {
+                    Some(inline) => {
+                        inlines.push(inline);
                         continue 'outer;
+                    }
+                    None => {
+                        let success = parser.iter.rollback(checkpoint);
+                        debug_assert!(
+                            success,
+                            "Rollback was not successful for checkpoint '{:?}'",
+                            checkpoint
+                        )
                     }
                 }
             }
+
+            let (updated_parser, updated_inlines) =
+                crate::element::base::parse_base(parser, inlines);
+
+            parser = updated_parser;
+            inlines = updated_inlines;
+
+            #[cfg(debug_assertions)]
+            {
+                assert!(
+                    parser.iter.max_len() < curr_len,
+                    "Parser consumed no symbol in iteration."
+                );
+                curr_len = parser.iter.max_len();
+            }
         }
 
-        crate::element::base::parse_base(input, context, &mut inlines);
-
-        #[cfg(debug_assertions)]
-        {
-            assert!(
-                input.max_len() < curr_len,
-                "Parser consumed no symbol in iteration."
-            );
-            curr_len = input.max_len();
+        if !format_closes {
+            // To consume tokens in end matching, but do not consume closing formatting tokens
+            let _ = parser.iter.next();
         }
+
+        (parser, inlines)
     }
 
-    if !format_closes {
-        // To consume tokens in end matching, but do not consume closing formatting tokens
-        let _ = input.next();
+    pub fn nest_scoped(mut self, end_match: Option<IteratorEndFn>) -> Self {
+        self.iter = self.iter.nest_scoped(end_match);
+        self
     }
 
-    inlines
+    pub fn unfold(mut self) -> Self {
+        self.iter = self.iter.unfold();
+        self
+    }
 }
 
 fn get_format_parser(kind: InlineTokenKind) -> Option<InlineParserFn> {
@@ -153,18 +195,26 @@ fn get_scoped_parser(kind: InlineTokenKind, logic_only: bool) -> Option<InlinePa
 mod test {
     use unimarkup_commons::{lexer::token::iterator::TokenIterator, parsing::InlineContext};
 
-    use crate::tokenize::iterator::InlineTokenIterator;
+    use crate::{inline_parser::InlineParser, tokenize::iterator::InlineTokenIterator};
 
     #[test]
     fn dummy_for_debugging() {
         let tokens = unimarkup_commons::lexer::token::lex_str("`a`");
-        let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*tokens));
+        let mut inline_parser = InlineParser {
+            iter: InlineTokenIterator::from(TokenIterator::from(&*tokens)),
+            context: InlineContext::default(),
+        };
 
-        let inlines = super::parse(&mut token_iter, &mut InlineContext::default());
+        let (updated_parser, inlines) = InlineParser::parse(inline_parser);
+        inline_parser = updated_parser;
 
         // dbg!(&inlines);
 
         assert!(!inlines.is_empty(), "No inlines created.");
-        assert_eq!(token_iter.next(), None, "Iterator not fully consumed.");
+        assert_eq!(
+            inline_parser.iter.next(),
+            None,
+            "Iterator not fully consumed."
+        );
     }
 }

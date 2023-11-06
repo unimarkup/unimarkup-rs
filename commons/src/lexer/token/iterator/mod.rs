@@ -325,7 +325,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
     pub fn nest(
-        &self,
+        self,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
     ) -> TokenIterator<'slice, 'input> {
@@ -336,7 +336,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         let prefix_start = self.prefix_start;
 
         TokenIterator {
-            parent: TokenIteratorKind::Nested(Box::new(self.clone())),
+            parent: TokenIteratorKind::Nested(Box::new(self)),
             start_index,
             match_index: 0,
             scope,
@@ -363,21 +363,20 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
     pub fn nest_with_scope(
-        &self,
+        mut self,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
     ) -> TokenIterator<'slice, 'input> {
-        let scope = self.scope + 1;
-        let mut parent = self.clone();
-        parent.set_curr_scope(scope);
-
         let start_index = self.index();
         let iter_end = self.iter_end;
         let prefix_mismatch = self.prefix_mismatch;
         let prefix_start = self.prefix_start;
 
+        let scope = self.scope + 1;
+        self.set_curr_scope(scope);
+
         TokenIterator {
-            parent: TokenIteratorKind::Nested(Box::new(parent)),
+            parent: TokenIteratorKind::Nested(Box::new(self)),
             start_index,
             match_index: 0,
             scope,
@@ -394,14 +393,14 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     }
 
     pub fn new_scope_root(
-        &self,
+        self,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
     ) -> TokenIterator<'slice, 'input> {
         let start_index = self.index();
 
         TokenIterator {
-            parent: TokenIteratorKind::ScopedRoot(TokenIteratorScopedRoot::from(self.clone())),
+            parent: TokenIteratorKind::ScopedRoot(TokenIteratorScopedRoot::from(self)),
             scope: 0,
             scoped: false,
             skip_end_until_idx: 0,
@@ -424,9 +423,16 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         )
     }
 
+    pub fn is_scoped(&self) -> bool {
+        self.scoped
+    }
+
     pub fn unfold(self) -> Self {
         match self.parent {
-            TokenIteratorKind::Nested(parent) => *parent,
+            TokenIteratorKind::Nested(mut parent) => {
+                parent.set_curr_scope(parent.scope);
+                *parent
+            }
             TokenIteratorKind::Root(_) => {
                 debug_assert!(false, "Tried to unfold non-nested iterator.");
                 self
@@ -945,7 +951,7 @@ mod test {
         );
 
         // inner.update(&mut iterator);
-        iterator.progress(inner);
+        iterator = inner.unfold();
 
         assert!(
             iterator.end_reached(),
@@ -1026,7 +1032,7 @@ mod test {
             "Inner iterator end was not reached."
         );
 
-        scoped_iterator.progress(inner_iter);
+        scoped_iterator = inner_iter.unfold();
 
         let mut end = scoped_iterator.take_to_end();
         taken_outer.append(&mut end);
@@ -1114,7 +1120,7 @@ mod test {
             "First inner iterator did not reach end."
         );
 
-        iterator.progress(inner);
+        iterator = inner.unfold();
 
         // Matches " -"
         let mut inner = iterator.nest(
@@ -1129,7 +1135,7 @@ mod test {
             "Second inner iterator did not reach end."
         );
 
-        iterator.progress(inner);
+        iterator = inner.unfold();
         iterator.take_to_end();
 
         assert!(iterator.end_reached(), "Main iterator did not reach end.");

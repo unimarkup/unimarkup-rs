@@ -139,9 +139,9 @@ impl Heading {
         let (hashes_prefix, spaces_prefix) = heading_prefix_sequences(hashes_len);
         let (child_hash_prefix, _) = heading_prefix_sequences(hashes_len + 1);
 
-        let parsed_inlines = inline_parser::parse_inlines(
-            &mut parser.iter,
-            &mut parser.context.inline,
+        let (iter, inline_context, parsed_inlines) = inline_parser::parse_inlines(
+            parser.iter,
+            parser.context.inline,
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(hashes_prefix) || matcher.consumed_prefix(spaces_prefix)
             })),
@@ -149,6 +149,8 @@ impl Heading {
                 matcher.consumed_is_blank_line() || matcher.matches(child_hash_prefix)
             })),
         );
+        parser.iter = iter;
+        parser.context.inline = inline_context;
 
         if parsed_inlines.prefix_mismatch() {
             return (parser, None);

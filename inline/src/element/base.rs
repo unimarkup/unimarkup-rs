@@ -5,7 +5,8 @@ use unimarkup_commons::{
 
 use crate::{
     element::InlineElement,
-    tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind, InlineToken},
+    inline_parser::InlineParser,
+    tokenize::{kind::InlineTokenKind, InlineToken},
 };
 
 use super::{
@@ -13,50 +14,49 @@ use super::{
     Inline,
 };
 
-pub(crate) fn parse_base(
-    input: &mut InlineTokenIterator,
-    context: &mut InlineContext,
-    inlines: &mut Vec<Inline>,
-) {
+pub(crate) fn parse_base<'s, 'i>(
+    mut parser: InlineParser<'s, 'i>,
+    mut inlines: Vec<Inline>,
+) -> (InlineParser<'s, 'i>, Vec<Inline>) {
     // This also helps to reset any possible peek while trying to parse special elements
-    let mut next = input.next().expect("Peeked symbol in inline parser.");
+    let mut next = parser.iter.next().expect("Peeked symbol in inline parser.");
     let kind = next.kind;
 
     if matches!(kind, InlineTokenKind::Whitespace) {
         // Previous token is not updated, because format opening/closing validation needs whitespace information
-        let prev_kind = input.prev_kind();
+        let prev_kind = parser.iter.prev_kind();
 
         // Compresses multiple contiguous whitespaces into one.
-        if let Some(last_whitespace) = input.peeking_take_while(|i| i.kind == kind).last() {
+        if let Some(last_whitespace) = parser.iter.peeking_take_while(|i| i.kind == kind).last() {
             next.offset.end = last_whitespace.offset.end;
             next.end = last_whitespace.end;
-            input.skip_to_peek();
+            parser.iter.skip_to_peek();
         }
 
-        if context.flags.keep_whitespaces {
+        if parser.context.flags.keep_whitespaces {
             // Converting whitespace to plain will preserve content as is
             next.kind = InlineTokenKind::Plain;
         } else if matches!(
             prev_kind,
             Some(InlineTokenKind::Newline) | Some(InlineTokenKind::EscapedNewline)
         ) || matches!(
-            input.peek_kind(),
+            parser.iter.peek_kind(),
             Some(InlineTokenKind::Newline) | Some(InlineTokenKind::EscapedNewline)
         ) {
             // Ignore whitespaces after newline, because newline already represents one space
             // Ignore whitespaces before newline, because newline already represents one space
-            return;
+            return (parser, inlines);
         }
     }
 
     if kind.is_keyword() {
         // Ambiguous token may be split to get possible valid partial token
-        crate::element::formatting::ambiguous::ambiguous_split(input, &mut next);
+        crate::element::formatting::ambiguous::ambiguous_split(&mut parser.iter, &mut next);
 
         // Keyword did not lead to inline element in inline parser => convert token to plain
         next.kind = InlineTokenKind::Plain;
-        input.set_prev_token(next); // update prev token, because next changed afterwards
-    } else if !context.flags.allow_implicits
+        parser.iter.set_prev_token(next); // update prev token, because next changed afterwards
+    } else if !parser.context.flags.allow_implicits
         && matches!(
             kind,
             InlineTokenKind::ImplicitSubstitution(_) | InlineTokenKind::Directuri
@@ -75,10 +75,12 @@ pub(crate) fn parse_base(
             {
                 plain.push_token(next);
             }
-            _ => inlines.push(to_inline(context, next)),
+            _ => inlines.push(to_inline(&parser.context, next)),
         },
-        None => inlines.push(to_inline(context, next)),
+        None => inlines.push(to_inline(&parser.context, next)),
     }
+
+    (parser, inlines)
 }
 
 fn to_inline(context: &InlineContext, token: InlineToken<'_>) -> Inline {

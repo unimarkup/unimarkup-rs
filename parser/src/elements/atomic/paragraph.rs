@@ -17,17 +17,23 @@ pub struct Paragraph {
 
 impl Paragraph {
     pub(crate) fn parse<'s, 'i>(mut parser: BlockParser<'s, 'i>) -> (BlockParser<'s, 'i>, Block) {
-        let inlines = inline_parser::parse_inlines(
-            &mut parser.iter,
-            &mut parser.context.inline,
+        let (iter, inline_context, parsed_inlines) = inline_parser::parse_inlines(
+            parser.iter,
+            parser.context.inline,
             None,
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                 matcher.consumed_is_blank_line()
             })),
-        )
-        .to_inlines();
+        );
+        parser.iter = iter;
+        parser.context.inline = inline_context;
 
-        (parser, Block::Paragraph(Paragraph { content: inlines }))
+        (
+            parser,
+            Block::Paragraph(Paragraph {
+                content: parsed_inlines.to_inlines(),
+            }),
+        )
     }
 }
 

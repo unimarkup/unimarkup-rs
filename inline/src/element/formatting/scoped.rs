@@ -1,51 +1,48 @@
 use std::rc::Rc;
 
-use unimarkup_commons::{
-    lexer::{token::iterator::EndMatcher, PeekingNext},
-    parsing::InlineContext,
-};
+use unimarkup_commons::lexer::{token::iterator::EndMatcher, PeekingNext};
 
-use crate::{
-    element::Inline,
-    inline_parser,
-    tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind},
-};
+use crate::{element::Inline, inline_parser::InlineParser, tokenize::kind::InlineTokenKind};
 
 macro_rules! scoped_parser {
     ($fn_name:ident, $kind:ident) => {
-        pub(crate) fn $fn_name(
-            input: &mut InlineTokenIterator,
-            context: &mut InlineContext,
-        ) -> Option<Inline> {
-            let open_token = input.peeking_next(|_| true)?;
-
-            // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
-            if input.peek_kind()?.is_space() {
-                return None;
+        pub(crate) fn $fn_name<'slice, 'input>(
+            mut parser: InlineParser<'slice, 'input>,
+        ) -> (InlineParser<'slice, 'input>, Option<Inline>) {
+            let open_token_opt = parser.iter.peeking_next(|_| true);
+            if open_token_opt.is_none() {
+                return (parser, None);
             }
 
-            input.next(); // consume open token => now it will lead to Some(inline)
+            let open_token = open_token_opt.expect("Checked above to be not None.");
 
-            let mut scoped_iter: InlineTokenIterator<'_, '_> =
-                input.nest_with_scope(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+            // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
+            if parser.iter.peek_kind().map_or(true, |t| t.is_space()) {
+                return (parser, None);
+            }
+
+            parser.iter.next(); // consume open token => now it will lead to Some(inline)
+
+            // ignore implicits, because only escapes and logic elements are allowed in following inline verbatim
+            let prev_context_flags = parser.context.flags;
+
+            let mut scoped_parser =
+                parser.nest_scoped(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                     !matcher.prev_is_space()
                         && matcher.consumed_matches(&[InlineTokenKind::$kind.into()])
                 })));
+            scoped_parser.context.flags.allow_implicits = false;
+            scoped_parser.context.flags.keep_whitespaces = true;
+            scoped_parser.context.flags.logic_only = true;
 
-            // ignore implicits, because only escapes and logic elements are allowed in following inline verbatim
-            let prev_context_flags = context.flags;
-            context.flags.allow_implicits = false;
-            context.flags.keep_whitespaces = true;
-            context.flags.logic_only = true;
+            let (updated_parser, inner) = InlineParser::parse(scoped_parser);
+            scoped_parser = updated_parser;
 
-            let inner = inline_parser::parse(&mut scoped_iter, context);
+            let end_reached = scoped_parser.iter.end_reached();
+            parser = scoped_parser.unfold();
+            parser.context.flags = prev_context_flags;
 
-            context.flags = prev_context_flags;
-
-            let end_reached = scoped_iter.end_reached();
-            input.progress(scoped_iter);
-
-            let prev_token = input.prev_token().expect(
+            let prev_token = parser.iter.prev_token().expect(
                 "Previous token must exist, because peek above would else have returned None.",
             );
 
@@ -60,14 +57,17 @@ macro_rules! scoped_parser {
                 )
             };
 
-            Some(super::to_formatting(
-                open_token.kind,
-                inner,
-                attributes,
-                open_token.start,
-                end,
-                implicit_end,
-            ))
+            (
+                parser,
+                Some(super::to_formatting(
+                    open_token.kind,
+                    inner,
+                    attributes,
+                    open_token.start,
+                    end,
+                    implicit_end,
+                )),
+            )
         }
     };
 }
