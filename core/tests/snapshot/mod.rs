@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use unimarkup_commons::lexer::token::TokenKind;
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
 use unimarkup_parser::elements::blocks::Block;
 use unimarkup_parser::elements::Blocks;
@@ -44,6 +45,7 @@ impl AsSnapshot for Snapshot<&Block> {
             Block::BulletList(block) => Snapshot(block).as_snapshot(),
             Block::Verbatim(block) => Snapshot(block).as_snapshot(),
             Block::Heading(block) => Snapshot(block).as_snapshot(),
+            Block::Blankline(_) => String::from(TokenKind::Blankline),
             _ => unimplemented!("TODO: Implement snapshot for {:?}", self),
         }
     }

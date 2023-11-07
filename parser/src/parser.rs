@@ -158,6 +158,15 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
         self
     }
 
+    pub fn nest(
+        mut self,
+        prefix_match: Option<IteratorPrefixFn>,
+        end_match: Option<IteratorEndFn>,
+    ) -> Self {
+        self.iter = self.iter.nest(prefix_match, end_match);
+        self
+    }
+
     pub fn unfold(mut self) -> Self {
         self.iter = self.iter.unfold();
         self
@@ -181,7 +190,7 @@ fn get_parser_fn(start: PossibleBlockStart, context: &BlockContext) -> &'static 
             PossibleBlockStart::RenderBlock => todo!(),
             PossibleBlockStart::VerbatimBlock => &[Verbatim::parse],
             PossibleBlockStart::Table => todo!(),
-            PossibleBlockStart::BulletList => &[], //TODO: add bullet list parser
+            PossibleBlockStart::BulletList => &[BulletList::parse],
             PossibleBlockStart::Digit => todo!(),
             PossibleBlockStart::QuotationBlock => todo!(),
             PossibleBlockStart::LineBlock => todo!(),
@@ -241,7 +250,7 @@ mod test {
 
     #[test]
     fn debugging_dummy() {
-        let tokens = unimarkup_commons::lexer::token::lex_str("# heading\nbad heading");
+        let tokens = unimarkup_commons::lexer::token::lex_str("- first entry\n- second entry");
         let parser = BlockParser {
             iter: TokenIterator::from(&*tokens),
             context: BlockContext::default(),

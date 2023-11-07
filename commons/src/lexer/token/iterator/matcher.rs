@@ -93,15 +93,22 @@ fn matches_kind(token: &Token<'_>, kind: &TokenKind) -> bool {
 
 impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
     fn is_blank_line(&mut self) -> bool {
-        if matches!(
-            self.peek_kind(),
+        let peek_index = self.peek_index();
+
+        // peeking_next to move peek index forward
+        let is_blankline = if matches!(
+            self.peeking_next(|_| true).map(|t| t.kind),
             Some(TokenKind::Blankline) | Some(TokenKind::Eoi)
         ) {
             self.set_match_index(self.peek_index());
-            return true;
-        }
 
-        false
+            true
+        } else {
+            false
+        };
+
+        self.set_peek_index(peek_index);
+        is_blankline
     }
 
     fn consumed_is_blank_line(&mut self) -> bool {
