@@ -214,6 +214,7 @@ impl InlineTokenKind {
                 | InlineTokenKind::Superscript
                 | InlineTokenKind::Strikethrough
                 | InlineTokenKind::Quote
+                | InlineTokenKind::Overline
                 | InlineTokenKind::Verbatim
                 | InlineTokenKind::Highlight
                 | InlineTokenKind::Math
