@@ -4,7 +4,7 @@ use unimarkup_commons::lexer::{position::Position, span::Span, token::TokenKind}
 
 use super::{
     atomic::{Heading, Paragraph},
-    enclosed::Verbatim,
+    enclosed::VerbatimBlock,
     indents::{BulletList, BulletListEntry},
     BlockElement,
 };
@@ -21,7 +21,7 @@ pub enum Block {
     /// Represents the paragraph block
     Paragraph(Paragraph),
     /// Represents the verbatim block
-    Verbatim(Verbatim),
+    VerbatimBlock(VerbatimBlock),
     /// Represents the bullet list block
     BulletList(BulletList),
     /// Represents the bullet list entry block
@@ -52,7 +52,7 @@ impl Block {
             Block::Blankline(_) => "Blankline",
             Block::Heading(_) => "Heading",
             Block::Paragraph(_) => "Paragraph",
-            Block::Verbatim(_) => "Verbatim",
+            Block::VerbatimBlock(_) => "VerbatimBlock",
             Block::BulletList(_) => "BulletList",
             Block::BulletListEntry(_) => "BulletListEntry",
         }
@@ -65,7 +65,7 @@ impl BlockElement for Block {
             Block::Blankline(_) => String::from(TokenKind::Blankline),
             Block::Heading(block) => block.to_plain_string(),
             Block::Paragraph(block) => block.to_plain_string(),
-            Block::Verbatim(block) => block.to_plain_string(),
+            Block::VerbatimBlock(block) => block.to_plain_string(),
             Block::BulletList(block) => block.to_plain_string(),
             Block::BulletListEntry(block) => block.to_plain_string(),
         }
@@ -76,7 +76,7 @@ impl BlockElement for Block {
             Block::Blankline(span) => span.start,
             Block::Heading(block) => block.start(),
             Block::Paragraph(block) => block.start(),
-            Block::Verbatim(block) => block.start(),
+            Block::VerbatimBlock(block) => block.start(),
             Block::BulletList(block) => block.start(),
             Block::BulletListEntry(block) => block.start(),
         }
@@ -87,7 +87,7 @@ impl BlockElement for Block {
             Block::Blankline(span) => span.end,
             Block::Heading(block) => block.end(),
             Block::Paragraph(block) => block.end(),
-            Block::Verbatim(block) => block.end(),
+            Block::VerbatimBlock(block) => block.end(),
             Block::BulletList(block) => block.end(),
             Block::BulletListEntry(block) => block.end(),
         }
@@ -145,7 +145,7 @@ macro_rules! impl_from {
 }
 
 impl_from!(Heading from Heading);
-impl_from!(Verbatim from Verbatim);
+impl_from!(VerbatimBlock from VerbatimBlock);
 impl_from!(Paragraph from Paragraph);
 impl_from!(BulletList from BulletList);
 impl_from!(BulletListEntry from BulletListEntry);

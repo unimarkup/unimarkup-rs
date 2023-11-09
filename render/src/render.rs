@@ -75,7 +75,7 @@ pub trait Renderer<T: OutputFormat> {
     /// Render a Unimarkup [`Verbatim` block](enclosed::Verbatim) to the output format `T`.
     fn render_verbatim_block(
         &mut self,
-        _verbatim: &enclosed::Verbatim,
+        _verbatim: &enclosed::VerbatimBlock,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -239,7 +239,7 @@ pub trait Renderer<T: OutputFormat> {
         match block {
             Block::Heading(heading) => self.render_heading(heading, context),
             Block::Paragraph(paragraph) => self.render_paragraph(paragraph, context),
-            Block::Verbatim(verbatim) => self.render_verbatim_block(verbatim, context),
+            Block::VerbatimBlock(verbatim) => self.render_verbatim_block(verbatim, context),
             Block::BulletList(bullet_list) => self.render_bullet_list(bullet_list, context),
             _ => Err(RenderError::Unimplemented),
         }

@@ -1,8 +1,8 @@
 use super::Snapshot;
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
-use unimarkup_parser::elements::enclosed::Verbatim;
+use unimarkup_parser::elements::enclosed::VerbatimBlock;
 
-impl AsSnapshot for Snapshot<&Verbatim> {
+impl AsSnapshot for Snapshot<&VerbatimBlock> {
     fn as_snapshot(&self) -> String {
         let content = &self.content;
 

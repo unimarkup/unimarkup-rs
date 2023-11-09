@@ -179,7 +179,9 @@ impl Heading {
                 matcher.consumed_prefix(hashes_prefix) || matcher.consumed_prefix(spaces_prefix)
             })),
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-                matcher.consumed_is_blank_line() || matcher.matches(child_hash_prefix)
+                matcher.consumed_is_blank_line()
+                    || matcher.matches(child_hash_prefix)
+                    || matcher.outer_end()
             })),
         );
         parser.iter = iter;

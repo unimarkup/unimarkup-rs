@@ -43,7 +43,7 @@ impl AsSnapshot for Snapshot<&Block> {
         match **self {
             Block::Paragraph(block) => Snapshot(block).as_snapshot(),
             Block::BulletList(block) => Snapshot(block).as_snapshot(),
-            Block::Verbatim(block) => Snapshot(block).as_snapshot(),
+            Block::VerbatimBlock(block) => Snapshot(block).as_snapshot(),
             Block::Heading(block) => Snapshot(block).as_snapshot(),
             Block::Blankline(_) => String::from(TokenKind::Blankline),
             _ => unimplemented!("TODO: Implement snapshot for {:?}", self),

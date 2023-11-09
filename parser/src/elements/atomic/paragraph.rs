@@ -38,7 +38,7 @@ impl Paragraph {
             (&parser.context).into(),
             None,
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-                matcher.consumed_is_blank_line()
+                matcher.consumed_is_blank_line() || matcher.outer_end()
             })),
         );
         parser.iter = iter;

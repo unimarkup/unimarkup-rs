@@ -89,6 +89,7 @@ impl From<TokenKind> for PossibleBlockStart {
             | TokenKind::DirectUri
             | TokenKind::Any
             | TokenKind::Space
+            | TokenKind::EnclosedBlockEnd
             | TokenKind::PossibleAttributes
             | TokenKind::PossibleDecorator => {}
         }

@@ -1,17 +1,16 @@
 use std::rc::Rc;
 
-use serde::{Deserialize, Serialize};
 use unimarkup_commons::lexer::position::Position;
 use unimarkup_commons::lexer::token::iterator::EndMatcher;
 use unimarkup_commons::lexer::token::TokenKind;
 
-use crate::elements::{BlockElement, Blocks};
+use crate::elements::BlockElement;
 use crate::{elements::blocks::Block, BlockParser};
-use unimarkup_commons::lexer::{Itertools, SymbolKind};
+use unimarkup_commons::lexer::SymbolKind;
 
 /// Structure of a Unimarkup verbatim block element.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Verbatim {
+pub struct VerbatimBlock {
     /// The content of the verbatim block.
     pub content: String,
 
@@ -28,7 +27,7 @@ pub struct Verbatim {
     pub end: Position,
 }
 
-impl BlockElement for Verbatim {
+impl BlockElement for VerbatimBlock {
     fn to_plain_string(&self) -> String {
         let ticks = SymbolKind::Tick.as_str().repeat(self.tick_len);
         let lang = self.data_lang.clone().unwrap_or_default();
@@ -44,7 +43,7 @@ impl BlockElement for Verbatim {
     }
 }
 
-impl Verbatim {
+impl VerbatimBlock {
     pub(crate) fn parse<'s, 'i>(
         mut parser: BlockParser<'s, 'i>,
     ) -> (BlockParser<'s, 'i>, Option<Block>) {
@@ -95,7 +94,7 @@ impl Verbatim {
                 matcher.consumed_matches(&[
                     TokenKind::Newline,
                     TokenKind::Tick(tick_len),
-                    TokenKind::Blankline, //TODO: add PossibleAttributes & Possible Decorators besides blanklines
+                    TokenKind::EnclosedBlockEnd, //TODO: add PossibleAttributes & Possible Decorators besides blanklines
                 ])
             })),
         );
@@ -122,7 +121,7 @@ impl Verbatim {
 
         (
             parser,
-            Some(Block::Verbatim(Verbatim {
+            Some(Block::VerbatimBlock(VerbatimBlock {
                 content: content.to_plain_string(),
                 data_lang,
                 attributes: None,

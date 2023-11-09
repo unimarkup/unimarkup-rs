@@ -58,6 +58,7 @@ pub enum TokenKind {
     // For matching
     Any,
     Space,
+    EnclosedBlockEnd,
     PossibleAttributes,
     PossibleDecorator,
 }
@@ -84,6 +85,7 @@ impl TokenKind {
                 | TokenKind::DirectUri
                 | TokenKind::Any
                 | TokenKind::Space
+                | TokenKind::EnclosedBlockEnd
                 | TokenKind::PossibleAttributes
                 | TokenKind::PossibleDecorator
         )
@@ -187,6 +189,7 @@ impl From<TokenKind> for String {
             | TokenKind::PossibleAttributes
             | TokenKind::PossibleDecorator
             | TokenKind::Any
+            | TokenKind::EnclosedBlockEnd
             | TokenKind::Space
             | TokenKind::Eoi => {
                 #[cfg(debug_assertions)]

@@ -14,7 +14,7 @@ use crate::{
     elements::{
         atomic::{Heading, Paragraph},
         blocks::Block,
-        enclosed::Verbatim,
+        enclosed::VerbatimBlock,
         indents::BulletList,
         kind::PossibleBlockStart,
         Blocks,
@@ -188,7 +188,7 @@ fn get_parser_fn(start: PossibleBlockStart, context: &BlockContext) -> &'static 
             PossibleBlockStart::ColumnBlock => todo!(), //&[implicit_column_parser, explicit_column_parser],
             PossibleBlockStart::MathBlock => todo!(),
             PossibleBlockStart::RenderBlock => todo!(),
-            PossibleBlockStart::VerbatimBlock => &[Verbatim::parse],
+            PossibleBlockStart::VerbatimBlock => &[VerbatimBlock::parse],
             PossibleBlockStart::Table => todo!(),
             PossibleBlockStart::BulletList => &[BulletList::parse],
             PossibleBlockStart::Digit => todo!(),
@@ -246,12 +246,11 @@ impl BlockContext {
 mod test {
     use unimarkup_commons::lexer::token::iterator::TokenIterator;
 
-    use crate::{BlockContext, BlockParser};
+    use crate::{elements::BlockElement, BlockContext, BlockParser};
 
     #[test]
     fn debugging_dummy() {
-        let tokens =
-            unimarkup_commons::lexer::token::lex_str("- first entry\n\n  - nested list entry");
+        let tokens = unimarkup_commons::lexer::token::lex_str("## Heading **with** inlines.");
         let parser = BlockParser {
             iter: TokenIterator::from(&*tokens),
             context: BlockContext::default(),

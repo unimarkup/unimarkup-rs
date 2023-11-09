@@ -260,7 +260,7 @@ macro_rules! from_block_to_type {
 
 from_block_to_type!(super::atomic::Heading, Heading);
 from_block_to_type!(super::atomic::Paragraph, Paragraph);
-from_block_to_type!(super::enclosed::Verbatim, Verbatim);
+from_block_to_type!(super::enclosed::VerbatimBlock, Verbatim);
 
 #[cfg(test)]
 mod tests {

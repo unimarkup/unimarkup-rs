@@ -245,6 +245,7 @@ impl BulletListEntry {
             })),
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                 matcher.consumed_is_blank_line()
+                    || matcher.outer_end()
                     || matcher.matches(STAR_ENTRY_START)
                     || matcher.matches(MINUS_ENTRY_START)
                     || matcher.matches(PLUS_ENTRY_START)

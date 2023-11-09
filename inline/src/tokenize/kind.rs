@@ -357,6 +357,7 @@ impl From<TokenKind> for InlineTokenKind {
             | TokenKind::Hash(_)
             | TokenKind::Minus(_)
             | TokenKind::Plus(_)
+            | TokenKind::EnclosedBlockEnd
             | TokenKind::PossibleDecorator
             | TokenKind::TerminalPunctuation => InlineTokenKind::Plain,
         }

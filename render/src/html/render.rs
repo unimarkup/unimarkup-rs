@@ -47,7 +47,7 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_verbatim_block(
         &mut self,
-        verbatim: &unimarkup_parser::elements::enclosed::Verbatim,
+        verbatim: &unimarkup_parser::elements::enclosed::VerbatimBlock,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = Html::with(

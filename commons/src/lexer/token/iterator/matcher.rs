@@ -53,6 +53,8 @@ pub trait EndMatcher {
     /// Returns `true` if the previous symbol returned using `next()` or `consumed_matches()` is either
     /// whitespace, newline, EOI, or no previous symbol exists.
     fn prev_is_space(&mut self) -> bool;
+
+    fn outer_end(&mut self) -> bool;
 }
 
 /// Trait containing functions that are available inside the prefix matcher function.
@@ -81,6 +83,7 @@ pub trait PrefixMatcher {
 fn matches_kind(token: &Token<'_>, kind: &TokenKind) -> bool {
     match kind {
         TokenKind::Any => true,
+        TokenKind::EnclosedBlockEnd => matches!(token.kind, TokenKind::Blankline | TokenKind::Eoi),
         // TokenKind::PossibleAttributes => todo!(),
         // TokenKind::PossibleDecorator => todo!(),
         TokenKind::Space => match token.kind {
@@ -132,7 +135,9 @@ impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
         for kind in sequence {
             let next_token_opt = self.peeking_next(|s| matches_kind(s, kind));
 
-            if next_token_opt.is_none() {
+            if next_token_opt.is_none()
+                && !matches!(kind, TokenKind::EnclosedBlockEnd | TokenKind::Any)
+            {
                 self.set_peek_index(peek_index);
                 return false;
             }
@@ -165,6 +170,10 @@ impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
     fn prev_is_space(&mut self) -> bool {
         // default `true`, because "no prev" means start of input, which is considered as space.
         self.prev_kind().map_or(true, |k| k.is_space())
+    }
+
+    fn outer_end(&mut self) -> bool {
+        self.peek().is_none()
     }
 }
 
