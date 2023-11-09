@@ -250,7 +250,7 @@ mod test {
 
     #[test]
     fn debugging_dummy() {
-        let tokens = unimarkup_commons::lexer::token::lex_str("- first entry\n- second entry");
+        let tokens = unimarkup_commons::lexer::token::lex_str("- first entry\n\n  Entry has body.");
         let parser = BlockParser {
             iter: TokenIterator::from(&*tokens),
             context: BlockContext::default(),

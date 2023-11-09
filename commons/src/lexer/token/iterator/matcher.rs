@@ -198,7 +198,12 @@ impl<'slice, 'input> PrefixMatcher for TokenIterator<'slice, 'input> {
             .peeking_take_while(|s| matches!(s.kind, TokenKind::Whitespace))
             .count();
 
-        let new_line = self.peeking_next(|s| matches!(s.kind, TokenKind::Newline | TokenKind::Eoi));
+        let new_line = self.peeking_next(|s| {
+            matches!(
+                s.kind,
+                TokenKind::Blankline | TokenKind::Newline | TokenKind::Eoi
+            )
+        });
 
         // NOTE: Not consumed, because nested prefix matchers must see the potentially empty line too
         self.set_peek_index(peek_index);

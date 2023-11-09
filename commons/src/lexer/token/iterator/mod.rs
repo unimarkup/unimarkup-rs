@@ -573,7 +573,7 @@ impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input> {
         // Prefix matching after `next()` to skip prefix symbols, but pass (escaped) `Newline` to nested iterators.
         if matches!(
             curr_token_opt.map(|t| t.kind),
-            Some(TokenKind::Newline) | Some(TokenKind::EscapedNewline)
+            Some(TokenKind::Newline) | Some(TokenKind::EscapedNewline | TokenKind::Blankline)
         ) {
             // To store the newline token at the start of a possible prefix match.
             // Needed for `prev()`, because prefix match implicitly consumes tokens,
@@ -649,7 +649,10 @@ impl<'slice, 'input> PeekingNext for TokenIterator<'slice, 'input> {
         if in_scope
             && !self.next_matching
             && !self.peek_matching
-            && peeked_token_opt?.kind == TokenKind::Newline
+            && matches!(
+                peeked_token_opt?.kind,
+                TokenKind::Newline | TokenKind::EscapedNewline | TokenKind::Blankline
+            )
             && self.prefix_match.is_some()
         {
             let prefix_match = self

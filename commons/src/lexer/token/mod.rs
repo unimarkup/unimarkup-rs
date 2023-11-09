@@ -231,17 +231,17 @@ fn make_blankline<'input>(
         .peeking_take_while(|s| s.kind == SymbolKind::Whitespace)
         .count();
 
-    let symbol_opt = sym_iter.peek();
+    let symbol_opt = sym_iter.peek(); // Do not consume last newline/EOI, to allow chaining contiguous blanklines
 
     if symbol_opt.map_or(false, |s| {
         s.kind == SymbolKind::Newline || s.kind == SymbolKind::Eoi
     }) {
-        // Consume peeked symbols without iterating over them again
+        // Consume peeking_next symbols without iterating over them again
         sym_iter.set_index(sym_iter.peek_index());
 
         let symbol = symbol_opt.expect("Checked above to be some symbol.");
         token.offset.extend(symbol.offset);
-        token.end = symbol.end;
+        token.end = symbol.start; // Start position, because last newline/EOI is not consumed
         token.kind = TokenKind::Blankline;
         Some(token)
     } else {
