@@ -8,7 +8,7 @@ use unimarkup_commons::lexer::{
         iterator::{EndMatcher, PrefixMatcher},
         Token, TokenKind,
     },
-    SymbolKind,
+    Itertools, SymbolKind,
 };
 use unimarkup_inline::{
     element::{Inline, InlineElement},
@@ -31,15 +31,21 @@ pub struct BulletList {
 
 impl BlockElement for BulletList {
     fn to_plain_string(&self) -> String {
-        todo!()
+        let mut s = String::default();
+
+        for entry in &self.entries {
+            s.push_str(&entry.to_plain_string())
+        }
+
+        s
     }
 
     fn start(&self) -> unimarkup_commons::lexer::position::Position {
-        todo!()
+        self.start
     }
 
     fn end(&self) -> unimarkup_commons::lexer::position::Position {
-        todo!()
+        self.end
     }
 }
 
@@ -110,7 +116,24 @@ pub struct BulletListEntry {
 
 impl BlockElement for BulletListEntry {
     fn to_plain_string(&self) -> String {
-        todo!()
+        let head_body_separator = match self.body.first() {
+            Some(Block::BulletList(_)) | None => "",
+            _ => SymbolKind::Newline.as_str(),
+        };
+
+        let plain_body = if self.body.is_empty() {
+            String::default()
+        } else {
+            self.body.to_plain_string().lines().join("\n  ")
+        }; // Two space indentation after newline
+
+        format!(
+            "{} {}\n{}{}",
+            self.keyword.as_str(),
+            self.heading.to_plain_string(),
+            head_body_separator,
+            plain_body
+        )
     }
 
     fn start(&self) -> unimarkup_commons::lexer::position::Position {
