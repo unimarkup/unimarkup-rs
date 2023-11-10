@@ -1,3 +1,5 @@
+//! Contains elements that build upon the text box syntax.
+
 use std::rc::Rc;
 
 use unimarkup_commons::lexer::{
@@ -6,7 +8,7 @@ use unimarkup_commons::lexer::{
     PeekingNext,
 };
 
-use crate::{inline_parser::InlineParser, tokenize::kind::InlineTokenKind};
+use crate::{parser::InlineParser, tokenize::kind::InlineTokenKind};
 
 use self::hyperlink::Hyperlink;
 
@@ -14,11 +16,16 @@ use super::{Inline, InlineElement};
 
 pub mod hyperlink;
 
+/// Represents the text box element.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextBox {
+    /// The content inside brackets.
     inner: Vec<Inline>,
+    /// Optional attributes of the text box.
     attributes: Option<Vec<Inline>>,
+    /// The start of this text box in the original content.
     start: Position,
+    /// The end of this text box in the original content.
     end: Position,
 }
 
@@ -37,6 +44,7 @@ impl TextBox {
         }
     }
 
+    /// Returns the content inside the brackets of the text box.
     pub fn inner(&self) -> &Vec<Inline> {
         &self.inner
     }
@@ -168,6 +176,7 @@ pub(crate) fn parse<'slice, 'input>(
     )
 }
 
+/// Tries to parse text box variants like literature referencing.
 fn parse_box_variant<'slice, 'input>(
     parser: InlineParser<'slice, 'input>,
 ) -> (InlineParser<'slice, 'input>, Option<Inline>) {
@@ -195,55 +204,3 @@ impl InlineElement for TextBox {
         self.end
     }
 }
-
-// #[cfg(test)]
-// mod test {
-//     use unimarkup_commons::lexer::token::iterator::TokenIterator;
-
-//     use crate::{
-//         element::{
-//             plain::Plain,
-//             textbox::{hyperlink::Hyperlink, TextBox},
-//         },
-//         tokenize::iterator::InlineTokenIterator,
-//     };
-
-//     #[test]
-//     fn parse_textbox() {
-//         let symbols = unimarkup_commons::lexer::scan_str("[textbox]");
-//         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
-
-//         let inline = super::parse(&mut token_iter).unwrap();
-
-//         assert_eq!(
-//             inline,
-//             TextBox {
-//                 inner: vec![Plain {
-//                     content: "textbox".to_string(),
-//                 }
-//                 .into()],
-//             }
-//             .into(),
-//             "Textbox not correctly parsed."
-//         );
-//     }
-
-//     #[test]
-//     fn parse_hyperlink() {
-//         let symbols = unimarkup_commons::lexer::scan_str("[](link)");
-//         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
-
-//         let inline = super::parse(&mut token_iter).unwrap();
-
-//         assert_eq!(
-//             inline,
-//             Hyperlink {
-//                 inner: vec![],
-//                 link: "link".to_string(),
-//                 alt_text: None,
-//             }
-//             .into(),
-//             "Hyperlink not correctly parsed."
-//         );
-//     }
-// }

@@ -1,8 +1,10 @@
+//! Contains the inline parser for base elements like plain text, whitespace, or implicit substitution.
+
 use unimarkup_commons::lexer::{position::Position, Itertools};
 
 use crate::{
     element::InlineElement,
-    inline_parser::{InlineContext, InlineParser},
+    parser::{InlineContext, InlineParser},
     tokenize::{kind::InlineTokenKind, InlineToken},
 };
 
@@ -11,6 +13,7 @@ use super::{
     Inline,
 };
 
+/// Creates basic inline elements from the following tokens returned by the inline parser.
 pub(crate) fn parse_base<'s, 'i>(
     mut parser: InlineParser<'s, 'i>,
     mut inlines: Vec<Inline>,
@@ -80,6 +83,8 @@ pub(crate) fn parse_base<'s, 'i>(
     (parser, inlines)
 }
 
+/// Creates an inline element for the given token.
+/// The created element may vary depending on the given context.
 fn to_inline(context: &InlineContext, token: InlineToken<'_>) -> Inline {
     match token.kind {
         InlineTokenKind::Newline => {

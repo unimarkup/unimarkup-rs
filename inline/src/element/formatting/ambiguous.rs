@@ -1,3 +1,5 @@
+//! Contains the parser for ambiguous formats like [`Bold`](super::Bold) and [`Italic`](super::Italic), or [`Underline`](super::Underline) and [`Subscript`](super::Subscript).
+
 use unimarkup_commons::lexer::{
     position::{Offset, Position},
     PeekingNext,
@@ -5,10 +7,11 @@ use unimarkup_commons::lexer::{
 
 use crate::{
     element::Inline,
-    inline_parser::InlineParser,
+    parser::InlineParser,
     tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind, InlineToken},
 };
 
+/// Parses and creates an ambiguous format.
 pub(crate) fn parse<'s, 'i>(
     mut parser: InlineParser<'s, 'i>,
 ) -> (InlineParser<'s, 'i>, Option<Inline>) {
@@ -68,6 +71,8 @@ pub(crate) fn ambiguous_split<'input>(
     }
 }
 
+/// Resolves closing of the ambiguous format.
+/// Either by fully closing the format, or splitting the closing token, and parsing the second half until this can be closed aswell.
 fn resolve_closing<'slice, 'input>(
     mut parser: InlineParser<'slice, 'input>,
     open_token: InlineToken<'input>,
@@ -244,6 +249,7 @@ fn resolve_closing<'slice, 'input>(
     )
 }
 
+/// Converts the ambiguous format into its inline element.
 fn to_inline<'input>(
     open_token: InlineToken<'input>,
     input: &mut InlineTokenIterator<'_, 'input>,
@@ -286,10 +292,16 @@ fn to_inline<'input>(
     }
 }
 
+/// Returns `true` if the two kinds are compatible.
+/// Meaning they both share the same keyword.
 fn compatible(kind: InlineTokenKind, other: InlineTokenKind) -> bool {
     kind == other || kind == counterpart(other) || kind == ambiguous_part(other)
 }
 
+/// Returns the counterpart of the given kind.
+/// e.g. `italic` for `bold`
+///
+/// The ambiguous variants have no counterpart.
 fn counterpart(kind: InlineTokenKind) -> InlineTokenKind {
     match kind {
         InlineTokenKind::Bold => InlineTokenKind::Italic,
@@ -300,6 +312,8 @@ fn counterpart(kind: InlineTokenKind) -> InlineTokenKind {
     }
 }
 
+/// Returns the main part of an ambiguous kind.
+/// e.g. `bold` for bold/italic
 fn main_part(kind: InlineTokenKind) -> InlineTokenKind {
     match kind {
         InlineTokenKind::Bold => kind,
@@ -312,6 +326,8 @@ fn main_part(kind: InlineTokenKind) -> InlineTokenKind {
     }
 }
 
+/// Returns the sub part of an ambiguous kind.
+/// e.g. `italic` for bold/italic
 fn sub_part(kind: InlineTokenKind) -> InlineTokenKind {
     match kind {
         InlineTokenKind::Italic => kind,
@@ -324,6 +340,8 @@ fn sub_part(kind: InlineTokenKind) -> InlineTokenKind {
     }
 }
 
+/// Returns `true` if the given kind is ambiguous.
+/// e.g. `bolditalic`
 pub(crate) fn is_ambiguous(kind: InlineTokenKind) -> bool {
     matches!(
         kind,
@@ -331,6 +349,8 @@ pub(crate) fn is_ambiguous(kind: InlineTokenKind) -> bool {
     )
 }
 
+/// Returns the ambiguous kind for the given kind.
+/// e.g. `bolditalic` for bold/italic
 fn ambiguous_part(kind: InlineTokenKind) -> InlineTokenKind {
     match kind {
         InlineTokenKind::Italic | InlineTokenKind::Bold | InlineTokenKind::BoldItalic => {
@@ -343,6 +363,7 @@ fn ambiguous_part(kind: InlineTokenKind) -> InlineTokenKind {
     }
 }
 
+/// Splits an ambiguous token using the given kind as the first part.
 fn split_token(
     ambiguous: InlineToken<'_>,
     first_kind: InlineTokenKind,
@@ -384,73 +405,3 @@ fn split_token(
 
     (first_token, second_token)
 }
-
-// #[cfg(test)]
-// mod test {
-//     use unimarkup_commons::scanner::token::iterator::TokenIterator;
-
-//     use crate::element::{
-//         formatting::{Subscript, Underline},
-//         plain::Plain,
-//     };
-
-//     use super::*;
-
-//     #[test]
-//     fn parse_underline_subscript() {
-//         let symbols = unimarkup_commons::scanner::scan_str("___underline__subscript_");
-//         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
-
-//         let inline = parse(&mut token_iter).unwrap();
-
-//         assert_eq!(
-//             inline,
-//             Subscript {
-//                 inner: vec![
-//                     Underline {
-//                         inner: vec![Plain {
-//                             content: "underline".to_string(),
-//                         }
-//                         .into()]
-//                     }
-//                     .into(),
-//                     Plain {
-//                         content: "subscript".to_string(),
-//                     }
-//                     .into()
-//                 ],
-//             }
-//             .into(),
-//             "Subscript + underline not correctly parsed."
-//         )
-//     }
-
-//     #[test]
-//     fn parse_underline_subscript_ambiguous_close() {
-//         let symbols = unimarkup_commons::scanner::scan_str("__underline_subscript___");
-//         let mut token_iter = InlineTokenIterator::from(TokenIterator::from(&*symbols));
-
-//         let inline = parse(&mut token_iter).unwrap();
-
-//         assert_eq!(
-//             inline,
-//             Underline {
-//                 inner: vec![
-//                     Plain {
-//                         content: "underline".to_string(),
-//                     }
-//                     .into(),
-//                     Subscript {
-//                         inner: vec![Plain {
-//                             content: "subscript".to_string(),
-//                         }
-//                         .into()]
-//                     }
-//                     .into(),
-//                 ],
-//             }
-//             .into(),
-//             "Subscript + underline not correctly parsed."
-//         )
-//     }
-// }

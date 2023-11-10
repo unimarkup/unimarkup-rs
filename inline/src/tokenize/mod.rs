@@ -1,3 +1,5 @@
+//! Contains the [`InlineToken`], the [`InlineTokenKind`], and the [`InlineTokenIterator`](iterator::InlineTokenIterator).
+
 use unimarkup_commons::lexer::{
     position::{Offset, Position},
     token::{Token, COMMENT_TOKEN_LEN},
@@ -8,7 +10,7 @@ use self::kind::InlineTokenKind;
 pub(crate) mod iterator;
 pub(crate) mod kind;
 
-/// Token lexed from Unimarkup text.
+/// Converted Unimarkup [`Token`] to make inline parsing easier.
 ///
 /// # Lifetimes
 ///

@@ -41,6 +41,8 @@ pub fn parse_inlines<'slice, 'input>(
     )
 }
 
+/// Struct to return parsed inline elements,
+/// and additional infos about the inline parser state at the end of the parser.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedInlines {
     inlines: Vec<Inline>,
@@ -49,14 +51,17 @@ pub struct ParsedInlines {
 }
 
 impl ParsedInlines {
+    /// Convert [`ParsedInlines`] to inlines.
     pub fn to_inlines(self) -> Vec<Inline> {
         self.inlines
     }
 
+    /// Returns `true` if the inline parser reached its end.
     pub fn end_reached(&self) -> bool {
         self.end_reached
     }
 
+    /// Returns `true` if the inline parser had a prefix mismatch.
     pub fn prefix_mismatch(&self) -> bool {
         self.prefix_mismatch
     }
@@ -80,6 +85,8 @@ pub struct InlineContextFlags {
     pub allow_implicits: bool,
 }
 
+/// The inline parser containing the [`InlineTokenIterator`],
+/// and the [`InlineContext`] used to parse Unimarkup content to create inline elements.
 #[derive(Debug)]
 pub(crate) struct InlineParser<'slice, 'input> {
     pub iter: InlineTokenIterator<'slice, 'input>,
@@ -87,6 +94,7 @@ pub(crate) struct InlineParser<'slice, 'input> {
 }
 
 impl<'slice, 'input> InlineParser<'slice, 'input> {
+    /// The main parser for inline elements.
     pub(crate) fn parse(mut parser: Self) -> (Self, Vec<Inline>) {
         let mut inlines = Vec::default();
         let mut format_closes = false;
@@ -165,17 +173,21 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
         (parser, inlines)
     }
 
+    /// Create an inline parser that has this parser as parent.
     pub fn nest_scoped(mut self, end_match: Option<IteratorEndFn>) -> Self {
         self.iter = self.iter.nest_scoped(end_match);
         self
     }
 
+    /// Returns the parent parser if this parser is nested.
+    /// Otherwise, self is returned unchanged.
     pub fn unfold(mut self) -> Self {
         self.iter = self.iter.unfold();
         self
     }
 }
 
+/// Returns the parser that is able to create an inline format element from the given kind.
 fn get_format_parser(kind: InlineTokenKind) -> Option<InlineParserFn> {
     match kind {
         InlineTokenKind::Bold
@@ -193,6 +205,7 @@ fn get_format_parser(kind: InlineTokenKind) -> Option<InlineParserFn> {
     }
 }
 
+/// Returns the parser that is able to create an inline scoped parser from the given kind.
 fn get_scoped_parser(kind: InlineTokenKind, logic_only: bool) -> Option<InlineParserFn> {
     match kind {
         InlineTokenKind::Verbatim if !logic_only => {
@@ -211,7 +224,7 @@ mod test {
     use unimarkup_commons::lexer::token::iterator::TokenIterator;
 
     use crate::{
-        inline_parser::{InlineContext, InlineParser},
+        parser::{InlineContext, InlineParser},
         tokenize::iterator::InlineTokenIterator,
     };
 

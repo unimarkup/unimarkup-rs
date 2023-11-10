@@ -1,7 +1,10 @@
+//! Contains the [`Hyperlink`] element.
+
 use unimarkup_commons::lexer::position::Position;
 
 use crate::element::{Inline, InlineElement};
 
+/// Represents a Unimarkup hyperlink.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Hyperlink {
     inner: Vec<Inline>,
@@ -31,14 +34,17 @@ impl Hyperlink {
         }
     }
 
+    /// Returns the content inside the brackets of the hyperlink.
     pub fn inner(&self) -> &Vec<Inline> {
         &self.inner
     }
 
+    /// Returns the link of this hyperlink.
     pub fn link(&self) -> &str {
         &self.link
     }
 
+    /// Returns the optional link text of this hyperlink.
     pub fn link_text(&self) -> Option<&str> {
         self.link_text.as_deref()
     }

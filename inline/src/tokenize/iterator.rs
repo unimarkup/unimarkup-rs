@@ -1,3 +1,5 @@
+//! Contains the [`InlineTokenIterator`].
+
 use unimarkup_commons::lexer::{
     token::iterator::{Checkpoint, IteratorEndFn, TokenIterator},
     PeekingNext,
@@ -9,20 +11,23 @@ use crate::element::formatting::{
 
 use super::{kind::InlineTokenKind, InlineToken};
 
-/// The [`TokenIterator`] provides an iterator over [`Token`]s.
+/// The [`InlineTokenIterator`] provides an iterator over [`InlineToken`]s.
 /// It allows to add matcher functions to notify the iterator,
 /// when an end of an element is reached.
 /// Additionaly, the iterator may be nested to enable transparent iterating for nested elements.
 ///
-/// *Transparent* meaning that the nested iterator does not see [`Token`]s consumed by the wrapped (parent) iterator.
-/// In other words, wrapped iterators control which [`Token`]s will be passed to their nested iterator.
-/// Therefore, each nested iterator only sees those [`Token`]s that are relevant to its scope.
+/// *Transparent* meaning that the nested iterator does not see [`InlineToken`]s consumed by the wrapped (parent) iterator.
+/// In other words, wrapped iterators control which [`InlineToken`]s will be passed to their nested iterator.
+/// Therefore, each nested iterator only sees those [`InlineToken`]s that are relevant to its scope.
 #[derive(Debug)]
 pub(crate) struct InlineTokenIterator<'slice, 'input> {
-    /// The [`TokenIterator`] of this iterator.
+    /// The underlying [`TokenIterator`] of this iterator.
     token_iter: TokenIterator<'slice, 'input>,
+    /// Optional cached token used for splitting ambiguous tokens.
     cached_token: Option<InlineToken<'input>>,
+    /// Optional token in case the previously returned token was changed after being returned by the iterator.
     updated_prev: Option<InlineToken<'input>>,
+    /// Flag to mark if the cached token was viewed when peeking the next token.
     peeked_cache: bool,
     /// Flags for open formats per scope
     open_formats: Vec<OpenFormatMap>,
@@ -59,7 +64,7 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         self.token_iter.reset_peek();
     }
 
-    /// Returns the next [`Token`] without changing the current index.    
+    /// Returns the next [`InlineToken`] without changing the current index.    
     pub fn peek(&mut self) -> Option<InlineToken<'input>> {
         let peek_index = self.token_iter.peek_index();
         let peeked_cache = self.peeked_cache;
@@ -72,12 +77,12 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         token
     }
 
-    /// Returns the [`TokenKind`] of the peeked [`Token`].
+    /// Returns the [`InlineTokenKind`] of the peeked [`InlineToken`].
     pub fn peek_kind(&mut self) -> Option<InlineTokenKind> {
         self.peek().map(|s| s.kind)
     }
 
-    /// Returns the previous symbol this iterator returned via `next()` or `consumed_matches()`.
+    /// Returns the previous token this iterator returned via `next()` or `consumed_matches()`.
     pub fn prev_token(&self) -> Option<InlineToken<'input>> {
         match self.updated_prev {
             Some(updated) => Some(updated),
@@ -89,7 +94,7 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         self.updated_prev = Some(token);
     }
 
-    /// Returns the [`TokenKind`] of the previous symbol this iterator returned via `next()` or `consumed_matches()`.
+    /// Returns the [`InlineTokenKind`] of the previous token this iterator returned via `next()` or `consumed_matches()`.
     pub fn prev_kind(&self) -> Option<InlineTokenKind> {
         self.prev_token().map(|s| s.kind)
     }
@@ -98,18 +103,21 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         self.cached_token = Some(token)
     }
 
+    /// Marks the given format as being open.
     pub(crate) fn open_format(&mut self, format: &InlineTokenKind) {
         self.open_formats
             .last_mut()
             .expect("At least one open format map always exists.")[map_index(format)] = true;
     }
 
+    /// Removes the given format from the open format map.
     pub(crate) fn close_format(&mut self, format: &InlineTokenKind) {
         self.open_formats
             .last_mut()
             .expect("At least one open format map always exists.")[map_index(format)] = false;
     }
 
+    /// Returns `true` if the given format would close given the current iterator state.
     pub(crate) fn format_closes(&mut self, format: InlineTokenKind) -> bool {
         // previous token is space => close is invalid
         if self.prev_token().map_or(true, |t| t.kind.is_space()) {
@@ -119,6 +127,7 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         self.format_is_open(format)
     }
 
+    /// Returns `true` if the given format is currently open.
     pub(crate) fn format_is_open(&self, format: InlineTokenKind) -> bool {
         // check if ambiguous parts are open, because open ambiguous pushes both formats, but not itself
         let ambiguous_open = (format == InlineTokenKind::BoldItalic
@@ -154,9 +163,6 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
     /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
     /// Pushes the new iterator to a new scope, and only runs the given matching functions in the new scope.
     ///
-    /// **Note:** Any change in this iterator is **not** propagated to the nested iterator.
-    /// See [`Self::update()`] on how to synchronize this iterator with the nested one.
-    ///
     /// # Arguments
     ///
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
@@ -166,6 +172,7 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         self
     }
 
+    /// Returns the parent of this iterator if a parent exists, or leaves this iterator unchanged.
     pub fn unfold(mut self) -> Self {
         // Inline root is not scoped, so at least one open format map always remains
         if self.token_iter.is_scoped() {
@@ -176,19 +183,23 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         self
     }
 
+    /// Creates a checkpoint of the current position in the uderlying [`TokenIterator`].
+    /// This may be used to `rollback()` to this checkoint at a later point.
     pub fn checkpoint(&self) -> Checkpoint<'slice, 'input> {
         self.token_iter.checkpoint()
     }
 
+    /// Rolls back the iterator to the given checkpoint.
     pub fn rollback(&mut self, checkpoint: Checkpoint<'slice, 'input>) -> bool {
         self.token_iter.rollback(checkpoint)
     }
 
+    /// Skip all tokens until the main index is aligned with the current peek index.
     pub fn skip_to_peek(&mut self) {
         self.token_iter.skip_to_peek();
     }
 
-    /// Collects and returns all tokens until one of the end functions signals the end,
+    /// Collects and returns all tokens until `None` is returned, or one of the end functions signals the end,
     /// or until no line prefix is matched after a new line.
     pub fn take_to_end(&mut self) -> Vec<InlineToken<'input>> {
         let mut tokens = Vec::new();
@@ -205,6 +216,7 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         self.token_iter.end_reached()
     }
 
+    /// Returns `true` if no prefix match matched the latest token sequence after a newline.
     pub fn prefix_mismatch(&self) -> bool {
         self.token_iter.prefix_mismatch()
     }

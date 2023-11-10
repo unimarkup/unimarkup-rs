@@ -1,3 +1,5 @@
+//! Contains all Unimarkup [`Inline`] elements.
+
 use unimarkup_commons::{
     lexer::{position::Position, span::Span},
     parsing::Element,
@@ -20,7 +22,7 @@ pub mod formatting;
 pub mod substitution;
 pub mod textbox;
 
-// Needed to implement trait for Vec<Inline> in this crate
+// Needed to implement the [`Element`] trait for Vec<Inline> in this crate
 pub trait InlineElement {
     fn to_plain_string(&self) -> String;
     fn start(&self) -> Position;
@@ -111,8 +113,10 @@ pub enum Inline {
     /// Escaped plain text without any formatting.
     EscapedPlain(EscapedPlain),
 
+    /// Implicit substitutions like emojis and arrows.
     ImplicitSubstitution(ImplicitSubstitution),
 
+    /// Direct URI
     DirectUri(DirectUri),
 }
 

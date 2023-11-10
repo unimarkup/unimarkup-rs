@@ -1,8 +1,10 @@
+//! Contains the parser for scoped formats like [`Math`](super::Math).
+
 use std::rc::Rc;
 
 use unimarkup_commons::lexer::{token::iterator::EndMatcher, PeekingNext};
 
-use crate::{element::Inline, inline_parser::InlineParser, tokenize::kind::InlineTokenKind};
+use crate::{element::Inline, parser::InlineParser, tokenize::kind::InlineTokenKind};
 
 macro_rules! scoped_parser {
     ($fn_name:ident, $kind:ident) => {

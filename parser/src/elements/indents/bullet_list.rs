@@ -12,7 +12,7 @@ use unimarkup_commons::lexer::{
 };
 use unimarkup_inline::{
     element::{Inline, InlineElement},
-    inline_parser,
+    parser,
 };
 
 use crate::{
@@ -266,7 +266,7 @@ impl BulletListEntry {
             })),
         );
 
-        let (iter, inline_context, parsed_inlines) = inline_parser::parse_inlines(
+        let (iter, inline_context, parsed_inlines) = parser::parse_inlines(
             entry_heading_parser.iter,
             (&entry_heading_parser.context).into(),
             None,

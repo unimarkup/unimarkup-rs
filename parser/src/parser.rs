@@ -7,7 +7,7 @@ use unimarkup_commons::lexer::{
         TokenKind,
     },
 };
-use unimarkup_inline::inline_parser::{InlineContext, InlineContextFlags};
+use unimarkup_inline::parser::{InlineContext, InlineContextFlags};
 
 use crate::{
     document::Document,

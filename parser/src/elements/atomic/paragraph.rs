@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use unimarkup_commons::lexer::token::iterator::EndMatcher;
 use unimarkup_inline::element::{Inline, InlineElement};
-use unimarkup_inline::inline_parser;
+use unimarkup_inline::parser;
 
 use crate::elements::blocks::Block;
 use crate::elements::BlockElement;
@@ -34,7 +34,7 @@ impl BlockElement for Paragraph {
 
 impl Paragraph {
     pub(crate) fn parse<'s, 'i>(mut parser: BlockParser<'s, 'i>) -> (BlockParser<'s, 'i>, Block) {
-        let (iter, inline_context, parsed_inlines) = inline_parser::parse_inlines(
+        let (iter, inline_context, parsed_inlines) = parser::parse_inlines(
             parser.iter,
             (&parser.context).into(),
             None,

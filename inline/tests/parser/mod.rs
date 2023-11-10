@@ -3,7 +3,7 @@ use std::panic;
 use crate::snapshot::Snapshot;
 use libtest_mimic::Trial;
 use unimarkup_commons::test_runner::{self, snap_test_runner::SnapTestRunner};
-use unimarkup_inline::inline_parser::InlineContext;
+use unimarkup_inline::parser::InlineContext;
 
 mod snapshot;
 
@@ -39,7 +39,7 @@ fn run_test_case(case: test_runner::test_file::TestCase) {
     let tokens = unimarkup_commons::lexer::token::lex_str(&case.test.input);
 
     let runner = SnapTestRunner::with_fn(&case.test.name, &tokens, |slice| {
-        let (_, _, parsed_inlines) = unimarkup_inline::inline_parser::parse_inlines(
+        let (_, _, parsed_inlines) = unimarkup_inline::parser::parse_inlines(
             slice.into(),
             InlineContext::default(),
             None,

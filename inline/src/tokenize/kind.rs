@@ -1,3 +1,5 @@
+//! Contains the [`InlineTokenKind`] enum.
+
 use unimarkup_commons::lexer::token::{implicit::ImplicitSubstitutionKind, TokenKind};
 
 /// The kind of the token found in Unimarkup document.
@@ -83,12 +85,16 @@ pub enum InlineTokenKind {
     /// Escaped textual token.
     EscapedPlain,
 
+    /// End of input marker.
     Eoi,
 
+    /// A Unimarkup comment.
     Comment {
         implicit_close: bool,
     },
+    /// Implicit substitution (e.g. emojis and arrows)
     ImplicitSubstitution(ImplicitSubstitutionKind),
+    /// Direct URI
     Directuri,
 
     // For matching

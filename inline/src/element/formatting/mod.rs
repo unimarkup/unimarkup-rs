@@ -1,12 +1,16 @@
+//! Contains formatting elements like [`Bold`], [`Italic`], [`Underline`], ...
+
 use unimarkup_commons::lexer::{position::Position, PeekingNext};
 
-use crate::{element::InlineElement, inline_parser::InlineParser, tokenize::kind::InlineTokenKind};
+use crate::{element::InlineElement, parser::InlineParser, tokenize::kind::InlineTokenKind};
 
 use super::Inline;
 
 pub mod ambiguous;
 pub mod scoped;
 
+/// Parses formatting elements that have distinct keywords assigned to them.
+/// e.g. [`Strikethrough`] or [`Quote`]
 pub(crate) fn parse_distinct_format<'s, 'i>(
     mut parser: InlineParser<'s, 'i>,
 ) -> (InlineParser<'s, 'i>, Option<Inline>) {
@@ -213,8 +217,10 @@ const OVERLINE_INDEX: usize = 7;
 const QUOTE_INDEX: usize = 8;
 pub(crate) const NR_OF_UNSCOPED_FORMATS: usize = 9;
 
+/// Type used to keep track of open formats that do not open their own scope.
 pub(crate) type OpenFormatMap = [bool; NR_OF_UNSCOPED_FORMATS];
 
+/// Returns the index in the open format map for the given unscoped format.
 pub(crate) fn map_index(kind: &InlineTokenKind) -> usize {
     match kind {
         InlineTokenKind::Bold => BOLD_INDEX,

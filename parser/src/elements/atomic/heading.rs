@@ -7,7 +7,7 @@ use unimarkup_commons::lexer::token::iterator::{EndMatcher, PrefixMatcher};
 use unimarkup_commons::lexer::token::TokenKind;
 use unimarkup_commons::lexer::Itertools;
 use unimarkup_inline::element::{Inline, InlineElement};
-use unimarkup_inline::inline_parser;
+use unimarkup_inline::parser;
 
 use crate::elements::BlockElement;
 use crate::{elements::blocks::Block, BlockParser};
@@ -177,7 +177,7 @@ impl Heading {
         let (hashes_prefix, spaces_prefix) = heading_prefix_sequences(hashes_len);
         let (child_hash_prefix, _) = heading_prefix_sequences(hashes_len + 1);
 
-        let (iter, inline_context, parsed_inlines) = inline_parser::parse_inlines(
+        let (iter, inline_context, parsed_inlines) = parser::parse_inlines(
             parser.iter,
             (&parser.context).into(),
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
