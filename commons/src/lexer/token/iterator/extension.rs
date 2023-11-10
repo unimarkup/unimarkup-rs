@@ -1,7 +1,10 @@
+//! Contains the extension trait token iterator variants must implement.
+
 use itertools::PeekingNext;
 
 use crate::lexer::token::Token;
 
+/// Trait that must be implemented by token iterator variants.
 pub(crate) trait TokenIteratorExt<'slice, 'input, T>:
     Iterator<Item = T> + PeekingNext
 {

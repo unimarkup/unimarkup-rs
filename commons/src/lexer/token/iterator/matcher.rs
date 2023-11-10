@@ -54,6 +54,8 @@ pub trait EndMatcher {
     /// whitespace, newline, EOI, or no previous symbol exists.
     fn prev_is_space(&mut self) -> bool;
 
+    /// Returns `true` if any parent iterator ended.
+    /// Meaning this iterator returns `None` before reaching `EOI`.
     fn outer_end(&mut self) -> bool;
 }
 

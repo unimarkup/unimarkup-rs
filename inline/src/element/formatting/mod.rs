@@ -1,6 +1,6 @@
 //! Contains formatting elements like [`Bold`], [`Italic`], [`Underline`], ...
 
-use unimarkup_commons::lexer::{position::Position, PeekingNext};
+use unimarkup_commons::lexer::{position::Position, token::iterator::PeekingNext};
 
 use crate::{element::InlineElement, parser::InlineParser, tokenize::kind::InlineTokenKind};
 

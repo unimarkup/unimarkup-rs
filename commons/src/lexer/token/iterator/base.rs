@@ -1,5 +1,7 @@
 // //! Contains the [`TokenIteratorRoot`] that is the root iterator in any [`TokenIterator`](super::TokenIterator).
 
+// Kept to serve as blueprint for symbol iterator rework to use grapheme iterator directly.
+
 // use std::collections::VecDeque;
 
 // use itertools::{Itertools, PeekingNext};

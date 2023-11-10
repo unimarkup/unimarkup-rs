@@ -2,7 +2,7 @@
 
 use unimarkup_commons::lexer::{
     position::{Offset, Position},
-    PeekingNext,
+    token::iterator::PeekingNext,
 };
 
 use crate::{

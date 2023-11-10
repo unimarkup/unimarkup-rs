@@ -5,11 +5,12 @@ use icu_segmenter::GraphemeClusterSegmenter;
 
 pub mod position;
 pub mod span;
-mod symbol;
+pub mod symbol;
 pub mod token;
 
 use position::{Offset, Position as SymPos};
-pub use symbol::{iterator::*, Symbol, SymbolKind};
+
+use self::symbol::{Symbol, SymbolKind};
 
 /// Scans given input and returns vector of [`Symbol`]s needed to convert the input to Unimarkup content.
 pub fn scan_str(input: &str) -> Vec<Symbol<'_>> {

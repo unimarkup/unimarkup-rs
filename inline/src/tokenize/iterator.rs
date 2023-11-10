@@ -1,8 +1,7 @@
 //! Contains the [`InlineTokenIterator`].
 
-use unimarkup_commons::lexer::{
-    token::iterator::{Checkpoint, IteratorEndFn, TokenIterator},
-    PeekingNext,
+use unimarkup_commons::lexer::token::iterator::{
+    Checkpoint, IteratorEndFn, PeekingNext, TokenIterator,
 };
 
 use crate::element::formatting::{

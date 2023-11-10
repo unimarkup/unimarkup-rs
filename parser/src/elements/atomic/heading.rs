@@ -3,9 +3,8 @@
 use std::rc::Rc;
 
 use strum_macros::*;
-use unimarkup_commons::lexer::token::iterator::{EndMatcher, PrefixMatcher};
+use unimarkup_commons::lexer::token::iterator::{EndMatcher, Itertools, PrefixMatcher};
 use unimarkup_commons::lexer::token::TokenKind;
-use unimarkup_commons::lexer::Itertools;
 use unimarkup_inline::element::{Inline, InlineElement};
 use unimarkup_inline::parser;
 

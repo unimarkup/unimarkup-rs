@@ -1,6 +1,6 @@
 //! Contains the inline parser for base elements like plain text, whitespace, or implicit substitution.
 
-use unimarkup_commons::lexer::{position::Position, Itertools};
+use unimarkup_commons::lexer::{position::Position, token::iterator::Itertools};
 
 use crate::{
     element::InlineElement,

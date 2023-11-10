@@ -4,11 +4,11 @@ use std::rc::Rc;
 
 use unimarkup_commons::lexer::{
     position::Position,
+    symbol::SymbolKind,
     token::{
-        iterator::{EndMatcher, PrefixMatcher},
+        iterator::{EndMatcher, Itertools, PrefixMatcher},
         Token, TokenKind,
     },
-    Itertools, SymbolKind,
 };
 use unimarkup_inline::{
     element::{Inline, InlineElement},

@@ -3,15 +3,14 @@ use itertools::Itertools;
 pub use kind::*;
 
 use super::{
-    new::SymbolIterator,
     position::{Offset, Position},
-    Symbol, SymbolKind,
+    symbol::{iterator::SymbolIterator, Symbol, SymbolKind},
 };
 
 pub mod implicit;
 pub mod iterator;
 
-/// Token lexed from Unimarkup text.
+/// Token lexed from grapheme [`Symbol`]s of the given input.
 ///
 /// # Lifetimes
 ///
@@ -81,8 +80,11 @@ impl From<Token<'_>> for String {
 }
 
 impl<'input> Token<'input> {
-    pub fn flatten(symbols: &[Self]) -> Option<&str> {
-        let (first, last) = (symbols.first()?, symbols.last()?);
+    /// Returns the underlying content the given slice spans.
+    ///
+    /// **Note:** The tokens must have the same input.
+    pub fn flatten(tokens: &[Self]) -> Option<&str> {
+        let (first, last) = (tokens.first()?, tokens.last()?);
 
         debug_assert_eq!(first.input, last.input);
 
@@ -95,6 +97,7 @@ impl<'input> Token<'input> {
     }
 }
 
+/// Creates a vector of [`Token`]s from the given string.
 pub fn lex_str<'input>(s: &'input str) -> Vec<Token<'input>> {
     let symbols: Vec<Symbol<'input>> = super::scan_str(s);
     let mut sym_iter: SymbolIterator<'_, 'input> = SymbolIterator::from(&*symbols);
@@ -107,6 +110,7 @@ pub fn lex_str<'input>(s: &'input str) -> Vec<Token<'input>> {
     tokens
 }
 
+/// Gets the next [`Token`] from the underlying symbols.
 fn next_token<'input>(
     sym_iter: &mut SymbolIterator<'_, 'input>,
     first_symbol: Symbol<'input>,
@@ -223,6 +227,7 @@ fn next_token<'input>(
     token
 }
 
+/// Converts a [`TokenKind::Newline`] into a [`TokenKind::Blankline`] if there are only whitespaces until the next [`TokenKind::Newline`].
 fn make_blankline<'input>(
     sym_iter: &mut SymbolIterator<'_, 'input>,
     mut token: Token<'input>,

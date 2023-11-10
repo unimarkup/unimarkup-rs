@@ -1,5 +1,5 @@
-//! Contains the [`TokenIterator`], and all related functionality
-//! that is used to step through the [`Symbol`]s retrieved from the [`Scanner`](crate::scanner::Scanner).
+//! Contains the [`TokenIterator`] and all related functionality
+//! that is used to iterate over a [`Token`] slice.
 
 use std::borrow::BorrowMut;
 
@@ -9,42 +9,40 @@ use self::{
 
 use super::{Token, TokenKind};
 
-mod cache;
 mod matcher;
 mod slice;
 
 pub(crate) mod extension;
-pub mod implicit;
 
 pub mod base;
 pub mod scope_root;
 
-use helper::PeekingNext;
-pub use itertools as helper;
+pub use itertools::*;
 pub use matcher::*;
 
-/// The [`TokenIterator`] provides an iterator over [`Symbol`]s.
+/// The [`TokenIterator`] provides an iterator over [`Token`]s.
 /// It allows to add matcher functions to notify the iterator,
 /// when an end of an element is reached, or what prefixes to strip on a new line.
 /// Additionaly, the iterator may be nested to enable transparent iterating for nested elements.
 ///
-/// *Transparent* meaning that the nested iterator does not see [`Symbol`]s consumed by the wrapped (parent) iterator.
-/// In other words, wrapped iterators control which [`Symbol`]s will be passed to their nested iterator.
-/// Therefore, each nested iterator only sees those [`Symbol`]s that are relevant to its scope.
+/// *Transparent* meaning that the nested iterator does not see [`Token`]s consumed by the wrapped (parent) iterator.
+/// In other words, wrapped iterators control which [`Token`]s will be passed to their nested iterator.
+/// Therefore, each nested iterator only sees those [`Token`]s that are relevant to its scope.
 #[derive(Clone)]
 pub struct TokenIterator<'slice, 'input> {
     /// The [`TokenIteratorKind`] of this iterator.
     parent: TokenIteratorKind<'slice, 'input>,
-    /// The index inside the [`Symbol`]s of the root iterator.
+    /// The index inside the [`Token`] slice a parent iterator was at when creating this iterator.
+    /// Will be index 0 for iterators created for a new token slice.
     start_index: usize,
-    /// The match index of the iterator inside the [`Symbol`] slice.
+    /// The match index of the iterator inside the [`Token`] slice.
     /// Used to keep track of end and prefix matches to consume the matched sequence length.    
     match_index: usize,
     /// The scope this iterator is in, starting at 0 if parent is the root iterator.
     scope: usize,
     /// Flag set to `true` if this iterator pushed a new scope.
     scoped: bool,
-    /// Index used to skip end matchings in case subsequent symbols already passed end matching for previous `peeking_next` calls.
+    /// Index used to skip end matchings in case subsequent tokens already passed end matching for previous `peeking_next` calls.
     skip_end_until_idx: usize,
     /// Optional matching function that is used to automatically skip matched prefixes after a new line.
     prefix_match: Option<IteratorPrefixFn>,
@@ -56,18 +54,20 @@ pub struct TokenIterator<'slice, 'input> {
     iter_end: bool,
     /// Flag set to `true` if prefix mismatch occured.
     ///
-    /// Prevents the iterator from returning symbols once no prefix matched.
+    /// Prevents the iterator from returning tokens once no prefix matched.
     prefix_mismatch: bool,
     /// Flag set to `true` to indicate matching context in [`Self::next()`].
     ///
     /// End/Prefix matching in `next()` uses `peeking_next()` to check wether the given function matches or not.
     /// Without this flag, `peeking_next()` would apply end/prefix matching itself,
-    /// leading to invalid symbols being passed to matching functions for `next()`.
+    /// leading to invalid tokens being passed to matching functions for `next()`.
     next_matching: bool,
     /// Flag set to `true` to indicate matching context in [`Self::peeking_next()`]
     ///
     /// Used to prevent consumed matching while peeking.
     peek_matching: bool,
+    /// Token that was the start of the last prefix match.
+    /// Needed to get correct end positions for elements.
     prefix_start: Option<&'slice Token<'input>>,
 }
 
@@ -88,20 +88,22 @@ impl std::fmt::Debug for TokenIterator<'_, '_> {
     }
 }
 
-/// The [`TokenIteratorKind`] defines the kind of a [`SymbolIterator`].
+/// The [`TokenIteratorKind`] defines the kind of a [`TokenIterator`].
 #[derive(Debug, Clone)]
 pub enum TokenIteratorKind<'slice, 'input> {
     /// Defines an iterator as being nested.
     /// The contained iterator is the parent iterator.
     Nested(Box<TokenIterator<'slice, 'input>>),
-    /// Iterator that resolves implicit substitutions.
-    /// It is the first layer above the conversion from symbols to tokens.
+    /// Token iterator over a token slice.
+    /// It is the first layer on top of the token slice.
     Root(TokenSliceIterator<'slice, 'input>),
     /// Iterator to define a new scope root.
     /// Meaning that the scope for parent iterators remains unchanged.
     ScopedRoot(TokenIteratorScopedRoot<'slice, 'input>),
 }
 
+/// An iterator checkpoint to rollback to this iterator state using `rollback()`.
+/// The checkpoint does **not** preserve the peek index.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct Checkpoint<'slice, 'input> {
     index: usize,
@@ -111,6 +113,7 @@ pub struct Checkpoint<'slice, 'input> {
 }
 
 impl<'slice, 'input> Checkpoint<'slice, 'input> {
+    /// Set the index until end matches should be ignored.
     pub fn skip_end_until(&mut self, index: usize) {
         if self.skip_end_until_idx < index {
             self.skip_end_until_idx = index;
@@ -119,12 +122,12 @@ impl<'slice, 'input> Checkpoint<'slice, 'input> {
 }
 
 impl<'slice, 'input> TokenIterator<'slice, 'input> {
-    /// Creates a new [`SymbolIterator`] from the given [`Symbol`] slice,
+    /// Creates a new [`TokenIterator`] from the given [`Token`] slice,
     /// and the given matching functions.
     ///
     /// # Arguments
     ///
-    /// * `symbols` ... [`Symbol`] slice to iterate over
+    /// * `tokens` ... [`Token`] slice to iterate over
     /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
     pub fn with(
@@ -149,10 +152,10 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         }
     }
 
-    /// Returns the maximum length of the remaining [`Symbol`]s this iterator might return.
+    /// Returns the maximum length of the remaining [`Token`]s this iterator might return.
     ///
     /// **Note:** This length does not consider parent iterators, or matching functions.
-    /// Therefore, the returned number of [`Symbol`]s might differ, but cannot be larger than this length.
+    /// Therefore, the returned number of [`Token`]s might differ, but cannot be larger than this length.
     pub fn max_len(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.max_len(),
@@ -161,17 +164,17 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         }
     }
 
-    /// Returns `true` if no more [`Symbol`]s are available.
+    /// Returns `true` if no more [`Token`]s are available.
     pub fn is_empty(&self) -> bool {
         self.max_len() == 0
     }
 
-    /// Returns the index this iterator was started from the [`Symbol`] slice of the root iterator.
+    /// Returns the index this iterator was started from the [`Token`] slice of the root iterator.
     pub fn start_index(&self) -> usize {
         self.start_index
     }
 
-    /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
+    /// Returns the current index this iterator is in the [`Token`] slice of the root iterator.
     pub fn index(&self) -> usize {
         match &self.parent {
             TokenIteratorKind::Nested(parent) => parent.index(),
@@ -233,7 +236,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         self.set_peek_index(self.index());
     }
 
-    /// Returns the next [`Symbol`] without changing the current index.    
+    /// Returns the next [`Token`] without changing the current index.    
     pub fn peek(&mut self) -> Option<&'slice Token<'input>> {
         let peek_index = self.peek_index();
 
@@ -243,7 +246,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         token
     }
 
-    /// Returns the [`SymbolKind`] of the peeked [`Symbol`].
+    /// Returns the [`TokenKind`] of the peeked [`Token`].
     pub fn peek_kind(&mut self) -> Option<TokenKind> {
         self.peek().map(|s| s.kind)
     }
@@ -264,7 +267,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         }
     }
 
-    /// Returns the previous symbol this iterator returned via `next()` or `consumed_matches()`.
+    /// Returns the previous token this iterator returned via `next()` or `consumed_matches()`.
     pub fn prev(&self) -> Option<&'slice Token<'input>> {
         // Previous token was a newline that caused prefix match to consume tokens.
         if self.prefix_start.is_some() {
@@ -278,7 +281,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         }
     }
 
-    /// Returns the [`SymbolKind`] of the previous symbol this iterator returned via `next()` or `consumed_matches()`.
+    /// Returns the [`TokenKind`] of the previous token this iterator returned via `next()` or `consumed_matches()`.
     pub fn prev_kind(&self) -> Option<TokenKind> {
         self.prev().map(|s| s.kind)
     }
@@ -287,6 +290,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         self.set_index(self.peek_index());
     }
 
+    /// Creates a [`Checkpoint`] to `rollback` to at later point if needed.
     pub fn checkpoint(&self) -> Checkpoint<'slice, 'input> {
         Checkpoint {
             index: self.index(),
@@ -296,6 +300,10 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         }
     }
 
+    /// Rolls back the iterator to the given checkpoint.
+    /// Only works if the checkpoint was created for this iterator.
+    ///
+    /// Returns `true` if the iterator was rolled back to the checkpoint.
     pub fn rollback(&mut self, checkpoint: Checkpoint<'slice, 'input>) -> bool {
         // Simple check to make sure checkpoint is done on iterator the checkpoint was created from
         // Is not super accurate, but should be sufficient, because most parsers consume at least one token
@@ -316,9 +324,6 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     }
 
     /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
-    ///
-    /// **Note:** Any change in this iterator is **not** propagated to the nested iterator.
-    /// See [`Self::update()`] on how to synchronize this iterator with the nested one.
     ///
     /// # Arguments
     ///
@@ -355,9 +360,6 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
     /// Pushes the new iterator to a new scope, and only runs the given matching functions in the new scope.
     ///
-    /// **Note:** Any change in this iterator is **not** propagated to the nested iterator.
-    /// See [`Self::update()`] on how to synchronize this iterator with the nested one.
-    ///
     /// # Arguments
     ///
     /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
@@ -392,6 +394,14 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         }
     }
 
+    /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
+    /// Pushes the new iterator to a new scope root, and only runs the given matching functions in the new scope.
+    /// Parent iterators do not get updated to the new scope, so matching functions for scoped parent iterators are still executed.
+    ///
+    /// # Arguments
+    ///
+    /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
+    /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
     pub fn new_scope_root(
         self,
         prefix_match: Option<IteratorPrefixFn>,
@@ -416,6 +426,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         }
     }
 
+    /// Returns `true` if this iterator is nested.
     pub fn is_nested(&self) -> bool {
         matches!(
             self.parent,
@@ -423,10 +434,12 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         )
     }
 
+    /// Returns `true` if this iterator created a new scope.
     pub fn is_scoped(&self) -> bool {
         self.scoped
     }
 
+    /// Returns the parent iterator if this iterator is nested.
     pub fn unfold(self) -> Self {
         match self.parent {
             TokenIteratorKind::Nested(mut parent) => {
@@ -441,31 +454,11 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         }
     }
 
-    pub fn progress(&mut self, child: Self) {
-        if let TokenIteratorKind::Nested(mut child_parent) = child.parent {
-            // Make sure it actually is the parent.
-            // It is not possible to check more precisely, because other indices are expected to be different due to `clone()`.
-            debug_assert_eq!(
-                child_parent.start_index, self.start_index,
-                "Self is not parent of given child iterator."
-            );
-            child_parent.set_curr_scope(self.scope);
-
-            *self = *child_parent;
-        } else if let TokenIteratorKind::ScopedRoot(mut scoped_root) = child.parent {
-            scoped_root.token_iter.set_curr_scope(self.scope);
-
-            *self = *scoped_root.token_iter;
-        } else {
-            debug_assert!(false, "Tried to unfold non-nested iterator.");
-        }
-    }
-
-    /// Tries to skip symbols until one of the end functions signals the end.
+    /// Tries to skip tokens until one of the end functions signals the end.
     ///
     /// **Note:** This function might not reach the iterator end.
     ///
-    /// If no symbols are left, or no given line prefix is matched, the iterator may stop before an end is reached.
+    /// If no tokens are left, or no given line prefix is matched, the iterator may stop before an end is reached.
     /// Use [`Self::end_reached()`] to check if the end was actually reached.
     pub fn skip_to_end(mut self) -> Self {
         let _last_token = self.by_ref().last();
@@ -484,7 +477,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         token
     }
 
-    /// Collects and returns all symbols until one of the end functions signals the end,
+    /// Collects and returns all tokens until one of the end functions signals the end,
     /// or until no line prefix is matched after a new line.
     pub fn take_to_end(&mut self) -> Vec<&'slice Token<'input>> {
         let mut tokens = Vec::new();
@@ -501,6 +494,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         self.iter_end
     }
 
+    /// Returns `true` if no prefix match matched the last prefix sequence.
     pub fn prefix_mismatch(&self) -> bool {
         self.prefix_mismatch
     }
@@ -528,15 +522,6 @@ where
         }
     }
 }
-
-// impl<'input, T> From<T> for TokenIterator<'input>
-// where
-//     T: Into<&'input [Symbol<'input>]>,
-// {
-//     fn from(value: T) -> Self {
-//         TokenIterator::from(SymbolIterator::from(value))
-//     }
-// }
 
 impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input> {
     type Item = &'slice Token<'input>;

@@ -1,4 +1,4 @@
-use unimarkup_commons::lexer::SymbolKind;
+use unimarkup_commons::lexer::symbol::SymbolKind;
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedWhitespace, Newline, Plain},
     formatting::{

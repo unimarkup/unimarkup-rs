@@ -4,8 +4,10 @@ use std::rc::Rc;
 
 use unimarkup_commons::lexer::{
     position::Position,
-    token::{iterator::EndMatcher, TokenKind},
-    PeekingNext,
+    token::{
+        iterator::{EndMatcher, PeekingNext},
+        TokenKind,
+    },
 };
 
 use crate::{parser::InlineParser, tokenize::kind::InlineTokenKind};

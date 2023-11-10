@@ -8,7 +8,7 @@ use unimarkup_commons::lexer::token::TokenKind;
 
 use crate::elements::BlockElement;
 use crate::{elements::blocks::Block, BlockParser};
-use unimarkup_commons::lexer::SymbolKind;
+use unimarkup_commons::lexer::symbol::SymbolKind;
 
 /// Structure of a Unimarkup verbatim block element.
 #[derive(Debug, PartialEq, Eq, Clone)]

@@ -2,7 +2,7 @@
 
 use std::rc::Rc;
 
-use unimarkup_commons::lexer::{token::iterator::EndMatcher, PeekingNext};
+use unimarkup_commons::lexer::token::iterator::{EndMatcher, PeekingNext};
 
 use crate::{element::Inline, parser::InlineParser, tokenize::kind::InlineTokenKind};
 
