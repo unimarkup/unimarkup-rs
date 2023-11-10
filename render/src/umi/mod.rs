@@ -3,7 +3,7 @@ use crate::render::OutputFormat;
 pub mod render;
 
 #[derive(Debug, Default)]
-pub struct UmiRow{
+pub struct UmiRow {
     position: u8,
     id: String,
     kind: String, // Maybe change to Enum
@@ -13,9 +13,9 @@ pub struct UmiRow{
     attributes: String,
 }
 
-impl UmiRow{
+impl UmiRow {
     fn new(
-        position: u8, 
+        position: u8,
         id: String,
         kind: String,
         symbol_count: u8,
@@ -23,31 +23,39 @@ impl UmiRow{
         content: String,
         attributes: String,
     ) -> Self {
-        UmiRow { position: position, id: id, kind: kind, symbol_count: symbol_count, depth: depth, content: content, attributes: attributes }
+        UmiRow {
+            position: position,
+            id: id,
+            kind: kind,
+            symbol_count: symbol_count,
+            depth: depth,
+            content: content,
+            attributes: attributes,
+        }
     }
 }
 
 #[derive(Debug, Default)]
-pub struct Umi{
+pub struct Umi {
     pub elements: Vec<UmiRow>,
     pub lang: String,
 }
 
-impl Umi{
+impl Umi {
     fn with(elements: Vec<UmiRow>, lang: String) -> Self {
-        Umi { 
-            elements: elements, 
-            lang: lang 
+        Umi {
+            elements: elements,
+            lang: lang,
         }
     }
-
-    fn merge(&mut self, other_umi: &mut Umi){
+    /// Merge two
+    fn merge(&mut self, other_umi: &mut Umi) {
         assert!(self.lang == other_umi.lang);
         self.elements.append(&mut other_umi.elements);
     }
 }
 
-impl OutputFormat for Umi{
+impl OutputFormat for Umi {
     fn new(context: &crate::render::Context) -> Self {
         Umi {
             elements: Vec::new(),
