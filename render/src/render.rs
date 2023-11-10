@@ -1,7 +1,5 @@
 //! Contains the [`Render`] trait definition.
 
-use std::collections::VecDeque;
-
 use unimarkup_commons::config::icu_locid::Locale;
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedWhitespace, Newline, Plain},
@@ -299,7 +297,7 @@ pub trait Renderer<T: OutputFormat> {
 
     fn render_nested_inline(
         &mut self,
-        nested: &Vec<Inline>,
+        nested: &[Inline],
         context: &Context,
     ) -> Result<T, RenderError> {
         let mut t = T::default();

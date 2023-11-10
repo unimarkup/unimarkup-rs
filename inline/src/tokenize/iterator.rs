@@ -161,7 +161,7 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
     ///
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
     pub fn nest_scoped(mut self, end_match: Option<IteratorEndFn>) -> Self {
-        self.token_iter = self.token_iter.nest_with_scope(None, end_match);
+        self.token_iter = self.token_iter.nest_scoped(None, end_match);
         self.open_formats.push([false; NR_OF_UNSCOPED_FORMATS]);
         self
     }

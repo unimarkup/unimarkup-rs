@@ -1,29 +1,49 @@
+//! Contains [`PossibleBlockStart`] to help selecting possible parsers in the main block parser.
+
 use unimarkup_commons::lexer::token::TokenKind;
 
+/// Enum helping to return possible parser functions of elements the following tokens may resolve to.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum PossibleBlockStart {
+    /// Denotes that the following tokens may resolve to a heading element.
     Heading(usize),
+    /// Denotes that the following tokens may resolve to a column block.
     ColumnBlock,
+    /// Denotes that the following tokens may resolve to a math block.
     MathBlock,
+    /// Denotes that the following tokens may resolve to a render block.
     RenderBlock,
+    /// Denotes that the following tokens may resolve to a verbatim block.
     VerbatimBlock,
+    /// Denotes that the following tokens may resolve to a table.
     Table,
+    /// Denotes that the following tokens may resolve to a bullet list.
     BulletList,
-    /// Might lead to valid numbered list
+    /// The following tokens may resolve to a numbered list,
+    /// but the required `dot` must be checked in the parser function itself.
     Digit,
+    /// Denotes that the following tokens may resolve to a quotation block.
     QuotationBlock,
+    /// Denotes that the following tokens may resolve to a line block.
     LineBlock,
+    /// Denotes that the following tokens may resolve to a media insert.
     MediaInsert,
+    /// Denotes that the following tokens may resolve to a render insert.
     RenderInsert,
+    /// Denotes that the following tokens may resolve to a verbatim insert.
     VerbatimInsert,
+    /// Denotes that the following tokens may resolve to a horizontal line.
     HorizontalLine,
+    /// Denotes that the following tokens may resolve to a line break.
     LineBreak,
+    /// Denotes that the following tokens may resolve to a block decoration.
     Decoration,
+    /// Every token that may not lead to another block element can only lead to a paragraph.
     #[default]
     Paragraph,
-    /// Might lead to valid text/field block
+    /// Denotes that the following tokens may resolve to a text/field block.
     OpenBracket,
-    /// Might lead to valid attribute block
+    /// Denotes that the following tokens may resolve to an attribute block.
     OpenBrace,
 }
 

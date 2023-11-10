@@ -25,7 +25,9 @@ use crate::{
 pub struct BulletList {
     /// The list entries of this bullet list.
     pub entries: Vec<BulletListEntry>,
+    /// The start of this bullet list in the original content.
     pub start: Position,
+    /// The end of this bullet list in theoriginal content.
     pub end: Position,
 }
 
@@ -50,6 +52,9 @@ impl BlockElement for BulletList {
 }
 
 impl BulletList {
+    /// Tries to create a bullet list from the current position of the given [`BlockParser`].
+    ///
+    /// Returns the block parser, and the optional bullet list.
     pub(crate) fn parse<'s, 'i>(
         mut parser: BlockParser<'s, 'i>,
     ) -> (BlockParser<'s, 'i>, Option<Block>) {
@@ -109,8 +114,9 @@ pub struct BulletListEntry {
     pub heading: Vec<Inline>,
     /// The body of this entry.
     pub body: Vec<Block>,
-
+    /// The start of this entry in the original content.
     pub start: Position,
+    /// The end of this entry in the original content.
     pub end: Position,
 }
 
@@ -196,6 +202,8 @@ pub enum ConversionError {
     CannotConvertSymbol,
 }
 
+// Consts below help with matching to prevent dynamic allocations.
+
 const STAR_ENTRY_START: &[TokenKind] = &[TokenKind::Newline, TokenKind::Star(1), TokenKind::Space];
 const MINUS_ENTRY_START: &[TokenKind] =
     &[TokenKind::Newline, TokenKind::Minus(1), TokenKind::Space];
@@ -224,6 +232,9 @@ const PLUS_SUB_ENTRY_START: &[TokenKind] = &[
 ];
 
 impl BulletListEntry {
+    /// Tries to create a bullet list entry from the current position of the given [`BlockParser`].
+    ///
+    /// Returns the block parser, and the optional bullet list entry.
     pub(crate) fn parse<'s, 'i>(
         mut parser: BlockParser<'s, 'i>,
     ) -> (BlockParser<'s, 'i>, Option<BulletListEntry>) {
@@ -327,149 +338,3 @@ impl BulletListEntry {
         )
     }
 }
-
-// impl ElementParser for BulletList {
-//     type Token<'a> = self::BulletListEntry;
-
-//     fn tokenize<'i>(
-//         input: &mut unimarkup_commons::lexer::SymbolIterator<'i>,
-//     ) -> Option<crate::TokenizeOutput<Self::Token<'i>>> {
-//         let mut tokens = Vec::new();
-
-//         // `[1..]` to strip newline match for list start
-//         while input.matches(&STAR_ENTRY_START[1..])
-//             || input.matches(&MINUS_ENTRY_START[1..])
-//             || input.matches(&PLUS_ENTRY_START[1..])
-//         {
-//             match BulletListEntry::tokenize(input) {
-//                 Some(entry_tokens) => {
-//                     let Block::BulletListEntry(entry) =
-//                         BulletListEntry::parse(entry_tokens.tokens)?.pop()?
-//                     else {
-//                         return None;
-//                     };
-
-//                     tokens.push(entry);
-//                 }
-//                 None => break,
-//             }
-//         }
-
-//         if tokens.is_empty() {
-//             return None;
-//         }
-
-//         Some(crate::parser::TokenizeOutput { tokens })
-//     }
-
-//     fn parse(input: Vec<Self::Token<'_>>) -> Option<crate::elements::Blocks> {
-//         let mut list = Self {
-//             id: String::new(),
-//             entries: Vec::with_capacity(input.len()),
-//         };
-
-//         for entry in input {
-//             list.entries.push(entry);
-//         }
-
-//         Some(vec![Block::BulletList(list)])
-//     }
-// }
-
-// impl ElementParser for BulletListEntry {
-//     type Token<'a> = self::EntryToken;
-
-//     fn tokenize<'i>(
-//         input: &mut unimarkup_commons::lexer::SymbolIterator<'i>,
-//     ) -> Option<crate::TokenizeOutput<Self::Token<'i>>> {
-//         let entry_keyword = BulletListEntryKeyword::try_from(input.next()?).ok()?;
-
-//         if input.next()?.kind != SymbolKind::Whitespace {
-//             return None;
-//         }
-
-//         let indent_sequence = &[SymbolKind::Whitespace, SymbolKind::Whitespace];
-//         let mut entry_heading_iter = input.nest(
-//             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-//                 matcher.consumed_prefix(indent_sequence)
-//             })),
-//             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-//                 matcher.consumed_is_empty_line()
-//                     || matcher.matches(STAR_ENTRY_START)
-//                     || matcher.matches(MINUS_ENTRY_START)
-//                     || matcher.matches(PLUS_ENTRY_START)
-//                     || matcher.matches(STAR_SUB_ENTRY_START)
-//                     || matcher.matches(MINUS_SUB_ENTRY_START)
-//                     || matcher.matches(PLUS_SUB_ENTRY_START)
-//             })),
-//         );
-
-//         let entry_heading_symbols = entry_heading_iter.take_to_end();
-//         let entry_heading = entry_heading_symbols
-//             .iter()
-//             .map(|&s| *s)
-//             .collect::<Vec<Symbol<'_>>>()
-//             .parse_inlines()
-//             .collect();
-//         entry_heading_iter.update(input);
-
-//         while input.consumed_is_empty_line() {
-//             // skip empty lines
-//         }
-
-//         let entry_body = if !input.end_reached()
-//             && !input.matches(STAR_ENTRY_START)
-//             && !input.matches(MINUS_ENTRY_START)
-//             && !input.matches(PLUS_ENTRY_START)
-//         {
-//             let mut entry_body_iter = input.nest(
-//                 Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-//                     matcher.consumed_prefix(indent_sequence) || matcher.empty_line()
-//                 })),
-//                 None,
-//             );
-//             let body = MainParser::default().parse(&mut entry_body_iter);
-//             entry_body_iter.update(input);
-//             body
-//         } else {
-//             input.next(); // Consume "Newline" symbol of next list entry
-//             Vec::new()
-//         };
-
-//         Some(crate::TokenizeOutput {
-//             tokens: vec![
-//                 Self::Token::Id(String::new()),
-//                 Self::Token::Keyword(entry_keyword),
-//                 Self::Token::Heading(entry_heading),
-//                 Self::Token::Body(entry_body),
-//                 Self::Token::Attributes(String::new()),
-//             ],
-//         })
-//     }
-
-//     fn parse(mut input: Vec<Self::Token<'_>>) -> Option<crate::elements::Blocks> {
-//         let EntryToken::Attributes(attributes) = input.pop()? else {
-//             return None;
-//         };
-//         let EntryToken::Body(body) = input.pop()? else {
-//             return None;
-//         };
-//         let EntryToken::Heading(heading) = input.pop()? else {
-//             return None;
-//         };
-//         let EntryToken::Keyword(keyword) = input.pop()? else {
-//             return None;
-//         };
-//         let EntryToken::Id(id) = input.pop()? else {
-//             return None;
-//         };
-
-//         Some(vec![Block::BulletListEntry(BulletListEntry {
-//             id,
-//             keyword,
-//             heading,
-//             body,
-//             attributes,
-//         })])
-//     }
-// }

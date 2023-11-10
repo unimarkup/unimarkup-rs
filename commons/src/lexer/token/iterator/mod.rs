@@ -362,7 +362,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     ///
     /// * `prefix_match` ... Optional matching function used to strip prefix on new lines
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
-    pub fn nest_with_scope(
+    pub fn nest_scoped(
         mut self,
         prefix_match: Option<IteratorPrefixFn>,
         end_match: Option<IteratorEndFn>,
@@ -1009,7 +1009,7 @@ mod test {
 
         // Nest like this, because TokenIterator does not provide a way to initialize with scoped = true
         // which is intentional, because the lowest iterator layer should not be scoped
-        let mut scoped_iterator = iterator.nest_with_scope(
+        let mut scoped_iterator = iterator.nest_scoped(
             None,
             Some(Rc::new(|matcher| {
                 matcher.consumed_matches(&[TokenKind::CloseBracket])
@@ -1022,7 +1022,7 @@ mod test {
             .take_while(|s| s.kind != TokenKind::OpenBracket)
             .collect::<Vec<_>>();
 
-        let mut inner_iter = scoped_iterator.nest_with_scope(
+        let mut inner_iter = scoped_iterator.nest_scoped(
             None,
             Some(Rc::new(|matcher| {
                 matcher.consumed_matches(&[TokenKind::CloseBracket])
