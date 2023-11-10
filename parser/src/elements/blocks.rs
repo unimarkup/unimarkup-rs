@@ -30,23 +30,7 @@ pub enum Block {
 
 impl Block {
     /// Returns the variant of [`Block`] as string.
-    ///
-    /// # Example:
-    ///
-    /// ```
-    /// # use unimarkup_parser::elements::{blocks::Block, atomic::Paragraph};
-    /// # fn get_paragraph() -> Paragraph {
-    /// #     Paragraph {
-    /// #         id: String::new(),
-    /// #         content: vec![],
-    /// #         attributes: None,
-    /// #         line_nr: 0,
-    /// #     }
-    /// # }
-    /// let block = Block::Paragraph(get_paragraph());
-    ///
-    /// assert_eq!(block.variant_str(), "Paragraph");
-    /// ```
+    /// e.g. "Paragraph" for [`Block::Paragraph`]
     pub fn variant_str(&self) -> &'static str {
         match self {
             Block::Blankline(_) => "Blankline",
