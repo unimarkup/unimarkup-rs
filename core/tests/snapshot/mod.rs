@@ -8,7 +8,7 @@ use unimarkup_parser::elements::Blocks;
 mod bullet_list;
 mod heading;
 mod paragraph;
-mod verbatim;
+mod verbatim_block;
 
 #[derive(Debug)]
 pub struct Snapshot<T>(pub T);
