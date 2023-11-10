@@ -4,5 +4,6 @@
 //! It also provides syntax highlighting functionality.
 
 pub mod html;
+pub mod umi;
 pub mod log_id;
 pub mod render;
