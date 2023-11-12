@@ -14,8 +14,8 @@ pub enum ImplicitSubstitutionKind {
 impl ImplicitSubstitutionKind {
     pub fn orig(&self) -> &'static str {
         match self {
-            ImplicitSubstitutionKind::Arrow(_) => todo!(),
-            ImplicitSubstitutionKind::Emoji(_) => todo!(),
+            ImplicitSubstitutionKind::Arrow(arrow) => arrow.orig(),
+            ImplicitSubstitutionKind::Emoji(emoji) => emoji.orig(),
             ImplicitSubstitutionKind::Trademark => "(TM)",
             ImplicitSubstitutionKind::Copyright => "((C))",
             ImplicitSubstitutionKind::Registered => "((R))",
@@ -28,8 +28,8 @@ impl ImplicitSubstitutionKind {
 
     pub fn subst(&self) -> &'static str {
         match self {
-            ImplicitSubstitutionKind::Arrow(_) => todo!(),
-            ImplicitSubstitutionKind::Emoji(_) => todo!(),
+            ImplicitSubstitutionKind::Arrow(arrow) => arrow.subst(),
+            ImplicitSubstitutionKind::Emoji(emoji) => emoji.subst(),
             ImplicitSubstitutionKind::Trademark => "™",
             ImplicitSubstitutionKind::Copyright => "©",
             ImplicitSubstitutionKind::Registered => "®",
@@ -44,5 +44,29 @@ impl ImplicitSubstitutionKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ArrowSubsitutionKind {}
 
+impl ArrowSubsitutionKind {
+    pub fn orig(&self) -> &'static str {
+        //TODO: implement once arrows are defined
+        ""
+    }
+
+    pub fn subst(&self) -> &'static str {
+        //TODO: implement once arrows are defined
+        ""
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum EmojiSubstitutionKind {}
+
+impl EmojiSubstitutionKind {
+    pub fn orig(&self) -> &'static str {
+        //TODO: implement once emojis are defined
+        ""
+    }
+
+    pub fn subst(&self) -> &'static str {
+        //TODO: implement once emojis are defined
+        ""
+    }
+}

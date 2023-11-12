@@ -75,14 +75,14 @@ impl From<TokenKind> for PossibleBlockStart {
                     return PossibleBlockStart::Decoration;
                 }
             }
-            TokenKind::Underline(_) => todo!(),
-            TokenKind::Caret(_) => todo!(),
             TokenKind::Tick(len) => {
                 if len >= 3 {
                     return PossibleBlockStart::VerbatimBlock;
                 }
             }
-            TokenKind::Overline(_)
+            TokenKind::Underline(_)
+            | TokenKind::Caret(_)
+            | TokenKind::Overline(_)
             | TokenKind::Pipe(_)
             | TokenKind::Tilde(_)
             | TokenKind::Quote(_)

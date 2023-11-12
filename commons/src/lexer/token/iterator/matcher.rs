@@ -86,8 +86,6 @@ fn matches_kind(token: &Token<'_>, kind: &TokenKind) -> bool {
     match kind {
         TokenKind::Any => true,
         TokenKind::EnclosedBlockEnd => matches!(token.kind, TokenKind::Blankline | TokenKind::Eoi),
-        // TokenKind::PossibleAttributes => todo!(),
-        // TokenKind::PossibleDecorator => todo!(),
         TokenKind::Space => match token.kind {
             TokenKind::Whitespace => String::from(token) == " ",
             _ => false,
