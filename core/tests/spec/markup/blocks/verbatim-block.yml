@@ -1,0 +1,44 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: verbatim-block
+description: Test the verbatim block element.
+
+tests:
+  - name: simple-verbatim-block
+    description: |
+      Parse a simple verbatim block.
+
+    input: |
+      ```
+      Verbatim block
+      ```
+
+    html: |
+      <pre><code>
+        <span class="highlighted_text highlighted_plain">Verbatim block</span>
+      </code></pre>
+
+
+  - name: implicitly-closed-verbatim
+
+    input: |
+      ```
+      Implicitly closed verbatim block
+
+    html: |
+      <pre><code>
+        <span class="highlighted_text highlighted_plain">Implicitly closed verbatim block</span>
+      </code></pre>
+
+  - name: verbatim-block-precedence
+
+    input: |
+      ```
+      # no heading
+      ```
+
+    html: |
+      <pre><code>
+        <span class="highlighted_text highlighted_plain"># no heading</span>
+      </code></pre>

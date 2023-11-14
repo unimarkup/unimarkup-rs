@@ -1,0 +1,12 @@
+---
+source: core/tests/runner/mod.rs
+info: "Test 'implicitly-closed-verbatim' from: markup\\blocks\\verbatim-block.yml"
+---
+VerbatimBlock(Implicitly closed verbatim block)
+---
+With input:
+
+```
+Implicitly closed verbatim block
+
+
