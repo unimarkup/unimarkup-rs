@@ -34,7 +34,13 @@ impl BlockElement for VerbatimBlock {
     fn to_plain_string(&self) -> String {
         let ticks = SymbolKind::Tick.as_str().repeat(self.tick_len);
         let lang = self.data_lang.clone().unwrap_or_default();
-        format!("{}{}\n{}\n{}", ticks, lang, self.content, ticks)
+        format!(
+            "{}{}\n{}\n{}",
+            &ticks,
+            lang,
+            self.content,
+            if self.implicit_closed { "" } else { &ticks }
+        )
     }
 
     fn start(&self) -> unimarkup_commons::lexer::position::Position {
