@@ -86,7 +86,7 @@ impl<'input> Token<'input> {
     pub fn flatten(tokens: &[Self]) -> Option<&str> {
         let (first, last) = (tokens.first()?, tokens.last()?);
 
-        debug_assert_eq!(first.input, last.input);
+        debug_assert!(std::ptr::eq(first.input, last.input));
 
         let input = first.input;
 
