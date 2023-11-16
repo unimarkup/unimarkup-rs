@@ -120,7 +120,7 @@ impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
         if is_blank_line {
             self.set_peek_index(self.match_index()); // To consume matched symbols for `peeking_next()`
 
-            if !self.peek_matching {
+            if !self.matching_in_peek {
                 self.set_index(self.match_index()); // To consume matched symbols for `next()`
             }
         }
@@ -154,7 +154,7 @@ impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
         if matched {
             self.set_peek_index(self.match_index()); // To consume matched tokens for `peeking_next()`
 
-            if !self.peek_matching {
+            if !self.matching_in_peek {
                 self.set_index(self.match_index()); // To consume matched tokens for `next()`
             }
         }

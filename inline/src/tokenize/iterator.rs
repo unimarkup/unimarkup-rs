@@ -178,7 +178,7 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
             self.open_formats.pop();
         }
 
-        self.token_iter = self.token_iter.unfold();
+        self.token_iter = self.token_iter.into_inner();
         self
     }
 

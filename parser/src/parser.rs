@@ -181,7 +181,7 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
     ///
     /// The block context is kept as is.
     pub fn unfold(mut self) -> Self {
-        self.iter = self.iter.unfold();
+        self.iter = self.iter.into_inner();
         self
     }
 }

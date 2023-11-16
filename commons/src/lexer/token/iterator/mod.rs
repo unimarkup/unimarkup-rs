@@ -25,9 +25,9 @@ pub use matcher::*;
 /// when an end of an element is reached, or what prefixes to strip on a new line.
 /// Additionaly, the iterator may be nested to enable transparent iterating for nested elements.
 ///
-/// *Transparent* meaning that the nested iterator does not see [`Token`]s consumed by the wrapped (parent) iterator.
-/// In other words, wrapped iterators control which [`Token`]s will be passed to their nested iterator.
-/// Therefore, each nested iterator only sees those [`Token`]s that are relevant to its scope.
+/// *Transparent* meaning that the outer iterator (created with `nest()`) does not see [`Token`]s consumed by the inner (parent) iterator.
+/// In other words, inner iterators control which [`Token`]s will be passed to the outer iterator.
+/// Therefore, outer iterators only sees those [`Token`]s that are relevant to their scope.
 #[derive(Clone)]
 pub struct TokenIterator<'slice, 'input> {
     /// The [`TokenIteratorKind`] of this iterator.
@@ -61,11 +61,11 @@ pub struct TokenIterator<'slice, 'input> {
     /// End/Prefix matching in `next()` uses `peeking_next()` to check wether the given function matches or not.
     /// Without this flag, `peeking_next()` would apply end/prefix matching itself,
     /// leading to invalid tokens being passed to matching functions for `next()`.
-    next_matching: bool,
+    matching_in_next: bool,
     /// Flag set to `true` to indicate matching context in [`Self::peeking_next()`]
     ///
     /// Used to prevent consumed matching while peeking.
-    peek_matching: bool,
+    matching_in_peek: bool,
     /// Token that was the start of the last prefix match.
     /// Needed to get correct end positions for elements.
     prefix_start: Option<&'slice Token<'input>>,
@@ -82,8 +82,8 @@ impl std::fmt::Debug for TokenIterator<'_, '_> {
             .field("highest_peek_index", &self.skip_end_until_idx)
             .field("iter_end", &self.iter_end)
             .field("prefix_mismatch", &self.prefix_mismatch)
-            .field("next_matching", &self.next_matching)
-            .field("peek_matching", &self.peek_matching)
+            .field("matching_in_next", &self.matching_in_next)
+            .field("matching_in_peek", &self.matching_in_peek)
             .finish()
     }
 }
@@ -146,8 +146,8 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
             end_match,
             iter_end: false,
             prefix_mismatch: false,
-            next_matching: false,
-            peek_matching: false,
+            matching_in_next: false,
+            matching_in_peek: false,
             prefix_start: None,
         }
     }
@@ -323,7 +323,7 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         true
     }
 
-    /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
+    /// Nests this iterator, by creating a new (outer) iterator that has this iterator set as parent (inner).
     ///
     /// # Arguments
     ///
@@ -351,13 +351,13 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
             end_match,
             iter_end,
             prefix_mismatch,
-            next_matching: false,
-            peek_matching: false,
+            matching_in_next: false,
+            matching_in_peek: false,
             prefix_start,
         }
     }
 
-    /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
+    /// Nests this iterator, by creating a new (outer) iterator that has this iterator set as parent (inner).
     /// Pushes the new iterator to a new scope, and only runs the given matching functions in the new scope.
     ///
     /// # Arguments
@@ -388,15 +388,15 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
             end_match,
             iter_end,
             prefix_mismatch,
-            next_matching: false,
-            peek_matching: false,
+            matching_in_next: false,
+            matching_in_peek: false,
             prefix_start,
         }
     }
 
-    /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
+    /// Nests this iterator, by creating a new (outer) iterator that has this iterator set as parent (inner).
     /// Pushes the new iterator to a new scope root, and only runs the given matching functions in the new scope.
-    /// Parent iterators do not get updated to the new scope, so matching functions for scoped parent iterators are still executed.
+    /// Parent (inner) iterators do not get updated to the new scope, so matching functions for scoped parent (inner) iterators are still executed.
     ///
     /// # Arguments
     ///
@@ -420,13 +420,13 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
             end_match,
             iter_end: false,
             prefix_mismatch: false,
-            next_matching: false,
-            peek_matching: false,
+            matching_in_next: false,
+            matching_in_peek: false,
             prefix_start: None,
         }
     }
 
-    /// Returns `true` if this iterator is nested.
+    /// Returns `true` if this iterator has inner iterators.
     pub fn is_nested(&self) -> bool {
         matches!(
             self.parent,
@@ -439,8 +439,9 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
         self.scoped
     }
 
-    /// Returns the parent iterator if this iterator is nested.
-    pub fn unfold(self) -> Self {
+    /// Returns the parent (inner) iterator if this iterator is nested.
+    /// If this iterator has no inner iterator, this iterator is returned unchanged.
+    pub fn into_inner(self) -> Self {
         match self.parent {
             TokenIteratorKind::Nested(mut parent) => {
                 parent.set_curr_scope(parent.scope);
@@ -516,8 +517,8 @@ where
             end_match: None,
             iter_end: false,
             prefix_mismatch: false,
-            next_matching: false,
-            peek_matching: false,
+            matching_in_next: false,
+            matching_in_peek: false,
             prefix_start: None,
         }
     }
@@ -539,11 +540,11 @@ impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input> {
 
         if allow_end_matching {
             if let Some(end_fn) = self.end_match.clone() {
-                self.next_matching = true;
+                self.matching_in_next = true;
 
                 if (end_fn)(self) {
                     self.iter_end = true;
-                    self.next_matching = false;
+                    self.matching_in_next = false;
                     return None;
                 }
             }
@@ -571,18 +572,18 @@ impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input> {
                     .prefix_match
                     .clone()
                     .expect("Prefix match checked above to be some.");
-                self.next_matching = true;
+                self.matching_in_next = true;
 
                 // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
                 if !prefix_match(self) {
                     self.prefix_mismatch = true;
-                    self.next_matching = false;
+                    self.matching_in_next = false;
                     return None;
                 }
             }
         }
 
-        self.next_matching = false;
+        self.matching_in_next = false;
         curr_token_opt
     }
 
@@ -606,14 +607,14 @@ impl<'slice, 'input> PeekingNext for TokenIterator<'slice, 'input> {
         let in_scope = !self.scoped || self.scope == self.root_scope();
         let allow_end_matching = in_scope && (self.skip_end_until_idx <= self.peek_index());
 
-        if allow_end_matching && !self.next_matching && !self.peek_matching {
+        if allow_end_matching && !self.matching_in_next && !self.matching_in_peek {
             if let Some(end_fn) = self.end_match.clone() {
                 let peek_index = self.peek_index();
-                self.peek_matching = true;
+                self.matching_in_peek = true;
 
                 let end_matched = (end_fn)(self);
 
-                self.peek_matching = false;
+                self.matching_in_peek = false;
                 self.set_peek_index(peek_index);
 
                 if end_matched {
@@ -632,8 +633,8 @@ impl<'slice, 'input> PeekingNext for TokenIterator<'slice, 'input> {
 
         // Prefix matching after `peeking_next()` to skip prefix symbols, but pass `Newline` to nested iterators.
         if in_scope
-            && !self.next_matching
-            && !self.peek_matching
+            && !self.matching_in_next
+            && !self.matching_in_peek
             && matches!(
                 peeked_token_opt?.kind,
                 TokenKind::Newline | TokenKind::EscapedNewline | TokenKind::Blankline
@@ -645,11 +646,11 @@ impl<'slice, 'input> PeekingNext for TokenIterator<'slice, 'input> {
                 .clone()
                 .expect("Prefix match checked above to be some.");
             let peek_index = self.peek_index();
-            self.peek_matching = true;
+            self.matching_in_peek = true;
 
             let prefix_matched = prefix_match(self);
 
-            self.peek_matching = false;
+            self.matching_in_peek = false;
 
             if !prefix_matched {
                 self.set_peek_index(peek_index);
@@ -939,7 +940,7 @@ mod test {
         );
 
         // inner.update(&mut iterator);
-        iterator = inner.unfold();
+        iterator = inner.into_inner();
 
         assert!(
             iterator.end_reached(),
@@ -1020,7 +1021,7 @@ mod test {
             "Inner iterator end was not reached."
         );
 
-        scoped_iterator = inner_iter.unfold();
+        scoped_iterator = inner_iter.into_inner();
 
         let mut end = scoped_iterator.take_to_end();
         taken_outer.append(&mut end);
@@ -1108,7 +1109,7 @@ mod test {
             "First inner iterator did not reach end."
         );
 
-        iterator = inner.unfold();
+        iterator = inner.into_inner();
 
         // Matches " -"
         let mut inner = iterator.nest(
@@ -1123,7 +1124,7 @@ mod test {
             "Second inner iterator did not reach end."
         );
 
-        iterator = inner.unfold();
+        iterator = inner.into_inner();
         iterator.take_to_end();
 
         assert!(iterator.end_reached(), "Main iterator did not reach end.");
