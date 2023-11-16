@@ -1,6 +1,6 @@
-use unimarkup_commons::lexer::symbol::SymbolKind;
+use unimarkup_commons::lexer::{span::Span, symbol::SymbolKind, token::TokenKind};
 use unimarkup_inline::element::{
-    base::{EscapedNewline, EscapedWhitespace, Newline, Plain},
+    base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
         Bold, Highlight, Italic, Overline, Quote, Strikethrough, Subscript, Superscript, Underline,
         Verbatim,
@@ -109,6 +109,23 @@ impl Renderer<Html> for HtmlRenderer {
             HtmlAttributes::default(),
             entry_heading,
         ))
+    }
+
+    fn render_blankline(
+        &mut self,
+        _blankline: &Span,
+        _context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
+            tag: HtmlTag::Span,
+            attributes: HtmlAttributes(vec![HtmlAttribute {
+                name: "style".to_string(),
+                value: Some("white-space: pre-wrap;".to_string()),
+            }]),
+            content: Some(String::from(TokenKind::Blankline)),
+        }));
+
+        Ok(html)
     }
 
     fn render_bold(
@@ -266,6 +283,20 @@ impl Renderer<Html> for HtmlRenderer {
         Ok(html)
     }
 
+    fn render_implicit_newline(
+        &mut self,
+        _implicit_newline: &Newline,
+        _context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
+            tag: HtmlTag::Br,
+            attributes: HtmlAttributes::default(),
+            content: None,
+        }));
+
+        Ok(html)
+    }
+
     fn render_escaped_newline(
         &mut self,
         _escaped_newline: &EscapedNewline,
@@ -292,6 +323,20 @@ impl Renderer<Html> for HtmlRenderer {
                 value: Some("white-space: pre-wrap;".to_string()),
             }]),
             content: Some(SymbolKind::Whitespace.as_str().to_string()),
+        }));
+
+        Ok(html)
+    }
+
+    fn render_escaped_plain(
+        &mut self,
+        escaped_plain: &EscapedPlain,
+        _context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
+            tag: HtmlTag::PlainContent,
+            attributes: HtmlAttributes::default(),
+            content: Some(escaped_plain.content().clone()),
         }));
 
         Ok(html)

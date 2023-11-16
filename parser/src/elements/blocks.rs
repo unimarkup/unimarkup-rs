@@ -10,7 +10,6 @@ use super::{
 };
 
 /// Generic enum for all Unimarkup block elements.
-#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Block {
     /// Represents one blankline.
