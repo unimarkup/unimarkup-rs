@@ -468,26 +468,15 @@ impl<'slice, 'input> TokenIterator<'slice, 'input> {
     }
 
     pub fn peek_nth(&mut self, n: usize) -> Option<&'slice Token<'input>> {
-        let mut token = self.peeking_next(|_| true);
-
-        for _ in 0..n {
-            token = self.peeking_next(|_| true);
-            token?;
-        }
-
-        token
+        std::iter::repeat_with(|| self.peeking_next(|_| true))
+            .nth(n)
+            .flatten()
     }
 
     /// Collects and returns all tokens until one of the end functions signals the end,
     /// or until no line prefix is matched after a new line.
     pub fn take_to_end(&mut self) -> Vec<&'slice Token<'input>> {
-        let mut tokens = Vec::new();
-
-        for token in self.by_ref() {
-            tokens.push(token);
-        }
-
-        tokens
+        self.by_ref().collect()
     }
 
     /// Returns `true` if this iterator has reached its end.
