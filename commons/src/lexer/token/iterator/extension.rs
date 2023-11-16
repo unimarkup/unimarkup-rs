@@ -12,10 +12,10 @@ pub(crate) trait TokenIteratorExt<'slice, 'input, T>:
 
     fn max_len(&self) -> usize;
 
-    /// Returns `true` if no more [`Symbol`]s are available.
+    /// Returns `true` if no more [`Token`]s are available.
     fn is_empty(&self) -> bool;
 
-    /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
+    /// Returns the current index this iterator is in the [`Token`] slice of the root iterator.
     fn index(&self) -> usize;
 
     /// Sets the current index of this iterator to the given index.

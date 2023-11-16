@@ -1,5 +1,5 @@
-//! Functionality, iterators, helper types and traits to get [`Symbol`]s from `&str`.
-//! These [`Symbol`]s and iterators are used to convert the input into a Unimarkup document.
+//! Functionality, iterators, helper types and traits to get [`Tokens`](token::Token)s from `&str`.
+//! These [`Tokens`](token::Token)s and iterators are used to convert the input into a Unimarkup document.
 
 use icu_segmenter::GraphemeClusterSegmenter;
 
@@ -12,7 +12,7 @@ use position::{Offset, Position as SymPos};
 
 use self::symbol::{Symbol, SymbolKind};
 
-/// Scans given input and returns vector of [`Symbol`]s needed to convert the input to Unimarkup content.
+/// Scans given input and returns vector of [`Symbol`]s needed to convert the input to [Token](token::Token)s.
 pub fn scan_str(input: &str) -> Vec<Symbol<'_>> {
     let segmenter = GraphemeClusterSegmenter::new();
 

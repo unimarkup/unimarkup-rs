@@ -5,28 +5,28 @@ use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 use super::span::SpanLen;
 
-/// Indicates position of a symbol in a Unimarkup document. Both line and column
+/// Indicates position of a symbol or token in a Unimarkup document. Both line and column
 /// counting starts from 1.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Position {
-    /// Line the symbol is found at
+    /// Line the symbol or token is found at
     pub line: usize,
-    /// Column at which the symbol is located in line, when encoded as UTF8
+    /// Column at which the symbol or token is located in line, when encoded as UTF8
     pub col_utf8: usize,
-    /// Column at which the symbol is located in line, when encoded as UTF16
+    /// Column at which the symbol or token is located in line, when encoded as UTF16
     pub col_utf16: usize,
-    /// Column at which the symbol is located in line, when counting graphemes
+    /// Column at which the symbol or token is located in line, when counting graphemes
     pub col_grapheme: usize,
 }
 
-/// Symbol offset in the original input.
+/// Symbol or token offset in the original input.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Offset {
-    /// Start offset of a symbol, inclusive. This is the same as the end offset
-    /// of the previous symbol.
+    /// Start offset of a symbol or token, inclusive. This is the same as the end offset
+    /// of the previous symbol or token.
     pub start: usize,
-    /// End offset of a symbol, exclusive. This is the same as the start offset
-    /// of the next symbol.
+    /// End offset of a symbol or token, exclusive. This is the same as the start offset
+    /// of the next symbol or token.
     pub end: usize,
 }
 

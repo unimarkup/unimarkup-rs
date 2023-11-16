@@ -143,7 +143,7 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
             {
                 assert!(
                     parser.iter.max_len() < curr_len,
-                    "Parser consumed no symbol in iteration."
+                    "Parser consumed no token in iteration."
                 );
                 curr_len = parser.iter.max_len();
             }
@@ -230,7 +230,7 @@ pub struct BlockContext {
 /// Block context flags used to define parser behavior of block element parsing.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BlockContextFlags {
-    /// Flag to indicate that only escaped symbols and logic elements are allowed besides plain content.
+    /// Flag to indicate that only escaped graphemes and logic elements are allowed besides plain content.
     pub logic_only: bool,
     /// Flag to indicate that multiple contiguous whitespaces must not be combined.
     pub keep_whitespaces: bool,

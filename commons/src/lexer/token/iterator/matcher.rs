@@ -1,5 +1,5 @@
 //! Contains matcher traits and types used to detect iterator end and strip prefixes.
-//! The available matcher traits are implemented for [`SymbolIterator`].
+//! The available matcher traits are implemented for [`TokenIterator`].
 
 use std::rc::Rc;
 
@@ -17,26 +17,22 @@ pub type IteratorPrefixFn = Rc<dyn (Fn(&mut dyn PrefixMatcher) -> bool)>;
 
 /// Trait containing functions that are available inside the end matcher function.
 pub trait EndMatcher {
-    /// Returns `true` if the upcoming [`Symbol`] sequence is an empty line.
-    /// Meaning that a line contains no [`Symbol`] or only [`SymbolKind::Whitespace`].
+    /// Returns `true` if the upcoming [`Token`] sequence is a blank line.
     ///
-    /// **Note:** This is also `true` if a parent iterator stripped non-whitespace symbols, and the nested iterator only has whitespace symbols.
-    ///
-    /// [`Symbol`]: super::Symbol
+    /// **Note:** This is also `true` if a parent (inner) iterator stripped non-whitespace tokens,
+    /// and the nested (outer) iterator only has whitespace tokens.
     fn is_blank_line(&mut self) -> bool;
 
-    /// Wrapper around [`Self::is_empty_line()`] that additionally consumes the matched empty line.
-    /// Consuming means the related iterator advances over the matched empty line, but not the end newline.
-    /// Not consuming the end newline allows to consume contiguous empty lines.
+    /// Wrapper around [`Self::is_blank_line()`] that additionally consumes the matched blank line.
+    /// Consuming means the related iterator advances over the matched blank line, but not the end newline.
+    /// Not consuming the end newline allows to consume contiguous blank lines.
     ///
-    /// **Note:** The iterator is only advanced if an empty line is matched.
+    /// **Note:** The iterator is only advanced if a blank line is matched.
     ///
-    /// **Note:** The empty line is **not** included in the symbols returned by [`SymbolIterator::take_to_end()`].
+    /// **Note:** The blank line is **not** included in the tokens returned by [`TokenIterator::take_to_end()`].
     fn consumed_is_blank_line(&mut self) -> bool;
 
-    /// Returns `true` if the given [`Symbol`] sequence matches the upcoming one.
-    ///
-    /// [`Symbol`]: super::Symbol
+    /// Returns `true` if the given [`Token`] sequence matches the upcoming one.
     fn matches(&mut self, sequence: &[TokenKind]) -> bool;
 
     /// Wrapper around [`Self::matches()`] that additionally consumes the matched sequence.
@@ -44,41 +40,37 @@ pub trait EndMatcher {
     ///
     /// **Note:** The iterator is only advanced if the sequence is matched.
     ///
-    /// **Note:** The matched sequence is **not** included in the symbols returned by [`SymbolIterator::take_to_end()`].
+    /// **Note:** The matched sequence is **not** included in the tokens returned by [`TokenIterator::take_to_end()`].
     fn consumed_matches(&mut self, sequence: &[TokenKind]) -> bool;
 
-    /// Returns `true` if the given [`SymbolKind`] is equal to the kind of the previous symbol returned using `next()` or `consumed_matches()`.
+    /// Returns `true` if the given [`TokenKind`] is equal to the kind of the previous token returned using `next()` or `consumed_matches()`.
     fn matches_prev(&mut self, kind: TokenKind) -> bool;
 
-    /// Returns `true` if the previous symbol returned using `next()` or `consumed_matches()` is either
-    /// whitespace, newline, EOI, or no previous symbol exists.
+    /// Returns `true` if the previous token returned using `next()` or `consumed_matches()` is either
+    /// whitespace, newline, EOI, or no previous token exists.
     fn prev_is_space(&mut self) -> bool;
 
-    /// Returns `true` if any parent iterator ended.
+    /// Returns `true` if any parent (inner) iterator ended.
     /// Meaning this iterator returns `None` before reaching `EOI`.
     fn outer_end(&mut self) -> bool;
 }
 
 /// Trait containing functions that are available inside the prefix matcher function.
 pub trait PrefixMatcher {
-    /// Consumes and returns `true` if the given [`Symbol`] sequence matches the upcoming one.
+    /// Consumes and returns `true` if the given [`Token`] sequence matches the upcoming one.
     /// Consuming means the related iterator advances over the matched sequence.
     ///
     /// **Note:** The iterator is only advanced if the sequence is matched.
     ///
-    /// **Note:** The given sequence must **not** include any [`SymbolKind::Newline`], because matches are only considered per line.
+    /// **Note:** The given sequence must **not** include any [`TokenKind::Newline`] or [`TokenKind::Blankline`], because matches are only considered per line.
     ///
-    /// **Note:** The matched sequence is **not** included in the symbols returned by [`SymbolIterator::take_to_end()`].
-    ///
-    /// [`Symbol`]: super::Symbol
+    /// **Note:** The matched sequence is **not** included in the tokens returned by [`TokenIterator::take_to_end()`].
     fn consumed_prefix(&mut self, sequence: &[TokenKind]) -> bool;
 
-    /// Returns `true` if the upcoming [`Symbol`] sequence is an empty line.
-    /// Meaning that a line contains no [`Symbol`] or only [`SymbolKind::Whitespace`].
+    /// Returns `true` if the upcoming [`Token`] sequence only has whitespace tokens left until a new line is encountered.
+    /// Meaning that a line contains no [`Token`] or only [`TokenKind::Whitespace`].
     ///
-    /// **Note:** This is also `true` if a parent iterator stripped non-whitespace symbols, and the nested iterator only has whitespace symbols.
-    ///
-    /// [`Symbol`]: super::Symbol
+    /// **Note:** This is also `true` if a parent (inner) iterator stripped non-whitespace tokens, and the nested (outer) iterator only has whitespace tokens.
     fn only_spaces_until_newline(&mut self) -> bool;
 }
 
@@ -118,10 +110,10 @@ impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
         let is_blank_line = self.is_blank_line();
 
         if is_blank_line {
-            self.set_peek_index(self.match_index()); // To consume matched symbols for `peeking_next()`
+            self.set_peek_index(self.match_index()); // To consume matched tokens for `peeking_next()`
 
             if !self.matching_in_peek {
-                self.set_index(self.match_index()); // To consume matched symbols for `next()`
+                self.set_index(self.match_index()); // To consume matched tokens for `next()`
             }
         }
 

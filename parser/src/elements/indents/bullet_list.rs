@@ -189,17 +189,17 @@ impl TryFrom<TokenKind> for BulletListEntryKeyword {
             TokenKind::Minus(1) => Ok(BulletListEntryKeyword::Minus),
             TokenKind::Plus(1) => Ok(BulletListEntryKeyword::Plus),
             TokenKind::Star(1) => Ok(BulletListEntryKeyword::Star),
-            _ => Err(ConversionError::CannotConvertSymbol),
+            _ => Err(ConversionError::CannotConvertToken),
         }
     }
 }
 
 /// Enum representing possible conversion errors
-/// that may occur when converting [`SymbolKind`] to [`BulletListEntryKeyword`].
+/// that may occur when converting [`TokenKind`] to [`BulletListEntryKeyword`].
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ConversionError {
-    /// Error denoting that the given [`SymbolKind`] could not be converted to a [`BulletListEntryKeyword`].
-    CannotConvertSymbol,
+    /// Error denoting that the given [`TokenKind`] could not be converted to a [`BulletListEntryKeyword`].
+    CannotConvertToken,
 }
 
 // Consts below help with matching to prevent dynamic allocations.
@@ -318,7 +318,7 @@ impl BulletListEntry {
                 );
             }
         } else {
-            parser.iter.next(); // Consume "Newline" symbol of next list entry
+            parser.iter.next(); // Consume "Newline" token of next list entry
         };
 
         let end = entry_heading

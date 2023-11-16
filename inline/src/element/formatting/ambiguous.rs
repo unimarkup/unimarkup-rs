@@ -378,7 +378,7 @@ fn split_token(
         },
         kind: first_kind,
         start: ambiguous.start,
-        // It is assumed that ambiguous format tokens have one code point per symbol
+        // It is assumed that ambiguous format tokens have one code point per grapheme, so utf8, utf16 and grapheme length are the same
         end: Position {
             line: ambiguous.start.line,
             col_utf8: ambiguous.start.col_utf8 + first_kind_len,
@@ -393,7 +393,7 @@ fn split_token(
             end: ambiguous.offset.end,
         },
         kind: counterpart(first_kind),
-        // It is assumed that ambiguous format tokens have one code point per symbol
+        // It is assumed that ambiguous format tokens have one code point per grapheme
         start: Position {
             line: ambiguous.start.line,
             col_utf8: ambiguous.start.col_utf8 + first_kind_len,

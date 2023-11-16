@@ -6,7 +6,7 @@ use super::{extension::TokenIteratorExt, TokenIterator};
 
 #[derive(Debug, Clone)]
 pub struct TokenIteratorScopedRoot<'slice, 'input> {
-    /// The [`Symbol`] slice the iterator was created for.
+    /// The underlying [`TokenIterator`].
     pub(super) token_iter: Box<TokenIterator<'slice, 'input>>,
     scope: usize,
 }
@@ -14,8 +14,8 @@ pub struct TokenIteratorScopedRoot<'slice, 'input> {
 impl<'slice, 'input> TokenIteratorExt<'slice, 'input, &'slice Token<'input>>
     for TokenIteratorScopedRoot<'slice, 'input>
 {
-    /// Returns the symbol that is directly before the current index.
-    /// If no previous symbol exists, `None`` is returned.
+    /// Returns the token that is directly before the current index.
+    /// If no previous token exists, `None`` is returned.
     fn prev(&self) -> Option<&'slice Token<'input>> {
         self.token_iter.prev()
     }
@@ -24,12 +24,12 @@ impl<'slice, 'input> TokenIteratorExt<'slice, 'input, &'slice Token<'input>>
         self.token_iter.max_len()
     }
 
-    /// Returns `true` if no more [`Symbol`]s are available.
+    /// Returns `true` if no more [`Token`]s are available.
     fn is_empty(&self) -> bool {
         self.max_len() == 0
     }
 
-    /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
+    /// Returns the current index this iterator is in the [`Token`] slice of the root iterator.
     fn index(&self) -> usize {
         self.token_iter.index()
     }

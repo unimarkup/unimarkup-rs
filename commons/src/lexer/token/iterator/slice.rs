@@ -4,12 +4,13 @@ use crate::lexer::token::{Token, TokenKind};
 
 #[derive(Debug, Default, Clone)]
 pub struct TokenSliceIterator<'slice, 'input> {
-    /// The [`Symbol`] slice the iterator was created for.
+    /// The [`Token`] slice the iterator was created for.
     tokens: &'slice [Token<'input>],
-    /// The current index of the iterator inside the [`Symbol`] slice.
+    /// The current index of the iterator inside the [`Token`] slice.
     index: usize,
-    /// The peek index of the iterator inside the [`Symbol`] slice.
+    /// The peek index of the iterator inside the [`Token`] slice.
     peek_index: usize,
+    /// The root scope of the iterator.
     scope: usize,
 }
 
@@ -57,20 +58,20 @@ impl<'slice, 'input> PeekingNext for TokenSliceIterator<'slice, 'input> {
 }
 
 impl<'slice, 'input> TokenSliceIterator<'slice, 'input> {
-    /// Returns the maximum length of the remaining [`Symbol`]s this iterator might return.
+    /// Returns the maximum length of the remaining [`Token`]s this iterator might return.
     ///
     /// **Note:** This length does not consider parent iterators, or matching functions.
-    /// Therefore, the returned number of [`Symbol`]s might differ, but cannot be larger than this length.
+    /// Therefore, the returned number of [`Token`]s might differ, but cannot be larger than this length.
     pub fn max_len(&self) -> usize {
         self.tokens.len().saturating_sub(self.index)
     }
 
-    /// Returns `true` if no more [`Symbol`]s are available.
+    /// Returns `true` if no more [`Token`]s are available.
     pub fn is_empty(&self) -> bool {
         self.max_len() == 0
     }
 
-    /// Returns the current index this iterator is in the [`Symbol`] slice of the root iterator.
+    /// Returns the current index this iterator is in the [`Token`] slice of the root iterator.
     pub fn index(&self) -> usize {
         self.index
     }
@@ -97,12 +98,12 @@ impl<'slice, 'input> TokenSliceIterator<'slice, 'input> {
         self.set_peek_index(self.index());
     }
 
-    /// Returns the next [`Symbol`] without changing the current index.    
+    /// Returns the next [`Token`] without changing the current index.    
     pub fn peek(&mut self) -> Option<&'slice Token<'input>> {
         self.tokens.get(self.peek_index)
     }
 
-    /// Returns the [`SymbolKind`] of the peeked [`Symbol`].
+    /// Returns the [`TokenKind`] of the peeked [`Token`].
     pub fn peek_kind(&mut self) -> Option<TokenKind> {
         self.peek().map(|s| s.kind)
     }

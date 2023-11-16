@@ -545,7 +545,7 @@ impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input> {
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.next(),
         };
 
-        // Prefix matching after `next()` to skip prefix symbols, but pass (escaped) `Newline` to nested iterators.
+        // Prefix matching after `next()` to skip prefix tokens, but pass (escaped) `Newline` to nested iterators.
         if matches!(
             curr_token_opt.map(|t| t.kind),
             Some(TokenKind::Newline) | Some(TokenKind::EscapedNewline | TokenKind::Blankline)
@@ -563,7 +563,7 @@ impl<'slice, 'input> Iterator for TokenIterator<'slice, 'input> {
                     .expect("Prefix match checked above to be some.");
                 self.matching_in_next = true;
 
-                // Note: This mostly indicates a syntax violation, so skipped symbol is ok.
+                // Note: This mostly indicates a syntax violation, so skipped token is ok.
                 if !prefix_match(self) {
                     self.prefix_mismatch = true;
                     self.matching_in_next = false;
@@ -620,7 +620,7 @@ impl<'slice, 'input> PeekingNext for TokenIterator<'slice, 'input> {
             TokenIteratorKind::ScopedRoot(scoped_root) => scoped_root.peeking_next(accept),
         };
 
-        // Prefix matching after `peeking_next()` to skip prefix symbols, but pass `Newline` to nested iterators.
+        // Prefix matching after `peeking_next()` to skip prefix tokens, but pass `Newline` to nested iterators.
         if in_scope
             && !self.matching_in_next
             && !self.matching_in_peek
@@ -683,12 +683,12 @@ mod test {
         assert_eq!(
             hash_token.kind,
             TokenKind::Hash(2),
-            "Hash symbols in input not correctly detected."
+            "Hash tokens in input not correctly detected."
         );
         assert_eq!(
             plus_token.kind,
             TokenKind::Plus(2),
-            "Plus symbols in input not correctly detected."
+            "Plus tokens in input not correctly detected."
         );
         assert_eq!(curr_index, 3, "Current index was not updated correctly.");
         assert_eq!(
@@ -708,31 +708,31 @@ mod test {
 
         let mut iterator = TokenIterator::from(&*tokens);
 
-        let peeked_symbol = iterator.peeking_next(|_| true);
-        let next_symbol = iterator.next();
-        let next_peeked_symbol = iterator.peeking_next(|_| true);
+        let peeked_token = iterator.peeking_next(|_| true);
+        let next_token = iterator.next();
+        let next_peeked_token = iterator.peeking_next(|_| true);
         let curr_index = iterator.index();
 
         assert_eq!(curr_index, 1, "Current index was not updated correctly.");
         assert_eq!(
-            peeked_symbol.map(|s| s.kind),
+            peeked_token.map(|s| s.kind),
             Some(TokenKind::Hash(1)),
-            "peek_next() did not return hash symbol."
+            "peek_next() did not return hash token."
         );
         assert_eq!(
-            next_symbol.map(|s| s.kind),
+            next_token.map(|s| s.kind),
             Some(TokenKind::Hash(1)),
-            "next() did not return hash symbol."
+            "next() did not return hash token."
         );
         assert_eq!(
-            next_peeked_symbol.map(|s| s.kind),
+            next_peeked_token.map(|s| s.kind),
             Some(TokenKind::Star(1)),
-            "Star symbol not peeked next."
+            "Star token not peeked next."
         );
         assert_eq!(
             iterator.next().map(|s| s.kind),
             Some(TokenKind::Star(1)),
-            "Star symbol not returned."
+            "Star token not returned."
         );
     }
 
@@ -828,7 +828,7 @@ mod test {
                 TokenKind::Plain,   // b
                 TokenKind::Eoi
             ],
-            "Prefix symbols not correctly skipped"
+            "Prefix tokens not correctly skipped"
         );
     }
 
@@ -1026,7 +1026,7 @@ mod test {
                 .map(String::from)
                 .collect::<Vec<_>>(),
             vec!["i"],
-            "Inner symbols are incorrect."
+            "Inner tokens are incorrect."
         );
         assert_eq!(
             taken_outer
@@ -1035,7 +1035,7 @@ mod test {
                 .map(String::from)
                 .collect::<Vec<_>>(),
             vec!["o", " ", " ", "o"],
-            "Outer symbols are incorrect."
+            "Outer tokens are incorrect."
         );
     }
 
@@ -1073,7 +1073,7 @@ mod test {
     }
 
     #[test]
-    fn match_any_symbol() {
+    fn match_any_token() {
         let tokens = lex_str("a* -\n:");
 
         let mut iterator = TokenIterator::with(

@@ -19,7 +19,7 @@ pub(crate) fn parse_base<'s, 'i>(
     mut inlines: Vec<Inline>,
 ) -> (InlineParser<'s, 'i>, Vec<Inline>) {
     // This also helps to reset any possible peek while trying to parse special elements
-    let mut next = parser.iter.next().expect("Peeked symbol in inline parser.");
+    let mut next = parser.iter.next().expect("Peeked token in inline parser.");
     let kind = next.kind;
 
     if matches!(kind, InlineTokenKind::Whitespace) {
