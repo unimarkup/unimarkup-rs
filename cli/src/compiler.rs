@@ -52,6 +52,14 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
                 &out_path,
                 OutputFormatKind::Html.extension(),
             )?,
+            OutputFormatKind::Umi => write_file(
+                &um.render_umi()
+                .map_err(|_| GeneralError::Render)?
+                .create_workbook()
+                .to_string(),
+                &out_path, 
+                OutputFormatKind::Umi.extension(),
+            )?,
         }
     }
 

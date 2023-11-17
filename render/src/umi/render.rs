@@ -1,11 +1,11 @@
-use unimarkup_inline::types::*;
-
 use crate::render::{Context, OutputFormat, Renderer};
+use std::collections::HashMap;
 
 use super::{Umi, UmiRow};
 
 #[derive(Debug, Default)]
 pub struct UmiRenderer {
+    pub umi: Umi,
     pub pos: u8,
     pub depth: u8,
 }
@@ -19,8 +19,15 @@ impl UmiRenderer {
         self.depth -= 1;
     }
 
-    fn proceed(&mut self) {
+    fn proceed(&mut self, new_umi: &mut Umi) -> Result<Umi, crate::log_id::RenderError> {
         self.pos += 1;
+
+        if self.depth!=0 {
+            Ok(new_umi.clone())
+        }else{
+            self.umi.merge(new_umi);
+            Ok(self.umi.clone())
+        }
     }
 }
 
@@ -34,16 +41,14 @@ impl Renderer<Umi> for UmiRenderer {
 
         let paragraph = UmiRow::new(
             self.pos,
-            String::new(),
+            paragraph.id.clone(),
             String::from("paragraph"),
-            0,
             self.depth,
-            content.elements[0].content.to_owned(),
-            paragraph.attributes.to_owned().unwrap_or(String::new()),
+            content.elements[0].content.clone(),
+            paragraph.attributes.clone().unwrap_or_default(),
         );
 
-        self.proceed();
-        Ok(Umi::with(vec![paragraph], context.get_lang().to_string()))
+        self.proceed(&mut Umi::with_um(vec![paragraph], context.get_lang().to_string()))
     }
 
     fn render_verbatim_block(
@@ -51,7 +56,23 @@ impl Renderer<Umi> for UmiRenderer {
         verbatim: &unimarkup_parser::elements::enclosed::Verbatim,
         context: &Context,
     ) -> Result<Umi, crate::log_id::RenderError> {
-        Ok(Umi::new(context))
+
+        let mut hashmap: HashMap<String, String>= HashMap::new();
+        hashmap.insert(String::from("attributes"), verbatim.attributes.clone().unwrap_or_default());
+        hashmap.insert(String::from("elem_count"), String::from("3"));
+
+        let attributes = format!("{:?}", hashmap);
+        
+        let verbatim = UmiRow::new(
+            self.pos,
+            verbatim.id.clone(),
+            String::from("verbatim"),
+            self.depth,
+            verbatim.content.clone(),
+            attributes,
+        );
+
+        self.proceed(&mut Umi::with_um(vec![verbatim], context.get_lang().to_string()))
     }
 
     fn render_heading(
@@ -59,7 +80,18 @@ impl Renderer<Umi> for UmiRenderer {
         heading: &unimarkup_parser::elements::atomic::Heading,
         context: &Context,
     ) -> Result<Umi, crate::log_id::RenderError> {
-        Ok(Umi::new(context))
+        let content = self.render_inlines(&heading.content, context)?;
+
+        let heading=UmiRow::new(
+            self.pos,
+            heading.id.clone(), 
+            String::from("heading"), 
+            self.depth, 
+            content.elements[0].content.clone(), 
+            heading.attributes.clone().unwrap_or_default(),
+        );
+
+        self.proceed(&mut Umi::with_um(vec![heading], context.get_lang().to_string()))
     }
 
     fn render_bullet_list(
@@ -67,7 +99,24 @@ impl Renderer<Umi> for UmiRenderer {
         bullet_list: &unimarkup_parser::elements::indents::BulletList,
         context: &Context,
     ) -> Result<Umi, crate::log_id::RenderError> {
-        Ok(Umi::new(context))
+        let bullet_list_heading = UmiRow::new(
+            self.pos,
+            bullet_list.id.clone(), 
+            String::from("bullet-list"), 
+            self.depth, 
+            String::new(), 
+            String::new(),
+        );
+
+        let mut bullet_list_content = Umi::with_um(vec![bullet_list_heading], context.get_lang().to_string());
+
+        self.step_in();
+        for entry in &bullet_list.entries{
+            bullet_list_content.append(self.render_bullet_list_entry(entry, context)?)?;
+        }
+        self.step_out();
+
+        self.proceed(&mut bullet_list_content)
     }
 
     fn render_bullet_list_entry(
@@ -75,7 +124,13 @@ impl Renderer<Umi> for UmiRenderer {
         bullet_list_entry: &unimarkup_parser::elements::indents::BulletListEntry,
         context: &Context,
     ) -> Result<Umi, crate::log_id::RenderError> {
-        Ok(Umi::new(context))
+        let mut entry = Umi::with_um(vec![], context.get_lang().to_string());
+
+        if !bullet_list_entry.body.is_empty() {
+            entry.merge(&mut self.render_blocks(&bullet_list_entry.body, context)?);
+        }
+
+        self.proceed(&mut entry)
     }
 
     fn render_inlines(
@@ -83,18 +138,16 @@ impl Renderer<Umi> for UmiRenderer {
         inlines: &[unimarkup_inline::Inline],
         context: &Context,
     ) -> Result<Umi, crate::log_id::RenderError> {
-        // TODO refine inline appending
-        let mut res = "".to_owned();
+        let mut res = String::from("");
         for inline in inlines {
             res += &mut inline.as_string();
         }
 
-        Ok(Umi::with(
+        Ok(Umi::with_um(
             vec![UmiRow::new(
                 self.pos,
                 String::new(),
                 String::from("inline"),
-                0,
                 self.depth,
                 res,
                 String::new(),

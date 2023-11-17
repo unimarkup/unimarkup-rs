@@ -8,6 +8,8 @@ use crate::commons::config::Config;
 use crate::parser::document::Document;
 use crate::render::html::render::HtmlRenderer;
 use crate::render::html::Html;
+use crate::render::umi::render::UmiRenderer;
+use crate::render::umi::Umi;
 use crate::render::log_id::RenderError;
 use crate::render::render::{OutputFormat, Renderer};
 
@@ -42,5 +44,9 @@ impl Unimarkup {
 
     pub fn render_html(&self) -> Result<Html, RenderError> {
         self.render(HtmlRenderer::default())
+    }
+
+    pub fn render_umi(&self) -> Result<Umi, RenderError> {
+        self.render(UmiRenderer::default())
     }
 }
