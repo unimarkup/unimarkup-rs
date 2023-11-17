@@ -1,6 +1,6 @@
 use crate::render::OutputFormat;
 
-use spreadsheet_ods::{WorkBook, Sheet, write_ods_buf_uncompressed};
+use spreadsheet_ods::{write_ods_buf_uncompressed, Sheet, WorkBook};
 
 pub mod render;
 
@@ -43,10 +43,11 @@ pub struct Umi {
 
 impl Umi {
     fn with_um(elements: Vec<UmiRow>, lang: String) -> Self {
-        Umi { 
-            elements, 
-            lang, 
-            ods: vec![] }
+        Umi {
+            elements,
+            lang,
+            ods: vec![],
+        }
     }
 
     // fn with_wb() -> Self{}
@@ -67,7 +68,7 @@ impl Umi {
         sheet.set_value(0, 4, "content-en-US");
         sheet.set_value(0, 5, "attributes-en-US");
 
-        for element in &self.elements{
+        for element in &self.elements {
             let row = element.position + 1;
             sheet.set_value(row.into(), 0, element.position);
             sheet.set_value(row.into(), 1, element.id.clone());
@@ -91,13 +92,7 @@ impl Umi {
 
 impl std::fmt::Display for Umi {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        unsafe{
-        write!(
-            f,
-            "{}",
-            String::from_utf8_unchecked(self.ods.clone())
-        )
-    }
+        unsafe { write!(f, "{}", String::from_utf8_unchecked(self.ods.clone())) }
     }
 }
 
@@ -106,7 +101,7 @@ impl OutputFormat for Umi {
         Umi {
             elements: Vec::new(),
             lang: context.get_lang().to_string(),
-            ods: vec![]
+            ods: vec![],
         }
     }
 

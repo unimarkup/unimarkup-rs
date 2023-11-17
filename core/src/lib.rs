@@ -8,10 +8,10 @@ use crate::commons::config::Config;
 use crate::parser::document::Document;
 use crate::render::html::render::HtmlRenderer;
 use crate::render::html::Html;
-use crate::render::umi::render::UmiRenderer;
-use crate::render::umi::Umi;
 use crate::render::log_id::RenderError;
 use crate::render::render::{OutputFormat, Renderer};
+use crate::render::umi::render::UmiRenderer;
+use crate::render::umi::Umi;
 
 pub struct Unimarkup {
     doc: Document,
