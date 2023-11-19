@@ -19,6 +19,7 @@ serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
 once_cell = { workspace = true, optional = true }
+icu_properties = "1.3.2"
 icu_segmenter = "1.3.0"
 icu_locid = "1.3.0"
 regex = { version = "1.8.1", optional = true }

@@ -1,0 +1,13 @@
+---
+source: core/tests/runner/mod.rs
+info: "Test 'verbatim-block-precedence' from: markup\\blocks\\verbatim-block.yml"
+---
+VerbatimBlock(# no heading)
+---
+With input:
+
+```
+# no heading
+```
+
+

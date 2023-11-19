@@ -1,0 +1,14 @@
+---
+source: core/tests/runner/mod.rs
+description: "Parse a simple verbatim block.\n"
+info: "Test 'simple-verbatim-block' from: markup\\blocks\\verbatim-block.yml"
+---
+VerbatimBlock(Verbatim block)
+---
+With input:
+
+```
+Verbatim block
+```
+
+

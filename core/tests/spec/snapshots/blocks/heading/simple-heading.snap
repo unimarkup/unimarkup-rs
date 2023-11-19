@@ -1,0 +1,12 @@
+---
+source: core/tests/runner/mod.rs
+description: "Parse a simple lvl1 heading.\n"
+info: "Test 'simple-heading' from: markup\\blocks\\heading.yml"
+---
+Heading-level-1(Simple heading.)
+---
+With input:
+
+# Simple heading.
+
+

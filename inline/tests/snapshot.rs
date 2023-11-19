@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use unimarkup_commons::{
-    scanner::{position::Position, span::Span},
+    lexer::{position::Position, span::Span},
     test_runner::as_snapshot::AsSnapshot,
 };
 

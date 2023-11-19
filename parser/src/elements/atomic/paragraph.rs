@@ -1,83 +1,51 @@
+//! Contains the structs and parsers to parse paragraph elements.
+
 use std::fmt::Debug;
 use std::rc::Rc;
 
-use unimarkup_inline::{Inline, ParseInlines};
+use unimarkup_commons::lexer::token::iterator::EndMatcher;
+use unimarkup_inline::element::{Inline, InlineElement};
+use unimarkup_inline::parser;
 
-use crate::{elements::Blocks, parser::ElementParser};
-use crate::{
-    elements::{blocks::Block, types},
-    parser::TokenizeOutput,
-};
-use unimarkup_commons::scanner::{EndMatcher, Symbol, SymbolIterator};
+use crate::elements::blocks::Block;
+use crate::elements::BlockElement;
+use crate::BlockParser;
 
 /// Structure of a Unimarkup paragraph element.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Paragraph {
-    /// Unique identifier for a paragraph.
-    pub id: String,
-
     /// The content of the paragraph.
     pub content: Vec<Inline>,
-
-    /// Attributes of the paragraph.
-    pub attributes: Option<String>,
-
-    /// Line number, where the paragraph occurs in
-    /// the Unimarkup document.
-    pub line_nr: usize,
 }
 
-impl Paragraph {}
+impl BlockElement for Paragraph {
+    fn as_unimarkup(&self) -> String {
+        self.content.as_unimarkup()
+    }
 
-impl From<Vec<&'_ Symbol<'_>>> for Paragraph {
-    fn from(value: Vec<&'_ Symbol<'_>>) -> Self {
-        let content = value
-            .iter()
-            .map(|&s| *s)
-            .collect::<Vec<Symbol<'_>>>()
-            .parse_inlines()
-            .collect();
-        let line_nr = value.get(0).map(|symbol| symbol.start.line).unwrap_or(0);
+    fn start(&self) -> unimarkup_commons::lexer::position::Position {
+        self.content.start()
+    }
 
-        let id = crate::generate_id::generate_id(&format!(
-            "paragraph{delim}{}",
-            line_nr,
-            delim = types::ELEMENT_TYPE_DELIMITER
-        ))
-        .unwrap();
-
-        Paragraph {
-            id,
-            content,
-            attributes: None,
-            line_nr,
-        }
+    fn end(&self) -> unimarkup_commons::lexer::position::Position {
+        self.content.end()
     }
 }
 
-impl ElementParser for Paragraph {
-    type Token<'a> = &'a Symbol<'a>;
-
-    fn tokenize<'i>(input: &mut SymbolIterator<'i>) -> Option<TokenizeOutput<Self::Token<'i>>> {
-        let mut content_iter = input.nest(
+impl Paragraph {
+    pub(crate) fn parse<'s, 'i>(mut parser: BlockParser<'s, 'i>) -> (BlockParser<'s, 'i>, Block) {
+        let (iter, inline_context, parsed_inlines) = parser::parse_inlines(
+            parser.iter,
+            (&parser.context).into(),
             None,
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-                matcher.consumed_is_empty_line()
+                matcher.consumed_is_blank_line() || matcher.outer_end()
             })),
         );
-        let content = content_iter.take_to_end();
-        content_iter.update(input);
+        parser.iter = iter;
+        parser.context.update_from(inline_context);
+        let inlines = parsed_inlines.to_inlines();
 
-        if content.is_empty() {
-            return None;
-        }
-
-        Some(TokenizeOutput { tokens: content })
-    }
-
-    fn parse(input: Vec<Self::Token<'_>>) -> Option<Blocks> {
-        let block = Block::Paragraph(Paragraph::from(input));
-
-        Some(vec![block])
+        (parser, Block::Paragraph(Paragraph { content: inlines }))
     }
 }

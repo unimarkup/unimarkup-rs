@@ -1,10 +1,16 @@
 ---
 source: inline/tests/parser/mod.rs
-info: "Test 'escaped-verbatim' from 'markup/verbatim.yml'"
+info: "Test 'escaped-verbatim' from 'markup\\verbatim.yml'"
 ---
-Plain @ (1:1)->(1:17) (
-    ␢`not verbatim`␢
-    ^^^^^^^^^^^^^^^^
+EscapedPlain @ (1:1)->(1:3) (
+    `
+)
+Plain @ (1:3)->(1:15) (
+    not verbatim
+    ^^^^^^^^^^^^
+)
+EscapedPlain @ (1:15)->(1:17) (
+    `
 )
 
 ---

@@ -1,0 +1,17 @@
+---
+source: inline/tests/parser/mod.rs
+info: "Test 'implicit-closed-verbatim' from 'markup\\verbatim.yml'"
+---
+Verbatim @ (1:1)->(1:19) (
+    Plain @ (1:2)->(1:19) (
+        implicit verbatim
+        ^^^^^^^^^^^^^^^^^
+    )
+)
+
+---
+With input:
+
+`implicit verbatim
+
+

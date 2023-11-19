@@ -1,5 +1,6 @@
 use super::Snapshot;
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
+use unimarkup_inline::element::InlineElement;
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
 
 impl AsSnapshot for Snapshot<&BulletList> {
@@ -23,9 +24,10 @@ impl AsSnapshot for Snapshot<&BulletListEntry> {
         let entry_heading: String = self
             .heading
             .iter()
-            .map(|inline| inline.as_string())
-            .collect();
-
+            .fold(String::default(), |mut s, inline| {
+                s.push_str(&inline.as_unimarkup());
+                s
+            });
         let entry_heading = if entry_heading.lines().count() > 1 {
             let entry_heading: String = entry_heading
                 .lines()

@@ -4,7 +4,6 @@
 // TODO: set to private modules that don't have to be public
 pub mod document;
 pub mod elements;
-pub mod generate_id;
 pub mod log_id;
 pub mod metadata;
 mod parser;

@@ -3,7 +3,7 @@ use std::panic;
 use crate::snapshot::Snapshot;
 use libtest_mimic::Trial;
 use unimarkup_commons::test_runner::{self, snap_test_runner::SnapTestRunner};
-use unimarkup_inline::ParseInlines;
+use unimarkup_inline::parser::InlineContext;
 
 mod snapshot;
 
@@ -36,10 +36,16 @@ pub fn test_parser_snapshots() -> Vec<Trial> {
 }
 
 fn run_test_case(case: test_runner::test_file::TestCase) {
-    let symbols = unimarkup_commons::scanner::scan_str(&case.test.input);
+    let tokens = unimarkup_commons::lexer::token::lex_str(&case.test.input);
 
-    let runner = SnapTestRunner::with_fn(&case.test.name, &symbols, |symbols| {
-        let inlines: Vec<_> = symbols.parse_inlines().collect();
+    let runner = SnapTestRunner::with_fn(&case.test.name, &tokens, |slice| {
+        let (_, _, parsed_inlines) = unimarkup_inline::parser::parse_inlines(
+            slice.into(),
+            InlineContext::default(),
+            None,
+            None,
+        );
+        let inlines = parsed_inlines.to_inlines();
         Snapshot::snap(&inlines[..])
     })
     .with_info(format!(
