@@ -174,7 +174,7 @@ impl Heading {
         }
 
         let (hashes_prefix, spaces_prefix) = heading_prefix_sequences(hashes_len);
-        let (child_hash_prefix, _) = heading_prefix_sequences(hashes_len + 1);
+        let sub_heading_prefix = sub_heading_start(hashes_len);
 
         let (iter, inline_context, parsed_inlines) = parser::parse_inlines(
             parser.iter,
@@ -184,7 +184,7 @@ impl Heading {
             })),
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                 matcher.consumed_is_blank_line()
-                    || matcher.matches(child_hash_prefix)
+                    || matcher.matches(sub_heading_prefix)
                     || matcher.outer_end()
             })),
         );
@@ -236,17 +236,26 @@ fn as_id(content: &Vec<Inline>) -> String {
 
 const HEADING_LVL_1_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(1), TokenKind::Space];
 const HEADING_LVL_1_SPACE_PREFIX: [TokenKind; 2] = [TokenKind::Space, TokenKind::Space];
+
 const HEADING_LVL_2_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(2), TokenKind::Space];
+const SUB_HEADING_LVL_2_HASH_PREFIX: [TokenKind; 3] =
+    [TokenKind::Newline, TokenKind::Hash(2), TokenKind::Space];
 const HEADING_LVL_2_SPACE_PREFIX: [TokenKind; 3] =
     [TokenKind::Space, TokenKind::Space, TokenKind::Space];
+
 const HEADING_LVL_3_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(3), TokenKind::Space];
+const SUB_HEADING_LVL_3_HASH_PREFIX: [TokenKind; 3] =
+    [TokenKind::Newline, TokenKind::Hash(3), TokenKind::Space];
 const HEADING_LVL_3_SPACE_PREFIX: [TokenKind; 4] = [
     TokenKind::Space,
     TokenKind::Space,
     TokenKind::Space,
     TokenKind::Space,
 ];
+
 const HEADING_LVL_4_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(4), TokenKind::Space];
+const SUB_HEADING_LVL_4_HASH_PREFIX: [TokenKind; 3] =
+    [TokenKind::Newline, TokenKind::Hash(4), TokenKind::Space];
 const HEADING_LVL_4_SPACE_PREFIX: [TokenKind; 5] = [
     TokenKind::Space,
     TokenKind::Space,
@@ -254,7 +263,10 @@ const HEADING_LVL_4_SPACE_PREFIX: [TokenKind; 5] = [
     TokenKind::Space,
     TokenKind::Space,
 ];
+
 const HEADING_LVL_5_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(5), TokenKind::Space];
+const SUB_HEADING_LVL_5_HASH_PREFIX: [TokenKind; 3] =
+    [TokenKind::Newline, TokenKind::Hash(5), TokenKind::Space];
 const HEADING_LVL_5_SPACE_PREFIX: [TokenKind; 6] = [
     TokenKind::Space,
     TokenKind::Space,
@@ -263,7 +275,10 @@ const HEADING_LVL_5_SPACE_PREFIX: [TokenKind; 6] = [
     TokenKind::Space,
     TokenKind::Space,
 ];
+
 const HEADING_LVL_6_HASH_PREFIX: [TokenKind; 2] = [TokenKind::Hash(6), TokenKind::Space];
+const SUB_HEADING_LVL_6_HASH_PREFIX: [TokenKind; 3] =
+    [TokenKind::Newline, TokenKind::Hash(6), TokenKind::Space];
 const HEADING_LVL_6_SPACE_PREFIX: [TokenKind; 7] = [
     TokenKind::Space,
     TokenKind::Space,
@@ -290,5 +305,19 @@ const fn heading_prefix_sequences(
         (&HEADING_LVL_5_HASH_PREFIX, &HEADING_LVL_5_SPACE_PREFIX)
     } else {
         (&HEADING_LVL_6_HASH_PREFIX, &HEADING_LVL_6_SPACE_PREFIX)
+    }
+}
+
+const fn sub_heading_start(hashes_len: usize) -> &'static [TokenKind; 3] {
+    if hashes_len == 1 {
+        &SUB_HEADING_LVL_2_HASH_PREFIX
+    } else if hashes_len == 2 {
+        &SUB_HEADING_LVL_3_HASH_PREFIX
+    } else if hashes_len == 3 {
+        &SUB_HEADING_LVL_4_HASH_PREFIX
+    } else if hashes_len == 4 {
+        &SUB_HEADING_LVL_5_HASH_PREFIX
+    } else {
+        &SUB_HEADING_LVL_6_HASH_PREFIX
     }
 }
