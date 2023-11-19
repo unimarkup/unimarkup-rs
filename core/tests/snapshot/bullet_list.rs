@@ -25,7 +25,7 @@ impl AsSnapshot for Snapshot<&BulletListEntry> {
             .heading
             .iter()
             .fold(String::default(), |mut s, inline| {
-                s.push_str(&inline.to_plain_string());
+                s.push_str(&inline.as_unimarkup());
                 s
             });
         let entry_heading = if entry_heading.lines().count() > 1 {

@@ -249,7 +249,7 @@ impl Renderer<Html> for HtmlRenderer {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::Code,
             attributes: HtmlAttributes::default(),
-            content: Some(verbatim.inner().to_plain_string()),
+            content: Some(verbatim.inner().as_unimarkup()),
         }));
 
         Ok(html)

@@ -24,9 +24,13 @@ pub mod textbox;
 
 // Needed to implement the [`Element`] trait for Vec<Inline> in this crate
 pub trait InlineElement {
-    fn to_plain_string(&self) -> String;
+    /// Shows the element in its original plain markup form.
+    fn as_unimarkup(&self) -> String;
+    /// Return the start of the element in the original content.
     fn start(&self) -> Position;
+    /// Return the end of the element in the original content.
     fn end(&self) -> Position;
+    /// The span of an element in the original content.
     fn span(&self) -> Span {
         Span {
             start: self.start(),
@@ -36,8 +40,8 @@ pub trait InlineElement {
 }
 
 impl Element for dyn InlineElement {
-    fn to_plain_string(&self) -> String {
-        self.to_plain_string()
+    fn as_unimarkup(&self) -> String {
+        self.as_unimarkup()
     }
 
     fn start(&self) -> Position {
@@ -154,29 +158,29 @@ impl Inline {
 }
 
 impl InlineElement for Inline {
-    fn to_plain_string(&self) -> String {
+    fn as_unimarkup(&self) -> String {
         match self {
-            Inline::Bold(inline) => inline.to_plain_string(),
-            Inline::Italic(inline) => inline.to_plain_string(),
-            Inline::Underline(inline) => inline.to_plain_string(),
-            Inline::Subscript(inline) => inline.to_plain_string(),
-            Inline::Superscript(inline) => inline.to_plain_string(),
-            Inline::Overline(inline) => inline.to_plain_string(),
-            Inline::Strikethrough(inline) => inline.to_plain_string(),
-            Inline::Highlight(inline) => inline.to_plain_string(),
-            Inline::Quote(inline) => inline.to_plain_string(),
-            Inline::Math(inline) => inline.to_plain_string(),
-            Inline::TextBox(inline) => inline.to_plain_string(),
-            Inline::Hyperlink(inline) => inline.to_plain_string(),
-            Inline::Verbatim(inline) => inline.to_plain_string(),
-            Inline::Newline(inline) => inline.to_plain_string(),
-            Inline::ImplicitNewline(inline) => inline.to_plain_string(),
-            Inline::EscapedNewline(inline) => inline.to_plain_string(),
-            Inline::EscapedWhitespace(inline) => inline.to_plain_string(),
-            Inline::Plain(inline) => inline.to_plain_string(),
-            Inline::EscapedPlain(inline) => inline.to_plain_string(),
-            Inline::DirectUri(inline) => inline.to_plain_string(),
-            Inline::ImplicitSubstitution(inline) => inline.to_plain_string(),
+            Inline::Bold(inline) => inline.as_unimarkup(),
+            Inline::Italic(inline) => inline.as_unimarkup(),
+            Inline::Underline(inline) => inline.as_unimarkup(),
+            Inline::Subscript(inline) => inline.as_unimarkup(),
+            Inline::Superscript(inline) => inline.as_unimarkup(),
+            Inline::Overline(inline) => inline.as_unimarkup(),
+            Inline::Strikethrough(inline) => inline.as_unimarkup(),
+            Inline::Highlight(inline) => inline.as_unimarkup(),
+            Inline::Quote(inline) => inline.as_unimarkup(),
+            Inline::Math(inline) => inline.as_unimarkup(),
+            Inline::TextBox(inline) => inline.as_unimarkup(),
+            Inline::Hyperlink(inline) => inline.as_unimarkup(),
+            Inline::Verbatim(inline) => inline.as_unimarkup(),
+            Inline::Newline(inline) => inline.as_unimarkup(),
+            Inline::ImplicitNewline(inline) => inline.as_unimarkup(),
+            Inline::EscapedNewline(inline) => inline.as_unimarkup(),
+            Inline::EscapedWhitespace(inline) => inline.as_unimarkup(),
+            Inline::Plain(inline) => inline.as_unimarkup(),
+            Inline::EscapedPlain(inline) => inline.as_unimarkup(),
+            Inline::DirectUri(inline) => inline.as_unimarkup(),
+            Inline::ImplicitSubstitution(inline) => inline.as_unimarkup(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }
@@ -240,9 +244,9 @@ impl InlineElement for Inline {
 }
 
 impl InlineElement for Vec<Inline> {
-    fn to_plain_string(&self) -> String {
+    fn as_unimarkup(&self) -> String {
         self.iter().fold(String::default(), |mut combined, inline| {
-            combined.push_str(&inline.to_plain_string());
+            combined.push_str(&inline.as_unimarkup());
             combined
         })
     }

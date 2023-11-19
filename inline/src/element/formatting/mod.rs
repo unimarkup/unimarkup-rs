@@ -92,8 +92,8 @@ macro_rules! inline_formats {
         }
 
         impl InlineElement for $format {
-            fn to_plain_string(&self) -> String {
-                format!("{}{}{}", InlineTokenKind::$format.as_str(), self.inner.to_plain_string(), if self.implicit_end {""} else {InlineTokenKind::$format.as_str()})
+            fn as_unimarkup(&self) -> String {
+                format!("{}{}{}", InlineTokenKind::$format.as_str(), self.inner.as_unimarkup(), if self.implicit_end {""} else {InlineTokenKind::$format.as_str()})
             }
 
             fn start(&self) -> Position {

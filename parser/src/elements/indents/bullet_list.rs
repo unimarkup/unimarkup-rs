@@ -32,11 +32,11 @@ pub struct BulletList {
 }
 
 impl BlockElement for BulletList {
-    fn to_plain_string(&self) -> String {
+    fn as_unimarkup(&self) -> String {
         let mut s = String::default();
 
         for entry in &self.entries {
-            s.push_str(&entry.to_plain_string())
+            s.push_str(&entry.as_unimarkup())
         }
 
         s
@@ -121,7 +121,7 @@ pub struct BulletListEntry {
 }
 
 impl BlockElement for BulletListEntry {
-    fn to_plain_string(&self) -> String {
+    fn as_unimarkup(&self) -> String {
         let head_body_separator = match self.body.first() {
             Some(Block::BulletList(_)) | None => SymbolKind::Newline.as_str().to_string(),
             Some(_) => SymbolKind::Newline.as_str().repeat(2), // to get a blankline between head and body
@@ -130,13 +130,13 @@ impl BlockElement for BulletListEntry {
         let plain_body = if self.body.is_empty() {
             String::default()
         } else {
-            self.body.to_plain_string().lines().join("\n  ")
+            self.body.as_unimarkup().lines().join("\n  ")
         }; // Two space indentation after newline
 
         format!(
             "{} {}{}{}",
             self.keyword.as_str(),
-            self.heading.to_plain_string(),
+            self.heading.as_unimarkup(),
             head_body_separator,
             plain_body
         )

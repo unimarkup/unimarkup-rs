@@ -31,7 +31,7 @@ pub struct VerbatimBlock {
 }
 
 impl BlockElement for VerbatimBlock {
-    fn to_plain_string(&self) -> String {
+    fn as_unimarkup(&self) -> String {
         let ticks = SymbolKind::Tick.as_str().repeat(self.tick_len);
         let lang = self.data_lang.clone().unwrap_or_default();
         format!(
@@ -131,7 +131,7 @@ impl VerbatimBlock {
         (
             parser,
             Some(Block::VerbatimBlock(VerbatimBlock {
-                content: content.to_plain_string(),
+                content: content.as_unimarkup(),
                 data_lang,
                 attributes: None,
                 implicit_closed,

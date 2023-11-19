@@ -43,14 +43,14 @@ impl Block {
 }
 
 impl BlockElement for Block {
-    fn to_plain_string(&self) -> String {
+    fn as_unimarkup(&self) -> String {
         match self {
             Block::Blankline(_) => String::default(), // Newline is pushed after every block, so blankline is empty on its own
-            Block::Heading(block) => block.to_plain_string(),
-            Block::Paragraph(block) => block.to_plain_string(),
-            Block::VerbatimBlock(block) => block.to_plain_string(),
-            Block::BulletList(block) => block.to_plain_string(),
-            Block::BulletListEntry(block) => block.to_plain_string(),
+            Block::Heading(block) => block.as_unimarkup(),
+            Block::Paragraph(block) => block.as_unimarkup(),
+            Block::VerbatimBlock(block) => block.as_unimarkup(),
+            Block::BulletList(block) => block.as_unimarkup(),
+            Block::BulletListEntry(block) => block.as_unimarkup(),
         }
     }
 
@@ -78,9 +78,9 @@ impl BlockElement for Block {
 }
 
 impl BlockElement for Vec<Block> {
-    fn to_plain_string(&self) -> String {
+    fn as_unimarkup(&self) -> String {
         let mut s = self.iter().fold(String::default(), |mut combined, block| {
-            combined.push_str(&block.to_plain_string());
+            combined.push_str(&block.as_unimarkup());
             combined.push_str(SymbolKind::Newline.as_str());
             combined
         });

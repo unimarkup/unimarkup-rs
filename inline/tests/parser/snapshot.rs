@@ -18,7 +18,7 @@ impl AsSnapshot for Snapshot<&str> {
 impl AsSnapshot for Snapshot<&[Inline]> {
     fn as_snapshot(&self) -> String {
         self.iter()
-            .filter(|inline| !inline.to_plain_string().trim().is_empty())
+            .filter(|inline| !inline.as_unimarkup().trim().is_empty())
             .map(Snapshot::snap)
             .collect()
     }
@@ -27,7 +27,7 @@ impl AsSnapshot for Snapshot<&[Inline]> {
 impl AsSnapshot for Snapshot<&Vec<Inline>> {
     fn as_snapshot(&self) -> String {
         self.iter()
-            .filter(|inline| !inline.to_plain_string().trim().is_empty())
+            .filter(|inline| !inline.as_unimarkup().trim().is_empty())
             .map(Snapshot::snap)
             .collect()
     }

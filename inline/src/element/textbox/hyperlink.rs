@@ -61,8 +61,8 @@ impl From<Hyperlink> for Inline {
 }
 
 impl InlineElement for Hyperlink {
-    fn to_plain_string(&self) -> String {
-        format!("[{}]({})", self.inner.to_plain_string(), self.link)
+    fn as_unimarkup(&self) -> String {
+        format!("[{}]({})", self.inner.as_unimarkup(), self.link)
     }
 
     fn start(&self) -> Position {

@@ -194,8 +194,8 @@ impl From<TextBox> for Inline {
 }
 
 impl InlineElement for TextBox {
-    fn to_plain_string(&self) -> String {
-        format!("[{}]", self.inner.to_plain_string())
+    fn as_unimarkup(&self) -> String {
+        format!("[{}]", self.inner.as_unimarkup())
     }
 
     fn start(&self) -> Position {

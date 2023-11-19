@@ -26,7 +26,7 @@ impl ImplicitSubstitution {
 }
 
 impl InlineElement for ImplicitSubstitution {
-    fn to_plain_string(&self) -> String {
+    fn as_unimarkup(&self) -> String {
         self.kind.orig().to_string()
     }
 
@@ -57,7 +57,7 @@ impl DirectUri {
 }
 
 impl InlineElement for DirectUri {
-    fn to_plain_string(&self) -> String {
+    fn as_unimarkup(&self) -> String {
         self.uri.clone()
     }
 

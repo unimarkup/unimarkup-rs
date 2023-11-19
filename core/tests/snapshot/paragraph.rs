@@ -9,7 +9,7 @@ impl AsSnapshot for Snapshot<&Paragraph> {
             .content
             .iter()
             .fold(String::default(), |mut s, inline| {
-                s.push_str(&inline.to_plain_string());
+                s.push_str(&inline.as_unimarkup());
                 s
             });
 

@@ -19,14 +19,13 @@ pub type Blocks = Vec<Block>;
 
 /// Needed trait to implement [`Element`] trait for Vec<Block> in this crate
 pub trait BlockElement {
-    /// Converts a block into the original string representation.
-    /// e.g. "# Heading" for level-1 heading
-    fn to_plain_string(&self) -> String;
-    /// The start of a block in the original content.
+    /// Shows the element in its original plain markup form.
+    fn as_unimarkup(&self) -> String;
+    /// Return the start of the element in the original content.
     fn start(&self) -> Position;
-    /// The end of a block in the original content.
+    /// Return the end of the element in the original content.
     fn end(&self) -> Position;
-    /// The span of the block in the original content.
+    /// The span of an element in the original content.
     fn span(&self) -> Span {
         Span {
             start: self.start(),
@@ -36,8 +35,8 @@ pub trait BlockElement {
 }
 
 impl Element for dyn BlockElement {
-    fn to_plain_string(&self) -> String {
-        self.to_plain_string()
+    fn as_unimarkup(&self) -> String {
+        self.as_unimarkup()
     }
 
     fn start(&self) -> Position {

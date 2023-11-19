@@ -128,11 +128,11 @@ pub struct Heading {
 }
 
 impl BlockElement for Heading {
-    fn to_plain_string(&self) -> String {
+    fn as_unimarkup(&self) -> String {
         let prefix = self.level.as_str();
         let content = self
             .content
-            .to_plain_string()
+            .as_unimarkup()
             .lines()
             .join(&" ".repeat(prefix.len()));
         format!("{prefix}{content}")
@@ -226,7 +226,7 @@ impl Heading {
 /// Whitespaces are replaced with `-`, quotes and backslash are removed,
 /// and all other content is lowercased.
 fn as_id(content: &Vec<Inline>) -> String {
-    let mut s = content.to_plain_string().to_lowercase();
+    let mut s = content.as_unimarkup().to_lowercase();
     s = s.replace(char::is_whitespace, "-");
     s = s.replace('\\', ""); // backslash removed to prevent html escapes
     s.replace(['\'', '"'], "") // quotes removed to prevent early attribute closing

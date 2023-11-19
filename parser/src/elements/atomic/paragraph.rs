@@ -19,8 +19,8 @@ pub struct Paragraph {
 }
 
 impl BlockElement for Paragraph {
-    fn to_plain_string(&self) -> String {
-        self.content.to_plain_string()
+    fn as_unimarkup(&self) -> String {
+        self.content.as_unimarkup()
     }
 
     fn start(&self) -> unimarkup_commons::lexer::position::Position {

@@ -154,7 +154,7 @@ macro_rules! base_inlines {
 
             $(
                 impl InlineElement for $element {
-                    fn to_plain_string(&self) -> String {
+                    fn as_unimarkup(&self) -> String {
                         self.$content.clone()
                     }
 
@@ -217,7 +217,7 @@ macro_rules! element_without_content {
             }
 
             impl InlineElement for $element {
-                fn to_plain_string(&self) -> String {
+                fn as_unimarkup(&self) -> String {
                     InlineTokenKind::$element.as_str().to_string()
                 }
 
