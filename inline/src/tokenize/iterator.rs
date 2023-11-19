@@ -4,9 +4,7 @@ use unimarkup_commons::lexer::token::iterator::{
     Checkpoint, IteratorEndFn, PeekingNext, TokenIterator,
 };
 
-use crate::element::formatting::{
-    ambiguous::is_ambiguous, map_index, OpenFormatMap, NR_OF_UNSCOPED_FORMATS,
-};
+use crate::element::formatting::{ambiguous::is_ambiguous, map_index, OpenFormatMap};
 
 use super::{kind::InlineTokenKind, InlineToken};
 
@@ -28,8 +26,8 @@ pub(crate) struct InlineTokenIterator<'slice, 'input> {
     updated_prev: Option<InlineToken<'input>>,
     /// Flag to mark if the cached token was viewed when peeking the next token.
     peeked_cache: bool,
-    /// Flags for open formats per scope
-    open_formats: Vec<OpenFormatMap>,
+    /// Flags for open formats.
+    open_formats: OpenFormatMap,
 }
 
 impl<'slice, 'input> From<TokenIterator<'slice, 'input>> for InlineTokenIterator<'slice, 'input> {
@@ -39,7 +37,7 @@ impl<'slice, 'input> From<TokenIterator<'slice, 'input>> for InlineTokenIterator
             cached_token: None,
             updated_prev: None,
             peeked_cache: false,
-            open_formats: vec![[false; NR_OF_UNSCOPED_FORMATS]],
+            open_formats: OpenFormatMap::default(),
         }
     }
 }
@@ -101,16 +99,12 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
 
     /// Marks the given format as being open.
     pub(crate) fn open_format(&mut self, format: &InlineTokenKind) {
-        self.open_formats
-            .last_mut()
-            .expect("At least one open format map always exists.")[map_index(format)] = true;
+        self.open_formats.open(map_index(format));
     }
 
     /// Removes the given format from the open format map.
     pub(crate) fn close_format(&mut self, format: &InlineTokenKind) {
-        self.open_formats
-            .last_mut()
-            .expect("At least one open format map always exists.")[map_index(format)] = false;
+        self.open_formats.close(map_index(format));
     }
 
     /// Returns `true` if the given format would close given the current iterator state.
@@ -129,31 +123,16 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         let ambiguous_open = (format == InlineTokenKind::BoldItalic
             && (self
                 .open_formats
-                .last()
-                .expect("At least one open format map always exists.")
-                [map_index(&InlineTokenKind::Italic)]
-                || self
-                    .open_formats
-                    .last()
-                    .expect("At least one open format map always exists.")
-                    [map_index(&InlineTokenKind::Bold)]))
+                .is_open(map_index(&InlineTokenKind::Italic))
+                || self.open_formats.is_open(map_index(&InlineTokenKind::Bold))))
             || (format == InlineTokenKind::UnderlineSubscript
                 && (self
                     .open_formats
-                    .last()
-                    .expect("At least one open format map always exists.")
-                    [map_index(&InlineTokenKind::Underline)]
+                    .is_open(map_index(&InlineTokenKind::Underline))
                     || self
                         .open_formats
-                        .last()
-                        .expect("At least one open format map always exists.")
-                        [map_index(&InlineTokenKind::Subscript)]));
-        ambiguous_open
-            || (!is_ambiguous(format)
-                && self
-                    .open_formats
-                    .last()
-                    .expect("At least one open format map always exists.")[map_index(&format)])
+                        .is_open(map_index(&InlineTokenKind::Subscript))));
+        ambiguous_open || (!is_ambiguous(format) && self.open_formats.is_open(map_index(&format)))
     }
 
     /// Nests this iterator, by creating a new iterator that has this iterator set as parent.
@@ -162,19 +141,18 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
     /// # Arguments
     ///
     /// * `end_match` ... Optional matching function used to indicate the end of the created iterator
-    pub fn nest_scoped(mut self, end_match: Option<IteratorEndFn>) -> Self {
+    pub fn nest_scoped(mut self, end_match: Option<IteratorEndFn>) -> (Self, OpenFormatMap) {
+        let outer_open_formats = self.open_formats;
+
         self.token_iter = self.token_iter.nest_scoped(None, end_match);
-        self.open_formats.push([false; NR_OF_UNSCOPED_FORMATS]);
-        self
+        self.open_formats = OpenFormatMap::default();
+
+        (self, outer_open_formats)
     }
 
     /// Returns the parent of this iterator if a parent exists, or leaves this iterator unchanged.
-    pub fn unfold(mut self) -> Self {
-        // Inline root is not scoped, so at least one open format map always remains
-        if self.token_iter.is_scoped() {
-            self.open_formats.pop();
-        }
-
+    pub fn unfold(mut self, outer_open_formats: OpenFormatMap) -> Self {
+        self.open_formats = outer_open_formats;
         self.token_iter = self.token_iter.into_inner();
         self
     }
@@ -187,6 +165,7 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
             cached_token: self.cached_token,
             updated_prev: self.updated_prev,
             peeked_cache: self.peeked_cache,
+            open_formats: self.open_formats,
         }
     }
 
@@ -195,6 +174,7 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
         self.cached_token = checkpoint.cached_token;
         self.updated_prev = checkpoint.updated_prev;
         self.peeked_cache = checkpoint.peeked_cache;
+        self.open_formats = checkpoint.open_formats;
         self.token_iter.rollback(checkpoint.iter_checkpoint)
     }
 
@@ -297,4 +277,6 @@ pub(crate) struct InlineCheckpoint<'slice, 'input> {
     updated_prev: Option<InlineToken<'input>>,
     /// Flag to mark if the cached token was viewed when peeking the next token.
     peeked_cache: bool,
+    /// Flags for open formats.
+    open_formats: OpenFormatMap,
 }
