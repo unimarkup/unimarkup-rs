@@ -218,7 +218,7 @@ mod test {
 
     #[test]
     fn dummy_for_debugging() {
-        let tokens = unimarkup_commons::lexer::token::lex_str("**bold *+italic*** plain");
+        let tokens = unimarkup_commons::lexer::token::lex_str("[Simple textbox]");
         let mut inline_parser = InlineParser {
             iter: InlineTokenIterator::from(TokenIterator::from(&*tokens)),
             context: InlineContext::default(),

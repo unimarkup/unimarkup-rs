@@ -4,9 +4,10 @@ use unimarkup_commons::{config::icu_locid::Locale, lexer::span::Span};
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
-        Bold, Highlight, Italic, Overline, Quote, Strikethrough, Subscript, Superscript, Underline,
-        Verbatim,
+        Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
+        Underline, Verbatim,
     },
+    textbox::{hyperlink::Hyperlink, TextBox},
     Inline,
 };
 use unimarkup_parser::{
@@ -107,6 +108,20 @@ pub trait Renderer<T: OutputFormat> {
 
     //--------------------------------- INLINES ---------------------------------
 
+    /// Render a [`TextBox`] to the output format `T`.
+    fn render_textbox(&mut self, _textbox: &TextBox, _context: &Context) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    /// Render a [`Hyperlink`] to the output format `T`.
+    fn render_hyperlink(
+        &mut self,
+        _hyperlink: &Hyperlink,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
     /// Render a [`Bold` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_bold(&mut self, _bold: &Bold, _context: &Context) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -182,6 +197,11 @@ pub trait Renderer<T: OutputFormat> {
         _verbatim: &Verbatim,
         _context: &Context,
     ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    /// Render a [`Math`] to the output format `T`.
+    fn render_inline_math(&mut self, _math: &Math, _context: &Context) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
     }
 
@@ -330,9 +350,10 @@ pub trait Renderer<T: OutputFormat> {
             Inline::ImplicitNewline(implicit_newline) => {
                 self.render_implicit_newline(implicit_newline, context)
             }
-            Inline::Math(_) => todo!(),
-            Inline::TextBox(_) => todo!(),
-            Inline::Hyperlink(_) => todo!(),
+            Inline::Math(math) => self.render_inline_math(math, context),
+            Inline::TextBox(textbox) => self.render_textbox(textbox, context),
+            Inline::Hyperlink(hyperlink) => self.render_hyperlink(hyperlink, context),
+
             Inline::NamedSubstitution(_) => todo!(),
             Inline::ImplicitSubstitution(_) => todo!(),
             Inline::DirectUri(_) => todo!(),

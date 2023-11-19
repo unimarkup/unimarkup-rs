@@ -87,6 +87,7 @@ pub(crate) fn parse<'slice, 'input>(
         }
         None => {
             scoped_parser.iter.rollback(checkpoint);
+            scoped_parser.iter.next(); // Consume open bracket
         }
     }
 
