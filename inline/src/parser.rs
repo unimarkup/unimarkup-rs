@@ -139,8 +139,8 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
                         let success = parser.iter.rollback(checkpoint);
                         debug_assert!(
                             success,
-                            "Rollback was not successful for checkpoint '{:?}'",
-                            checkpoint
+                            "Inline rollback was not successful at '{:?}'",
+                            parser.iter.peek()
                         )
                     }
                 }
@@ -218,7 +218,7 @@ mod test {
 
     #[test]
     fn dummy_for_debugging() {
-        let tokens = unimarkup_commons::lexer::token::lex_str("`a`");
+        let tokens = unimarkup_commons::lexer::token::lex_str("**bold *+italic*** plain");
         let mut inline_parser = InlineParser {
             iter: InlineTokenIterator::from(TokenIterator::from(&*tokens)),
             context: InlineContext::default(),

@@ -83,7 +83,7 @@ tests:
       The next ***word** is bolditalic.
 
     html: |
-      The next <em><strong>word</strong> is bold.</em>
+      The next <em><strong>word</strong> is bolditalic.</em>
 
   - name: ambiguous-end
     description: |
@@ -94,3 +94,13 @@ tests:
 
     html: |
       The next <strong>word</strong>* is bold.
+
+  - name: ambiguous-close
+    description: |
+      BoldItalic that's closed with an ambiguous token.
+
+    input: |
+      **bold *+italic*** plain
+
+    html: |
+      <strong>bold <em>+italic</em></strong> plain

@@ -320,7 +320,7 @@ fn main_part(kind: InlineTokenKind) -> InlineTokenKind {
         InlineTokenKind::Italic | InlineTokenKind::BoldItalic => InlineTokenKind::Bold,
         InlineTokenKind::Underline => kind,
         InlineTokenKind::Subscript | InlineTokenKind::UnderlineSubscript => {
-            InlineTokenKind::Underline
+            InlineTokenKind::Subscript
         }
         _ => kind,
     }
@@ -334,7 +334,7 @@ fn sub_part(kind: InlineTokenKind) -> InlineTokenKind {
         InlineTokenKind::Bold | InlineTokenKind::BoldItalic => InlineTokenKind::Italic,
         InlineTokenKind::Subscript => kind,
         InlineTokenKind::Underline | InlineTokenKind::UnderlineSubscript => {
-            InlineTokenKind::Subscript
+            InlineTokenKind::Underline
         }
         _ => kind,
     }

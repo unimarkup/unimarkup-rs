@@ -95,7 +95,8 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
     }
 
     pub(crate) fn cache_token(&mut self, token: InlineToken<'input>) {
-        self.cached_token = Some(token)
+        self.cached_token = Some(token);
+        self.peeked_cache = false;
     }
 
     /// Marks the given format as being open.
@@ -180,13 +181,21 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
 
     /// Creates a checkpoint of the current position in the uderlying [`TokenIterator`].
     /// This may be used to `rollback()` to this checkoint at a later point.
-    pub fn checkpoint(&self) -> Checkpoint<'slice, 'input> {
-        self.token_iter.checkpoint()
+    pub fn checkpoint(&self) -> InlineCheckpoint<'slice, 'input> {
+        InlineCheckpoint {
+            iter_checkpoint: self.token_iter.checkpoint(),
+            cached_token: self.cached_token,
+            updated_prev: self.updated_prev,
+            peeked_cache: self.peeked_cache,
+        }
     }
 
     /// Rolls back the iterator to the given checkpoint.
-    pub fn rollback(&mut self, checkpoint: Checkpoint<'slice, 'input>) -> bool {
-        self.token_iter.rollback(checkpoint)
+    pub fn rollback(&mut self, checkpoint: InlineCheckpoint<'slice, 'input>) -> bool {
+        self.cached_token = checkpoint.cached_token;
+        self.updated_prev = checkpoint.updated_prev;
+        self.peeked_cache = checkpoint.peeked_cache;
+        self.token_iter.rollback(checkpoint.iter_checkpoint)
     }
 
     /// Skip all tokens until the main index is aligned with the current peek index.
@@ -272,4 +281,20 @@ impl<'slice, 'input> PeekingNext for InlineTokenIterator<'slice, 'input> {
             None
         }
     }
+}
+
+/// Inline checkpoint to rollback the iterator.
+///
+/// **Note:** The checkpoint does not include the open formats map.
+/// Element parsers must ensure that the open format map remains unchanged if an element could not be parsed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct InlineCheckpoint<'slice, 'input> {
+    /// Checkpoint of the underlying [`TokenIterator`].
+    iter_checkpoint: Checkpoint<'slice, 'input>,
+    /// Optional cached token used for splitting ambiguous tokens.
+    cached_token: Option<InlineToken<'input>>,
+    /// Optional token in case the previously returned token was changed after being returned by the iterator.
+    updated_prev: Option<InlineToken<'input>>,
+    /// Flag to mark if the cached token was viewed when peeking the next token.
+    peeked_cache: bool,
 }
