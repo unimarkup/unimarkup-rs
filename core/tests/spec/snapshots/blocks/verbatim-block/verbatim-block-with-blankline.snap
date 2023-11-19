@@ -1,0 +1,22 @@
+---
+source: core/tests/runner/mod.rs
+description: "Parse a verbatim block with multiple blank lines.\n"
+info: "Test 'verbatim-block-with-blankline' from: markup\\blocks\\verbatim-block.yml"
+---
+VerbatimBlock(
+	Verbatim block
+	
+	
+	Two blank lines before.
+)
+---
+With input:
+
+```
+Verbatim block
+
+
+Two blank lines before.
+```
+
+

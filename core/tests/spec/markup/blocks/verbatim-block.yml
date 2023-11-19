@@ -42,3 +42,23 @@ tests:
       <pre><code>
         <span class="highlighted_text highlighted_plain"># no heading</span>
       </code></pre>
+
+  - name: verbatim-block-with-blankline
+    description: |
+      Parse a verbatim block with multiple blank lines.
+
+    input: |
+      ```
+      Verbatim block
+
+
+      Two blank lines before.
+      ```
+
+    html: |
+      <pre><code>
+        <span class="highlighted_text highlighted_plain">Verbatim block
+
+
+      Two blank lines before.</span>
+      </code></pre>

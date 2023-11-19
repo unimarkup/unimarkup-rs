@@ -32,6 +32,11 @@ pub struct Offset {
 
 impl Offset {
     pub fn extend(&mut self, other: Offset) {
+        debug_assert!(
+            self.start <= other.start,
+            "Tried to extend self by another offset that started earlier."
+        );
+
         self.end = self.end.max(other.end)
     }
 }

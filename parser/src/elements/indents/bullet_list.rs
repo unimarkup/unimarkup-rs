@@ -123,8 +123,8 @@ pub struct BulletListEntry {
 impl BlockElement for BulletListEntry {
     fn to_plain_string(&self) -> String {
         let head_body_separator = match self.body.first() {
-            Some(Block::BulletList(_)) | None => "",
-            _ => SymbolKind::Newline.as_str(),
+            Some(Block::BulletList(_)) | None => SymbolKind::Newline.as_str().to_string(),
+            Some(_) => SymbolKind::Newline.as_str().repeat(2), // to get a blankline between head and body
         };
 
         let plain_body = if self.body.is_empty() {
@@ -134,7 +134,7 @@ impl BlockElement for BulletListEntry {
         }; // Two space indentation after newline
 
         format!(
-            "{} {}\n{}{}",
+            "{} {}{}{}",
             self.keyword.as_str(),
             self.heading.to_plain_string(),
             head_body_separator,

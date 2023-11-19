@@ -1,6 +1,6 @@
 //! Defines the generic Unimarkup Block that is the base for all block elements.
 
-use unimarkup_commons::lexer::{position::Position, span::Span, token::TokenKind};
+use unimarkup_commons::lexer::{position::Position, span::Span, symbol::SymbolKind};
 
 use super::{
     atomic::{Heading, Paragraph},
@@ -45,7 +45,7 @@ impl Block {
 impl BlockElement for Block {
     fn to_plain_string(&self) -> String {
         match self {
-            Block::Blankline(_) => String::from(TokenKind::Blankline),
+            Block::Blankline(_) => String::default(), // Newline is pushed after every block, so blankline is empty on its own
             Block::Heading(block) => block.to_plain_string(),
             Block::Paragraph(block) => block.to_plain_string(),
             Block::VerbatimBlock(block) => block.to_plain_string(),
@@ -79,10 +79,18 @@ impl BlockElement for Block {
 
 impl BlockElement for Vec<Block> {
     fn to_plain_string(&self) -> String {
-        self.iter().fold(String::default(), |mut combined, block| {
+        let mut s = self.iter().fold(String::default(), |mut combined, block| {
             combined.push_str(&block.to_plain_string());
+            combined.push_str(SymbolKind::Newline.as_str());
             combined
-        })
+        });
+
+        // Remove last newline, to prevent ending newline from being part of nested content.
+        if s.ends_with(SymbolKind::Newline.as_str()) {
+            s.pop();
+        }
+
+        s
     }
 
     fn start(&self) -> unimarkup_commons::lexer::position::Position {

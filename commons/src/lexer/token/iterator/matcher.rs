@@ -76,8 +76,8 @@ pub trait PrefixMatcher {
 
 fn matches_kind(token: &Token<'_>, kind: &TokenKind) -> bool {
     match kind {
-        TokenKind::Any => true,
-        TokenKind::EnclosedBlockEnd => matches!(token.kind, TokenKind::Blankline | TokenKind::Eoi),
+        // EnclosedBlockEnd is validated in `matches()`
+        TokenKind::Any | TokenKind::EnclosedBlockEnd => true,
         TokenKind::Space => match token.kind {
             TokenKind::Whitespace => String::from(token) == " ",
             _ => false,
@@ -127,9 +127,15 @@ impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
         for kind in sequence {
             let next_token_opt = self.peeking_next(|s| matches_kind(s, kind));
 
-            if next_token_opt.is_none()
-                && !matches!(kind, TokenKind::EnclosedBlockEnd | TokenKind::Any)
-            {
+            let matched = match next_token_opt {
+                Some(token) => {
+                    kind != &TokenKind::EnclosedBlockEnd
+                        || matches!(token.kind, TokenKind::Blankline | TokenKind::Eoi)
+                }
+                None => kind == &TokenKind::EnclosedBlockEnd || kind == &TokenKind::Any,
+            };
+
+            if !matched {
                 self.set_peek_index(peek_index);
                 return false;
             }

@@ -12,7 +12,7 @@ impl AsSnapshot for Snapshot<&VerbatimBlock> {
             let content: String = content
                 .lines()
                 .fold(String::new(), |s, line| s + "\t" + line + "\n");
-            format!("VerbatimBlock(\n{content}\n)")
+            format!("VerbatimBlock(\n{content})")
         } else {
             format!("VerbatimBlock({content})")
         }

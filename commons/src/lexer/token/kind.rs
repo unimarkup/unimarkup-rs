@@ -168,7 +168,8 @@ impl From<TokenKind> for String {
                 s.push_str(SymbolKind::CloseBrace.as_str());
                 s
             }
-            TokenKind::EscapedNewline | TokenKind::Newline => {
+            TokenKind::EscapedNewline | TokenKind::Newline | TokenKind::Blankline => {
+                // Blankline is also only one newline to handle contiguous blanklines.
                 let mut s = String::with_capacity(SymbolKind::Newline.as_str().len());
                 s.push_str(SymbolKind::Newline.as_str());
                 s
@@ -178,7 +179,6 @@ impl From<TokenKind> for String {
                 s.push_str(SymbolKind::Whitespace.as_str());
                 s
             }
-            TokenKind::Blankline => "\n\n".to_string(),
             TokenKind::Plain
             | TokenKind::TerminalPunctuation
             | TokenKind::EscapedPlain

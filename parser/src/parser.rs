@@ -106,11 +106,8 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
                 break 'outer;
             } else {
                 let block_start = PossibleBlockStart::from(kind);
-                if block_start == PossibleBlockStart::Paragraph {
-                    let (updated_parser, paragraph) = Paragraph::parse(parser);
-                    parser = updated_parser;
-                    blocks.push(paragraph);
-                } else {
+
+                if block_start != PossibleBlockStart::Paragraph {
                     // Token might be start of a block element
                     for parser_fn in get_parser_fn(block_start, &parser.context) {
                         let checkpoint = parser.iter.checkpoint();
@@ -119,6 +116,19 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
                         match block_opt {
                             Some(block) => {
                                 blocks.push(block);
+
+                                if let Some(prev) = parser.iter.prev() {
+                                    // To keep possibly consumed blank lines
+                                    if parser.context.flags.keep_newline
+                                        && prev.kind == TokenKind::Blankline
+                                    {
+                                        blocks.push(Block::Blankline(Span {
+                                            start: prev.start,
+                                            end: prev.end,
+                                        }))
+                                    }
+                                }
+
                                 continue 'outer;
                             }
                             None => {
@@ -131,11 +141,21 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
                             }
                         }
                     }
+                }
 
-                    // no other block parser created a block for curr token -> take as paragraph
-                    let (updated_parser, paragraph) = Paragraph::parse(parser);
-                    parser = updated_parser;
-                    blocks.push(paragraph);
+                // no other block parser created a block for curr token -> take as paragraph
+                let (updated_parser, paragraph) = Paragraph::parse(parser);
+                parser = updated_parser;
+                blocks.push(paragraph);
+
+                if let Some(prev) = parser.iter.prev() {
+                    // To keep possibly consumed blank lines
+                    if parser.context.flags.keep_newline && prev.kind == TokenKind::Blankline {
+                        blocks.push(Block::Blankline(Span {
+                            start: prev.start,
+                            end: prev.end,
+                        }))
+                    }
                 }
             }
 
@@ -268,7 +288,14 @@ mod test {
 
     #[test]
     fn debugging_dummy() {
-        let tokens = unimarkup_commons::lexer::token::lex_str("## Heading **with** inlines.");
+        let tokens = unimarkup_commons::lexer::token::lex_str(
+            "```
+Verbatim block
+
+
+Two blank lines before.
+```",
+        );
         let parser = BlockParser {
             iter: TokenIterator::from(&*tokens),
             context: BlockContext::default(),
