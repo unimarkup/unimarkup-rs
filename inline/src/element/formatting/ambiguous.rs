@@ -144,7 +144,7 @@ fn resolve_closing<'slice, 'input>(
                     close_token.kind,
                     inner,
                     None, // check for optional attributes here
-                    open_token.start,
+                    open_token.start + counterpart(close_token.kind).len(), // Because inner token gets closed
                     close_token.end,
                     false,
                 ));
@@ -271,12 +271,12 @@ fn to_inline<'input>(
                 inner,
                 None,
                 inner_token.start,
-                inner_token.end,
+                end - outer_token.kind.len(), // Because the outer token is at "end"
                 implicit_end,
             )],
             attributes,
             outer_token.start,
-            outer_token.end,
+            end,
             implicit_end,
         )
     } else {

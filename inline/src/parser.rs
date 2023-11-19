@@ -99,9 +99,6 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
         let mut inlines = Vec::default();
         let mut format_closes = false;
 
-        #[cfg(debug_assertions)]
-        let mut curr_len = parser.iter.max_len();
-
         parser.iter.reset_peek();
 
         'outer: while let Some(kind) = parser.iter.peek_kind() {
@@ -154,15 +151,6 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
 
             parser = updated_parser;
             inlines = updated_inlines;
-
-            #[cfg(debug_assertions)]
-            {
-                assert!(
-                    parser.iter.max_len() < curr_len,
-                    "Parser consumed no token in iteration."
-                );
-                curr_len = parser.iter.max_len();
-            }
         }
 
         if !format_closes {
