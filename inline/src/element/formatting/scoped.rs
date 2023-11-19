@@ -28,7 +28,7 @@ macro_rules! scoped_parser {
             // ignore implicits, because only escapes and logic elements are allowed in following inline verbatim
             let prev_context_flags = parser.context.flags;
 
-            let mut scoped_parser =
+            let (mut scoped_parser, outer_open_formats) =
                 parser.nest_scoped(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
                     !matcher.prev_is_space()
                         && matcher.consumed_matches(&[InlineTokenKind::$kind.into()])
@@ -41,7 +41,7 @@ macro_rules! scoped_parser {
             scoped_parser = updated_parser;
 
             let end_reached = scoped_parser.iter.end_reached();
-            parser = scoped_parser.unfold();
+            parser = scoped_parser.unfold(outer_open_formats);
             parser.context.flags = prev_context_flags;
 
             let prev_token = parser.iter.prev_token().expect(

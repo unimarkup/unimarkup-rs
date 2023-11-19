@@ -2,9 +2,10 @@ use unimarkup_commons::lexer::{span::Span, symbol::SymbolKind, token::TokenKind}
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
-        Bold, Highlight, Italic, Overline, Quote, Strikethrough, Subscript, Superscript, Underline,
-        Verbatim,
+        Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
+        Underline, Verbatim,
     },
+    textbox::{hyperlink::Hyperlink, TextBox},
     InlineElement,
 };
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
@@ -126,6 +127,41 @@ impl Renderer<Html> for HtmlRenderer {
         }));
 
         Ok(html)
+    }
+
+    fn render_textbox(
+        &mut self,
+        textbox: &TextBox,
+        context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let inner = self.render_nested_inline(textbox.inner(), context)?;
+
+        Ok(Html::nested(
+            HtmlTag::Span,
+            HtmlAttributes::default(),
+            inner,
+        ))
+    }
+
+    fn render_hyperlink(
+        &mut self,
+        hyperlink: &Hyperlink,
+        context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let inner = self.render_nested_inline(hyperlink.inner(), context)?;
+        let mut attributes = vec![HtmlAttribute {
+            name: "href".to_string(),
+            value: Some(hyperlink.link().to_string()),
+        }];
+
+        if let Some(link_text) = hyperlink.link_text() {
+            attributes.push(HtmlAttribute {
+                name: "title".to_string(),
+                value: Some(link_text.to_string()),
+            })
+        }
+
+        Ok(Html::nested(HtmlTag::A, HtmlAttributes(attributes), inner))
     }
 
     fn render_bold(
@@ -253,6 +289,21 @@ impl Renderer<Html> for HtmlRenderer {
         }));
 
         Ok(html)
+    }
+
+    fn render_inline_math(
+        &mut self,
+        math: &Math,
+        context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        // TODO: use proper math rendering once supported
+        let inner = self.render_nested_inline(math.inner(), context)?;
+
+        Ok(Html::nested(
+            HtmlTag::Span,
+            HtmlAttributes::default(),
+            inner,
+        ))
     }
 
     fn render_plain(

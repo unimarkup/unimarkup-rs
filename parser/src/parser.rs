@@ -81,9 +81,6 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
     pub fn parse(mut parser: Self) -> (Self, Blocks) {
         let mut blocks = Vec::default();
 
-        #[cfg(debug_assertions)]
-        let mut curr_len = parser.iter.max_len();
-
         parser.iter.reset_peek();
 
         'outer: while let Some(kind) = parser.iter.peek_kind() {
@@ -157,15 +154,6 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
                         }))
                     }
                 }
-            }
-
-            #[cfg(debug_assertions)]
-            {
-                assert!(
-                    parser.iter.max_len() < curr_len,
-                    "Parser consumed no token in iteration."
-                );
-                curr_len = parser.iter.max_len();
             }
         }
 

@@ -22,6 +22,7 @@ unimarkup-commons = { path = "../commons/", version = "0" }
 
 [dev-dependencies]
 unimarkup-commons = { path ="../commons/", version = "0", features = ["test_runner"] }
+unimarkup-core = { path = "../core/", version = "0" }
 serde.workspace = true
 serde_yaml.workspace = true
 libtest-mimic = "0.6.1"

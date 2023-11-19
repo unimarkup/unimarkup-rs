@@ -215,10 +215,25 @@ const STRIKETHROUGH_INDEX: usize = 5;
 const HIGHLIGHT_INDEX: usize = 6;
 const OVERLINE_INDEX: usize = 7;
 const QUOTE_INDEX: usize = 8;
-pub(crate) const NR_OF_UNSCOPED_FORMATS: usize = 9;
+const NR_OF_UNSCOPED_FORMATS: usize = 9;
 
 /// Type used to keep track of open formats that do not open their own scope.
-pub(crate) type OpenFormatMap = [bool; NR_OF_UNSCOPED_FORMATS];
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct OpenFormatMap([bool; NR_OF_UNSCOPED_FORMATS]);
+
+impl OpenFormatMap {
+    pub(crate) fn is_open(&self, index: usize) -> bool {
+        self.0[index]
+    }
+
+    pub(crate) fn open(&mut self, index: usize) {
+        self.0[index] = true;
+    }
+
+    pub(crate) fn close(&mut self, index: usize) {
+        self.0[index] = false;
+    }
+}
 
 /// Returns the index in the open format map for the given unscoped format.
 pub(crate) fn map_index(kind: &InlineTokenKind) -> usize {

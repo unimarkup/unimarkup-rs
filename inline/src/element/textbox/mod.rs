@@ -73,9 +73,10 @@ pub(crate) fn parse<'slice, 'input>(
         open_token.kind
     );
 
-    let mut scoped_parser = parser.nest_scoped(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-        matcher.consumed_matches(&[TokenKind::CloseBracket])
-    })));
+    let (mut scoped_parser, outer_open_formats) =
+        parser.nest_scoped(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+            matcher.consumed_matches(&[TokenKind::CloseBracket])
+        })));
 
     let checkpoint = scoped_parser.iter.checkpoint();
     let (updated_parser, box_variant_opt) = parse_box_variant(scoped_parser);
@@ -83,10 +84,11 @@ pub(crate) fn parse<'slice, 'input>(
 
     match box_variant_opt {
         Some(box_variant) => {
-            return (scoped_parser.unfold(), Some(box_variant));
+            return (scoped_parser.unfold(outer_open_formats), Some(box_variant));
         }
         None => {
             scoped_parser.iter.rollback(checkpoint);
+            scoped_parser.iter.next(); // Consume open bracket
         }
     }
 
@@ -104,7 +106,7 @@ pub(crate) fn parse<'slice, 'input>(
             .expect("Inlines in textbox => previous token must exist.")
     };
     let end_reached = scoped_parser.iter.end_reached();
-    parser = scoped_parser.unfold();
+    parser = scoped_parser.unfold(outer_open_formats);
 
     // check for `()`
     if end_reached && parser.iter.peek_kind() == Some(InlineTokenKind::OpenParenthesis) {
@@ -112,9 +114,10 @@ pub(crate) fn parse<'slice, 'input>(
             .iter
             .next()
             .expect("Peeked before, so `next` must return Some."); // Consume open parenthesis
-        let mut link_parser = parser.nest_scoped(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-            matcher.consumed_matches(&[TokenKind::CloseParenthesis])
-        })));
+        let (mut link_parser, outer_open_formats) =
+            parser.nest_scoped(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+                matcher.consumed_matches(&[TokenKind::CloseParenthesis])
+            })));
 
         let link = link_parser
             .iter
@@ -142,7 +145,7 @@ pub(crate) fn parse<'slice, 'input>(
             )
         };
 
-        parser = link_parser.unfold();
+        parser = link_parser.unfold(outer_open_formats);
 
         return (
             parser,

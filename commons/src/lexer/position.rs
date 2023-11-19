@@ -90,6 +90,14 @@ impl AddAssign<Option<SpanLen>> for Position {
     }
 }
 
+impl AddAssign<usize> for Position {
+    fn add_assign(&mut self, rhs: usize) {
+        self.col_utf8 += rhs;
+        self.col_utf16 += rhs;
+        self.col_grapheme += rhs;
+    }
+}
+
 impl<T> Add<T> for Position
 where
     Position: AddAssign<T>,
@@ -122,10 +130,18 @@ impl SubAssign<SpanLen> for Position {
 impl SubAssign<Option<SpanLen>> for Position {
     fn sub_assign(&mut self, rhs: Option<SpanLen>) {
         if let Some(rhs) = rhs {
-            self.col_utf8 += rhs.len_utf8;
-            self.col_utf16 += rhs.len_utf16;
-            self.col_grapheme += rhs.len_grapheme;
+            self.col_utf8 -= rhs.len_utf8;
+            self.col_utf16 -= rhs.len_utf16;
+            self.col_grapheme -= rhs.len_grapheme;
         }
+    }
+}
+
+impl SubAssign<usize> for Position {
+    fn sub_assign(&mut self, rhs: usize) {
+        self.col_utf8 -= rhs;
+        self.col_utf16 -= rhs;
+        self.col_grapheme -= rhs;
     }
 }
 

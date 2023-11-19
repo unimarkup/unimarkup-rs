@@ -1,0 +1,17 @@
+---
+source: inline/tests/parser/mod.rs
+info: "Test 'simple-textbox' from 'markup\\textbox.yml'"
+---
+TextBox @ (1:1)->(1:17) (
+    Plain @ (1:2)->(1:16) (
+        Simple textbox
+        ^^^^^^^^^^^^^^
+    )
+)
+
+---
+With input:
+
+[Simple textbox]
+
+
