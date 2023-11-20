@@ -5,7 +5,7 @@ use unimarkup_inline::element::{
         Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
         Underline, Verbatim,
     },
-    textbox::{hyperlink::Hyperlink, TextBox},
+    textbox::{citation::Citation, hyperlink::Hyperlink, TextBox},
     InlineElement,
 };
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
@@ -17,7 +17,9 @@ use super::{
 };
 
 #[derive(Debug, Default)]
-pub struct HtmlRenderer {}
+pub struct HtmlRenderer {
+    citation_index: usize,
+}
 
 impl Renderer<Html> for HtmlRenderer {
     fn render_paragraph(
@@ -162,6 +164,25 @@ impl Renderer<Html> for HtmlRenderer {
         }
 
         Ok(Html::nested(HtmlTag::A, HtmlAttributes(attributes), inner))
+    }
+
+    fn render_citation(
+        &mut self,
+        _citation: &Citation,
+        context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let citation = context
+            .rendered_citation(self.citation_index)
+            .expect("Rendered citation must exist for parsed citation.");
+        self.citation_index += 1;
+
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
+            tag: HtmlTag::PlainContent,
+            attributes: HtmlAttributes::default(),
+            content: Some(citation.clone()),
+        }));
+
+        Ok(html)
     }
 
     fn render_bold(

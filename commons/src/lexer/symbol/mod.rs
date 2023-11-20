@@ -55,6 +55,10 @@ pub enum SymbolKind {
     Colon,
     /// A dot literal (`.`).
     Dot,
+    /// An ampersand literal (`&`)
+    Ampersand,
+    /// A comma literal (`,`)
+    Comma,
     /// The open parentheses (`(`) literal is used for additional data to text group elements (e.g.
     /// image insert).
     OpenParenthesis,
@@ -246,6 +250,8 @@ impl From<&str> for SymbolKind {
             "}" => SymbolKind::CloseBrace,
             ":" => SymbolKind::Colon,
             "." => SymbolKind::Dot,
+            "&" => SymbolKind::Ampersand,
+            "," => SymbolKind::Comma,
             symbol
                 if symbol != "\n"
                     && symbol != "\r\n"
@@ -305,6 +311,8 @@ impl SymbolKind {
             SymbolKind::CloseBrace => "}",
             SymbolKind::Colon => ":",
             SymbolKind::Dot => ".",
+            SymbolKind::Ampersand => "&",
+            SymbolKind::Comma => ",",
         }
     }
 }

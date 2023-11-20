@@ -151,8 +151,18 @@ impl<'slice, 'input> InlineTokenIterator<'slice, 'input> {
     }
 
     /// Returns the parent of this iterator if a parent exists, or leaves this iterator unchanged.
-    pub fn unfold(mut self, outer_open_formats: OpenFormatMap) -> Self {
+    pub fn unfold_scoped(mut self, outer_open_formats: OpenFormatMap) -> Self {
         self.open_formats = outer_open_formats;
+        self.token_iter = self.token_iter.into_inner();
+        self
+    }
+
+    pub fn nest(mut self, end_match: Option<IteratorEndFn>) -> Self {
+        self.token_iter = self.token_iter.nest(None, end_match);
+        self
+    }
+
+    pub fn into_inner(mut self) -> Self {
         self.token_iter = self.token_iter.into_inner();
         self
     }

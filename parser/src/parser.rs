@@ -29,8 +29,7 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let tokens = unimarkup_commons::lexer::token::lex_str(um_content);
 
     //TODO: extract and parse preamble before parsing
-
-    let (_, blocks) = BlockParser::parse(BlockParser::new(
+    let (parser, blocks) = BlockParser::parse(BlockParser::new(
         TokenIterator::from(&*tokens),
         BlockContext::default(),
     ));
@@ -38,6 +37,7 @@ pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
     let mut unimarkup = Document {
         config: config.clone(),
         blocks,
+        citations: parser.context.citations,
         ..Default::default()
     };
 
@@ -233,6 +233,10 @@ fn get_parser_fn(start: PossibleBlockStart, context: &BlockContext) -> &'static 
 pub struct BlockContext {
     /// Flags used to define parser behavior of block element parsing.
     pub flags: BlockContextFlags,
+    /// Citations used in the Unimarkup content.
+    /// The citations are added in document flow.
+    /// Every citation may contain one or more citation entry IDs.
+    pub citations: Vec<Vec<String>>,
 }
 
 /// Block context flags used to define parser behavior of block element parsing.
@@ -255,16 +259,17 @@ impl From<&BlockContext> for InlineContext {
                 keep_newline: value.flags.keep_newline,
                 allow_implicits: value.flags.logic_only,
             },
+            citations: Vec::new(),
         }
     }
 }
 
 impl BlockContext {
     /// Updates the block context using the given [`InlineContext`].
-    pub fn update_from(&mut self, _inline_context: InlineContext) {
-        //TODO: update block context
-
+    pub fn update_from(&mut self, mut inline_context: InlineContext) {
         // Flags are not updated, because they only "propagate" block->inline, but not the other way.
+
+        self.citations.append(&mut inline_context.citations);
     }
 }
 

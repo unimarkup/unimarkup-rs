@@ -41,7 +41,7 @@ macro_rules! scoped_parser {
             scoped_parser = updated_parser;
 
             let end_reached = scoped_parser.iter.end_reached();
-            parser = scoped_parser.unfold(outer_open_formats);
+            parser = scoped_parser.unfold_scoped(outer_open_formats);
             parser.context.flags = prev_context_flags;
 
             let prev_token = parser.iter.prev_token().expect(

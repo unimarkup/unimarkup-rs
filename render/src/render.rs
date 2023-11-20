@@ -1,13 +1,16 @@
 //! Contains the [`Render`] trait definition.
 
-use unimarkup_commons::{config::icu_locid::Locale, lexer::span::Span};
+use unimarkup_commons::{
+    config::icu_locid::Locale,
+    lexer::{span::Span, token::iterator::Itertools},
+};
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
         Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
         Underline, Verbatim,
     },
-    textbox::{hyperlink::Hyperlink, TextBox},
+    textbox::{citation::Citation, hyperlink::Hyperlink, TextBox},
     Inline,
 };
 use unimarkup_parser::{
@@ -24,6 +27,7 @@ use crate::log_id::RenderError;
 
 pub struct Context<'a> {
     doc: &'a Document,
+    rendered_citations: Vec<String>,
 }
 
 impl<'a> Context<'a> {
@@ -31,13 +35,30 @@ impl<'a> Context<'a> {
     pub fn get_lang(&self) -> &Locale {
         &self.doc.config.preamble.i18n.lang
     }
+
+    pub fn rendered_citation(&self, index: usize) -> Option<&String> {
+        self.rendered_citations.get(index)
+    }
+
+    fn new(doc: &'a Document) -> Self {
+        let rendered_citations = doc
+            .citations
+            .iter()
+            .map(|cite| cite.join(","))
+            .collect_vec();
+
+        Context {
+            doc,
+            rendered_citations,
+        }
+    }
 }
 
 pub fn render<T: OutputFormat>(
     doc: &Document,
     mut renderer: impl Renderer<T>,
 ) -> Result<T, RenderError> {
-    let context = Context { doc };
+    let context = Context::new(doc);
     let mut t = T::new(&context);
 
     t.append(renderer.render_blocks(&doc.blocks, &context)?)?;
@@ -117,6 +138,14 @@ pub trait Renderer<T: OutputFormat> {
     fn render_hyperlink(
         &mut self,
         _hyperlink: &Hyperlink,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    fn render_citation(
+        &mut self,
+        _citation: &Citation,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -353,6 +382,7 @@ pub trait Renderer<T: OutputFormat> {
             Inline::Math(math) => self.render_inline_math(math, context),
             Inline::TextBox(textbox) => self.render_textbox(textbox, context),
             Inline::Hyperlink(hyperlink) => self.render_hyperlink(hyperlink, context),
+            Inline::Citation(citation) => self.render_citation(citation, context),
 
             Inline::NamedSubstitution(_) => todo!(),
             Inline::ImplicitSubstitution(_) => todo!(),
