@@ -2,6 +2,8 @@
 
 use std::path::PathBuf;
 
+use unimarkup_commons::config::preamble::Preamble;
+
 /// Represents a Unimarkup metadata
 #[derive(Debug, Default, Clone)]
 pub struct Metadata {
@@ -10,7 +12,7 @@ pub struct Metadata {
     /// The sha256 hash of the content this metadata points to
     pub contenthash: Vec<u8>,
     /// Preamble of the Unimarkup file
-    pub preamble: String,
+    pub preamble: Option<Preamble>,
     /// Kind of the Unimarkup file
     pub kind: MetadataKind,
     /// Namespace of the Unimarkup file

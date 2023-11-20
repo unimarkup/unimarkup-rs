@@ -67,6 +67,38 @@ pub mod serde {
                 .collect()
         }
     }
+
+    pub mod optional {
+        use super::*;
+
+        pub fn serialize<S>(locale: &Option<Locale>, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            match locale.as_ref().map(|l| l.to_string()) {
+                Some(locale) => serializer.serialize_some(&locale),
+                None => serializer.serialize_none(),
+            }
+        }
+
+        // The signature of a deserialize_with function must follow the pattern:
+        //
+        //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+        //    where
+        //        D: Deserializer<'de>
+        //
+        // although it may also be generic over the output types T.
+        pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Locale>, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let s = String::deserialize(deserializer)?;
+            match s.parse() {
+                Ok(locale) => Ok(Some(locale)),
+                Err(_) => Ok(None),
+            }
+        }
+    }
 }
 
 pub mod clap {

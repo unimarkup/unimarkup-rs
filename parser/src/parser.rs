@@ -1,10 +1,13 @@
 //! Module for parsing of Unimarkup elements.
 
-use unimarkup_commons::lexer::{
-    span::Span,
-    token::{
-        iterator::{IteratorEndFn, IteratorPrefixFn, TokenIterator},
-        TokenKind,
+use unimarkup_commons::{
+    config::ConfigFns,
+    lexer::{
+        span::Span,
+        token::{
+            iterator::{IteratorEndFn, IteratorPrefixFn, TokenIterator},
+            TokenKind,
+        },
     },
 };
 use unimarkup_inline::parser::{InlineContext, InlineContextFlags};
@@ -17,6 +20,7 @@ use crate::{
         enclosed::VerbatimBlock,
         indents::BulletList,
         kind::PossibleBlockStart,
+        preamble::parse_preamble,
         Blocks,
     },
     metadata::{Metadata, MetadataKind},
@@ -25,33 +29,39 @@ use crate::{
 use unimarkup_commons::config::Config;
 
 /// Parses and returns a Unimarkup document.
-pub fn parse_unimarkup(um_content: &str, config: &mut Config) -> Document {
+pub fn parse_unimarkup(um_content: &str, mut config: Config) -> Document {
     let tokens = unimarkup_commons::lexer::token::lex_str(um_content);
 
-    //TODO: extract and parse preamble before parsing
-    let (parser, blocks) = BlockParser::parse(BlockParser::new(
-        TokenIterator::from(&*tokens),
-        BlockContext::default(),
-    ));
+    let mut parser = BlockParser::new(TokenIterator::from(&*tokens), BlockContext::default());
 
-    let mut unimarkup = Document {
-        config: config.clone(),
+    let checkpoint = parser.iter.checkpoint();
+    let (updated_parser, preamble) = parse_preamble(parser);
+    parser = updated_parser;
+
+    if preamble.is_none() {
+        parser.iter.rollback(checkpoint);
+    }
+    config.preamble.merge(
+        preamble
+            .clone()
+            .expect("Ensured above that preamble is Some."),
+    );
+    let (parser, blocks) = BlockParser::parse(parser);
+
+    let input = config.input.clone();
+    Document {
+        config,
         blocks,
         citations: parser.context.citations,
+        metadata: vec![Metadata {
+            file: input,
+            contenthash: security::get_contenthash(um_content),
+            preamble,
+            kind: MetadataKind::Root,
+            namespace: ".".to_string(),
+        }],
         ..Default::default()
-    };
-
-    let metadata = Metadata {
-        file: config.input.clone(),
-        contenthash: security::get_contenthash(um_content),
-        preamble: String::new(),
-        kind: MetadataKind::Root,
-        namespace: ".".to_string(),
-    };
-
-    unimarkup.metadata.push(metadata);
-
-    unimarkup
+    }
 }
 
 /// Function type for functions that parse block elements
@@ -188,7 +198,7 @@ impl<'slice, 'input> BlockParser<'slice, 'input> {
     /// If no parent exists, it leaves this parser unchanged.
     ///
     /// The block context is kept as is.
-    pub fn unfold(mut self) -> Self {
+    pub fn into_inner(mut self) -> Self {
         self.iter = self.iter.into_inner();
         self
     }
@@ -277,7 +287,7 @@ impl BlockContext {
 mod test {
     use unimarkup_commons::lexer::token::iterator::TokenIterator;
 
-    use crate::{BlockContext, BlockParser};
+    use crate::{parse_unimarkup, BlockContext, BlockParser};
 
     #[test]
     fn debugging_dummy() {
@@ -296,6 +306,21 @@ Two blank lines before.
 
         let (_, blocks) = BlockParser::parse(parser);
 
-        dbg!(blocks);
+        assert!(!blocks.is_empty());
+
+        // dbg!(blocks);
+    }
+
+    #[test]
+    fn debugging_preamble_dummy() {
+        let content = "+++
+lang: \"de-AT\"
++++
+
+Funktioniert preamble parsing?
+        ";
+        let doc = parse_unimarkup(content, unimarkup_commons::config::Config::default());
+
+        assert!(!doc.metadata.is_empty());
     }
 }

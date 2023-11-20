@@ -115,7 +115,7 @@ impl VerbatimBlock {
         content_parser = updated_content_parser;
         let implicit_closed = !content_parser.iter.end_reached();
 
-        parser = content_parser.unfold();
+        parser = content_parser.into_inner();
         parser.context.flags = prev_context_flags;
 
         let prev = parser

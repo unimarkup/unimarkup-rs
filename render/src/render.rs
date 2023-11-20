@@ -1,7 +1,7 @@
 //! Contains the [`Render`] trait definition.
 
 use unimarkup_commons::{
-    config::icu_locid::Locale,
+    config::icu_locid::{locale, Locale},
     lexer::{span::Span, token::iterator::Itertools},
 };
 use unimarkup_inline::element::{
@@ -32,8 +32,14 @@ pub struct Context<'a> {
 
 impl<'a> Context<'a> {
     /// Returns the locale for the natural language that is the main language for this rendering.
-    pub fn get_lang(&self) -> &Locale {
-        &self.doc.config.preamble.i18n.lang
+    pub fn get_lang(&self) -> Locale {
+        self.doc
+            .config
+            .preamble
+            .i18n
+            .lang
+            .clone()
+            .unwrap_or(locale!("en"))
     }
 
     pub fn rendered_citation(&self, index: usize) -> Option<&String> {

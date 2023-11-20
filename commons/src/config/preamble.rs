@@ -44,17 +44,18 @@ impl ConfigFns for Preamble {
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct I18n {
-    #[arg(long, value_parser = locale::clap::parse_locale, default_value = "en")]
-    #[serde(with = "locale::serde::single")]
-    pub lang: Locale,
+    #[arg(long, value_parser = locale::clap::parse_locale)]
+    #[serde(with = "locale::serde::optional", default)]
+    pub lang: Option<Locale>,
 
     #[arg(long, value_parser = parse_to_hashset::<Locale>, required = false, default_value = "")]
-    #[serde(with = "locale::serde::multiple")]
+    #[serde(with = "locale::serde::multiple", default)]
     pub output_langs: HashSet<Locale>,
 }
 
 impl ConfigFns for I18n {
     fn merge(&mut self, other: Self) {
+        self.lang.replace_none(other.lang);
         self.output_langs.extend(other.output_langs);
     }
 
@@ -68,12 +69,16 @@ impl ConfigFns for I18n {
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderConfig {
     #[arg(long = "ignore-file", value_parser = parse_ignore_file, required = false, default_value = "")]
+    #[serde(default)]
     pub ignore: HashSet<String>,
     #[arg(long, value_parser = parse_parameter, required = false, default_value = "")]
+    #[serde(default)]
     pub parameter: HashMap<String, String>,
     #[arg(long)]
+    #[serde(default)]
     pub keep_comments: bool,
     #[arg(long)]
+    #[serde(default)]
     pub allow_unsafe: bool,
 }
 
@@ -81,6 +86,8 @@ impl ConfigFns for RenderConfig {
     fn merge(&mut self, other: Self) {
         self.ignore.extend(other.ignore);
         self.parameter.extend(other.parameter);
+        self.keep_comments |= other.keep_comments;
+        self.allow_unsafe |= other.allow_unsafe;
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
@@ -95,20 +102,28 @@ impl ConfigFns for RenderConfig {
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Citedata {
     #[arg(long = "citation-style")]
+    #[serde(default)]
     pub style: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    #[serde(default)]
     pub references: HashSet<PathBuf>,
+    /// Optional file containing locale information to render citations.
+    #[arg(long)]
+    #[serde(default)]
+    pub citation_locale: Option<PathBuf>,
 }
 
 impl ConfigFns for Citedata {
     fn merge(&mut self, other: Self) {
         self.style.replace_none(other.style);
         self.references.extend(other.references);
+        self.citation_locale.replace_none(other.citation_locale);
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
         if let Some(file) = &self.style {
             if !file.exists() {
+                // TODO: check for included styles
                 return err!(
                     ConfigErr::InvalidFile,
                     format!("Citation Style Language file not found: {:?}", file)
@@ -125,6 +140,8 @@ impl ConfigFns for Citedata {
             }
         }
 
+        // TODO: ensure locale is available for citations
+
         Ok(())
     }
 }
@@ -132,14 +149,19 @@ impl ConfigFns for Citedata {
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Metadata {
     #[arg(long)]
+    #[serde(default)]
     pub title: Option<String>,
     #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
+    #[serde(default)]
     pub authors: HashSet<String>,
     #[arg(long)]
+    #[serde(default)]
     pub description: Option<String>,
     #[arg(long)]
+    #[serde(default)]
     pub base: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    #[serde(default)]
     pub fonts: HashSet<PathBuf>,
 }
 
@@ -177,8 +199,10 @@ pub fn parse_parameter(_s: &str) -> Result<HashMap<String, String>, clap::Error>
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HtmlSpecificParameter {
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    #[serde(default)]
     pub favicons: HashSet<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
+    #[serde(default)]
     pub keywords: HashSet<String>,
 }
 
