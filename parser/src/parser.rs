@@ -38,14 +38,13 @@ pub fn parse_unimarkup(um_content: &str, mut config: Config) -> Document {
     let (updated_parser, preamble) = parse_preamble(parser);
     parser = updated_parser;
 
-    if preamble.is_none() {
-        parser.iter.rollback(checkpoint);
+    match preamble.clone() {
+        Some(preamble) => config.preamble.merge(preamble),
+        None => {
+            parser.iter.rollback(checkpoint);
+        }
     }
-    config.preamble.merge(
-        preamble
-            .clone()
-            .expect("Ensured above that preamble is Some."),
-    );
+
     let (parser, blocks) = BlockParser::parse(parser);
 
     let input = config.input.clone();
