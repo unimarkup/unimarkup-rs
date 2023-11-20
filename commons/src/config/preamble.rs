@@ -107,17 +107,17 @@ pub struct Citedata {
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
     #[serde(default)]
     pub references: HashSet<PathBuf>,
-    /// Optional file containing locale information to render citations.
-    #[arg(long)]
+    /// Optional files containing locale information to render citations.
+    #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
     #[serde(default)]
-    pub citation_locale: Option<PathBuf>,
+    pub citation_locales: HashSet<PathBuf>,
 }
 
 impl ConfigFns for Citedata {
     fn merge(&mut self, other: Self) {
         self.style.replace_none(other.style);
         self.references.extend(other.references);
-        self.citation_locale.replace_none(other.citation_locale);
+        self.citation_locales.extend(other.citation_locales);
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
