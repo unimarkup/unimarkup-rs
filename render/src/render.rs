@@ -1,5 +1,6 @@
 //! Contains the [`Render`] trait definition.
 
+use std::path::PathBuf;
 use unimarkup_commons::{
     config::icu_locid::{locale, Locale},
     lexer::{span::Span, token::iterator::Itertools},
@@ -22,6 +23,7 @@ use unimarkup_parser::{
         indents::{BulletList, BulletListEntry},
     },
 };
+use crate::html::citeproc::CiteprocWrapper;
 
 use crate::log_id::RenderError;
 
@@ -47,11 +49,15 @@ impl<'a> Context<'a> {
     }
 
     fn new(doc: &'a Document) -> Self {
-        let rendered_citations = doc
-            .citations
-            .iter()
-            .map(|cite| cite.join(","))
-            .collect_vec();
+        let mut citeproc = CiteprocWrapper::new();
+        // TODO: replace by right text
+        const CITATION_TEXT: &str = include_str!("./html/citeproc/files/example.csl");
+
+        let for_pagedjs = false;
+        let rendered_citations = citeproc.get_citation_strings(String::from(CITATION_TEXT),
+                                                               PathBuf::new(), PathBuf::new(), &doc.citations, for_pagedjs);
+
+        // TODO: get bibliography and footnote texts
 
         Context {
             doc,

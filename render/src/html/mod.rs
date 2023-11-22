@@ -7,6 +7,7 @@ use self::tag::HtmlTag;
 pub mod highlight;
 pub mod render;
 pub mod tag;
+pub(crate) mod citeproc;
 
 #[derive(Debug, Default)]
 pub struct HtmlAttribute {
