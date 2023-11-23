@@ -76,8 +76,56 @@ function splitCitationEntry(inputString, ids) {
     return resultString.join("");
 }
 
-function getMode() {
-    return citeproc.opt.xclass;
+function getBibliographyStyles(bibStyles) {
+    let stylesString = [];
+    stylesString.push("<style scoped>");
+    stylesString.push(".csl-entry { ");
+    if (bibStyles["entryspacing"] === 0) {
+        stylesString.push("padding-bottom: 0.1em;");
+    } else {
+        stylesString.push(`padding-bottom: ${bibStyles["entryspacing"]}em;`);
+    }
+    stylesString.push(`line-height: ${bibStyles["linespacing"]}em;`);
+    if (bibStyles["hangingindent"] !== undefined) {
+        stylesString.push("padding-left: 1.3em;");
+        stylesString.push("text-indent: -1.3em;");
+    }
+    stylesString.push("}");
+    console.log(bibStyles["second-field-align"]);
+    if (bibStyles["second-field-align"]) {
+        if (bibStyles["second-field-align"] === "flush") {
+            stylesString.push(".csl-left-margin { ");
+            stylesString.push("position: absolute;");
+            stylesString.push("}");
+            stylesString.push(".csl-right-inline { ");
+            stylesString.push(`margin-left: ${bibStyles["maxoffset"]}ch`);
+            stylesString.push("}");
+        } else {
+            stylesString.push(".csl-left-margin { ");
+            stylesString.push("text-align: right;");
+            stylesString.push("position: absolute;");
+            stylesString.push("transform-origin: top right;");
+            stylesString.push("transform: translate(-100%);");
+            stylesString.push("margin-left: -1ch;");
+            stylesString.push("}");
+        }
+    }
+    stylesString.push("</style>");
+    return stylesString.join("\n");
+}
+
+function getFootnoteStyles() {
+    let stylesString = [];
+    stylesString.push("<style scoped>");
+    stylesString.push(".footnote-left-margin { ");
+    stylesString.push("text-align: right;");
+    stylesString.push("position: absolute;");
+    stylesString.push("transform-origin: top right;");
+    stylesString.push("transform: translate(-100%);");
+    stylesString.push("margin-left: -1ch;");
+    stylesString.push("}");
+    stylesString.push("</style>");
+    return stylesString.join("\n");
 }
 
 export function initProcessor(citationText, localeText, styleText) {
@@ -91,7 +139,7 @@ export function getCitationStrings(citationIds, for_pagedjs) {
     for (let citationId of JSON.parse(citationIds)) {
         let newStrings = appendCitation(counter, citationId);
         let lastResult = newStrings[newStrings.length - 1];
-        if (getMode() === "in-text") {
+        if (citeproc.opt.xclass === "in-text") {
             citationResults.push(lastResult[1]);
             for (let i = 0; i < newStrings.length - 1; ++i) {
                 citationResults[newStrings[i][0]] = newStrings[i][1];
@@ -104,17 +152,45 @@ export function getCitationStrings(citationIds, for_pagedjs) {
                 }
             } else {
                 citationResults.push(`<a href=\"#footnote-${counter}/" style=\"color: inherit; text-decoration: none\">[${counter}]</a>`);
-                footnoteResults.push(`<div id=\"footnote-${counter}/">[${counter}] ${lastResult[1]}</div>`);
+                footnoteResults.push(`<div id=\"footnote-${counter}/"><div class="footnote-left-margin">[${counter}]</div> <div class="footnote-right-inline">${lastResult[1]}</div></div>`)
                 for (let i = 0; i < newStrings.length - 1; ++i) {
                     let index = newStrings[i][0];
-                    footnoteResults[index] = `<div id=\"footnote-${index + 1}/">[${index + 1}] ${newStrings[i][1]}</div>`;
+                    footnoteResults[index] = `<div id=\"footnote-${index + 1}/"><div class="footnote-left-margin">[${index + 1}]</div> <div class="footnote-right-inline">${newStrings[i][1]}</div></div>`;
                 }
             }
         }
         counter += 1;
     }
-    for (let result of footnoteResults) {
-        console.log(result);
-    }
     return citationResults;
+}
+
+export function hasFootnotes() {
+    return footnoteResults.length > 0;
+}
+export function getFootnoteString() {
+    let joinedResults = footnoteResults.join("");
+    let footnoteString = [];
+    footnoteString.push(
+        "<div style='margin-left: 4ch'>",
+        getFootnoteStyles());
+    footnoteString.push(joinedResults);
+    footnoteString.push("</div>");
+    return footnoteString.join("");
+}
+
+export function getBibliography() {
+    let bib = citeproc.makeBibliography();
+    let resultString = [];
+    let ids = bib[0]["entry_ids"];
+    resultString.push(bib[0]["bibstart"]);
+    resultString.push(getBibliographyStyles(bib[0]));
+    for (let i = 0; i < bib[1].length; ++i) {
+        resultString.push(
+            `<div id="${ids[i]}">`,
+            bib[1][i],
+            "</div>"
+        );
+    }
+    resultString.push(bib[0]["bibend"]);
+    return resultString.join("");
 }
