@@ -1,5 +1,6 @@
 //! Contains the [`Render`] trait definition.
 
+use std::fs;
 use std::path::PathBuf;
 use unimarkup_commons::{
     config::icu_locid::{locale, Locale},
@@ -50,12 +51,27 @@ impl<'a> Context<'a> {
 
     fn new(doc: &'a Document) -> Self {
         let mut citeproc = CiteprocWrapper::new();
-        // TODO: replace by right text
-        const CITATION_TEXT: &str = include_str!("./html/citeproc/files/example.csl");
+        let mut citation_text: Vec<String> = Vec::new();
+        let references = &doc.config.preamble.cite.references;
+        for reference in references {
+            citation_text.push(fs::read_to_string(reference.clone().into_os_string()).expect("reading a reference failed"));
+            // TODO: merging citations is more complex
+            break;
+        }
 
         let for_pagedjs = false;
-        let rendered_citations = citeproc.get_citation_strings(String::from(CITATION_TEXT),
-                                                               PathBuf::new(), PathBuf::new(), &doc.citations, for_pagedjs);
+        let style = doc.config.preamble.cite.style.clone().unwrap_or(PathBuf::from(String::from("ieee")));
+        let mut locale: PathBuf = PathBuf::from(String::from("en-US"));
+        let citation_locales = doc.config.preamble.cite.citation_locales.clone();
+        for l in citation_locales {
+            locale = l;
+            // TODO: render citations for every locale?
+            break;
+        }
+        let rendered_citations = citeproc.get_citation_strings(citation_text.join(""),
+                                                               locale,
+                                                               style,
+                                                               &doc.citations, for_pagedjs);
 
         // TODO: get bibliography and footnote texts
 
