@@ -1,10 +1,8 @@
-#![deny(missing_docs)]
-//! Crate for lexing and parsing of Unimarkup inline formatted text.
+//! Crate for parsing Unimarkup inline elements.
 
-mod inlines;
-mod lexer;
-mod parser;
+pub mod element;
+pub mod parser;
 
-pub use inlines::*;
-pub use lexer::*;
-pub use parser::*;
+mod tokenize;
+
+pub use tokenize::kind::InlineTokenKind;

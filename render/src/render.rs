@@ -1,9 +1,15 @@
 //! Contains the [`Render`] trait definition.
 
-use std::collections::VecDeque;
-
-use unimarkup_commons::config::icu_locid::Locale;
-use unimarkup_inline::{types::*, Inline};
+use unimarkup_commons::{config::icu_locid::Locale, lexer::span::Span};
+use unimarkup_inline::element::{
+    base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
+    formatting::{
+        Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
+        Underline, Verbatim,
+    },
+    textbox::{hyperlink::Hyperlink, TextBox},
+    Inline,
+};
 use unimarkup_parser::{
     document::Document,
     elements::{
@@ -68,7 +74,7 @@ pub trait Renderer<T: OutputFormat> {
     /// Render a Unimarkup [`Verbatim` block](enclosed::Verbatim) to the output format `T`.
     fn render_verbatim_block(
         &mut self,
-        _verbatim: &enclosed::Verbatim,
+        _verbatim: &enclosed::VerbatimBlock,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -92,7 +98,29 @@ pub trait Renderer<T: OutputFormat> {
         Err(RenderError::Unimplemented)
     }
 
+    fn render_blankline(
+        &mut self,
+        _blankline: &Span,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
     //--------------------------------- INLINES ---------------------------------
+
+    /// Render a [`TextBox`] to the output format `T`.
+    fn render_textbox(&mut self, _textbox: &TextBox, _context: &Context) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    /// Render a [`Hyperlink`] to the output format `T`.
+    fn render_hyperlink(
+        &mut self,
+        _hyperlink: &Hyperlink,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
 
     /// Render a [`Bold` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_bold(&mut self, _bold: &Bold, _context: &Context) -> Result<T, RenderError> {
@@ -172,6 +200,11 @@ pub trait Renderer<T: OutputFormat> {
         Err(RenderError::Unimplemented)
     }
 
+    /// Render a [`Math`] to the output format `T`.
+    fn render_inline_math(&mut self, _math: &Math, _context: &Context) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
     /// Render [`Plain` content](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_plain(&mut self, _plain: &Plain, _context: &Context) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -191,10 +224,28 @@ pub trait Renderer<T: OutputFormat> {
         Err(RenderError::Unimplemented)
     }
 
+    /// Render implicit [`Newline` content](unimarkup_inline::inlines::Inline) to the output format `T`.
+    fn render_implicit_newline(
+        &mut self,
+        _implicit_newline: &Newline,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
     /// Render [`EscapedWhitespace` content](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_escaped_whitespace(
         &mut self,
         _escaped_whitespace: &EscapedWhitespace,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    /// Render [`EscapedPlain` content](unimarkup_inline::inlines::Inline) to the output format `T`.
+    fn render_escaped_plain(
+        &mut self,
+        _escaped_plain: &EscapedPlain,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -232,9 +283,16 @@ pub trait Renderer<T: OutputFormat> {
         match block {
             Block::Heading(heading) => self.render_heading(heading, context),
             Block::Paragraph(paragraph) => self.render_paragraph(paragraph, context),
-            Block::Verbatim(verbatim) => self.render_verbatim_block(verbatim, context),
+            Block::VerbatimBlock(verbatim) => self.render_verbatim_block(verbatim, context),
             Block::BulletList(bullet_list) => self.render_bullet_list(bullet_list, context),
-            _ => Err(RenderError::Unimplemented),
+            Block::Blankline(blankline) => self.render_blankline(blankline, context),
+            Block::BulletListEntry(_) => {
+                debug_assert!(
+                    false,
+                    "Bullet list entries are rendered directly insie a bullet list."
+                );
+                Err(RenderError::Unimplemented)
+            }
         }
     }
 
@@ -286,13 +344,25 @@ pub trait Renderer<T: OutputFormat> {
             Inline::EscapedWhitespace(escaped_whitespace) => {
                 self.render_escaped_whitespace(escaped_whitespace, context)
             }
-            _ => Err(RenderError::Unimplemented),
+            Inline::EscapedPlain(escaped_plain) => {
+                self.render_escaped_plain(escaped_plain, context)
+            }
+            Inline::ImplicitNewline(implicit_newline) => {
+                self.render_implicit_newline(implicit_newline, context)
+            }
+            Inline::Math(math) => self.render_inline_math(math, context),
+            Inline::TextBox(textbox) => self.render_textbox(textbox, context),
+            Inline::Hyperlink(hyperlink) => self.render_hyperlink(hyperlink, context),
+
+            Inline::NamedSubstitution(_) => todo!(),
+            Inline::ImplicitSubstitution(_) => todo!(),
+            Inline::DirectUri(_) => todo!(),
         }
     }
 
     fn render_nested_inline(
         &mut self,
-        nested: &VecDeque<Inline>,
+        nested: &[Inline],
         context: &Context,
     ) -> Result<T, RenderError> {
         let mut t = T::default();

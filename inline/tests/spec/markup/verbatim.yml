@@ -35,15 +35,15 @@ tests:
     html: |
       ` not verbatim `
 
-  - name: not-closed-verbatim
+  - name: implicit-closed-verbatim
     description: |
-      Verbatim that's not correctly closed.
+      Verbatim that's implicitly closed.
 
     input: |
-      `not verbatim `
+      `implicit verbatim
 
     html: |
-      `not verbatim `
+      <code>implicit verbatim</code>
 
   - name: not-opened-verbatim
     description: |

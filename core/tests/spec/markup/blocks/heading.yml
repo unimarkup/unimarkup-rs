@@ -1,0 +1,25 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: heading
+description: Test the heading block element.
+
+tests:
+  - name: simple-heading
+    description: |
+      Parse a simple lvl1 heading.
+
+    input: |
+      # Simple heading.
+
+    html: |
+      <h1 id='simple-heading.'>Simple heading.</h1>
+
+
+  - name: heading-lvl2-with-inlines
+
+    input: |
+      ## Heading **with** inlines.
+
+    html: |
+      <h2 id='heading-**with**-inlines.'>Heading <strong>with</strong> inlines.</h2>

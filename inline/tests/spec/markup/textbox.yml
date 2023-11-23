@@ -1,0 +1,16 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: textbox
+description: Contains tests for the textbox element.
+
+tests:
+  - name: simple-textbox
+    description: |
+      Parse a simple textbox.
+
+    input: |
+      [Simple textbox]
+
+    html: |
+      <span>Simple textbox</span>

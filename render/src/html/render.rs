@@ -1,4 +1,13 @@
-use unimarkup_inline::types::*;
+use unimarkup_commons::lexer::{span::Span, symbol::SymbolKind, token::TokenKind};
+use unimarkup_inline::element::{
+    base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
+    formatting::{
+        Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
+        Underline, Verbatim,
+    },
+    textbox::{hyperlink::Hyperlink, TextBox},
+    InlineElement,
+};
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
 
 use crate::render::{Context, OutputFormat, Renderer};
@@ -39,7 +48,7 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_verbatim_block(
         &mut self,
-        verbatim: &unimarkup_parser::elements::enclosed::Verbatim,
+        verbatim: &unimarkup_parser::elements::enclosed::VerbatimBlock,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = Html::with(
@@ -101,6 +110,58 @@ impl Renderer<Html> for HtmlRenderer {
             HtmlAttributes::default(),
             entry_heading,
         ))
+    }
+
+    fn render_blankline(
+        &mut self,
+        _blankline: &Span,
+        _context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
+            tag: HtmlTag::Span,
+            attributes: HtmlAttributes(vec![HtmlAttribute {
+                name: "style".to_string(),
+                value: Some("white-space: pre-wrap;".to_string()),
+            }]),
+            content: Some(String::from(TokenKind::Blankline)),
+        }));
+
+        Ok(html)
+    }
+
+    fn render_textbox(
+        &mut self,
+        textbox: &TextBox,
+        context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let inner = self.render_nested_inline(textbox.inner(), context)?;
+
+        Ok(Html::nested(
+            HtmlTag::Span,
+            HtmlAttributes::default(),
+            inner,
+        ))
+    }
+
+    fn render_hyperlink(
+        &mut self,
+        hyperlink: &Hyperlink,
+        context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let inner = self.render_nested_inline(hyperlink.inner(), context)?;
+        let mut attributes = vec![HtmlAttribute {
+            name: "href".to_string(),
+            value: Some(hyperlink.link().to_string()),
+        }];
+
+        if let Some(link_text) = hyperlink.link_text() {
+            attributes.push(HtmlAttribute {
+                name: "title".to_string(),
+                value: Some(link_text.to_string()),
+            })
+        }
+
+        Ok(Html::nested(HtmlTag::A, HtmlAttributes(attributes), inner))
     }
 
     fn render_bold(
@@ -224,10 +285,25 @@ impl Renderer<Html> for HtmlRenderer {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::Code,
             attributes: HtmlAttributes::default(),
-            content: Some(verbatim.inner().to_string()),
+            content: Some(verbatim.inner().as_unimarkup()),
         }));
 
         Ok(html)
+    }
+
+    fn render_inline_math(
+        &mut self,
+        math: &Math,
+        context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        // TODO: use proper math rendering once supported
+        let inner = self.render_nested_inline(math.inner(), context)?;
+
+        Ok(Html::nested(
+            HtmlTag::Span,
+            HtmlAttributes::default(),
+            inner,
+        ))
     }
 
     fn render_plain(
@@ -238,7 +314,7 @@ impl Renderer<Html> for HtmlRenderer {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::PlainContent,
             attributes: HtmlAttributes::default(),
-            content: Some(plain.inner().to_string()),
+            content: Some(plain.content().clone()),
         }));
 
         Ok(html)
@@ -252,7 +328,21 @@ impl Renderer<Html> for HtmlRenderer {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::PlainContent,
             attributes: HtmlAttributes::default(),
-            content: Some(unimarkup_inline::TokenKind::Whitespace.as_str().to_string()),
+            content: Some(SymbolKind::Whitespace.as_str().to_string()),
+        }));
+
+        Ok(html)
+    }
+
+    fn render_implicit_newline(
+        &mut self,
+        _implicit_newline: &Newline,
+        _context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
+            tag: HtmlTag::Br,
+            attributes: HtmlAttributes::default(),
+            content: None,
         }));
 
         Ok(html)
@@ -274,7 +364,7 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_escaped_whitespace(
         &mut self,
-        escaped_whitespace: &EscapedWhitespace,
+        _escaped_whitespace: &EscapedWhitespace,
         _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
@@ -283,7 +373,21 @@ impl Renderer<Html> for HtmlRenderer {
                 name: "style".to_string(),
                 value: Some("white-space: pre-wrap;".to_string()),
             }]),
-            content: Some(escaped_whitespace.inner().to_string()),
+            content: Some(SymbolKind::Whitespace.as_str().to_string()),
+        }));
+
+        Ok(html)
+    }
+
+    fn render_escaped_plain(
+        &mut self,
+        escaped_plain: &EscapedPlain,
+        _context: &Context,
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let html = Html::with_body(HtmlBody::from(HtmlElement {
+            tag: HtmlTag::PlainContent,
+            attributes: HtmlAttributes::default(),
+            content: Some(escaped_plain.content().clone()),
         }));
 
         Ok(html)

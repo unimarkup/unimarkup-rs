@@ -2,33 +2,153 @@
 
 use std::rc::Rc;
 
-use unimarkup_commons::scanner::{EndMatcher, PrefixMatcher, Symbol, SymbolKind};
-use unimarkup_inline::{Inline, ParseInlines};
+use unimarkup_commons::lexer::{
+    position::Position,
+    symbol::SymbolKind,
+    token::{
+        iterator::{EndMatcher, Itertools, PrefixMatcher},
+        Token, TokenKind,
+    },
+};
+use unimarkup_inline::{
+    element::{Inline, InlineElement},
+    parser,
+};
 
-use crate::{elements::blocks::Block, ElementParser, MainParser};
+use crate::{
+    elements::{blocks::Block, BlockElement},
+    BlockParser,
+};
 
 /// Structure of a Unimarkup bullet list element.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BulletList {
-    /// Unique identifier for a bullet list.
-    pub id: String,
     /// The list entries of this bullet list.
     pub entries: Vec<BulletListEntry>,
+    /// The start of this bullet list in the original content.
+    pub start: Position,
+    /// The end of this bullet list in theoriginal content.
+    pub end: Position,
+}
+
+impl BlockElement for BulletList {
+    fn as_unimarkup(&self) -> String {
+        let mut s = String::default();
+
+        for entry in &self.entries {
+            s.push_str(&entry.as_unimarkup())
+        }
+
+        s
+    }
+
+    fn start(&self) -> unimarkup_commons::lexer::position::Position {
+        self.start
+    }
+
+    fn end(&self) -> unimarkup_commons::lexer::position::Position {
+        self.end
+    }
+}
+
+impl BulletList {
+    /// Tries to create a bullet list from the current position of the given [`BlockParser`].
+    ///
+    /// Returns the block parser, and the optional bullet list.
+    pub(crate) fn parse<'s, 'i>(
+        mut parser: BlockParser<'s, 'i>,
+    ) -> (BlockParser<'s, 'i>, Option<Block>) {
+        let mut entries = Vec::new();
+
+        // `[1..]` to strip newline match for list start
+        while parser.iter.matches(&STAR_ENTRY_START[1..])
+            || parser.iter.matches(&MINUS_ENTRY_START[1..])
+            || parser.iter.matches(&PLUS_ENTRY_START[1..])
+        {
+            let checkpoint = parser.iter.checkpoint();
+            let (updated_parser, list_entry_opt) = BulletListEntry::parse(parser);
+            parser = updated_parser;
+
+            match list_entry_opt {
+                Some(list_entry) => {
+                    entries.push(list_entry);
+                }
+                None => {
+                    // Reverts last tried entry parsing
+                    parser.iter.rollback(checkpoint);
+                    break;
+                }
+            }
+        }
+
+        if entries.is_empty() {
+            return (parser, None);
+        }
+
+        let start = entries
+            .first()
+            .expect("Ensured above that entries exist.")
+            .start();
+        let end = entries
+            .last()
+            .expect("Ensured above that entries exist.")
+            .end();
+
+        (
+            parser,
+            Some(Block::BulletList(BulletList {
+                entries,
+                start,
+                end,
+            })),
+        )
+    }
 }
 
 /// Structure of a Unimarkup bullet list entry.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BulletListEntry {
-    /// The ID of this entry.
-    pub id: String,
     /// The [`BulletListEntryKeyword`] used to create this entry.
     pub keyword: BulletListEntryKeyword,
     /// The entry heading content of this entry.
     pub heading: Vec<Inline>,
     /// The body of this entry.
     pub body: Vec<Block>,
-    /// The attributes set for this entry.
-    pub attributes: String,
+    /// The start of this entry in the original content.
+    pub start: Position,
+    /// The end of this entry in the original content.
+    pub end: Position,
+}
+
+impl BlockElement for BulletListEntry {
+    fn as_unimarkup(&self) -> String {
+        let head_body_separator = match self.body.first() {
+            Some(Block::BulletList(_)) | None => SymbolKind::Newline.as_str().to_string(),
+            Some(_) => SymbolKind::Newline.as_str().repeat(2), // to get a blankline between head and body
+        };
+
+        let plain_body = if self.body.is_empty() {
+            String::default()
+        } else {
+            self.body.as_unimarkup().lines().join("\n  ")
+        }; // Two space indentation after newline
+
+        format!(
+            "{} {}{}{}",
+            self.keyword.as_str(),
+            self.heading.as_unimarkup(),
+            head_body_separator,
+            plain_body
+        )
+    }
+
+    fn start(&self) -> unimarkup_commons::lexer::position::Position {
+        self.start
+    }
+
+    fn end(&self) -> unimarkup_commons::lexer::position::Position {
+        self.end
+    }
 }
 
 /// Enum representing the keyword used to create a [`BulletListEntry`].
@@ -53,147 +173,90 @@ impl BulletListEntryKeyword {
     }
 }
 
-impl<'a> TryFrom<&'a Symbol<'a>> for BulletListEntryKeyword {
+impl<'slice, 'input> TryFrom<&'slice Token<'input>> for BulletListEntryKeyword {
     type Error = ConversionError;
 
-    fn try_from(value: &'a Symbol<'a>) -> Result<Self, Self::Error> {
+    fn try_from(value: &'slice Token<'input>) -> Result<Self, Self::Error> {
         value.kind.try_into()
     }
 }
 
-impl TryFrom<SymbolKind> for BulletListEntryKeyword {
+impl TryFrom<TokenKind> for BulletListEntryKeyword {
     type Error = ConversionError;
 
-    fn try_from(value: SymbolKind) -> Result<Self, Self::Error> {
+    fn try_from(value: TokenKind) -> Result<Self, Self::Error> {
         match value {
-            SymbolKind::Minus => Ok(BulletListEntryKeyword::Minus),
-            SymbolKind::Plus => Ok(BulletListEntryKeyword::Plus),
-            SymbolKind::Star => Ok(BulletListEntryKeyword::Star),
-            _ => Err(ConversionError::CannotConvertSymbol),
+            TokenKind::Minus(1) => Ok(BulletListEntryKeyword::Minus),
+            TokenKind::Plus(1) => Ok(BulletListEntryKeyword::Plus),
+            TokenKind::Star(1) => Ok(BulletListEntryKeyword::Star),
+            _ => Err(ConversionError::CannotConvertToken),
         }
     }
 }
 
 /// Enum representing possible conversion errors
-/// that may occur when converting [`SymbolKind`] to [`BulletListEntryKeyword`].
+/// that may occur when converting [`TokenKind`] to [`BulletListEntryKeyword`].
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ConversionError {
-    /// Error denoting that the given [`SymbolKind`] could not be converted to a [`BulletListEntryKeyword`].
-    CannotConvertSymbol,
+    /// Error denoting that the given [`TokenKind`] could not be converted to a [`BulletListEntryKeyword`].
+    CannotConvertToken,
 }
 
-pub(crate) enum EntryToken {
-    Id(String),
-    Keyword(BulletListEntryKeyword),
-    Heading(Vec<Inline>),
-    Body(Vec<Block>),
-    Attributes(String),
-}
+// Consts below help with matching to prevent dynamic allocations.
 
-const STAR_ENTRY_START: &[SymbolKind] = &[
-    SymbolKind::Newline,
-    SymbolKind::Star,
-    SymbolKind::Whitespace,
-];
-const MINUS_ENTRY_START: &[SymbolKind] = &[
-    SymbolKind::Newline,
-    SymbolKind::Minus,
-    SymbolKind::Whitespace,
-];
-const PLUS_ENTRY_START: &[SymbolKind] = &[
-    SymbolKind::Newline,
-    SymbolKind::Plus,
-    SymbolKind::Whitespace,
-];
+const STAR_ENTRY_START: &[TokenKind] = &[TokenKind::Newline, TokenKind::Star(1), TokenKind::Space];
+const MINUS_ENTRY_START: &[TokenKind] =
+    &[TokenKind::Newline, TokenKind::Minus(1), TokenKind::Space];
+const PLUS_ENTRY_START: &[TokenKind] = &[TokenKind::Newline, TokenKind::Plus(1), TokenKind::Space];
 
-const STAR_SUB_ENTRY_START: &[SymbolKind] = &[
-    SymbolKind::Newline,
-    SymbolKind::Whitespace,
-    SymbolKind::Whitespace,
-    SymbolKind::Star,
-    SymbolKind::Whitespace,
+const STAR_SUB_ENTRY_START: &[TokenKind] = &[
+    TokenKind::Newline,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Star(1),
+    TokenKind::Space,
 ];
-const MINUS_SUB_ENTRY_START: &[SymbolKind] = &[
-    SymbolKind::Newline,
-    SymbolKind::Whitespace,
-    SymbolKind::Whitespace,
-    SymbolKind::Minus,
-    SymbolKind::Whitespace,
+const MINUS_SUB_ENTRY_START: &[TokenKind] = &[
+    TokenKind::Newline,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Minus(1),
+    TokenKind::Space,
 ];
-const PLUS_SUB_ENTRY_START: &[SymbolKind] = &[
-    SymbolKind::Newline,
-    SymbolKind::Whitespace,
-    SymbolKind::Whitespace,
-    SymbolKind::Plus,
-    SymbolKind::Whitespace,
+const PLUS_SUB_ENTRY_START: &[TokenKind] = &[
+    TokenKind::Newline,
+    TokenKind::Space,
+    TokenKind::Space,
+    TokenKind::Plus(1),
+    TokenKind::Space,
 ];
 
-impl ElementParser for BulletList {
-    type Token<'a> = self::BulletListEntry;
+impl BulletListEntry {
+    /// Tries to create a bullet list entry from the current position of the given [`BlockParser`].
+    ///
+    /// Returns the block parser, and the optional bullet list entry.
+    pub(crate) fn parse<'s, 'i>(
+        mut parser: BlockParser<'s, 'i>,
+    ) -> (BlockParser<'s, 'i>, Option<BulletListEntry>) {
+        // It is ensured by the BulletList parser, that the entry start is valid
+        // => we can consume the start tokens without checking
+        let start_token = parser
+            .iter
+            .next()
+            .expect("Correct list entry start ensured in bullet list parser.");
+        let entry_keyword = BulletListEntryKeyword::try_from(start_token)
+            .expect("Correct list entry start ensured in bullet list parser.");
 
-    fn tokenize<'i>(
-        input: &mut unimarkup_commons::scanner::SymbolIterator<'i>,
-    ) -> Option<crate::TokenizeOutput<Self::Token<'i>>> {
-        let mut tokens = Vec::new();
+        parser.iter.next(); // Consume space after keyword
 
-        // `[1..]` to strip newline match for list start
-        while input.matches(&STAR_ENTRY_START[1..])
-            || input.matches(&MINUS_ENTRY_START[1..])
-            || input.matches(&PLUS_ENTRY_START[1..])
-        {
-            match BulletListEntry::tokenize(input) {
-                Some(entry_tokens) => {
-                    let Block::BulletListEntry(entry) =
-                        BulletListEntry::parse(entry_tokens.tokens)?.pop()?
-                    else {
-                        return None;
-                    };
-
-                    tokens.push(entry);
-                }
-                None => break,
-            }
-        }
-
-        if tokens.is_empty() {
-            return None;
-        }
-
-        Some(crate::parser::TokenizeOutput { tokens })
-    }
-
-    fn parse(input: Vec<Self::Token<'_>>) -> Option<crate::elements::Blocks> {
-        let mut list = Self {
-            id: String::new(),
-            entries: Vec::with_capacity(input.len()),
-        };
-
-        for entry in input {
-            list.entries.push(entry);
-        }
-
-        Some(vec![Block::BulletList(list)])
-    }
-}
-
-impl ElementParser for BulletListEntry {
-    type Token<'a> = self::EntryToken;
-
-    fn tokenize<'i>(
-        input: &mut unimarkup_commons::scanner::SymbolIterator<'i>,
-    ) -> Option<crate::TokenizeOutput<Self::Token<'i>>> {
-        let entry_keyword = BulletListEntryKeyword::try_from(input.next()?).ok()?;
-
-        if input.next()?.kind != SymbolKind::Whitespace {
-            return None;
-        }
-
-        let indent_sequence = &[SymbolKind::Whitespace, SymbolKind::Whitespace];
-        let mut entry_heading_iter = input.nest(
+        let indent_sequence = &[TokenKind::Space, TokenKind::Space];
+        let mut entry_heading_parser = parser.nest(
             Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
                 matcher.consumed_prefix(indent_sequence)
             })),
             Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-                matcher.consumed_is_empty_line()
+                matcher.consumed_is_blank_line()
+                    || matcher.outer_end()
                     || matcher.matches(STAR_ENTRY_START)
                     || matcher.matches(MINUS_ENTRY_START)
                     || matcher.matches(PLUS_ENTRY_START)
@@ -203,72 +266,75 @@ impl ElementParser for BulletListEntry {
             })),
         );
 
-        let entry_heading_symbols = entry_heading_iter.take_to_end();
-        let entry_heading = entry_heading_symbols
-            .iter()
-            .map(|&s| *s)
-            .collect::<Vec<Symbol<'_>>>()
-            .parse_inlines()
-            .collect();
-        entry_heading_iter.update(input);
+        let (iter, inline_context, parsed_inlines) = parser::parse_inlines(
+            entry_heading_parser.iter,
+            (&entry_heading_parser.context).into(),
+            None,
+            None,
+        );
+        entry_heading_parser.iter = iter;
+        entry_heading_parser.context.update_from(inline_context);
+        let entry_heading = parsed_inlines.to_inlines();
 
-        while input.consumed_is_empty_line() {
-            // skip empty lines
+        parser = entry_heading_parser.unfold();
+
+        // List entries without content are invalid
+        if entry_heading.is_empty() {
+            return (parser, None);
         }
 
-        let entry_body = if !input.end_reached()
-            && !input.matches(STAR_ENTRY_START)
-            && !input.matches(MINUS_ENTRY_START)
-            && !input.matches(PLUS_ENTRY_START)
+        while parser.iter.consumed_is_blank_line() {
+            // skip empty lines
+            //TODO: add blanklines in case newlines should be kept
+        }
+
+        if !parser.iter.end_reached()
+            && !parser.iter.matches(STAR_ENTRY_START)
+            && !parser.iter.matches(MINUS_ENTRY_START)
+            && !parser.iter.matches(PLUS_ENTRY_START)
         {
-            let mut entry_body_iter = input.nest(
+            let entry_body_parser = parser.nest(
                 Some(Rc::new(|matcher: &mut dyn PrefixMatcher| {
-                    matcher.consumed_prefix(indent_sequence) || matcher.empty_line()
+                    matcher.consumed_prefix(indent_sequence) || matcher.only_spaces_until_newline()
                 })),
                 None,
             );
-            let body = MainParser::default().parse(&mut entry_body_iter);
-            entry_body_iter.update(input);
-            body
+            let (updated_parser, blocks) = BlockParser::parse(entry_body_parser);
+            //TODO: checkpoint and rollback in block parser if prefix match failed
+            parser = updated_parser.unfold();
+
+            if !blocks.is_empty() {
+                let end = blocks.last().expect("At least one block must exist.").end();
+
+                return (
+                    parser,
+                    Some(BulletListEntry {
+                        keyword: entry_keyword,
+                        heading: entry_heading,
+                        body: blocks,
+                        start: start_token.start,
+                        end,
+                    }),
+                );
+            }
         } else {
-            input.next(); // Consume "Newline" symbol of next list entry
-            Vec::new()
+            parser.iter.next(); // Consume "Newline" token of next list entry
         };
 
-        Some(crate::TokenizeOutput {
-            tokens: vec![
-                Self::Token::Id(String::new()),
-                Self::Token::Keyword(entry_keyword),
-                Self::Token::Heading(entry_heading),
-                Self::Token::Body(entry_body),
-                Self::Token::Attributes(String::new()),
-            ],
-        })
-    }
+        let end = entry_heading
+            .last()
+            .expect("Ensured above that entry heading has elements.")
+            .end();
 
-    fn parse(mut input: Vec<Self::Token<'_>>) -> Option<crate::elements::Blocks> {
-        let EntryToken::Attributes(attributes) = input.pop()? else {
-            return None;
-        };
-        let EntryToken::Body(body) = input.pop()? else {
-            return None;
-        };
-        let EntryToken::Heading(heading) = input.pop()? else {
-            return None;
-        };
-        let EntryToken::Keyword(keyword) = input.pop()? else {
-            return None;
-        };
-        let EntryToken::Id(id) = input.pop()? else {
-            return None;
-        };
-
-        Some(vec![Block::BulletListEntry(BulletListEntry {
-            id,
-            keyword,
-            heading,
-            body,
-            attributes,
-        })])
+        (
+            parser,
+            Some(BulletListEntry {
+                keyword: entry_keyword,
+                heading: entry_heading,
+                body: Vec::new(),
+                start: start_token.start,
+                end,
+            }),
+        )
     }
 }

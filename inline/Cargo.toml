@@ -18,12 +18,11 @@ harness=false
 
 [dependencies]
 logid.workspace = true
-ribbon.workspace = true
 unimarkup-commons = { path = "../commons/", version = "0" }
-fxhash = "0.2.1"
 
 [dev-dependencies]
 unimarkup-commons = { path ="../commons/", version = "0", features = ["test_runner"] }
+unimarkup-core = { path = "../core/", version = "0" }
 serde.workspace = true
 serde_yaml.workspace = true
 libtest-mimic = "0.6.1"

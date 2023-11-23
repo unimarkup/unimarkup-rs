@@ -1,12 +1,14 @@
 use std::ops::Deref;
 
+use unimarkup_commons::lexer::token::TokenKind;
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
 use unimarkup_parser::elements::blocks::Block;
 use unimarkup_parser::elements::Blocks;
 
 mod bullet_list;
+mod heading;
 mod paragraph;
-mod verbatim;
+mod verbatim_block;
 
 #[derive(Debug)]
 pub struct Snapshot<T>(pub T);
@@ -41,7 +43,9 @@ impl AsSnapshot for Snapshot<&Block> {
         match **self {
             Block::Paragraph(block) => Snapshot(block).as_snapshot(),
             Block::BulletList(block) => Snapshot(block).as_snapshot(),
-            Block::Verbatim(block) => Snapshot(block).as_snapshot(),
+            Block::VerbatimBlock(block) => Snapshot(block).as_snapshot(),
+            Block::Heading(block) => Snapshot(block).as_snapshot(),
+            Block::Blankline(_) => String::from(TokenKind::Blankline),
             _ => unimplemented!("TODO: Implement snapshot for {:?}", self),
         }
     }

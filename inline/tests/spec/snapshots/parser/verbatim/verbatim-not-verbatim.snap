@@ -1,10 +1,12 @@
 ---
 source: inline/tests/parser/mod.rs
-info: "Test 'verbatim-not-verbatim' from 'markup/verbatim.yml'"
+info: "Test 'verbatim-not-verbatim' from 'markup\\verbatim.yml'"
 ---
 Verbatim @ (1:1)->(1:11) (
-    ␢Verbatim␢
-    ^^^^^^^^^^
+    Plain @ (1:2)->(1:10) (
+        Verbatim
+        ^^^^^^^^
+    )
 )
 Plain @ (1:11)->(1:25) (
      not verbatim.

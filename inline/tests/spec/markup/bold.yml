@@ -35,15 +35,15 @@ tests:
     html: |
       ** not bold **
 
-  - name: not-closed-bold
+  - name: implicit-closed-bold
     description: |
-      Bold that's not correctly closed.
+      Bold that's implicitly closed after invalid closing sequence.
 
     input: |
-      **not bold **
+      **implicit bold **close
 
     html: |
-      **not bold **
+      <strong>implicit bold **close</strong>
 
   - name: not-opened-bold
     description: |
@@ -77,13 +77,13 @@ tests:
 
   - name: ambiguous-start
     description: |
-      Bold that's started with an ambiguous token.
+      Ambiguous token with inner bold and implicit closed italic.
 
     input: |
-      The next ***word** is bold.
+      The next ***word** is bolditalic.
 
     html: |
-      The next *<strong>word</strong> is bold.
+      The next <em><strong>word</strong> is bolditalic.</em>
 
   - name: ambiguous-end
     description: |
@@ -94,3 +94,13 @@ tests:
 
     html: |
       The next <strong>word</strong>* is bold.
+
+  - name: ambiguous-close
+    description: |
+      BoldItalic that's closed with an ambiguous token.
+
+    input: |
+      **bold *+italic*** plain
+
+    html: |
+      <strong>bold <em>+italic</em></strong> plain

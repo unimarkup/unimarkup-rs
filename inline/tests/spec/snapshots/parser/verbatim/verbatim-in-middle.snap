@@ -1,14 +1,16 @@
 ---
 source: inline/tests/parser/mod.rs
-info: "Test 'verbatim-in-middle' from 'markup/verbatim.yml'"
+info: "Test 'verbatim-in-middle' from 'markup\\verbatim.yml'"
 ---
 Plain @ (1:1)->(1:10) (
-    The next
+    The next 
     ^^^^^^^^^
 )
 Verbatim @ (1:10)->(1:16) (
-    ␢word␢
-    ^^^^^^
+    Plain @ (1:11)->(1:15) (
+        word
+        ^^^^
+    )
 )
 Plain @ (1:16)->(1:29) (
      is verbatim.
