@@ -91,7 +91,6 @@ function getBibliographyStyles(bibStyles) {
         stylesString.push("text-indent: -1.3em;");
     }
     stylesString.push("}");
-    console.log(bibStyles["second-field-align"]);
     if (bibStyles["second-field-align"]) {
         if (bibStyles["second-field-align"] === "flush") {
             stylesString.push(".csl-left-margin { ");
@@ -167,7 +166,7 @@ export function getCitationStrings(citationIds, for_pagedjs) {
 export function hasFootnotes() {
     return footnoteResults.length > 0;
 }
-export function getFootnoteString() {
+export function getFootnotesString() {
     let joinedResults = footnoteResults.join("");
     let footnoteString = [];
     footnoteString.push(

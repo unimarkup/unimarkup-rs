@@ -9,6 +9,7 @@ use unimarkup_inline::element::{
     InlineElement,
 };
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
+use crate::log_id::RenderError;
 
 use crate::render::{Context, OutputFormat, Renderer};
 
@@ -183,6 +184,49 @@ impl Renderer<Html> for HtmlRenderer {
         }));
 
         Ok(html)
+    }
+
+    fn render_bibliography(
+        &mut self,
+        context: &Context
+    ) -> Result<Html, crate::log_id::RenderError> {
+        let mut elements: Vec<HtmlElement> = vec![];
+        elements.push(HtmlElement {
+            tag: HtmlTag::H1,
+            attributes: HtmlAttributes::default(),
+            // TODO: other languages?
+            content: Some(String::from("Literaturverzeichnis"))
+        });
+        elements.push(HtmlElement {
+            tag: HtmlTag::PlainContent,
+            attributes: HtmlAttributes::default(),
+            content: Some(context.bibliography.clone())
+        });
+        let body = HtmlBody::from(elements);
+        let html = Html::with_body(body);
+        Ok(html)
+    }
+
+    fn render_footnotes(&mut self, context: &Context) -> Result<Html, RenderError> {
+        let footnotes = context.footnotes.clone();
+        if footnotes != "" {
+            let mut elements: Vec<HtmlElement> = vec![];
+            elements.push(HtmlElement {
+                tag: HtmlTag::PlainContent,
+                attributes: HtmlAttributes::default(),
+                content: Some(String::from("<hr style=\"width: 25%; margin-left: 0\">"))
+            });
+            elements.push(HtmlElement {
+                tag: HtmlTag::PlainContent,
+                attributes: HtmlAttributes::default(),
+                content: Some(footnotes)
+            });
+            let body = HtmlBody::from(elements);
+            let html = Html::with_body(body);
+            Ok(html)
+        } else {
+            return Ok(Html::default());
+        }
     }
 
     fn render_bold(

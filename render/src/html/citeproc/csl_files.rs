@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 macro_rules! csl_files {
@@ -21,23 +22,31 @@ csl_files!(
     CSL_ZH_CN_LOCALE, "../../../csl_locales/locales-zh-CN.xml"
 );
 
-pub fn get_locale_string(path: PathBuf) -> String {
-    return if path.is_file() {
-        fs::read_to_string(path.into_os_string()).expect("Reading the locale file failed")
-    } else {
-        match path.to_str().expect("The locale could not be converted to a string") {
-            "de-DE" => String::from(CSL_DE_DE_LOCALE),
-            "ar" => String::from(CSL_AR_LOCALE),
-            "de-AT" => String::from(CSL_DE_AT_LOCALE),
-            "en-GB" => String::from(CSL_EN_GB_LOCALE),
-            "en-US" => String::from(CSL_EN_US_LOCALE),
-            "es-ES" => String::from(CSL_ES_ES_LOCALE),
-            "fr-FR" => String::from(CSL_FR_FR_LOCALE),
-            "hi-IN" => String::from(CSL_HI_IN_LOCALE),
-            "zh-CN" => String::from(CSL_ZH_CN_LOCALE),
-            _ => String::from(CSL_EN_US_LOCALE)
+pub fn get_locale_string(paths: HashSet<PathBuf>) -> String {
+    let mut default_string = String::from("en-US");
+    let mut default_string_set = false;
+    for path in paths {
+        if path.is_file() {
+            return fs::read_to_string(path.into_os_string()).expect("Reading the locale file failed");
+        }
+        if !default_string_set {
+            default_string = String::from(path.to_str().expect("Converting the path to a string failed"));
+            default_string_set = true;
+
         }
     }
+    return match default_string.as_str() {
+        "de-DE" => String::from(CSL_DE_DE_LOCALE),
+        "ar" => String::from(CSL_AR_LOCALE),
+        "de-AT" => String::from(CSL_DE_AT_LOCALE),
+        "en-GB" => String::from(CSL_EN_GB_LOCALE),
+        "en-US" => String::from(CSL_EN_US_LOCALE),
+        "es-ES" => String::from(CSL_ES_ES_LOCALE),
+        "fr-FR" => String::from(CSL_FR_FR_LOCALE),
+        "hi-IN" => String::from(CSL_HI_IN_LOCALE),
+        "zh-CN" => String::from(CSL_ZH_CN_LOCALE),
+        _ => String::from(CSL_EN_US_LOCALE)
+    };
 }
 
 csl_files!(

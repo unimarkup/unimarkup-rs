@@ -31,6 +31,8 @@ use crate::log_id::RenderError;
 pub struct Context<'a> {
     doc: &'a Document,
     rendered_citations: Vec<String>,
+    pub footnotes: String,
+    pub bibliography: String,
 }
 
 impl<'a> Context<'a> {
@@ -61,23 +63,21 @@ impl<'a> Context<'a> {
 
         let for_pagedjs = false;
         let style = doc.config.preamble.cite.style.clone().unwrap_or(PathBuf::from(String::from("ieee")));
-        let mut locale: PathBuf = PathBuf::from(String::from("en-US"));
-        let citation_locales = doc.config.preamble.cite.citation_locales.clone();
-        for l in citation_locales {
-            locale = l;
-            // TODO: render citations for every locale?
-            break;
-        }
+        let mut citation_locales = doc.config.preamble.cite.citation_locales.clone();
+        citation_locales.insert(PathBuf::from(String::from(doc.config.preamble.i18n.lang.clone().unwrap_or(locale!("en")).to_string())));
         let rendered_citations = citeproc.get_citation_strings(citation_text.join(""),
-                                                               locale,
+                                                               citation_locales,
                                                                style,
                                                                &doc.citations, for_pagedjs);
 
-        // TODO: get bibliography and footnote texts
+        let footnotes = citeproc.get_footnotes();
+        let bibliography = citeproc.get_bibliography();
 
         Context {
             doc,
             rendered_citations,
+            footnotes,
+            bibliography,
         }
     }
 }
@@ -90,6 +90,9 @@ pub fn render<T: OutputFormat>(
     let mut t = T::new(&context);
 
     t.append(renderer.render_blocks(&doc.blocks, &context)?)?;
+
+    t.append(renderer.render_footnotes(&context)?)?;
+    t.append(renderer.render_bibliography(&context)?)?;
 
     Ok(t)
 }
@@ -178,6 +181,16 @@ pub trait Renderer<T: OutputFormat> {
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
     }
+
+    fn render_bibliography(
+        &mut self,
+        _context: &Context,
+    ) -> Result<T, RenderError> { Err(RenderError::Unimplemented) }
+
+    fn render_footnotes(
+        &mut self,
+        _context: &Context,
+    ) -> Result<T, RenderError> { Err(RenderError::Unimplemented) }
 
     /// Render a [`Bold` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
     fn render_bold(&mut self, _bold: &Bold, _context: &Context) -> Result<T, RenderError> {
