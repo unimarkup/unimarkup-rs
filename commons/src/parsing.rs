@@ -18,3 +18,11 @@ pub trait Element {
         }
     }
 }
+
+pub trait Parser<T>
+where
+    Self: std::marker::Sized,
+    T: std::marker::Sized,
+{
+    fn parse(self) -> (Self, T);
+}
