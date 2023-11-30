@@ -1,6 +1,5 @@
 //! Contains the [`Render`] trait definition.
 
-use std::fs;
 use std::path::PathBuf;
 use unimarkup_commons::{
     config::icu_locid::{locale, Locale},
@@ -53,19 +52,12 @@ impl<'a> Context<'a> {
 
     fn new(doc: &'a Document) -> Self {
         let mut citeproc = CiteprocWrapper::new();
-        let mut citation_text: Vec<String> = Vec::new();
-        let references = &doc.config.preamble.cite.references;
-        for reference in references {
-            citation_text.push(fs::read_to_string(reference.clone().into_os_string()).expect("reading a reference failed"));
-            // TODO: merging citations is more complex
-            break;
-        }
 
         let for_pagedjs = false;
         let style = doc.config.preamble.cite.style.clone().unwrap_or(PathBuf::from(String::from("ieee")));
         let mut citation_locales = doc.config.preamble.cite.citation_locales.clone();
         citation_locales.insert(PathBuf::from(String::from(doc.config.preamble.i18n.lang.clone().unwrap_or(locale!("en")).to_string())));
-        let rendered_citations = citeproc.get_citation_strings(citation_text.join(""),
+        let rendered_citations = citeproc.get_citation_strings(&doc.config.preamble.cite.references,
                                                                citation_locales,
                                                                style,
                                                                &doc.citations, for_pagedjs);
