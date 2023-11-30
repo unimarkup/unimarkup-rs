@@ -1,3 +1,4 @@
+use unimarkup_commons::config::icu_locid::locale;
 use unimarkup_commons::lexer::{span::Span, symbol::SymbolKind, token::TokenKind};
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
@@ -191,11 +192,18 @@ impl Renderer<Html> for HtmlRenderer {
         context: &Context
     ) -> Result<Html, crate::log_id::RenderError> {
         let mut elements: Vec<HtmlElement> = vec![];
+        let bibliography_string: String;
+        if context.get_lang() == locale!("de-DE") || context.get_lang() == locale!("de-AT") {
+            bibliography_string = "Literaturverzeichnis".to_string();
+        } else if context.get_lang() == locale!("en-US") || context.get_lang() == locale!("en-GB") {
+            bibliography_string = "Bibliography".to_string();
+        } else {
+            bibliography_string = "Bibliography".to_string();
+        }
         elements.push(HtmlElement {
             tag: HtmlTag::H1,
             attributes: HtmlAttributes::default(),
-            // TODO: other languages?
-            content: Some("Literaturverzeichnis".to_string())
+            content: Some(bibliography_string)
         });
         elements.push(HtmlElement {
             tag: HtmlTag::PlainContent,
