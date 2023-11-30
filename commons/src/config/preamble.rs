@@ -6,9 +6,9 @@ use std::{
 use clap::Args;
 use icu_locid::Locale;
 use logid::err;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::{locale, log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone};
+use super::{locale, log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone, parse_to_locale_pathbuf_hashset};
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Preamble {
@@ -108,9 +108,9 @@ pub struct Citedata {
     #[serde(default)]
     pub references: HashSet<PathBuf>,
     /// Optional files containing locale information to render citations.
-    #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
-    #[serde(default)]
-    pub citation_locales: HashSet<PathBuf>,
+    #[arg(long, value_parser = parse_to_locale_pathbuf_hashset, required = false, default_value = "")]
+    #[serde(with = "locale::serde::hashmap", default)]
+    pub citation_locales: HashMap<Locale, PathBuf>,
 }
 
 impl ConfigFns for Citedata {

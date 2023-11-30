@@ -55,9 +55,10 @@ impl<'a> Context<'a> {
 
         let for_pagedjs = false;
         let style = doc.config.preamble.cite.style.clone().unwrap_or(PathBuf::from(String::from("ieee")));
-        let mut citation_locales = doc.config.preamble.cite.citation_locales.clone();
-        citation_locales.insert(PathBuf::from(String::from(doc.config.preamble.i18n.lang.clone().unwrap_or(locale!("en")).to_string())));
+        let doc_locale = doc.config.preamble.i18n.lang.clone().unwrap_or(locale!("en-US"));
+        let citation_locales = doc.config.preamble.cite.citation_locales.clone();
         let rendered_citations = citeproc.get_citation_strings(&doc.config.preamble.cite.references,
+                                                               doc_locale,
                                                                citation_locales,
                                                                style,
                                                                &doc.citations, for_pagedjs);

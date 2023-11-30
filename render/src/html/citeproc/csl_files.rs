@@ -1,6 +1,7 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use unimarkup_commons::config::icu_locid::Locale;
 macro_rules! csl_files {
     ($($name:ident, $path:literal)|+) => {
         $(
@@ -22,20 +23,8 @@ csl_files!(
     CSL_ZH_CN_LOCALE, "../../../csl_locales/locales-zh-CN.xml"
 );
 
-pub fn get_locale_string(paths: HashSet<PathBuf>) -> String {
-    let mut default_string = "en-US".to_string();
-    let mut default_string_set = false;
-    for path in paths {
-        if path.is_file() {
-            return fs::read_to_string(path.into_os_string()).expect("Reading the locale file failed");
-        }
-        if !default_string_set {
-            default_string = path.to_str().expect("Converting the path to a string failed").to_string();
-            default_string_set = true;
-
-        }
-    }
-    return match default_string.as_str() {
+fn get_cached_locale_string(locale: Locale) -> String {
+    return match locale.to_string().as_str() {
         "de-DE" => CSL_DE_DE_LOCALE.to_string(),
         "ar" => CSL_AR_LOCALE.to_string(),
         "de-AT" => CSL_DE_AT_LOCALE.to_string(),
@@ -47,6 +36,18 @@ pub fn get_locale_string(paths: HashSet<PathBuf>) -> String {
         "zh-CN" => CSL_ZH_CN_LOCALE.to_string(),
         _ => CSL_EN_US_LOCALE.to_string()
     };
+}
+
+pub fn get_locale_string(doc_locale: Locale, paths: HashMap<Locale, PathBuf>) -> String {
+    match paths.get(&doc_locale) {
+        Some(path) => {
+            if path.is_file() {
+                return fs::read_to_string(path.clone().into_os_string()).unwrap_or(get_cached_locale_string(doc_locale));
+            }
+        },
+        None => return get_cached_locale_string(doc_locale)
+    };
+    get_cached_locale_string(doc_locale)
 }
 
 csl_files!(

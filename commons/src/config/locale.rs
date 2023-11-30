@@ -99,6 +99,51 @@ pub mod serde {
             }
         }
     }
+
+    pub mod hashmap {
+        use super::*;
+        use std::collections::HashMap;
+        use std::path::PathBuf;
+
+        pub fn serialize<S>(locales_map: &HashMap<Locale, PathBuf>, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+        {
+            let mut res = String::new();
+
+            for entry in locales_map.iter() {
+                res.push_str("  ");
+                res.push_str(&entry.0.to_string());
+                res.push_str(": ");
+                res.push_str(&entry.1.to_str().expect("couldn't convert PathBuf to String"));
+                res.push('\n');
+            }
+
+            res.pop();
+
+            serializer.serialize_str(&res)
+        }
+
+        // The signature of a deserialize_with function must follow the pattern:
+        //
+        //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+        //    where
+        //        D: Deserializer<'de>
+        //
+        // although it may also be generic over the output types T.
+        pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<Locale, PathBuf>, D::Error>
+            where
+                D: Deserializer<'de>,
+        {
+            let s = HashMap::<String, String>::deserialize(deserializer)?;
+            let mut result: HashMap<Locale, PathBuf> = HashMap::new();
+
+            for entry in s {
+                result.insert(entry.0.parse().expect("Parsing the locale failed"), PathBuf::from(entry.1));
+            }
+            Ok(result)
+        }
+    }
 }
 
 pub mod clap {

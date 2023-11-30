@@ -1,10 +1,11 @@
 mod csl_files;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
 use rustyscript::{json_args, import, ModuleWrapper, serde_json};
+use unimarkup_commons::config::icu_locid::Locale;
 use crate::csl_json::csl_types::{CslData, CslItem};
 use crate::html::citeproc::csl_files::{get_locale_string, get_style_string};
 
@@ -23,9 +24,9 @@ impl CiteprocWrapper {
     // returns the citation strings to be placed inline in the same order as the citation_ids
     // the CitationItems have to have the same order that they should appear in the output, because this considers
     // disambiguation and short forms of citations if the same entry was cited before
-    pub fn get_citation_strings(&mut self, citation_paths: &HashSet<PathBuf>, citation_locales: HashSet<PathBuf>, style_id: PathBuf, citation_id_vectors: &Vec<Vec<String>>, for_pagedjs: bool) -> Vec<String> {
+    pub fn get_citation_strings(&mut self, citation_paths: &HashSet<PathBuf>, doc_locale: Locale, citation_locales: HashMap<Locale, PathBuf>, style_id: PathBuf, citation_id_vectors: &Vec<Vec<String>>, for_pagedjs: bool) -> Vec<String> {
         let citation_text = get_csl_string(citation_paths);
-        let locale = get_locale_string(citation_locales);
+        let locale = get_locale_string(doc_locale, citation_locales);
         let style = get_style_string(style_id);
 
         self.module.call::<()>("initProcessor", json_args!(citation_text, locale, style)).expect("call of initProcessor failed");
