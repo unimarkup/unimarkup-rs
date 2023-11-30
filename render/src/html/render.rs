@@ -195,7 +195,7 @@ impl Renderer<Html> for HtmlRenderer {
             tag: HtmlTag::H1,
             attributes: HtmlAttributes::default(),
             // TODO: other languages?
-            content: Some(String::from("Literaturverzeichnis"))
+            content: Some("Literaturverzeichnis".to_string())
         });
         elements.push(HtmlElement {
             tag: HtmlTag::PlainContent,
@@ -209,12 +209,12 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_footnotes(&mut self, context: &Context) -> Result<Html, RenderError> {
         let footnotes = context.footnotes.clone();
-        if footnotes != "" {
+        if !footnotes.is_empty() {
             let mut elements: Vec<HtmlElement> = vec![];
             elements.push(HtmlElement {
                 tag: HtmlTag::PlainContent,
                 attributes: HtmlAttributes::default(),
-                content: Some(String::from("<hr style=\"width: 25%; margin-left: 0\">"))
+                content: Some("<hr style=\"width: 25%; margin-left: 0\">".to_string())
             });
             elements.push(HtmlElement {
                 tag: HtmlTag::PlainContent,

@@ -36,7 +36,7 @@ impl CiteprocWrapper {
         if self.module.call("hasFootnotes", json_args!()).expect("call of hasFootnotes failed") {
             return self.module.call("getFootnotesString", json_args!()).expect("call of getFootnotesString failed");
         } else {
-            return String::from("");
+            return "".to_string();
         }
     }
 
