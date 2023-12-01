@@ -1,19 +1,8 @@
-use crate::lexer::position::Position;
-
-use super::{AttributeValue, NestedAttribute};
-
+// TODO: turn into enum to match ID with allowed values.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum HtmlAttribute {
-    Property(HtmlProperty),
-    Nested(NestedAttribute<HtmlAttribute>),
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct HtmlProperty {
-    ident: HtmlPropertyId,
-    value: AttributeValue,
-    start: Position,
-    end: Position,
+pub struct HtmlAttribute<'resolved> {
+    ident: HtmlAttributeId<'resolved>,
+    value: &'resolved str,
 }
 
 macro_rules! html_attributes {
@@ -22,7 +11,7 @@ macro_rules! html_attributes {
         /// HTML attributes that are supported as Unimarkup attributes.
         /// Taken from: https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes?retiredLocale=de
         #[derive(Debug, PartialEq, Eq, Clone)]
-        pub enum HtmlPropertyId {
+        pub enum HtmlAttributeId<'resolved> {
             $(
                 #[doc=concat!("The `", $name, "` attribute.")]
                 $(
@@ -32,34 +21,33 @@ macro_rules! html_attributes {
 
             )*
             /// Attribute starting with `data-`.
-            Custom(Box<super::AttributeIdent>),
+            Custom(&'resolved str),
         }
 
-        impl TryFrom<(&str, Position, Position)> for HtmlPropertyId {
+        impl<'resolved> TryFrom<&'resolved str> for HtmlAttributeId<'resolved> {
             type Error = super::log_id::AttributeError;
 
-            /// Tries to convert a given `str` to a [`HtmlPropertyId`].
-            /// The positions are the `start` and `end` of the given `str`.
+            /// Tries to convert a given `str` to a [`HtmlAttributeId`].
             ///
-            /// Usage: `HtmlPropertyId::try_from("autoplay", <start pos>, <end pos>)`
-            fn try_from(value: (&str, Position, Position)) -> Result<Self, Self::Error> {
-                match value.0.to_lowercase().as_str() {
+            /// Usage: `HtmlAttributeId::try_from("autoplay")`
+            fn try_from(value: &'resolved str) -> Result<Self, Self::Error> {
+                match value.to_lowercase().as_str() {
                     $(
-                        $name => Ok(HtmlPropertyId::$id),
+                        $name => Ok(HtmlAttributeId::$id),
                     )*
-                    s if s.starts_with("data-") => Ok(HtmlPropertyId::Custom(Box::new(super::AttributeIdent::from(value)))),
+                    s if s.starts_with("data-") => Ok(HtmlAttributeId::Custom(value)),
                     _ => Err(super::log_id::AttributeError::InvalidHtmlIdent),
                 }
             }
         }
 
-        impl HtmlPropertyId {
+        impl<'resolved> HtmlAttributeId<'resolved> {
             pub fn as_str(&self) -> &str {
                 match self {
                     $(
-                        HtmlPropertyId::$id => $name,
+                        HtmlAttributeId::$id => $name,
                     )*
-                    HtmlPropertyId::Custom(c) => &c.ident,
+                    HtmlAttributeId::Custom(c) => c,
                 }
             }
 
@@ -67,9 +55,9 @@ macro_rules! html_attributes {
             pub fn len(&self) -> usize {
                 match self {
                     $(
-                        HtmlPropertyId::$id => $name.len(),
+                        HtmlAttributeId::$id => $name.len(),
                     )*
-                    HtmlPropertyId::Custom(c) => c.ident.len(),
+                    HtmlAttributeId::Custom(c) => c.len(),
                 }
             }
         }

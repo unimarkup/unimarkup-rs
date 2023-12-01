@@ -10,6 +10,14 @@ use super::{
 pub mod implicit;
 pub mod iterator;
 
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct Comment {
+    content: String,
+    impl_closed: bool,
+    start: Position,
+    end: Position,
+}
+
 /// Token lexed from grapheme [`Symbol`]s of the given input.
 ///
 /// # Lifetimes

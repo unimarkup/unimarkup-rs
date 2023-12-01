@@ -4,6 +4,9 @@ use crate::{lexer::token::iterator::TokenIterator, parsing::Parser};
 
 pub struct LogicContext {}
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct LogicAst(String); // TODO: setup AST
+
 pub struct LogicParser<'slice, 'input, P, T>
 where
     P: Parser<T>,
