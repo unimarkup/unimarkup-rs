@@ -125,14 +125,20 @@ impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
         let peek_index = self.peek_index();
 
         for kind in sequence {
-            let next_token_opt = self.peeking_next(|s| matches_kind(s, kind));
+            let matched = if kind == &TokenKind::Digits {
+                self.peeking_take_while(|t| matches!(t.kind, TokenKind::Digit(_)))
+                    .count()
+                    > 0
+            } else {
+                let next_token_opt = self.peeking_next(|t| matches_kind(t, kind));
 
-            let matched = match next_token_opt {
-                Some(token) => {
-                    kind != &TokenKind::EnclosedBlockEnd
-                        || matches!(token.kind, TokenKind::Blankline | TokenKind::Eoi)
+                match next_token_opt {
+                    Some(token) => {
+                        kind != &TokenKind::EnclosedBlockEnd
+                            || matches!(token.kind, TokenKind::Blankline | TokenKind::Eoi)
+                    }
+                    None => kind == &TokenKind::EnclosedBlockEnd || kind == &TokenKind::Any,
                 }
-                None => kind == &TokenKind::EnclosedBlockEnd || kind == &TokenKind::Any,
             };
 
             if !matched {

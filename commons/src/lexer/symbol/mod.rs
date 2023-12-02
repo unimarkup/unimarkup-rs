@@ -11,103 +11,6 @@ pub mod iterator;
 pub const TERMINAL_PUNCTUATION: CodePointSetDataBorrowed<'static> =
     icu_properties::sets::terminal_punctuation();
 
-/// Possible kinds of Symbol found in Unimarkup document.
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum SymbolKind {
-    /// Regular text with no semantic meaning
-    #[default]
-    Plain,
-    /// Unicode terminal punctuation
-    TerminalPunctuation,
-    /// Any non-linebreaking whitespace
-    Whitespace,
-    /// A line break literal (for example `\n` or '\r\n')
-    Newline,
-    /// End of Unimarkup document
-    Eoi,
-    /// The backslash (`\`) is used for escaping other symbols.
-    Backslash,
-    /// Hash symbol (#) used for headings
-    Hash,
-    /// The star (`*`) literal is used for various elements.
-    Star,
-    /// The minus (`-`) literal is used for various elements.
-    Minus,
-    /// The plus (`+`) literal is used for various elements.
-    Plus,
-    /// The underline (`_`) literal is used for underline and/or subscript formatting.
-    Underline,
-    /// The caret (`^`) literal is used for superscript formatting.
-    Caret,
-    /// The tick (`` ` ``) literal is used for verbatim blocks and formatting.
-    Tick,
-    /// The overline (`‾`) literal is used for overline formatting.
-    Overline,
-    /// The pipe (`|`) literal is used for highlight formatting.
-    Pipe,
-    /// The tilde (`~`) literal is used for strikethrough formatting.
-    Tilde,
-    /// The quote (`"`) literal is used for quotation formatting.
-    Quote,
-    /// The dollar (`$`) literal is used for math mode formatting.
-    Dollar,
-    /// A colon literal (`:`) is used as marker (e.g. for alias substitutions `::heart::`).
-    Colon,
-    /// A dot literal (`.`).
-    Dot,
-    /// The open parentheses (`(`) literal is used for additional data to text group elements (e.g.
-    /// image insert).
-    OpenParenthesis,
-    /// The close parentheses (`)`) literal is used to close the additional data to text group.
-    CloseParenthesis,
-    /// The open bracket (`[`) literal is used for text group elements.
-    OpenBracket,
-    /// The close bracket (`]`) literal is used for text group elements.
-    CloseBracket,
-    /// The open brace (`{`) literal is used for inline attributes.
-    OpenBrace,
-    /// The close brace (`}`) literal is used for inline attributes.
-    CloseBrace,
-}
-
-impl SymbolKind {
-    pub fn is_not_keyword(&self) -> bool {
-        matches!(
-            self,
-            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Plain | SymbolKind::Eoi
-        )
-    }
-
-    pub fn is_keyword(&self) -> bool {
-        !self.is_not_keyword()
-    }
-
-    pub fn is_open_parenthesis(&self) -> bool {
-        matches!(
-            self,
-            SymbolKind::OpenParenthesis | SymbolKind::OpenBracket | SymbolKind::OpenBrace
-        )
-    }
-
-    pub fn is_close_parenthesis(&self) -> bool {
-        matches!(
-            self,
-            SymbolKind::CloseParenthesis | SymbolKind::CloseBracket | SymbolKind::CloseBrace
-        )
-    }
-
-    pub fn is_parenthesis(&self) -> bool {
-        self.is_open_parenthesis() || self.is_close_parenthesis()
-    }
-
-    pub fn is_space(&self) -> bool {
-        matches!(
-            self,
-            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Eoi
-        )
-    }
-}
-
 /// Symbol representation of literals found in Unimarkup document.
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Symbol<'a> {
@@ -221,44 +124,183 @@ impl Symbol<'_> {
     }
 }
 
+/// Possible kinds of Symbol found in Unimarkup document.
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum SymbolKind {
+    /// Regular text with no semantic meaning.
+    #[default]
+    Plain,
+    /// Any ASCII digit (`0-9`).
+    Digit(u8),
+    /// Unicode terminal punctuation.
+    TerminalPunctuation,
+    /// Any non-linebreaking whitespace.
+    Whitespace,
+    /// A line break literal (for example `\n` or '\r\n').
+    Newline,
+    /// End of Unimarkup content.
+    Eoi,
+    /// The backslash (`\`) is used for escaping other symbols.
+    Backslash,
+    /// A forward slash (`/`).
+    ForwardSlash,
+    /// Hash symbol (#) used for headings.
+    Hash,
+    /// The star (`*`) literal is used for various elements.
+    Star,
+    /// The minus (`-`) literal is used for various elements.
+    Minus,
+    /// The plus (`+`) literal is used for various elements.
+    Plus,
+    /// The underline (`_`) literal is used for underline and/or subscript formatting.
+    Underline,
+    /// The caret (`^`) literal is used for superscript formatting.
+    Caret,
+    /// The tick (`` ` ``) literal is used for verbatim blocks and formatting.
+    Tick,
+    /// The overline (`‾`) literal is used for overline formatting.
+    Overline,
+    /// The pipe (`|`) literal is used for highlight formatting.
+    Pipe,
+    /// The tilde (`~`) literal is used for strikethrough formatting.
+    Tilde,
+    /// The quote (`"`) literal is used for quotation formatting.
+    Quote,
+    /// A single quote (`'`) literal.
+    SingleQuote,
+    /// The dollar (`$`) literal is used for math mode formatting.
+    Dollar,
+    /// A percentage literal (`%`),
+    Percentage,
+    /// A colon literal (`:`) is used as marker (e.g. for alias substitutions `::heart::`).
+    Colon,
+    /// A dot literal (`.`).
+    Dot,
+    /// A comma literal (`,`).
+    Comma,
+    /// A semicolon literal (`;`).
+    Semicolon,
+    /// An exclamation mark literal (`!`).
+    ExclamationMark,
+    /// A question mark literal (`?`).
+    QuestionMark,
+    /// A `@` literal.
+    At,
+    /// A `<` literal.
+    Lt,
+    /// A `>` literal.
+    Gt,
+    /// A `=` literal.
+    Eq,
+    /// The open parentheses (`(`) literal is used for additional data to text group elements (e.g.
+    /// image insert).
+    OpenParenthesis,
+    /// The close parentheses (`)`) literal is used to close the additional data to text group.
+    CloseParenthesis,
+    /// The open bracket (`[`) literal is used for text group elements.
+    OpenBracket,
+    /// The close bracket (`]`) literal is used for text group elements.
+    CloseBracket,
+    /// The open brace (`{`) literal is used for inline attributes.
+    OpenBrace,
+    /// The close brace (`}`) literal is used for inline attributes.
+    CloseBrace,
+}
+
+impl SymbolKind {
+    pub fn is_not_keyword(&self) -> bool {
+        matches!(
+            self,
+            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Plain | SymbolKind::Eoi
+        )
+    }
+
+    pub fn is_keyword(&self) -> bool {
+        !self.is_not_keyword()
+    }
+
+    pub fn is_open_parenthesis(&self) -> bool {
+        matches!(
+            self,
+            SymbolKind::OpenParenthesis | SymbolKind::OpenBracket | SymbolKind::OpenBrace
+        )
+    }
+
+    pub fn is_close_parenthesis(&self) -> bool {
+        matches!(
+            self,
+            SymbolKind::CloseParenthesis | SymbolKind::CloseBracket | SymbolKind::CloseBrace
+        )
+    }
+
+    pub fn is_parenthesis(&self) -> bool {
+        self.is_open_parenthesis() || self.is_close_parenthesis()
+    }
+
+    pub fn is_space(&self) -> bool {
+        matches!(
+            self,
+            SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Eoi
+        )
+    }
+}
+
 impl From<&str> for SymbolKind {
     fn from(value: &str) -> Self {
         match value {
-            "#" => SymbolKind::Hash,
-            "\n" | "\r\n" => SymbolKind::Newline,
-            "`" => SymbolKind::Tick,
-            "\\" => SymbolKind::Backslash,
-            "*" => SymbolKind::Star,
-            "-" => SymbolKind::Minus,
-            "+" => SymbolKind::Plus,
-            "_" => SymbolKind::Underline,
-            "^" => SymbolKind::Caret,
-            "‾" => SymbolKind::Overline,
-            "|" => SymbolKind::Pipe,
-            "~" => SymbolKind::Tilde,
-            "\"" => SymbolKind::Quote,
-            "$" => SymbolKind::Dollar,
-            "(" => SymbolKind::OpenParenthesis,
-            ")" => SymbolKind::CloseParenthesis,
-            "[" => SymbolKind::OpenBracket,
-            "]" => SymbolKind::CloseBracket,
-            "{" => SymbolKind::OpenBrace,
-            "}" => SymbolKind::CloseBrace,
-            ":" => SymbolKind::Colon,
-            "." => SymbolKind::Dot,
-            symbol
-                if symbol != "\n"
-                    && symbol != "\r\n"
-                    && symbol.starts_with(char::is_whitespace) =>
-            {
-                SymbolKind::Whitespace
+            "\n" | "\r\n" => Self::Newline,
+            "#" => Self::Hash,
+            "`" => Self::Tick,
+            "\\" => Self::Backslash,
+            "/" => Self::ForwardSlash,
+            "*" => Self::Star,
+            "-" => Self::Minus,
+            "+" => Self::Plus,
+            "_" => Self::Underline,
+            "^" => Self::Caret,
+            "‾" => Self::Overline,
+            "|" => Self::Pipe,
+            "~" => Self::Tilde,
+            "\"" => Self::Quote,
+            "'" => Self::SingleQuote,
+            "$" => Self::Dollar,
+            "%" => Self::Percentage,
+            ":" => Self::Colon,
+            "." => Self::Dot,
+            "," => Self::Comma,
+            ";" => Self::Semicolon,
+            "!" => Self::ExclamationMark,
+            "?" => Self::QuestionMark,
+            "@" => Self::At,
+            "<" => Self::Lt,
+            ">" => Self::Gt,
+            "=" => Self::Eq,
+            "(" => Self::OpenParenthesis,
+            ")" => Self::CloseParenthesis,
+            "[" => Self::OpenBracket,
+            "]" => Self::CloseBracket,
+            "{" => Self::OpenBrace,
+            "}" => Self::CloseBrace,
+            "0" => Self::Digit(0),
+            "1" => Self::Digit(1),
+            "2" => Self::Digit(2),
+            "3" => Self::Digit(3),
+            "4" => Self::Digit(4),
+            "5" => Self::Digit(5),
+            "6" => Self::Digit(6),
+            "7" => Self::Digit(7),
+            "8" => Self::Digit(8),
+            "9" => Self::Digit(9),
+            symbol if symbol.starts_with(char::is_whitespace) => {
+                // `\n` & `\r\n` already handled above
+                Self::Whitespace
             }
             _ => {
-                let mut kind = SymbolKind::Plain;
+                let mut kind = Self::Plain;
 
                 if let Some(c) = value.chars().next() {
                     if TERMINAL_PUNCTUATION.contains(c) {
-                        kind = SymbolKind::TerminalPunctuation;
+                        kind = Self::TerminalPunctuation;
                     }
                 }
 
@@ -305,6 +347,33 @@ impl SymbolKind {
             SymbolKind::CloseBrace => "}",
             SymbolKind::Colon => ":",
             SymbolKind::Dot => ".",
+            SymbolKind::Digit(digit) => match digit {
+                0 => "0",
+                1 => "1",
+                2 => "2",
+                3 => "3",
+                4 => "4",
+                5 => "5",
+                6 => "6",
+                7 => "7",
+                8 => "8",
+                9 => "9",
+                _ => {
+                    debug_assert!(false, "Tried to convert digit: '{}' to `&str`", digit);
+                    ""
+                }
+            },
+            SymbolKind::ForwardSlash => "/",
+            SymbolKind::SingleQuote => "'",
+            SymbolKind::Percentage => "%",
+            SymbolKind::Comma => ",",
+            SymbolKind::Semicolon => ";",
+            SymbolKind::ExclamationMark => "!",
+            SymbolKind::QuestionMark => "?",
+            SymbolKind::At => "@",
+            SymbolKind::Lt => "<",
+            SymbolKind::Gt => ">",
+            SymbolKind::Eq => "=",
         }
     }
 }

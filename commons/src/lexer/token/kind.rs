@@ -22,6 +22,20 @@ pub enum TokenKind {
     Dollar(usize),
     Colon(usize),
     Dot(usize),
+    ForwardSlash(usize),
+    SingleQuote(usize),
+    Percentage(usize),
+    Comma(usize),
+    Semicolon(usize),
+    ExclamationMark(usize),
+    QuestionMark(usize),
+    At(usize),
+    Lt(usize),
+    Gt(usize),
+    Eq(usize),
+
+    // ASCII digits
+    Digit(u8),
 
     // parenthesis
     OpenParenthesis,
@@ -48,12 +62,7 @@ pub enum TokenKind {
     TerminalPunctuation,
 
     // Specials
-    Comment {
-        // Set to `true` if comment was implicitly closed at end of line
-        implicit_close: bool,
-    },
     ImplicitSubstitution(ImplicitSubstitutionKind),
-    DirectUri,
 
     // For matching
     Any,
@@ -61,6 +70,8 @@ pub enum TokenKind {
     EnclosedBlockEnd,
     PossibleAttributes,
     PossibleDecorator,
+    /// Matches one or more contiguous [`TokenKind::Digit`].
+    Digits,
 }
 
 impl TokenKind {
@@ -80,14 +91,13 @@ impl TokenKind {
                 | TokenKind::EscapedNewline
                 | TokenKind::Plain
                 | TokenKind::TerminalPunctuation
-                | TokenKind::Comment { .. }
                 | TokenKind::ImplicitSubstitution(_)
-                | TokenKind::DirectUri
                 | TokenKind::Any
                 | TokenKind::Space
                 | TokenKind::EnclosedBlockEnd
                 | TokenKind::PossibleAttributes
                 | TokenKind::PossibleDecorator
+                | TokenKind::Digits
         )
     }
 
@@ -138,58 +148,38 @@ impl From<TokenKind> for String {
             TokenKind::Dollar(len) => SymbolKind::Dollar.as_str().repeat(len),
             TokenKind::Colon(len) => SymbolKind::Colon.as_str().repeat(len),
             TokenKind::Dot(len) => SymbolKind::Dot.as_str().repeat(len),
-            TokenKind::OpenParenthesis => {
-                let mut s = String::with_capacity(SymbolKind::OpenParenthesis.as_str().len());
-                s.push_str(SymbolKind::OpenParenthesis.as_str());
-                s
-            }
-            TokenKind::CloseParenthesis => {
-                let mut s = String::with_capacity(SymbolKind::CloseParenthesis.as_str().len());
-                s.push_str(SymbolKind::CloseParenthesis.as_str());
-                s
-            }
-            TokenKind::OpenBracket => {
-                let mut s = String::with_capacity(SymbolKind::OpenBracket.as_str().len());
-                s.push_str(SymbolKind::OpenBracket.as_str());
-                s
-            }
-            TokenKind::CloseBracket => {
-                let mut s = String::with_capacity(SymbolKind::CloseBracket.as_str().len());
-                s.push_str(SymbolKind::CloseBracket.as_str());
-                s
-            }
-            TokenKind::OpenBrace => {
-                let mut s = String::with_capacity(SymbolKind::OpenBrace.as_str().len());
-                s.push_str(SymbolKind::OpenBrace.as_str());
-                s
-            }
-            TokenKind::CloseBrace => {
-                let mut s = String::with_capacity(SymbolKind::CloseBrace.as_str().len());
-                s.push_str(SymbolKind::CloseBrace.as_str());
-                s
-            }
+            TokenKind::ForwardSlash(len) => SymbolKind::ForwardSlash.as_str().repeat(len),
+            TokenKind::SingleQuote(len) => SymbolKind::SingleQuote.as_str().repeat(len),
+            TokenKind::Percentage(len) => SymbolKind::Percentage.as_str().repeat(len),
+            TokenKind::Comma(len) => SymbolKind::Comma.as_str().repeat(len),
+            TokenKind::Semicolon(len) => SymbolKind::Semicolon.as_str().repeat(len),
+            TokenKind::ExclamationMark(len) => SymbolKind::ExclamationMark.as_str().repeat(len),
+            TokenKind::QuestionMark(len) => SymbolKind::QuestionMark.as_str().repeat(len),
+            TokenKind::At(len) => SymbolKind::At.as_str().repeat(len),
+            TokenKind::Lt(len) => SymbolKind::Lt.as_str().repeat(len),
+            TokenKind::Gt(len) => SymbolKind::Gt.as_str().repeat(len),
+            TokenKind::Eq(len) => SymbolKind::Eq.as_str().repeat(len),
+            TokenKind::Digit(digit) => SymbolKind::Digit(digit).as_str().to_string(),
+            TokenKind::OpenParenthesis => SymbolKind::OpenParenthesis.as_str().to_string(),
+            TokenKind::CloseParenthesis => SymbolKind::CloseParenthesis.as_str().to_string(),
+            TokenKind::OpenBracket => SymbolKind::OpenBracket.as_str().to_string(),
+            TokenKind::CloseBracket => SymbolKind::CloseBracket.as_str().to_string(),
+            TokenKind::OpenBrace => SymbolKind::OpenBrace.as_str().to_string(),
+            TokenKind::CloseBrace => SymbolKind::CloseBrace.as_str().to_string(),
             TokenKind::EscapedNewline | TokenKind::Newline | TokenKind::Blankline => {
-                // Blankline is also only one newline to handle contiguous blanklines.
-                let mut s = String::with_capacity(SymbolKind::Newline.as_str().len());
-                s.push_str(SymbolKind::Newline.as_str());
-                s
+                SymbolKind::Newline.as_str().to_string()
             }
-            TokenKind::Whitespace => {
-                let mut s = String::with_capacity(SymbolKind::Whitespace.as_str().len());
-                s.push_str(SymbolKind::Whitespace.as_str());
-                s
-            }
+            TokenKind::Whitespace => SymbolKind::Whitespace.as_str().to_string(),
             TokenKind::Plain
             | TokenKind::TerminalPunctuation
             | TokenKind::EscapedPlain
             | TokenKind::EscapedWhitespace
             | TokenKind::ImplicitSubstitution(_)
-            | TokenKind::Comment { .. }
-            | TokenKind::DirectUri
             | TokenKind::PossibleAttributes
             | TokenKind::PossibleDecorator
             | TokenKind::Any
             | TokenKind::EnclosedBlockEnd
+            | TokenKind::Digits
             | TokenKind::Space
             | TokenKind::Eoi => {
                 #[cfg(debug_assertions)]
@@ -208,11 +198,6 @@ impl From<TokenKind> for String {
 impl From<SymbolKind> for TokenKind {
     fn from(value: SymbolKind) -> Self {
         match value {
-            SymbolKind::Plain | SymbolKind::Backslash => TokenKind::Plain, // Backslash is incorrect, but will be corrected in iterator
-            SymbolKind::TerminalPunctuation => TokenKind::TerminalPunctuation,
-            SymbolKind::Whitespace => TokenKind::Whitespace,
-            SymbolKind::Newline => TokenKind::Newline,
-            SymbolKind::Eoi => TokenKind::Eoi,
             SymbolKind::Hash => TokenKind::Hash(1),
             SymbolKind::Star => TokenKind::Star(1),
             SymbolKind::Minus => TokenKind::Minus(1),
@@ -227,6 +212,23 @@ impl From<SymbolKind> for TokenKind {
             SymbolKind::Dollar => TokenKind::Dollar(1),
             SymbolKind::Colon => TokenKind::Colon(1),
             SymbolKind::Dot => TokenKind::Colon(1),
+            SymbolKind::ForwardSlash => TokenKind::ForwardSlash(1),
+            SymbolKind::SingleQuote => TokenKind::SingleQuote(1),
+            SymbolKind::Percentage => TokenKind::Percentage(1),
+            SymbolKind::Comma => TokenKind::Comma(1),
+            SymbolKind::Semicolon => TokenKind::Semicolon(1),
+            SymbolKind::ExclamationMark => TokenKind::ExclamationMark(1),
+            SymbolKind::QuestionMark => TokenKind::QuestionMark(1),
+            SymbolKind::At => TokenKind::At(1),
+            SymbolKind::Lt => TokenKind::Lt(1),
+            SymbolKind::Gt => TokenKind::Gt(1),
+            SymbolKind::Eq => TokenKind::Eq(1),
+            SymbolKind::Plain | SymbolKind::Backslash => TokenKind::Plain, // Backslash is incorrect, but is corrected in `super::next_token()`
+            SymbolKind::TerminalPunctuation => TokenKind::TerminalPunctuation,
+            SymbolKind::Whitespace => TokenKind::Whitespace,
+            SymbolKind::Newline => TokenKind::Newline,
+            SymbolKind::Eoi => TokenKind::Eoi,
+            SymbolKind::Digit(digit) => TokenKind::Digit(digit),
             SymbolKind::OpenParenthesis => TokenKind::OpenParenthesis,
             SymbolKind::CloseParenthesis => TokenKind::CloseParenthesis,
             SymbolKind::OpenBracket => TokenKind::OpenBracket,
@@ -237,17 +239,18 @@ impl From<SymbolKind> for TokenKind {
     }
 }
 
-impl From<(SymbolKind, usize)> for TokenKind {
-    fn from(value: (SymbolKind, usize)) -> Self {
+pub enum ConversionError {
+    CannotMergeSymbol,
+}
+
+impl TryFrom<(SymbolKind, usize)> for TokenKind {
+    type Error = ConversionError;
+
+    fn try_from(value: (SymbolKind, usize)) -> Result<Self, Self::Error> {
         let kind = value.0;
         let len = value.1;
 
-        match kind {
-            SymbolKind::Plain | SymbolKind::Backslash => TokenKind::Plain, // Backslash is incorrect, but will be corrected in iterator
-            SymbolKind::TerminalPunctuation => TokenKind::TerminalPunctuation,
-            SymbolKind::Whitespace => TokenKind::Whitespace,
-            SymbolKind::Newline => TokenKind::Newline,
-            SymbolKind::Eoi => TokenKind::Eoi,
+        let token = match kind {
             SymbolKind::Hash => TokenKind::Hash(len),
             SymbolKind::Star => TokenKind::Star(len),
             SymbolKind::Minus => TokenKind::Minus(len),
@@ -262,12 +265,34 @@ impl From<(SymbolKind, usize)> for TokenKind {
             SymbolKind::Dollar => TokenKind::Dollar(len),
             SymbolKind::Colon => TokenKind::Colon(len),
             SymbolKind::Dot => TokenKind::Dot(len),
-            SymbolKind::OpenParenthesis => TokenKind::OpenParenthesis,
-            SymbolKind::CloseParenthesis => TokenKind::CloseParenthesis,
-            SymbolKind::OpenBracket => TokenKind::OpenBracket,
-            SymbolKind::CloseBracket => TokenKind::CloseBracket,
-            SymbolKind::OpenBrace => TokenKind::OpenBrace,
-            SymbolKind::CloseBrace => TokenKind::CloseBrace,
-        }
+            SymbolKind::ForwardSlash => TokenKind::ForwardSlash(len),
+            SymbolKind::SingleQuote => TokenKind::SingleQuote(len),
+            SymbolKind::Percentage => TokenKind::Percentage(len),
+            SymbolKind::Comma => TokenKind::Comma(len),
+            SymbolKind::Semicolon => TokenKind::Semicolon(len),
+            SymbolKind::ExclamationMark => TokenKind::ExclamationMark(len),
+            SymbolKind::QuestionMark => TokenKind::QuestionMark(len),
+            SymbolKind::At => TokenKind::At(len),
+            SymbolKind::Lt => TokenKind::Lt(len),
+            SymbolKind::Gt => TokenKind::Gt(len),
+            SymbolKind::Eq => TokenKind::Eq(len),
+            SymbolKind::Plain
+            | SymbolKind::Backslash
+            | SymbolKind::TerminalPunctuation
+            | SymbolKind::Whitespace
+            | SymbolKind::Newline
+            | SymbolKind::Eoi
+            | SymbolKind::OpenParenthesis
+            | SymbolKind::CloseParenthesis
+            | SymbolKind::OpenBracket
+            | SymbolKind::CloseBracket
+            | SymbolKind::OpenBrace
+            | SymbolKind::CloseBrace
+            | SymbolKind::Digit(_) => {
+                return Err(ConversionError::CannotMergeSymbol);
+            }
+        };
+
+        Ok(token)
     }
 }

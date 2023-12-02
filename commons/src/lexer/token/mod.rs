@@ -10,14 +10,6 @@ use super::{
 pub mod implicit;
 pub mod iterator;
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct Comment {
-    content: String,
-    impl_closed: bool,
-    start: Position,
-    end: Position,
-}
-
 /// Token lexed from grapheme [`Symbol`]s of the given input.
 ///
 /// # Lifetimes
@@ -144,9 +136,12 @@ fn next_token<'input>(
                 token.end = last_symbol.end;
             }
         }
-        SymbolKind::Whitespace => {
-            // Multiple whitespace cannot be consumed, because most prefix matching is done per single space
-            // Kind is already set in From impl above.
+        SymbolKind::Whitespace | SymbolKind::Digit(_) => {
+            // Multiple whitespace or digits cannot be consumed.
+            // For whitespaces: most prefix matching is done per single space
+            // For digits: contiguous digits may exceed the maximum number possible for `usize`
+
+            // Kind is already set in From impl above, so no need to do anything here.
         }
         SymbolKind::Backslash => {
             let escaped_symbol_opt = sym_iter.next();
@@ -222,7 +217,20 @@ fn next_token<'input>(
             if let Some(last_symbol) = contgiuous_keywords.last() {
                 // Consume peeked symbols without iterating over them again
                 sym_iter.set_index(sym_iter.peek_index());
-                token.kind = TokenKind::from((first_kind, contiguous_keyword_cnt + 1)); // +1 because first symbol is same keyword
+
+                // +1 because first symbol is same keyword
+                token.kind = match TokenKind::try_from((first_kind, contiguous_keyword_cnt + 1)) {
+                    Ok(kind) => kind,
+                    Err(_) => {
+                        debug_assert!(
+                            false,
+                            "Tried to combine contiguous symbols of kind: '{}'.",
+                            first_kind.as_str()
+                        );
+                        //TODO: set error log
+                        TokenKind::Plain
+                    }
+                };
                 token.offset.extend(last_symbol.offset);
                 token.end = last_symbol.end;
             }

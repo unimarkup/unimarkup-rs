@@ -2,7 +2,7 @@
 
 use unimarkup_commons::lexer::{
     position::{Offset, Position},
-    token::{Token, COMMENT_TOKEN_LEN},
+    token::Token,
 };
 
 use self::kind::InlineTokenKind;
@@ -43,7 +43,7 @@ where
 impl<'input> InlineToken<'input> {
     pub(crate) fn as_str(&self) -> &str {
         match self.kind {
-            InlineTokenKind::Plain | InlineTokenKind::Directuri => {
+            InlineTokenKind::Plain | InlineTokenKind::Lt(_) | InlineTokenKind::Gt(_) => {
                 &self.input[self.offset.start..self.offset.end]
             }
             InlineTokenKind::EscapedPlain | InlineTokenKind::EscapedWhitespace => {
@@ -72,17 +72,17 @@ impl<'input> InlineToken<'input> {
             | InlineTokenKind::Whitespace
             | InlineTokenKind::Newline
             | InlineTokenKind::EscapedNewline
+            | InlineTokenKind::Comment
+            | InlineTokenKind::SingleDot
+            | InlineTokenKind::Digit(_)
+            | InlineTokenKind::RenderInsert
+            | InlineTokenKind::MediaInsert
             | InlineTokenKind::Eoi => self.kind.as_str(),
-            InlineTokenKind::Comment { implicit_close } => {
-                if implicit_close {
-                    &self.input[self.offset.start + COMMENT_TOKEN_LEN..self.offset.end]
-                } else {
-                    &self.input
-                        [self.offset.start + COMMENT_TOKEN_LEN..self.offset.end - COMMENT_TOKEN_LEN]
-                }
-            }
             InlineTokenKind::ImplicitSubstitution(impl_subst) => impl_subst.orig(), // using `orig()` here, because `as_str()` is only called to convert to plain content
-            InlineTokenKind::Any | InlineTokenKind::Space | InlineTokenKind::PossibleAttributes => {
+            InlineTokenKind::Any
+            | InlineTokenKind::Space
+            | InlineTokenKind::Digits
+            | InlineTokenKind::PossibleAttributes => {
                 #[cfg(debug_assertions)]
                 panic!(
                     "Tried to create &str from '{:?}', which has undefined &str representation.",

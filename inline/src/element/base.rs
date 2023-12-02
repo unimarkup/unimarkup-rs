@@ -8,10 +8,7 @@ use crate::{
     tokenize::{kind::InlineTokenKind, InlineToken},
 };
 
-use super::{
-    substitution::{DirectUri, ImplicitSubstitution},
-    Inline,
-};
+use super::{substitution::ImplicitSubstitution, Inline};
 
 /// Creates basic inline elements from the following tokens returned by the inline parser.
 pub(crate) fn parse_base<'s, 'i>(
@@ -57,10 +54,7 @@ pub(crate) fn parse_base<'s, 'i>(
         next.kind = InlineTokenKind::Plain;
         parser.iter.set_prev_token(next); // update prev token, because next changed afterwards
     } else if !parser.context.flags.allow_implicits
-        && matches!(
-            kind,
-            InlineTokenKind::ImplicitSubstitution(_) | InlineTokenKind::Directuri
-        )
+        && matches!(kind, InlineTokenKind::ImplicitSubstitution(_))
     {
         next.kind = InlineTokenKind::Plain;
     }
@@ -103,11 +97,6 @@ fn to_inline(context: &InlineContext, token: InlineToken<'_>) -> Inline {
             token.end,
         )),
         InlineTokenKind::EscapedPlain => Inline::EscapedPlain(EscapedPlain::new(
-            token.as_str().to_string(),
-            token.start,
-            token.end,
-        )),
-        InlineTokenKind::Directuri => Inline::DirectUri(DirectUri::new(
             token.as_str().to_string(),
             token.start,
             token.end,

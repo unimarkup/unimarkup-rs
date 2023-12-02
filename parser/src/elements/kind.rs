@@ -50,11 +50,10 @@ pub enum PossibleBlockStart {
 impl From<TokenKind> for PossibleBlockStart {
     fn from(value: TokenKind) -> Self {
         match value {
-            TokenKind::Star(1) => {
-                return PossibleBlockStart::BulletList;
-            }
-            TokenKind::Star(_) => {
-                return PossibleBlockStart::Paragraph;
+            TokenKind::Star(len) => {
+                if len == 1 {
+                    return PossibleBlockStart::BulletList;
+                }
             }
             TokenKind::Hash(len) => {
                 if len <= 6 && len > 0 {
@@ -80,20 +79,46 @@ impl From<TokenKind> for PossibleBlockStart {
                     return PossibleBlockStart::VerbatimBlock;
                 }
             }
+            TokenKind::Eq(_) => {
+                // TODO: Possible table
+            }
+            TokenKind::ExclamationMark(_) => {
+                // TODO: Possible media block insert
+            }
+            TokenKind::SingleQuote(_) => {
+                // TODO: Possible render block or insert
+            }
+            TokenKind::Semicolon(_) => {
+                // TODO: Possible doc-comment
+            }
+            TokenKind::Digit(_) => {
+                // TODO: Possible numbered list
+            }
+            TokenKind::Pipe(_) => {
+                // TODO: Possible column block
+            }
+            TokenKind::Dollar(_) => {
+                // TODO: Possible math block
+            }
+            TokenKind::Gt(_) => {
+                // TODO: Possible quote block
+            }
+            TokenKind::OpenBracket => {
+                // TODO: Possible text or field block
+            }
+            TokenKind::OpenBrace => {
+                // TODO: Possible attribute or logic block
+            }
             TokenKind::Underline(_)
             | TokenKind::Caret(_)
             | TokenKind::Overline(_)
-            | TokenKind::Pipe(_)
             | TokenKind::Tilde(_)
             | TokenKind::Quote(_)
-            | TokenKind::Dollar(_)
             | TokenKind::Colon(_)
             | TokenKind::Dot(_)
             | TokenKind::OpenParenthesis
             | TokenKind::CloseParenthesis
-            | TokenKind::OpenBracket
             | TokenKind::CloseBracket
-            | TokenKind::OpenBrace
             | TokenKind::CloseBrace
             | TokenKind::Whitespace
             | TokenKind::Newline
@@ -104,11 +129,16 @@ impl From<TokenKind> for PossibleBlockStart {
             | TokenKind::EscapedNewline
             | TokenKind::Plain
             | TokenKind::TerminalPunctuation
-            | TokenKind::Comment { .. }
             | TokenKind::ImplicitSubstitution(_)
-            | TokenKind::DirectUri
+            | TokenKind::Comma(_)
+            | TokenKind::ForwardSlash(_)
+            | TokenKind::Lt(_)
+            | TokenKind::At(_)
+            | TokenKind::Percentage(_)
+            | TokenKind::QuestionMark(_)
             | TokenKind::Any
             | TokenKind::Space
+            | TokenKind::Digits
             | TokenKind::EnclosedBlockEnd
             | TokenKind::PossibleAttributes
             | TokenKind::PossibleDecorator => {}

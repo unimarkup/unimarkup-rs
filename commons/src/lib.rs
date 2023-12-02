@@ -1,4 +1,5 @@
 pub mod attributes;
+pub mod comments;
 pub mod config;
 pub mod lexer;
 pub mod logic;

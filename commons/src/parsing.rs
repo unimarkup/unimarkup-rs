@@ -1,6 +1,6 @@
 //! Contains the [`Element`] trait every Unimarkup element must implement.
 
-use crate::lexer::{position::Position, span::Span};
+use crate::lexer::{position::Position, span::Span, token::iterator::TokenIterator};
 
 /// Every Unimarkup element must implement this trait.
 pub trait Element {
@@ -19,10 +19,15 @@ pub trait Element {
     }
 }
 
-pub trait Parser<T>
+pub trait Parser<'slice, 'input, T, C>
 where
     Self: std::marker::Sized,
-    T: std::marker::Sized,
+    T: std::marker::Sized + Element,
 {
-    fn parse(self) -> (Self, T);
+    fn new(iter: TokenIterator<'slice, 'input>, context: C) -> Self;
+    fn parse(self) -> (Self, Option<T>);
+    fn context(&self) -> &C;
+    fn context_mut(&mut self) -> &mut C;
+    fn iter(&mut self) -> &mut TokenIterator<'slice, 'input>;
+    fn into_inner(self) -> (TokenIterator<'slice, 'input>, C);
 }

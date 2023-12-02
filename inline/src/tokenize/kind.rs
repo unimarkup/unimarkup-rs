@@ -1,6 +1,9 @@
 //! Contains the [`InlineTokenKind`] enum.
 
-use unimarkup_commons::lexer::token::{implicit::ImplicitSubstitutionKind, TokenKind};
+use unimarkup_commons::{
+    comments::{Comment, COMMENT_TOKEN_KIND},
+    lexer::token::{implicit::ImplicitSubstitutionKind, TokenKind},
+};
 
 /// The kind of the token found in Unimarkup document.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -65,6 +68,24 @@ pub enum InlineTokenKind {
     /// Double colon for substitution (`::`).
     NamedSubstitution,
 
+    /// A single dot for *dot-notation* (e.g. `&&cite-id.title`).
+    SingleDot,
+
+    /// An ASCII digit.
+    Digit(u8),
+
+    /// One or more `<`.
+    Lt(usize),
+
+    /// One or more `>`.
+    Gt(usize),
+
+    /// Possible start of a render insert (`[''alt text](url)`).
+    RenderInsert,
+
+    /// Possible start of a media insert (`[!!alt text](url)`).
+    MediaInsert,
+
     /// End of line - regular newline token ('\n').
     Newline,
 
@@ -89,17 +110,15 @@ pub enum InlineTokenKind {
     Eoi,
 
     /// A Unimarkup comment.
-    Comment {
-        implicit_close: bool,
-    },
+    Comment,
+
     /// Implicit substitution (e.g. emojis and arrows)
     ImplicitSubstitution(ImplicitSubstitutionKind),
-    /// Direct URI
-    Directuri,
 
     // For matching
     Any,
     Space,
+    Digits,
     PossibleAttributes,
 }
 
@@ -129,15 +148,36 @@ impl InlineTokenKind {
             InlineTokenKind::OpenBrace => "{",
             InlineTokenKind::CloseBrace => "}",
             InlineTokenKind::NamedSubstitution => "::",
+            InlineTokenKind::Comment => Comment::keyword(),
+            InlineTokenKind::SingleDot => ".",
+            InlineTokenKind::Digit(digit) => match digit {
+                0 => "0",
+                1 => "1",
+                2 => "2",
+                3 => "3",
+                4 => "4",
+                5 => "5",
+                6 => "6",
+                7 => "7",
+                8 => "8",
+                9 => "9",
+                _ => {
+                    debug_assert!(false, "Tried to convert digit: '{}' to `&str`", digit);
+                    ""
+                }
+            },
+            InlineTokenKind::RenderInsert => "''",
+            InlineTokenKind::MediaInsert => "!!",
             InlineTokenKind::Eoi => "",
             InlineTokenKind::Plain
+            | InlineTokenKind::Lt(_)
+            | InlineTokenKind::Gt(_)
             | InlineTokenKind::EscapedPlain
             | InlineTokenKind::EscapedWhitespace
-            | InlineTokenKind::Comment { .. }
             | InlineTokenKind::ImplicitSubstitution(_)
-            | InlineTokenKind::Directuri
             | InlineTokenKind::Any
             | InlineTokenKind::Space
+            | InlineTokenKind::Digits
             | InlineTokenKind::PossibleAttributes => {
                 #[cfg(debug_assertions)]
                 panic!(
@@ -166,9 +206,7 @@ impl InlineTokenKind {
                 | InlineTokenKind::Whitespace
                 | InlineTokenKind::Plain
                 | InlineTokenKind::Eoi
-                | InlineTokenKind::Comment { .. }
                 | InlineTokenKind::ImplicitSubstitution(_)
-                | InlineTokenKind::Directuri
                 | InlineTokenKind::EscapedNewline
                 | InlineTokenKind::EscapedWhitespace
                 | InlineTokenKind::EscapedPlain
@@ -231,7 +269,10 @@ impl InlineTokenKind {
     pub fn is_scoped_format_keyword(&self) -> bool {
         matches!(
             self,
-            InlineTokenKind::Verbatim | InlineTokenKind::Math | InlineTokenKind::NamedSubstitution
+            InlineTokenKind::Verbatim
+                | InlineTokenKind::Math
+                | InlineTokenKind::NamedSubstitution
+                | InlineTokenKind::Comment
         )
     }
 }
@@ -250,6 +291,7 @@ pub const NAMED_SUBSTITUTION_KEYWORD_LEN: usize = 2;
 pub const SUPERSCRIPT_KEYWORD_LEN: usize = 1;
 pub const VERBATIM_KEYWORD_LEN: usize = 1;
 pub const OVERLINE_KEYWORD_LEN: usize = 1;
+pub const INLINE_INSERT_KEYWORD_LEN: usize = 2;
 
 impl From<TokenKind> for InlineTokenKind {
     fn from(value: TokenKind) -> Self {
@@ -335,7 +377,37 @@ impl From<TokenKind> for InlineTokenKind {
                     InlineTokenKind::Plain
                 }
             }
-
+            TokenKind::Semicolon(len) => {
+                if len == Comment::keyword_len() {
+                    InlineTokenKind::Comment
+                } else {
+                    InlineTokenKind::Plain
+                }
+            }
+            TokenKind::Dot(len) => {
+                if len == 1 {
+                    InlineTokenKind::SingleDot
+                } else {
+                    InlineTokenKind::Plain
+                }
+            }
+            TokenKind::SingleQuote(len) => {
+                if len == INLINE_INSERT_KEYWORD_LEN {
+                    InlineTokenKind::RenderInsert
+                } else {
+                    InlineTokenKind::Plain
+                }
+            }
+            TokenKind::ExclamationMark(len) => {
+                if len == INLINE_INSERT_KEYWORD_LEN {
+                    InlineTokenKind::MediaInsert
+                } else {
+                    InlineTokenKind::Plain
+                }
+            }
+            TokenKind::Lt(len) => InlineTokenKind::Lt(len),
+            TokenKind::Gt(len) => InlineTokenKind::Gt(len),
+            TokenKind::Digit(digit) => InlineTokenKind::Digit(digit),
             TokenKind::OpenParenthesis => InlineTokenKind::OpenParenthesis,
             TokenKind::CloseParenthesis => InlineTokenKind::CloseParenthesis,
             TokenKind::OpenBracket => InlineTokenKind::OpenBracket,
@@ -348,21 +420,24 @@ impl From<TokenKind> for InlineTokenKind {
             TokenKind::EscapedPlain => InlineTokenKind::EscapedPlain,
             TokenKind::EscapedWhitespace => InlineTokenKind::EscapedWhitespace,
             TokenKind::EscapedNewline => InlineTokenKind::EscapedNewline,
-            TokenKind::Comment { implicit_close } => InlineTokenKind::Comment { implicit_close },
             TokenKind::ImplicitSubstitution(impl_subst) => {
                 InlineTokenKind::ImplicitSubstitution(impl_subst)
             }
-            TokenKind::DirectUri => InlineTokenKind::Directuri,
-
             TokenKind::Any => InlineTokenKind::Any,
             TokenKind::Space => InlineTokenKind::Space,
+            TokenKind::Digits => InlineTokenKind::Digits,
             TokenKind::PossibleAttributes => InlineTokenKind::PossibleAttributes,
 
             TokenKind::Plain
-            | TokenKind::Dot(_)
             | TokenKind::Hash(_)
             | TokenKind::Minus(_)
             | TokenKind::Plus(_)
+            | TokenKind::ForwardSlash(_)
+            | TokenKind::Percentage(_)
+            | TokenKind::Comma(_)
+            | TokenKind::QuestionMark(_)
+            | TokenKind::At(_)
+            | TokenKind::Eq(_)
             | TokenKind::EnclosedBlockEnd
             | TokenKind::PossibleDecorator
             | TokenKind::TerminalPunctuation => InlineTokenKind::Plain,
@@ -402,14 +477,20 @@ impl From<InlineTokenKind> for TokenKind {
             InlineTokenKind::Plain => TokenKind::Plain,
             InlineTokenKind::EscapedPlain => TokenKind::EscapedPlain,
             InlineTokenKind::Eoi => TokenKind::Eoi,
-            InlineTokenKind::Comment { implicit_close } => TokenKind::Comment { implicit_close },
+            InlineTokenKind::Comment => COMMENT_TOKEN_KIND,
             InlineTokenKind::ImplicitSubstitution(impl_subst) => {
                 TokenKind::ImplicitSubstitution(impl_subst)
             }
-            InlineTokenKind::Directuri => TokenKind::DirectUri,
+            InlineTokenKind::SingleDot => TokenKind::Dot(1),
+            InlineTokenKind::Digit(digit) => TokenKind::Digit(digit),
+            InlineTokenKind::Lt(len) => TokenKind::Lt(len),
+            InlineTokenKind::Gt(len) => TokenKind::Gt(len),
+            InlineTokenKind::RenderInsert => TokenKind::SingleQuote(INLINE_INSERT_KEYWORD_LEN),
+            InlineTokenKind::MediaInsert => TokenKind::ExclamationMark(INLINE_INSERT_KEYWORD_LEN),
             InlineTokenKind::Any => TokenKind::Any,
             InlineTokenKind::Space => TokenKind::Space,
             InlineTokenKind::PossibleAttributes => TokenKind::PossibleAttributes,
+            InlineTokenKind::Digits => TokenKind::Digits,
         }
     }
 }
