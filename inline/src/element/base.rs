@@ -50,9 +50,15 @@ pub(crate) fn parse_base<'s, 'i>(
         // Ambiguous token may be split to get possible valid partial token
         crate::element::formatting::ambiguous::ambiguous_split(&mut parser.iter, &mut next);
 
+        let is_quote = kind == InlineTokenKind::DoubleQuote;
+
         // Keyword did not lead to inline element in inline parser => convert token to plain
         next.kind = InlineTokenKind::Plain;
-        parser.iter.set_prev_token(next); // update prev token, because next changed afterwards
+        // Keep quote info, because contiguous quotes are not combined.
+        // Otherwise a quote element would be created using the last two quotes from a contiguous sequence.
+        if !is_quote {
+            parser.iter.set_prev_token(next); // update prev token, because next changed afterwards
+        }
     } else if !parser.context.flags.allow_implicits
         && matches!(kind, InlineTokenKind::ImplicitSubstitution(_))
     {

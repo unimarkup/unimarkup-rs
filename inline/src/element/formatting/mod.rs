@@ -78,6 +78,7 @@ pub(crate) fn parse_distinct_format<'s, 'i>(
 pub(crate) fn parse_quote_format<'s, 'i>(
     mut parser: InlineParser<'s, 'i>,
 ) -> (InlineParser<'s, 'i>, Option<Inline>) {
+    let prev_was_quote = parser.iter.prev_kind() == Some(InlineTokenKind::DoubleQuote);
     let open_token_opt = parser
         .iter
         .peeking_next(|t| t.kind == InlineTokenKind::DoubleQuote);
@@ -86,7 +87,8 @@ pub(crate) fn parse_quote_format<'s, 'i>(
         .peeking_next(|t| t.kind == InlineTokenKind::DoubleQuote);
     let third_token_kind = parser.iter.peek_kind();
 
-    if open_token_opt.is_none()
+    if prev_was_quote
+        || open_token_opt.is_none()
         || second_quote_opt.is_none()
         || third_token_kind == Some(InlineTokenKind::DoubleQuote)
     {
@@ -98,8 +100,8 @@ pub(crate) fn parse_quote_format<'s, 'i>(
         return (parser, None);
     }
 
-    parser.iter.next(); // consume open token => now it will lead to Some(inline)
-    parser.iter.next(); // consume second quote
+    parser.iter.next(); // consume open token
+    parser.iter.next(); // consume second quote => now it will lead to Some(inline)
 
     parser.iter.open_format(&open_token.kind);
 
