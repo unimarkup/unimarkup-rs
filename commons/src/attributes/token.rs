@@ -9,9 +9,9 @@ use super::rules::AtRuleId;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct AttributeToken {
-    kind: AttributeTokenKind,
-    start: Position,
-    end: Position,
+    pub(crate) kind: AttributeTokenKind,
+    pub(crate) start: Position,
+    pub(crate) end: Position,
 }
 
 impl Element for AttributeToken {
@@ -122,9 +122,9 @@ impl AttributeTokenKind {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct QuotedValuePart {
-    kind: QuotedValuePartKind,
-    start: Position,
-    end: Position,
+    pub(crate) kind: QuotedValuePartKind,
+    pub(crate) start: Position,
+    pub(crate) end: Position,
 }
 
 impl Element for Vec<QuotedValuePart> {

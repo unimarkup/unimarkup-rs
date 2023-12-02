@@ -2,8 +2,8 @@ use unimarkup_commons::lexer::{span::Span, symbol::SymbolKind, token::TokenKind}
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
-        Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
-        Underline, Verbatim,
+        Bold, DoubleQuote, Highlight, Italic, Math, Overline, Strikethrough, Subscript,
+        Superscript, Underline, Verbatim,
     },
     textbox::{hyperlink::Hyperlink, TextBox},
     InlineElement,
@@ -269,7 +269,7 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_quote(
         &mut self,
-        quote: &Quote,
+        quote: &DoubleQuote,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(quote.inner(), context)?;

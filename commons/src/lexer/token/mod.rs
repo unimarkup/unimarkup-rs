@@ -136,10 +136,15 @@ fn next_token<'input>(
                 token.end = last_symbol.end;
             }
         }
-        SymbolKind::Whitespace | SymbolKind::Digit(_) => {
-            // Multiple whitespace or digits cannot be consumed.
-            // For whitespaces: most prefix matching is done per single space
-            // For digits: contiguous digits may exceed the maximum number possible for `usize`
+        SymbolKind::Whitespace
+        | SymbolKind::Digit(_)
+        | SymbolKind::SingleQuote
+        | SymbolKind::DoubleQuote => {
+            // Multiple whitespace, digits, single/double quotes cannot be consumed.
+            // For whitespaces: Most prefix matching is done per single space
+            // For digits: Contiguous digits may exceed the maximum number possible for `usize`
+            // For quotes: Attributes and logic elements use quotes to encapsulate *string* values.
+            //             Combining multiple quotes in one token makes it much harder to handle *string* parsing.
 
             // Kind is already set in From impl above, so no need to do anything here.
         }

@@ -1,8 +1,8 @@
 use unimarkup_commons::test_runner::as_snapshot::AsSnapshot;
 use unimarkup_inline::element::{
     formatting::{
-        Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
-        Underline, Verbatim,
+        Bold, DoubleQuote, Highlight, Italic, Math, Overline, Strikethrough, Subscript,
+        Superscript, Underline, Verbatim,
     },
     Inline, InlineElement,
 };
@@ -103,7 +103,7 @@ fn inner_snapshot(inline: &Inline) -> String {
         Inline::Overline(inline) => Snapshot::snap(inline),
         Inline::Strikethrough(inline) => Snapshot::snap(inline),
         Inline::Highlight(inline) => Snapshot::snap(inline),
-        Inline::Quote(inline) => Snapshot::snap(inline),
+        Inline::DoubleQuote(inline) => Snapshot::snap(inline),
         Inline::Math(inline) => Snapshot::snap(inline),
         Inline::TextBox(inline) => Snapshot::snap(inline.inner()),
         Inline::Hyperlink(inline) => Snapshot::snap(inline.inner()),
@@ -143,6 +143,6 @@ format_to_inline!(
     Highlight,
     Overline,
     Verbatim,
-    Quote,
+    DoubleQuote,
     Math
 );

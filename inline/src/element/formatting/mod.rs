@@ -10,7 +10,7 @@ pub mod ambiguous;
 pub mod scoped;
 
 /// Parses formatting elements that have distinct keywords assigned to them.
-/// e.g. [`Strikethrough`] or [`Quote`]
+/// e.g. [`Strikethrough`] or [`Highlight`]
 pub(crate) fn parse_distinct_format<'s, 'i>(
     mut parser: InlineParser<'s, 'i>,
 ) -> (InlineParser<'s, 'i>, Option<Inline>) {
@@ -27,6 +27,79 @@ pub(crate) fn parse_distinct_format<'s, 'i>(
     }
 
     parser.iter.next(); // consume open token => now it will lead to Some(inline)
+
+    parser.iter.open_format(&open_token.kind);
+
+    let (updated_parser, inner) = InlineParser::parse(parser);
+    parser = updated_parser;
+
+    let attributes = None;
+    let mut implicit_end = true;
+
+    // Only consuming token on open/close match, because closing token might be reserved for an outer open format.
+    let end = if let Some(close_token) = parser.iter.peek() {
+        if close_token.kind == open_token.kind {
+            parser
+                .iter
+                .next()
+                .expect("Peeked before, so `next` must return Some.");
+            implicit_end = false;
+
+            //TODO: check for optional attributes here
+            close_token.end
+        } else {
+            close_token.start
+        }
+    } else {
+        parser
+            .iter
+            .prev_token()
+            .expect("Previous token must exist here, because format was opened.")
+            .end
+    };
+
+    parser.iter.close_format(&open_token.kind);
+
+    (
+        parser,
+        Some(to_formatting(
+            open_token.kind,
+            inner,
+            attributes,
+            open_token.start,
+            end,
+            implicit_end,
+        )),
+    )
+}
+
+/// Parses the quote formatting element.
+/// The quote element must be parsed separately, because contiguous double quotes are not combined.
+pub(crate) fn parse_quote_format<'s, 'i>(
+    mut parser: InlineParser<'s, 'i>,
+) -> (InlineParser<'s, 'i>, Option<Inline>) {
+    let open_token_opt = parser
+        .iter
+        .peeking_next(|t| t.kind == InlineTokenKind::DoubleQuote);
+    let second_quote_opt = parser
+        .iter
+        .peeking_next(|t| t.kind == InlineTokenKind::DoubleQuote);
+    let third_token_kind = parser.iter.peek_kind();
+
+    if open_token_opt.is_none()
+        || second_quote_opt.is_none()
+        || third_token_kind == Some(InlineTokenKind::DoubleQuote)
+    {
+        return (parser, None);
+    }
+    let open_token = open_token_opt.expect("Checked above to be not None.");
+
+    if third_token_kind.map_or(true, |t| t.is_space()) {
+        return (parser, None);
+    }
+
+    parser.iter.next(); // consume open token => now it will lead to Some(inline)
+    parser.iter.next(); // consume second quote
 
     parser.iter.open_format(&open_token.kind);
 
@@ -188,7 +261,7 @@ inline_formats!(
     Highlight,
     Overline,
     Verbatim,
-    Quote,
+    DoubleQuote,
     Math
 );
 
@@ -202,7 +275,7 @@ format_to_inline!(
     Highlight,
     Overline,
     Verbatim,
-    Quote,
+    DoubleQuote,
     Math
 );
 
@@ -246,7 +319,7 @@ pub(crate) fn map_index(kind: &InlineTokenKind) -> usize {
         InlineTokenKind::Strikethrough => STRIKETHROUGH_INDEX,
         InlineTokenKind::Highlight => HIGHLIGHT_INDEX,
         InlineTokenKind::Overline => OVERLINE_INDEX,
-        InlineTokenKind::Quote => QUOTE_INDEX,
+        InlineTokenKind::DoubleQuote => QUOTE_INDEX,
         _ => {
             #[cfg(debug_assertions)]
             panic!("Kind '{:?}' has no index in open format map.", kind);

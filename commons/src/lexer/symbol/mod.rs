@@ -165,7 +165,7 @@ pub enum SymbolKind {
     /// The tilde (`~`) literal is used for strikethrough formatting.
     Tilde,
     /// The quote (`"`) literal is used for quotation formatting.
-    Quote,
+    DoubleQuote,
     /// A single quote (`'`) literal.
     SingleQuote,
     /// The dollar (`$`) literal is used for math mode formatting.
@@ -261,7 +261,7 @@ impl From<&str> for SymbolKind {
             "‾" => Self::Overline,
             "|" => Self::Pipe,
             "~" => Self::Tilde,
-            "\"" => Self::Quote,
+            "\"" => Self::DoubleQuote,
             "'" => Self::SingleQuote,
             "$" => Self::Dollar,
             "%" => Self::Percentage,
@@ -337,7 +337,7 @@ impl SymbolKind {
             SymbolKind::Overline => "‾",
             SymbolKind::Pipe => "|",
             SymbolKind::Tilde => "~",
-            SymbolKind::Quote => "\"",
+            SymbolKind::DoubleQuote => "\"",
             SymbolKind::Dollar => "$",
             SymbolKind::OpenParenthesis => "(",
             SymbolKind::CloseParenthesis => ")",

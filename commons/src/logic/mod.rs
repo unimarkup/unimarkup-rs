@@ -8,7 +8,7 @@ use crate::{
         symbol::SymbolKind,
         token::{iterator::TokenIterator, TokenKind},
     },
-    parsing::{Element, Parser},
+    parsing::{Element, Parser, ParserError},
 };
 
 pub struct LogicContext {}
@@ -69,7 +69,7 @@ where
         }
     }
 
-    fn parse(mut self) -> (Self, Option<LogicAst>) {
+    fn parse(mut self) -> (Self, Result<LogicAst, ParserError>) {
         // TODO: implement logic parsing
         // The following code is more like a placeholder that takes logic elements as plain content.
         // It only considers scopes for `{}`. Excluding possible scopes from `"`, `'`, "`".
@@ -77,12 +77,12 @@ where
         let next_token_opt = self.iter.peeking_next(|_| true);
         let open_brace = match next_token_opt {
             Some(token) if token.kind == TokenKind::OpenBrace => token,
-            Some(_) | None => return (self, None),
+            Some(_) | None => return (self, Err(ParserError::InvalidStart)),
         };
 
         let dollar_token = match self.iter.peeking_next(|_| true) {
             Some(token) if token.kind == TokenKind::Dollar(1) => token,
-            Some(_) | None => return (self, None),
+            Some(_) | None => return (self, Err(ParserError::InvalidStart)),
         };
 
         let mut scope: usize = 0;
@@ -120,7 +120,7 @@ where
 
         (
             self,
-            Some(LogicAst {
+            Ok(LogicAst {
                 inner,
                 implicit_closed: scope > 0,
                 start: open_brace.start,

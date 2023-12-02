@@ -4,8 +4,8 @@ use unimarkup_commons::{config::icu_locid::Locale, lexer::span::Span};
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
-        Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
-        Underline, Verbatim,
+        Bold, DoubleQuote, Highlight, Italic, Math, Overline, Strikethrough, Subscript,
+        Superscript, Underline, Verbatim,
     },
     textbox::{hyperlink::Hyperlink, TextBox},
     Inline,
@@ -186,8 +186,8 @@ pub trait Renderer<T: OutputFormat> {
         Err(RenderError::Unimplemented)
     }
 
-    /// Render a [`Quote` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
-    fn render_quote(&mut self, _quote: &Quote, _context: &Context) -> Result<T, RenderError> {
+    /// Render a [`DoubleQuote` formatting](unimarkup_inline::inlines::Inline) to the output format `T`.
+    fn render_quote(&mut self, _quote: &DoubleQuote, _context: &Context) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
     }
 
@@ -334,7 +334,7 @@ pub trait Renderer<T: OutputFormat> {
                 self.render_strikethrough(strikethrough, context)
             }
             Inline::Highlight(highlight) => self.render_highlight(highlight, context),
-            Inline::Quote(quote) => self.render_quote(quote, context),
+            Inline::DoubleQuote(quote) => self.render_quote(quote, context),
             Inline::Verbatim(verbatim) => self.render_inline_verbatim(verbatim, context),
             Inline::Plain(plain) => self.render_plain(plain, context),
             Inline::Newline(newline) => self.render_newline(newline, context),

@@ -18,12 +18,10 @@ pub enum TokenKind {
     Overline(usize),
     Pipe(usize),
     Tilde(usize),
-    Quote(usize),
     Dollar(usize),
     Colon(usize),
     Dot(usize),
     ForwardSlash(usize),
-    SingleQuote(usize),
     Percentage(usize),
     Comma(usize),
     Semicolon(usize),
@@ -34,8 +32,14 @@ pub enum TokenKind {
     Gt(usize),
     Eq(usize),
 
-    // ASCII digits
+    /// One ASCII digit
     Digit(u8),
+    /// One double quote `"`.
+    /// Combining multiple double quotes makes attribute and logic parsing harder.
+    DoubleQuote,
+    /// One single quote `'`.
+    /// Combining multiple single quotes makes attribute and logic parsing harder.
+    SingleQuote,
 
     // parenthesis
     OpenParenthesis,
@@ -144,12 +148,10 @@ impl From<TokenKind> for String {
             TokenKind::Overline(len) => SymbolKind::Overline.as_str().repeat(len),
             TokenKind::Pipe(len) => SymbolKind::Pipe.as_str().repeat(len),
             TokenKind::Tilde(len) => SymbolKind::Tilde.as_str().repeat(len),
-            TokenKind::Quote(len) => SymbolKind::Quote.as_str().repeat(len),
             TokenKind::Dollar(len) => SymbolKind::Dollar.as_str().repeat(len),
             TokenKind::Colon(len) => SymbolKind::Colon.as_str().repeat(len),
             TokenKind::Dot(len) => SymbolKind::Dot.as_str().repeat(len),
             TokenKind::ForwardSlash(len) => SymbolKind::ForwardSlash.as_str().repeat(len),
-            TokenKind::SingleQuote(len) => SymbolKind::SingleQuote.as_str().repeat(len),
             TokenKind::Percentage(len) => SymbolKind::Percentage.as_str().repeat(len),
             TokenKind::Comma(len) => SymbolKind::Comma.as_str().repeat(len),
             TokenKind::Semicolon(len) => SymbolKind::Semicolon.as_str().repeat(len),
@@ -159,6 +161,8 @@ impl From<TokenKind> for String {
             TokenKind::Lt(len) => SymbolKind::Lt.as_str().repeat(len),
             TokenKind::Gt(len) => SymbolKind::Gt.as_str().repeat(len),
             TokenKind::Eq(len) => SymbolKind::Eq.as_str().repeat(len),
+            TokenKind::DoubleQuote => SymbolKind::DoubleQuote.as_str().to_string(),
+            TokenKind::SingleQuote => SymbolKind::SingleQuote.as_str().to_string(),
             TokenKind::Digit(digit) => SymbolKind::Digit(digit).as_str().to_string(),
             TokenKind::OpenParenthesis => SymbolKind::OpenParenthesis.as_str().to_string(),
             TokenKind::CloseParenthesis => SymbolKind::CloseParenthesis.as_str().to_string(),
@@ -208,12 +212,10 @@ impl From<SymbolKind> for TokenKind {
             SymbolKind::Overline => TokenKind::Overline(1),
             SymbolKind::Pipe => TokenKind::Pipe(1),
             SymbolKind::Tilde => TokenKind::Tilde(1),
-            SymbolKind::Quote => TokenKind::Quote(1),
             SymbolKind::Dollar => TokenKind::Dollar(1),
             SymbolKind::Colon => TokenKind::Colon(1),
             SymbolKind::Dot => TokenKind::Colon(1),
             SymbolKind::ForwardSlash => TokenKind::ForwardSlash(1),
-            SymbolKind::SingleQuote => TokenKind::SingleQuote(1),
             SymbolKind::Percentage => TokenKind::Percentage(1),
             SymbolKind::Comma => TokenKind::Comma(1),
             SymbolKind::Semicolon => TokenKind::Semicolon(1),
@@ -223,6 +225,8 @@ impl From<SymbolKind> for TokenKind {
             SymbolKind::Lt => TokenKind::Lt(1),
             SymbolKind::Gt => TokenKind::Gt(1),
             SymbolKind::Eq => TokenKind::Eq(1),
+            SymbolKind::DoubleQuote => TokenKind::DoubleQuote,
+            SymbolKind::SingleQuote => TokenKind::SingleQuote,
             SymbolKind::Plain | SymbolKind::Backslash => TokenKind::Plain, // Backslash is incorrect, but is corrected in `super::next_token()`
             SymbolKind::TerminalPunctuation => TokenKind::TerminalPunctuation,
             SymbolKind::Whitespace => TokenKind::Whitespace,
@@ -261,12 +265,10 @@ impl TryFrom<(SymbolKind, usize)> for TokenKind {
             SymbolKind::Overline => TokenKind::Overline(len),
             SymbolKind::Pipe => TokenKind::Pipe(len),
             SymbolKind::Tilde => TokenKind::Tilde(len),
-            SymbolKind::Quote => TokenKind::Quote(len),
             SymbolKind::Dollar => TokenKind::Dollar(len),
             SymbolKind::Colon => TokenKind::Colon(len),
             SymbolKind::Dot => TokenKind::Dot(len),
             SymbolKind::ForwardSlash => TokenKind::ForwardSlash(len),
-            SymbolKind::SingleQuote => TokenKind::SingleQuote(len),
             SymbolKind::Percentage => TokenKind::Percentage(len),
             SymbolKind::Comma => TokenKind::Comma(len),
             SymbolKind::Semicolon => TokenKind::Semicolon(len),
@@ -288,6 +290,8 @@ impl TryFrom<(SymbolKind, usize)> for TokenKind {
             | SymbolKind::CloseBracket
             | SymbolKind::OpenBrace
             | SymbolKind::CloseBrace
+            | SymbolKind::SingleQuote
+            | SymbolKind::DoubleQuote
             | SymbolKind::Digit(_) => {
                 return Err(ConversionError::CannotMergeSymbol);
             }

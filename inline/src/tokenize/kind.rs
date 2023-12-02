@@ -41,9 +41,6 @@ pub enum InlineTokenKind {
     /// Verbatim delimiter token (`` ` ``).
     Verbatim,
 
-    /// Quotation delimiter token (`""`).
-    Quote,
-
     /// Math delimiter token (`$`).
     Math,
 
@@ -71,6 +68,12 @@ pub enum InlineTokenKind {
     /// A single dot for *dot-notation* (e.g. `&&cite-id.title`).
     SingleDot,
 
+    /// Double quote literal (`"`).
+    DoubleQuote,
+
+    /// Single quote literal (`'`).
+    SingleQuote,
+
     /// An ASCII digit.
     Digit(u8),
 
@@ -79,9 +82,6 @@ pub enum InlineTokenKind {
 
     /// One or more `>`.
     Gt(usize),
-
-    /// Possible start of a render insert (`[''alt text](url)`).
-    RenderInsert,
 
     /// Possible start of a media insert (`[!!alt text](url)`).
     MediaInsert,
@@ -139,7 +139,6 @@ impl InlineTokenKind {
             InlineTokenKind::Overline => "‾",
             InlineTokenKind::Strikethrough => "~~",
             InlineTokenKind::Verbatim => "`",
-            InlineTokenKind::Quote => "\"\"",
             InlineTokenKind::Math => "$$",
             InlineTokenKind::OpenParenthesis => "(",
             InlineTokenKind::CloseParenthesis => ")",
@@ -150,6 +149,8 @@ impl InlineTokenKind {
             InlineTokenKind::NamedSubstitution => "::",
             InlineTokenKind::Comment => Comment::keyword(),
             InlineTokenKind::SingleDot => ".",
+            InlineTokenKind::DoubleQuote => "\"",
+            InlineTokenKind::SingleQuote => "'",
             InlineTokenKind::Digit(digit) => match digit {
                 0 => "0",
                 1 => "1",
@@ -166,7 +167,6 @@ impl InlineTokenKind {
                     ""
                 }
             },
-            InlineTokenKind::RenderInsert => "''",
             InlineTokenKind::MediaInsert => "!!",
             InlineTokenKind::Eoi => "",
             InlineTokenKind::Plain
@@ -257,7 +257,7 @@ impl InlineTokenKind {
                 | InlineTokenKind::UnderlineSubscript
                 | InlineTokenKind::Superscript
                 | InlineTokenKind::Strikethrough
-                | InlineTokenKind::Quote
+                | InlineTokenKind::DoubleQuote
                 | InlineTokenKind::Overline
                 | InlineTokenKind::Verbatim
                 | InlineTokenKind::Highlight
@@ -285,7 +285,6 @@ pub const UNDERLINE_KEYWORD_LEN: usize = 2;
 pub const UNDERLINESUBSCRIPT_KEYWORD_LEN: usize = 3;
 pub const STRIKETHROUGH_KEYWORD_LEN: usize = 2;
 pub const HIGHLIGHT_KEYWORD_LEN: usize = 2;
-pub const QUOTE_KEYWORD_LEN: usize = 2;
 pub const MATH_KEYWORD_LEN: usize = 2;
 pub const NAMED_SUBSTITUTION_KEYWORD_LEN: usize = 2;
 pub const SUPERSCRIPT_KEYWORD_LEN: usize = 1;
@@ -330,13 +329,6 @@ impl From<TokenKind> for InlineTokenKind {
             TokenKind::Tilde(len) => {
                 if len == STRIKETHROUGH_KEYWORD_LEN {
                     InlineTokenKind::Strikethrough
-                } else {
-                    InlineTokenKind::Plain
-                }
-            }
-            TokenKind::Quote(len) => {
-                if len == QUOTE_KEYWORD_LEN {
-                    InlineTokenKind::Quote
                 } else {
                     InlineTokenKind::Plain
                 }
@@ -391,13 +383,6 @@ impl From<TokenKind> for InlineTokenKind {
                     InlineTokenKind::Plain
                 }
             }
-            TokenKind::SingleQuote(len) => {
-                if len == INLINE_INSERT_KEYWORD_LEN {
-                    InlineTokenKind::RenderInsert
-                } else {
-                    InlineTokenKind::Plain
-                }
-            }
             TokenKind::ExclamationMark(len) => {
                 if len == INLINE_INSERT_KEYWORD_LEN {
                     InlineTokenKind::MediaInsert
@@ -407,6 +392,8 @@ impl From<TokenKind> for InlineTokenKind {
             }
             TokenKind::Lt(len) => InlineTokenKind::Lt(len),
             TokenKind::Gt(len) => InlineTokenKind::Gt(len),
+            TokenKind::DoubleQuote => InlineTokenKind::DoubleQuote,
+            TokenKind::SingleQuote => InlineTokenKind::SingleQuote,
             TokenKind::Digit(digit) => InlineTokenKind::Digit(digit),
             TokenKind::OpenParenthesis => InlineTokenKind::OpenParenthesis,
             TokenKind::CloseParenthesis => InlineTokenKind::CloseParenthesis,
@@ -461,7 +448,8 @@ impl From<InlineTokenKind> for TokenKind {
             InlineTokenKind::Strikethrough => TokenKind::Tilde(STRIKETHROUGH_KEYWORD_LEN),
             InlineTokenKind::Highlight => TokenKind::Pipe(HIGHLIGHT_KEYWORD_LEN),
             InlineTokenKind::Verbatim => TokenKind::Tick(VERBATIM_KEYWORD_LEN),
-            InlineTokenKind::Quote => TokenKind::Quote(QUOTE_KEYWORD_LEN),
+            InlineTokenKind::DoubleQuote => TokenKind::DoubleQuote,
+            InlineTokenKind::SingleQuote => TokenKind::SingleQuote,
             InlineTokenKind::Math => TokenKind::Dollar(MATH_KEYWORD_LEN),
             InlineTokenKind::OpenParenthesis => TokenKind::OpenParenthesis,
             InlineTokenKind::CloseParenthesis => TokenKind::CloseParenthesis,
@@ -485,7 +473,6 @@ impl From<InlineTokenKind> for TokenKind {
             InlineTokenKind::Digit(digit) => TokenKind::Digit(digit),
             InlineTokenKind::Lt(len) => TokenKind::Lt(len),
             InlineTokenKind::Gt(len) => TokenKind::Gt(len),
-            InlineTokenKind::RenderInsert => TokenKind::SingleQuote(INLINE_INSERT_KEYWORD_LEN),
             InlineTokenKind::MediaInsert => TokenKind::ExclamationMark(INLINE_INSERT_KEYWORD_LEN),
             InlineTokenKind::Any => TokenKind::Any,
             InlineTokenKind::Space => TokenKind::Space,

@@ -8,8 +8,8 @@ use unimarkup_commons::{
 use self::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
-        Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
-        Underline, Verbatim,
+        Bold, DoubleQuote, Highlight, Italic, Math, Overline, Strikethrough, Subscript,
+        Superscript, Underline, Verbatim,
     },
     substitution::{named::NamedSubstitution, DirectUri, ImplicitSubstitution},
     textbox::{hyperlink::Hyperlink, TextBox},
@@ -81,7 +81,7 @@ pub enum Inline {
     Highlight(Highlight),
 
     /// Quoted content.
-    Quote(Quote),
+    DoubleQuote(DoubleQuote),
 
     /// Mathematical content.
     Math(Math),
@@ -139,7 +139,7 @@ impl Inline {
             Inline::Overline(_) => "Overline",
             Inline::Strikethrough(_) => "Strikethrough",
             Inline::Highlight(_) => "Highlight",
-            Inline::Quote(_) => "Quote",
+            Inline::DoubleQuote(_) => "Quote",
             Inline::Math(_) => "Math",
             Inline::TextBox(_) => "TextBox",
             Inline::Hyperlink(_) => "Hyperlink",
@@ -168,7 +168,7 @@ impl InlineElement for Inline {
             Inline::Overline(inline) => inline.as_unimarkup(),
             Inline::Strikethrough(inline) => inline.as_unimarkup(),
             Inline::Highlight(inline) => inline.as_unimarkup(),
-            Inline::Quote(inline) => inline.as_unimarkup(),
+            Inline::DoubleQuote(inline) => inline.as_unimarkup(),
             Inline::Math(inline) => inline.as_unimarkup(),
             Inline::TextBox(inline) => inline.as_unimarkup(),
             Inline::Hyperlink(inline) => inline.as_unimarkup(),
@@ -196,7 +196,7 @@ impl InlineElement for Inline {
             Inline::Overline(inline) => inline.start(),
             Inline::Strikethrough(inline) => inline.start(),
             Inline::Highlight(inline) => inline.start(),
-            Inline::Quote(inline) => inline.start(),
+            Inline::DoubleQuote(inline) => inline.start(),
             Inline::Math(inline) => inline.start(),
             Inline::TextBox(inline) => inline.start(),
             Inline::Hyperlink(inline) => inline.start(),
@@ -224,7 +224,7 @@ impl InlineElement for Inline {
             Inline::Overline(inline) => inline.end(),
             Inline::Strikethrough(inline) => inline.end(),
             Inline::Highlight(inline) => inline.end(),
-            Inline::Quote(inline) => inline.end(),
+            Inline::DoubleQuote(inline) => inline.end(),
             Inline::Math(inline) => inline.end(),
             Inline::TextBox(inline) => inline.end(),
             Inline::Hyperlink(inline) => inline.end(),

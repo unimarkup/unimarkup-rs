@@ -85,7 +85,7 @@ impl From<TokenKind> for PossibleBlockStart {
             TokenKind::ExclamationMark(_) => {
                 // TODO: Possible media block insert
             }
-            TokenKind::SingleQuote(_) => {
+            TokenKind::SingleQuote => {
                 // TODO: Possible render block or insert
             }
             TokenKind::Semicolon(_) => {
@@ -113,9 +113,9 @@ impl From<TokenKind> for PossibleBlockStart {
             | TokenKind::Caret(_)
             | TokenKind::Overline(_)
             | TokenKind::Tilde(_)
-            | TokenKind::Quote(_)
             | TokenKind::Colon(_)
             | TokenKind::Dot(_)
+            | TokenKind::DoubleQuote
             | TokenKind::OpenParenthesis
             | TokenKind::CloseParenthesis
             | TokenKind::CloseBracket

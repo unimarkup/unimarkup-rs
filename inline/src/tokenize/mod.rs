@@ -60,7 +60,8 @@ impl<'input> InlineToken<'input> {
             | InlineTokenKind::Verbatim
             | InlineTokenKind::Overline
             | InlineTokenKind::Superscript
-            | InlineTokenKind::Quote
+            | InlineTokenKind::DoubleQuote
+            | InlineTokenKind::SingleQuote
             | InlineTokenKind::Strikethrough
             | InlineTokenKind::NamedSubstitution
             | InlineTokenKind::OpenBrace
@@ -75,7 +76,6 @@ impl<'input> InlineToken<'input> {
             | InlineTokenKind::Comment
             | InlineTokenKind::SingleDot
             | InlineTokenKind::Digit(_)
-            | InlineTokenKind::RenderInsert
             | InlineTokenKind::MediaInsert
             | InlineTokenKind::Eoi => self.kind.as_str(),
             InlineTokenKind::ImplicitSubstitution(impl_subst) => impl_subst.orig(), // using `orig()` here, because `as_str()` is only called to convert to plain content

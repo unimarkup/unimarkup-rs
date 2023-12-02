@@ -1,6 +1,8 @@
 //! Inline parser
 
-use unimarkup_commons::lexer::token::iterator::{IteratorEndFn, IteratorPrefixFn, TokenIterator};
+use unimarkup_commons::lexer::token::iterator::{
+    IteratorEndFn, IteratorPrefixFn, PeekingNext, TokenIterator,
+};
 
 use crate::{
     element::{formatting::OpenFormatMap, Inline},
@@ -115,8 +117,29 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
                 // An open format closes => unwrap to closing format element
                 // closing token is not consumed here => the element parser needs this info
                 if parser.iter.format_closes(kind) {
-                    format_closes = true;
-                    break 'outer;
+                    if kind == InlineTokenKind::DoubleQuote {
+                        let next_is_quote = parser
+                            .iter
+                            .peeking_next(|t| t.kind == InlineTokenKind::DoubleQuote)
+                            .is_some();
+                        let next_next_is_quote = parser
+                            .iter
+                            .peeking_next(|t| t.kind == InlineTokenKind::DoubleQuote)
+                            .is_some();
+                        if next_is_quote && !next_next_is_quote {
+                            // Consume first quote
+                            parser.iter.next();
+                            format_closes = true;
+                            break 'outer;
+                        } else {
+                            parser.iter.reset_peek();
+                            // Otherwhise, no quote element
+                            None
+                        }
+                    } else {
+                        format_closes = true;
+                        break 'outer;
+                    }
                 } else if !parser.iter.format_is_open(kind) {
                     get_format_parser(kind)
                 } else {
@@ -191,8 +214,8 @@ fn get_format_parser(kind: InlineTokenKind) -> Option<InlineParserFn> {
         InlineTokenKind::Strikethrough
         | InlineTokenKind::Superscript
         | InlineTokenKind::Highlight
-        | InlineTokenKind::Overline
-        | InlineTokenKind::Quote => Some(crate::element::formatting::parse_distinct_format),
+        | InlineTokenKind::Overline => Some(crate::element::formatting::parse_distinct_format),
+        InlineTokenKind::DoubleQuote => Some(crate::element::formatting::parse_quote_format),
         _ => None,
     }
 }

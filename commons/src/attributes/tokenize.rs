@@ -1,11 +1,17 @@
 use std::marker::PhantomData;
 
+use itertools::Itertools;
+
 use crate::{
-    lexer::token::iterator::TokenIterator,
-    parsing::{Element, Parser},
+    attributes::rules,
+    lexer::token::{iterator::TokenIterator, TokenKind},
+    parsing::{Element, Parser, ParserError},
 };
 
-use super::token::AttributeToken;
+use super::{
+    rules::AtRuleId,
+    token::{AttributeToken, AttributeTokenKind},
+};
 
 pub struct AttributeContext {}
 
@@ -58,7 +64,52 @@ where
         }
     }
 
-    fn parse(self) -> (Self, Option<Vec<AttributeToken>>) {
+    fn parse(mut self) -> (Self, Result<Vec<AttributeToken>, ParserError>) {
+        // Start: Ident | SelectorPart | AtRuleIdent | Logic | Comment | Whitespace | Newline
+        // => after Ident: (Comment | Whitespace | Newline)* (ValuePart | Nested | Logic | QuotedValue) (Comment | Whitespace | Newline)*
+        //    => after ValuePart: (ValuePart | Logic | QuotedValue | Comment | Whitespace | Newline)* Important? Semicolon
+        //    => after Nested: (Comment | Whitespace | Newline)* (Nested | <Start>)
+        //    => after Logic: <after Ident> | Important? (Comment | Whitespace | Newline)* Semicolon
+        // => after SelectorPart: (Comment | Whitespace | Newline)* (SelectorPart | Nested | Logic)
+        //    => after Nested: (Comment | Whitespace | Newline)* <Start>
+        //    => after Logic: (Comment | Whitespace | Newline)* (SelectorPart | Nested | Logic)
+        // => after AtRuleIdent: (Comment | Whitespace | Newline)* (AtRulePreludePart | Nested)
+        //    => after AtRulePreludePart: <after AtRuleIdent> | Semicolon
+        //    => after Nested: <Start>
+        // => after Logic | Comment | Whitespace | Newline: <Start>
+        //
+        // Nested: `{` <Start>* `}`
+        // QuotedValue: (`"` QuotedValuePartKind* `"`) | (`'` QuotedValuePartKind* `'`)
+
+        let mut attrb_tokens = Vec::new();
+        let open_token = match self.iter.next() {
+            Some(token) if token.kind == TokenKind::OpenBrace => token,
+            Some(_) | None => {
+                return (self, Err(ParserError::InvalidStart));
+            }
+        };
+        let next_kind = self.iter.peek_kind();
+
+        // Would be logic start
+        if next_kind == Some(TokenKind::Dollar(1)) {
+            return (self, Err(ParserError::InvalidStart));
+        }
+
+        match next_kind {
+            Some(TokenKind::At(len)) => {
+                if len != 1 {
+                    // TODO: set log error for multiple `@`
+                    return (self, Err(ParserError::SyntaxViolation));
+                }
+                let at_rule_parsed = rules::parse_at_rule(&mut self, &mut attrb_tokens);
+                if !at_rule_parsed {
+                    return (self, Err(ParserError::SyntaxViolation));
+                }
+            }
+            Some(_) => todo!(),
+            None => todo!(),
+        }
+
         todo!()
     }
 

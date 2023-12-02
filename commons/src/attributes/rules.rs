@@ -1,9 +1,21 @@
+use itertools::Itertools;
+
+use crate::{
+    lexer::token::TokenKind,
+    parsing::{Element, Parser},
+};
+
+use super::{
+    token::{AttributeToken, AttributeTokenKind},
+    tokenize::AttributeTokenizer,
+};
+
 macro_rules! at_rules {
     ($($name:literal -> $id:ident $(: $info:literal)?);*) => {
 
         /// At-rules that are supported as Unimarkup attributes.
         /// Taken from: https://developer.mozilla.org/en-US/docs/Web/CSS/At-rule?retiredLocale=de
-        #[derive(Debug, PartialEq, Eq, Clone)]
+        #[derive(Debug, PartialEq, Eq, Clone, Copy)]
         pub enum AtRuleId {
             $(
                 #[doc=concat!("The `", $name, "` at-rule.")]
@@ -91,3 +103,178 @@ at_rules!(
     "font-palette-values" -> FontPaletteValues: "https://developer.mozilla.org/en-US/docs/Web/CSS/@font-palette-values";
     "property" -> Property: "https://developer.mozilla.org/en-US/docs/Web/CSS/@property"
 );
+
+pub(crate) fn parse_at_rule<'slice, 'input, P, T, C>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+    attrb_tokens: &mut Vec<AttributeToken>,
+) -> bool
+where
+    P: Parser<'slice, 'input, T, C>,
+    T: Element,
+    C: Default,
+{
+    let mut ident_tokens = tokenizer.iter.peeking_take_while(|t| {
+        !matches!(
+            t.kind,
+            TokenKind::Whitespace
+                | TokenKind::EscapedNewline
+                | TokenKind::Newline
+                | TokenKind::OpenParenthesis
+                | TokenKind::OpenBrace
+                | TokenKind::Semicolon(_)
+        )
+    });
+
+    let start_token = match ident_tokens.next() {
+        Some(token) => token,
+        None => {
+            // TODO: set log for invalid at-rule
+            return false;
+        }
+    };
+    let end_token = match ident_tokens.last() {
+        Some(token) => token,
+        None => start_token,
+    };
+    let ident = &start_token.input[start_token.offset.start..end_token.offset.end];
+    let at_rule_ident = match AtRuleId::try_from(ident) {
+        Ok(id) => id,
+        Err(_) => {
+            // TODO: set log for unsupported at-rule
+            return false;
+        }
+    };
+    attrb_tokens.push(AttributeToken {
+        kind: AttributeTokenKind::AtRuleIdent(at_rule_ident),
+        start: start_token.start,
+        end: end_token.end,
+    });
+
+    todo!()
+}
+
+/// At-rule parser for `media` and `container`.
+fn parse_conditional<'slice, 'input, P, T, C>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+    attrb_tokens: &mut Vec<AttributeToken>,
+) -> bool
+where
+    P: Parser<'slice, 'input, T, C>,
+    T: Element,
+    C: Default,
+{
+    todo!()
+}
+
+fn parse_conditional_prelude<'slice, 'input, P, T, C>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+    attrb_tokens: &mut Vec<AttributeToken>,
+) -> bool
+where
+    P: Parser<'slice, 'input, T, C>,
+    T: Element,
+    C: Default,
+{
+    todo!()
+}
+
+fn parse_token_parts<'slice, 'input, P, T, C>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+    attrb_tokens: &mut Vec<AttributeToken>,
+    scope: usize,
+    quote: Option<TokenKind>,
+) -> bool
+where
+    P: Parser<'slice, 'input, T, C>,
+    T: Element,
+    C: Default,
+{
+    let mut tokens = tokenizer.iter.peeking_take_while(|t| match quote {
+        Some(quote_token) => {
+            t.kind != quote_token
+                && !matches!(t.kind, TokenKind::Newline | TokenKind::EscapedNewline)
+        }
+        None => !matches!(
+            t.kind,
+            TokenKind::OpenBrace
+                | TokenKind::SingleQuote
+                | TokenKind::DoubleQuote
+                | TokenKind::Newline
+                | TokenKind::EscapedNewline
+        ),
+    });
+    let start_token = match tokens.next() {
+        Some(token) => token,
+        None => {
+            // TODO: set log for invalid at-rule
+            return false;
+        }
+    };
+    let end_token = match tokens.last() {
+        Some(token) => token,
+        None => start_token,
+    };
+    let part = &start_token.input[start_token.offset.start..end_token.offset.end];
+
+    todo!()
+}
+
+fn parse_layer<'slice, 'input, P, T, C>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+    attrb_tokens: &mut Vec<AttributeToken>,
+) -> bool
+where
+    P: Parser<'slice, 'input, T, C>,
+    T: Element,
+    C: Default,
+{
+    todo!()
+}
+
+fn parse_scope<'slice, 'input, P, T, C>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+    attrb_tokens: &mut Vec<AttributeToken>,
+) -> bool
+where
+    P: Parser<'slice, 'input, T, C>,
+    T: Element,
+    C: Default,
+{
+    todo!()
+}
+
+fn parse_keyframes<'slice, 'input, P, T, C>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+    attrb_tokens: &mut Vec<AttributeToken>,
+) -> bool
+where
+    P: Parser<'slice, 'input, T, C>,
+    T: Element,
+    C: Default,
+{
+    todo!()
+}
+
+fn parse_page<'slice, 'input, P, T, C>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+    attrb_tokens: &mut Vec<AttributeToken>,
+) -> bool
+where
+    P: Parser<'slice, 'input, T, C>,
+    T: Element,
+    C: Default,
+{
+    todo!()
+}
+
+fn parse_supports<'slice, 'input, P, T, C>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+    attrb_tokens: &mut Vec<AttributeToken>,
+) -> bool
+where
+    P: Parser<'slice, 'input, T, C>,
+    T: Element,
+    C: Default,
+{
+    todo!()
+}
