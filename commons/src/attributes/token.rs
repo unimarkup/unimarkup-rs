@@ -8,6 +8,14 @@ use crate::{
 use super::rules::AtRuleId;
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct AttributeTokens {
+    pub(crate) tokens: Vec<AttributeToken>,
+    pub(crate) implicit_closed: bool,
+    pub(crate) start: Position,
+    pub(crate) end: Position,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct AttributeToken {
     pub(crate) kind: AttributeTokenKind,
     pub(crate) start: Position,
@@ -59,7 +67,7 @@ pub enum AttributeTokenKind {
     AtRulePreludePart(TokenPart),
     /// Tokens surrounded by `{}`.
     /// Nested blocks are implicity closed if the underlying token iterator ends, before `}` is reached.
-    Nested(Vec<AttributeToken>, bool),
+    Nested(AttributeTokens),
     Logic(LogicAst),
     /// A Unimarkup comment.
     /// e.g. `;; This is a comment`
@@ -74,9 +82,7 @@ pub enum AttributeTokenKind {
     /// A single semicolon used as declaration separator.
     Semicolon,
     /// A quoted value (e.g. `"value"` or `'value'`).
-    /// May only be part of the value, because it can span multiple lines.
-    /// The `char` contains the quote char (e.g. `"`).
-    QuotedValue(Vec<QuotedValuePart>, char),
+    QuotedValue(QuotedValue),
     /// A single non-escaped whitespace used as value separator.
     /// This will be turned into a single space when rendering back to Unimarkup.
     Whitespace,
@@ -95,11 +101,11 @@ impl AttributeTokenKind {
             AttributeTokenKind::AtRulePreludePart(at_rule_prelude_part) => {
                 at_rule_prelude_part.0.clone()
             }
-            AttributeTokenKind::Nested(inner, implicit_closed) => {
+            AttributeTokenKind::Nested(inner) => {
                 format!(
                     "{{{}{}",
                     inner.as_unimarkup(),
-                    if *implicit_closed {
+                    if inner.implicit_closed {
                         ""
                     } else {
                         SymbolKind::CloseBrace.as_str()
@@ -111,7 +117,8 @@ impl AttributeTokenKind {
             AttributeTokenKind::Important => "!important".to_string(),
             AttributeTokenKind::Comma => SymbolKind::Comma.as_str().to_string(),
             AttributeTokenKind::Semicolon => SymbolKind::Semicolon.as_str().to_string(),
-            AttributeTokenKind::QuotedValue(value, quote) => {
+            AttributeTokenKind::QuotedValue(value) => {
+                let quote = value.quote;
                 format!("{quote}{}{quote}", value.as_unimarkup())
             }
             AttributeTokenKind::Whitespace => SymbolKind::Whitespace.as_str().to_string(),
@@ -121,26 +128,34 @@ impl AttributeTokenKind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct QuotedValue {
+    pub(crate) parts: Vec<QuotedValuePart>,
+    pub(crate) quote: char,
+    pub(crate) start: Position,
+    pub(crate) end: Position,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct QuotedValuePart {
     pub(crate) kind: QuotedValuePartKind,
     pub(crate) start: Position,
     pub(crate) end: Position,
 }
 
-impl Element for Vec<QuotedValuePart> {
+impl Element for QuotedValue {
     fn as_unimarkup(&self) -> String {
-        self.iter().fold(String::new(), |mut s, q| {
+        self.parts.iter().fold(String::new(), |mut s, q| {
             s.push_str(&q.kind.as_unimarkup());
             s
         })
     }
 
     fn start(&self) -> Position {
-        self.first().map(|q| q.start).unwrap_or_default()
+        self.start
     }
 
     fn end(&self) -> Position {
-        self.last().map(|q| q.end).unwrap_or_default()
+        self.end
     }
 }
 
