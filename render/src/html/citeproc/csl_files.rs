@@ -95,7 +95,7 @@ pub fn get_style_string(path: PathBuf) -> String {
         _ => {
             log!(
                 GeneralWarning::UnsupportedCslStyle,
-                format!("The csl style '{:?}' is is not supported", path.to_str()),
+                format!("The csl style '{:?}' is not supported", path.to_str()),
             );
             IEEE.to_string()
         }

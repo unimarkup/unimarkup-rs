@@ -6,6 +6,7 @@ let citationsPre = [];
 const citationsPost = [];
 let citationResults = [];
 let footnoteResults = [];
+let forPagedjs;
 
 function getCitations(citationText) {
     const citationData = JSON.parse(citationText);
@@ -127,15 +128,16 @@ function getFootnoteStyles() {
     return stylesString.join("\n");
 }
 
-export function initProcessor(citationText, localeText, styleText) {
+export function initProcessor(citationText, localeText, styleText, forPagedjsParam) {
     citations = getCitations(citationText);
     let citeprocSys = getCiteprocSys(localeText);
     citeproc = getProcessor(citeprocSys, styleText);
+    forPagedjs = forPagedjsParam;
 }
 
-export function getCitationStrings(citationIds, for_pagedjs) {
+export function getCitationStrings(citationIds) {
     let counter = 1;
-    for (let citationId of JSON.parse(citationIds)) {
+    for (let citationId of citationIds) {
         let newStrings = appendCitation(counter, citationId);
         let lastResult = newStrings[newStrings.length - 1];
         if (citeproc.opt.xclass === "in-text") {
@@ -144,7 +146,7 @@ export function getCitationStrings(citationIds, for_pagedjs) {
                 citationResults[newStrings[i][0]] = newStrings[i][1];
             }
         } else {
-            if (for_pagedjs) {
+            if (forPagedjs) {
                 citationResults.push(`<span className=\"footnote\">${lastResult[1]}</span>`);
                 for (let i = 0; i < newStrings.length - 1; ++i) {
                     citationResults[newStrings[i][0]] = `<span className=\"footnote\">${newStrings[i][1]}</span>`;

@@ -17,6 +17,12 @@ pub enum GeneralWarning {
 
     /// Log-id denoting the attempt to use an unsupported csl style
     UnsupportedCslStyle,
+
+    /// Log-id denoting a failed json deserialization
+    JSONDeserialization,
+
+    /// Log-id denoting a failed json serialization
+    JSONSerialization,
 }
 
 #[derive(Debug, Clone, ErrLogId, Error)]

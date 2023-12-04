@@ -32,7 +32,7 @@ impl CiteprocWrapper {
         doc_locale: Locale,
         citation_locales: HashMap<Locale, PathBuf>,
         style_id: PathBuf,
-        citation_id_vectors: &Vec<Vec<String>>,
+        citation_id_vectors: &[serde_json::Value],
         for_pagedjs: bool,
     ) -> Result<Vec<String>, CiteError> {
         let citation_text = get_csl_string(citation_paths);
@@ -40,16 +40,13 @@ impl CiteprocWrapper {
         let style = get_style_string(style_id);
 
         self.module
-            .call::<()>("initProcessor", json_args!(citation_text, locale, style))
+            .call::<()>("initProcessor", json_args!(citation_text, locale, style, for_pagedjs))
             .map_err(|_| CiteError::ProcessorInitializationError)?;
 
         self.module
             .call(
                 "getCitationStrings",
-                json_args!(
-                    serde_json::to_string(citation_id_vectors).unwrap(),
-                    for_pagedjs
-                ),
+                citation_id_vectors,
             )
             .map_err(|_| CiteError::CitationError)
     }
@@ -79,6 +76,15 @@ fn get_csl_string(references: &HashSet<PathBuf>) -> String {
     let mut citation_items: Vec<CslItem> = vec![];
     for reference in references {
         if let Ok(citation_string) = fs::read_to_string(reference.clone().into_os_string()) {
+            match serde_json::from_str::<CslData>(&citation_string) {
+                Ok(mut citation_data) => citation_items.append(&mut citation_data.items),
+                Err(e) => {
+                    log!(
+                        GeneralWarning::JSONDeserialization,
+                        format!("JSON deserializaion failed with error: '{:?}'", e)
+                    );
+                }
+            }
             let mut citation_data: CslData =
                 serde_json::from_str::<CslData>(&citation_string).unwrap();
             citation_items.append(&mut citation_data.items);

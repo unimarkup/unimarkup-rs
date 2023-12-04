@@ -6,7 +6,7 @@ use std::{
 use clap::Args;
 use icu_locid::Locale;
 use logid::err;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 use super::{
     locale, log_id::ConfigErr, parse_to_hashset, parse_to_locale_pathbuf_hashset, ConfigFns,

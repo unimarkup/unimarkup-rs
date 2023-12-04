@@ -5,7 +5,7 @@ use logid::log;
 use std::path::PathBuf;
 use unimarkup_commons::{
     config::icu_locid::{locale, Locale},
-    lexer::{span::Span, token::iterator::Itertools},
+    lexer::span::Span,
 };
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
@@ -26,7 +26,7 @@ use unimarkup_parser::{
     },
 };
 
-use crate::log_id::RenderError;
+use crate::log_id::{GeneralWarning, RenderError};
 
 pub struct Context<'a> {
     doc: &'a Document,
@@ -74,40 +74,50 @@ impl<'a> Context<'a> {
                     .clone()
                     .unwrap_or(locale!("en-US"));
                 let citation_locales = doc.config.preamble.cite.citation_locales.clone();
+                let citation_ids = match serde_json::to_value(&doc.citations) {
+                    Ok(citation_ids) => citation_ids,
+                    Err(e) => {
+                        log!(
+                            GeneralWarning::JSONSerialization,
+                            format!("JSON serialization failed with error: '{:?}'", e)
+                        );
+                        serde_json::to_value::<Vec<Vec<String>>>(vec![]).unwrap()
+                    }
+                };
                 rendered_citations = match citeproc.get_citation_strings(
                     &doc.config.preamble.cite.references,
                     doc_locale,
                     citation_locales,
                     style,
-                    &doc.citations,
+                    &[citation_ids],
                     for_pagedjs,
                 ) {
                     Ok(rendered_citations) => rendered_citations,
                     Err(e) => {
                         log!(e);
-                        vec!["CITATION ERROR".to_string(); doc.citations.len()]
+                        vec!["########### CITATION ERROR ###########".to_string(); doc.citations.len()]
                     }
                 };
                 footnotes = match citeproc.get_footnotes() {
                     Ok(footnotes) => footnotes,
                     Err(e) => {
                         log!(e);
-                        "CITATION ERROR".to_string()
+                        "########### CITATION ERROR ###########".to_string()
                     }
                 };
                 bibliography = match citeproc.get_bibliography() {
                     Ok(bibliography) => bibliography,
                     Err(e) => {
                         log!(e);
-                        "CITATION ERROR".to_string()
+                        "########### CITATION ERROR ###########".to_string()
                     }
                 };
             }
             Err(e) => {
                 log!(e);
-                rendered_citations = vec!["CITATION_ERROR".to_string(); doc.citations.len()];
-                footnotes = "CITATION_ERROR".to_string();
-                bibliography = "CITATION_ERROR".to_string();
+                rendered_citations = vec!["########### CITATION ERROR ###########".to_string(); doc.citations.len()];
+                footnotes = "########### CITATION ERROR ###########".to_string();
+                bibliography = "########### CITATION ERROR ###########".to_string();
             }
         }
 
