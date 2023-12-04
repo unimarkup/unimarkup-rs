@@ -1,4 +1,4 @@
-use unimarkup_commons::config::icu_locid::locale;
+use crate::log_id::RenderError;
 use unimarkup_commons::lexer::{span::Span, symbol::SymbolKind, token::TokenKind};
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
@@ -10,7 +10,6 @@ use unimarkup_inline::element::{
     InlineElement,
 };
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
-use crate::log_id::RenderError;
 
 use crate::render::{Context, OutputFormat, Renderer};
 
@@ -189,26 +188,25 @@ impl Renderer<Html> for HtmlRenderer {
 
     fn render_bibliography(
         &mut self,
-        context: &Context
+        context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
         let mut elements: Vec<HtmlElement> = vec![];
-        let bibliography_string: String;
-        if context.get_lang() == locale!("de-DE") || context.get_lang() == locale!("de-AT") {
-            bibliography_string = "Literaturverzeichnis".to_string();
-        } else if context.get_lang() == locale!("en-US") || context.get_lang() == locale!("en-GB") {
-            bibliography_string = "Bibliography".to_string();
+        let bibliography_string = if context.get_lang().id.language
+            == unimarkup_commons::config::icu_locid::subtags::language!("de")
+        {
+            "Literaturverzeichnis"
         } else {
-            bibliography_string = "Bibliography".to_string();
-        }
+            "Bibliography"
+        };
         elements.push(HtmlElement {
             tag: HtmlTag::H1,
             attributes: HtmlAttributes::default(),
-            content: Some(bibliography_string)
+            content: Some(bibliography_string.to_string()),
         });
         elements.push(HtmlElement {
             tag: HtmlTag::PlainContent,
             attributes: HtmlAttributes::default(),
-            content: Some(context.bibliography.clone())
+            content: Some(context.bibliography.clone()),
         });
         let body = HtmlBody::from(elements);
         let html = Html::with_body(body);
@@ -218,22 +216,23 @@ impl Renderer<Html> for HtmlRenderer {
     fn render_footnotes(&mut self, context: &Context) -> Result<Html, RenderError> {
         let footnotes = context.footnotes.clone();
         if !footnotes.is_empty() {
-            let mut elements: Vec<HtmlElement> = vec![];
-            elements.push(HtmlElement {
-                tag: HtmlTag::PlainContent,
-                attributes: HtmlAttributes::default(),
-                content: Some("<hr style=\"width: 25%; margin-left: 0\">".to_string())
-            });
-            elements.push(HtmlElement {
-                tag: HtmlTag::PlainContent,
-                attributes: HtmlAttributes::default(),
-                content: Some(footnotes)
-            });
+            let elements: Vec<HtmlElement> = vec![
+                HtmlElement {
+                    tag: HtmlTag::PlainContent,
+                    attributes: HtmlAttributes::default(),
+                    content: Some("<hr style=\"width: 25%; margin-left: 0\">".to_string()),
+                },
+                HtmlElement {
+                    tag: HtmlTag::PlainContent,
+                    attributes: HtmlAttributes::default(),
+                    content: Some(footnotes),
+                },
+            ];
             let body = HtmlBody::from(elements);
             let html = Html::with_body(body);
             Ok(html)
         } else {
-            return Ok(Html::default());
+            Ok(Html::default())
         }
     }
 

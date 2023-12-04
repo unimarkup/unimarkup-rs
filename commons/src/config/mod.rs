@@ -1,5 +1,5 @@
-use std::{collections::HashSet, path::PathBuf};
 use std::collections::HashMap;
+use std::{collections::HashSet, path::PathBuf};
 
 use clap::{Args, Parser};
 use logid::err;
@@ -117,17 +117,19 @@ where
     Ok(HashSet::from_iter(entries?))
 }
 
-pub fn parse_to_locale_pathbuf_hashset(s: &str) -> Result<HashMap<Locale, PathBuf>, clap::Error>
-{
-   if s.is_empty() {
-       return Ok(HashMap::new());
-   }
+pub fn parse_to_locale_pathbuf_hashset(s: &str) -> Result<HashMap<Locale, PathBuf>, clap::Error> {
+    if s.is_empty() {
+        return Ok(HashMap::new());
+    }
 
     let mut result: HashMap<Locale, PathBuf> = HashMap::new();
     let entries = s.split('\n');
     for entry in entries {
         let split_entry: Vec<String> = entry.split(':').map(|e| e.to_string()).collect();
-        let locale: Locale = split_entry[0].trim().parse().expect("Parsing the locale failed");
+        let locale: Locale = split_entry[0]
+            .trim()
+            .parse()
+            .expect("Parsing the locale failed");
         let path: PathBuf = PathBuf::from(split_entry[1].trim());
         result.insert(locale, path);
     }

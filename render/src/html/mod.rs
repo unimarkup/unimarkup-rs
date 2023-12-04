@@ -4,10 +4,10 @@ use crate::render::OutputFormat;
 
 use self::tag::HtmlTag;
 
+pub(crate) mod citeproc;
 pub mod highlight;
 pub mod render;
 pub mod tag;
-pub(crate) mod citeproc;
 
 #[derive(Debug, Default)]
 pub struct HtmlAttribute {

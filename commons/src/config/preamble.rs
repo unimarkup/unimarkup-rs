@@ -8,7 +8,10 @@ use icu_locid::Locale;
 use logid::err;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::{locale, log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone, parse_to_locale_pathbuf_hashset};
+use super::{
+    locale, log_id::ConfigErr, parse_to_hashset, parse_to_locale_pathbuf_hashset, ConfigFns,
+    ReplaceIfNone,
+};
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Preamble {
