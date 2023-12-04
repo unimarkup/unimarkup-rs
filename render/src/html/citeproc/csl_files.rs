@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use logid::log;
 use unimarkup_commons::config::icu_locid::Locale;
+use crate::log_id::GeneralWarning;
 macro_rules! csl_files {
     ($($name:ident, $path:literal)|+) => {
         $(
@@ -23,31 +25,34 @@ csl_files!(
     CSL_ZH_CN_LOCALE, "../../../csl_locales/locales-zh-CN.xml"
 );
 
-fn get_cached_locale_string(locale: Locale) -> String {
+fn get_cached_locale_string(locale: Locale) -> &'static str {
     return match locale.to_string().as_str() {
-        "de-DE" => CSL_DE_DE_LOCALE.to_string(),
-        "ar" => CSL_AR_LOCALE.to_string(),
-        "de-AT" => CSL_DE_AT_LOCALE.to_string(),
-        "en-GB" => CSL_EN_GB_LOCALE.to_string(),
-        "en-US" => CSL_EN_US_LOCALE.to_string(),
-        "es-ES" => CSL_ES_ES_LOCALE.to_string(),
-        "fr-FR" => CSL_FR_FR_LOCALE.to_string(),
-        "hi-IN" => CSL_HI_IN_LOCALE.to_string(),
-        "zh-CN" => CSL_ZH_CN_LOCALE.to_string(),
-        _ => CSL_EN_US_LOCALE.to_string()
+        "de-DE" => CSL_DE_DE_LOCALE,
+        "ar" => CSL_AR_LOCALE,
+        "de-AT" => CSL_DE_AT_LOCALE,
+        "en-GB" => CSL_EN_GB_LOCALE,
+        "en-US" => CSL_EN_US_LOCALE,
+        "es-ES" => CSL_ES_ES_LOCALE,
+        "fr-FR" => CSL_FR_FR_LOCALE,
+        "hi-IN" => CSL_HI_IN_LOCALE,
+        "zh-CN" => CSL_ZH_CN_LOCALE,
+        _ => CSL_EN_US_LOCALE,
     };
 }
 
 pub fn get_locale_string(doc_locale: Locale, paths: HashMap<Locale, PathBuf>) -> String {
-    match paths.get(&doc_locale) {
-        Some(path) => {
-            if path.is_file() {
-                return fs::read_to_string(path.clone().into_os_string()).unwrap_or(get_cached_locale_string(doc_locale));
+    if let Some(path) = paths.get(&doc_locale) {
+        if path.is_file() {
+            if let Ok(csl_locale) = fs::read_to_string(path) {
+                return csl_locale;
             }
-        },
-        None => return get_cached_locale_string(doc_locale)
-    };
-    get_cached_locale_string(doc_locale)
+            log!(
+                GeneralWarning::FileRead,
+                format!("Could not read locale file: '{:?}'", &path),
+            );
+        }
+    }
+    get_cached_locale_string(doc_locale).to_string()
 }
 
 csl_files!(
@@ -62,19 +67,35 @@ csl_files!(
 );
 
 pub fn get_style_string(path: PathBuf) -> String {
-    return if path.is_file() {
-        fs::read_to_string(path.into_os_string()).expect("Reading the style file failed")
-    } else {
-        match path.to_str().expect("The style could not be converted to a string") {
-            "american-medical-association" => AMERICAN_MEDICAL_ASSOCIATION.to_string(),
-            "apa" => APA.to_string(),
-            "bluebook-inline" => BLUEBOOK_INLINE.to_string(),
-            "chicago-fullnote-bibliography" => CHICAGO_FULLNOTE_BIBLIOGRAPHY.to_string(),
-            "council-of-science-editors" => COUNCIL_OF_SCIENCE_EDITORS.to_string(),
-            "harvard-cite-them-right" => HARVARD_CITE_THEM_RIGHT.to_string(),
-            "ieee" => IEEE.to_string(),
-            "turabian-author-date" => TURABIAN_AUTHOR_DATE.to_string(),
-            _ => IEEE.to_string()
+    if path.is_file() {
+        match fs::read_to_string(&path) {
+            Ok(csl_style) => {
+                return csl_style;
+            }
+            Err(_) => {
+                log!(
+                    GeneralWarning::FileRead,
+                    format!("Could not read style file: '{:?}'", path.clone()),
+                );
+                return IEEE.to_string();
+            }
+        }
+    }
+    match path.to_str().unwrap_or("ieee") {
+        "american-medical-association" => AMERICAN_MEDICAL_ASSOCIATION.to_string(),
+        "apa" => APA.to_string(),
+        "bluebook-inline" => BLUEBOOK_INLINE.to_string(),
+        "chicago-fullnote-bibliography" => CHICAGO_FULLNOTE_BIBLIOGRAPHY.to_string(),
+        "council-of-science-editors" => COUNCIL_OF_SCIENCE_EDITORS.to_string(),
+        "harvard-cite-them-right" => HARVARD_CITE_THEM_RIGHT.to_string(),
+        "ieee" => IEEE.to_string(),
+        "turabian-author-date" => TURABIAN_AUTHOR_DATE.to_string(),
+        _ => {
+            log!(
+                GeneralWarning::UnsupportedCslStyle,
+                format!("The csl style '{:?}' is is not supported", path.to_str()),
+            );
+            IEEE.to_string()
         }
     }
 }
