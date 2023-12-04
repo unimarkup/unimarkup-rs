@@ -51,7 +51,7 @@ impl<'a> Context<'a> {
     }
 
     fn new(doc: &'a Document) -> Self {
-        let mut citeproc = CiteprocWrapper::new();
+        let mut citeproc = CiteprocWrapper::new().expect("Something went wrong");
 
         let for_pagedjs = false;
         let style = doc.config.preamble.cite.style.clone().unwrap_or(PathBuf::from(String::from("ieee")));
@@ -61,10 +61,10 @@ impl<'a> Context<'a> {
                                                                doc_locale,
                                                                citation_locales,
                                                                style,
-                                                               &doc.citations, for_pagedjs);
+                                                               &doc.citations, for_pagedjs).unwrap_or(vec!["CITATION ERROR".to_string(); doc.citations.len()]);
 
-        let footnotes = citeproc.get_footnotes();
-        let bibliography = citeproc.get_bibliography();
+        let footnotes = citeproc.get_footnotes().unwrap_or("CITATION ERROR".to_string());
+        let bibliography = citeproc.get_bibliography().unwrap_or("CITATION_ERROR".to_string());
 
         Context {
             doc,

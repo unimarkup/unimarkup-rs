@@ -18,3 +18,24 @@ pub enum GeneralWarning {
     /// Log-id denoting the attempt to use an unsupported csl style
     UnsupportedCslStyle,
 }
+
+#[derive(Debug, Clone, ErrLogId, Error)]
+pub enum CiteError {
+    #[error("Importing the JavaScript module failed.")]
+    ModuleImportError,
+
+    #[error("Initialization of the CSL processor failed.")]
+    ProcessorInitializationError,
+
+    #[error("Processing the citations failed.")]
+    CitationError,
+
+    #[error("The check if footnotes exist, failed.")]
+    CheckForFootnotesError,
+
+    #[error("Getting the footnotes failed.")]
+    GetFootnotesError,
+
+    #[error("Getting the bibliography failed.")]
+    GetBibliographyError,
+}
