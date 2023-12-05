@@ -77,37 +77,54 @@ function splitCitationEntry(inputString, ids) {
     return resultString.join("");
 }
 
+class CssEntry {
+    constructor(selector) {
+        this.selector = selector;
+        this.values = [];
+    }
+
+    toString() {
+        let cssEntryString = [];
+        cssEntryString.push(this.selector, "{");
+        for (let value of this.values) {
+            cssEntryString.push(value[0], ":", value[1], ";");
+        }
+        cssEntryString.push("}");
+        return cssEntryString.join("");
+    }
+}
+
 function getBibliographyStyles(bibStyles) {
     let stylesString = [];
     stylesString.push("<style scoped>");
-    stylesString.push(".csl-entry { ");
+    let cslEntry = new CssEntry(".csl-entry");
     if (bibStyles["entryspacing"] === 0) {
-        stylesString.push("padding-bottom: 0.1em;");
+        cslEntry.values.push(["padding-bottom", "0.1em"]);
     } else {
-        stylesString.push(`padding-bottom: ${bibStyles["entryspacing"]}em;`);
+        cslEntry.values.push(["padding-bottom", `${bibStyles["entryspacing"]}em`]);
     }
-    stylesString.push(`line-height: ${bibStyles["linespacing"]}em;`);
+    cslEntry.values.push(["line-height", `${bibStyles["linespacing"]}em`]);
     if (bibStyles["hangingindent"] !== undefined) {
-        stylesString.push("padding-left: 1.3em;");
-        stylesString.push("text-indent: -1.3em;");
+        cslEntry.values.push(["padding-left", "1.3em"]);
+        cslEntry.values.push(["text-indent", "-1.3em"]);
     }
-    stylesString.push("}");
+    stylesString.push(cslEntry.toString());
     if (bibStyles["second-field-align"]) {
         if (bibStyles["second-field-align"] === "flush") {
-            stylesString.push(".csl-left-margin { ");
-            stylesString.push("position: absolute;");
-            stylesString.push("}");
-            stylesString.push(".csl-right-inline { ");
-            stylesString.push(`margin-left: ${bibStyles["maxoffset"]}ch`);
-            stylesString.push("}");
+            let cslLeftMargin = new CssEntry(".csl-left-margin");
+            cslLeftMargin.values.push(["position", "absolute"]);
+            stylesString.push(cslLeftMargin.toString());
+            let cslRightInline = new CssEntry(".csl-right-inline");
+            cslRightInline.values.push(["margin-left", `${bibStyles["maxoffset"]}ch`]);
+            stylesString.push(cslRightInline.toString());
         } else {
-            stylesString.push(".csl-left-margin { ");
-            stylesString.push("text-align: right;");
-            stylesString.push("position: absolute;");
-            stylesString.push("transform-origin: top right;");
-            stylesString.push("transform: translate(-100%);");
-            stylesString.push("margin-left: -1ch;");
-            stylesString.push("}");
+            let cslLeftMargin = new CssEntry(".csl-left-margin");
+            cslLeftMargin.values.push(["text-align", "right"]);
+            cslLeftMargin.values.push(["position", "absolute"]);
+            cslLeftMargin.values.push(["transform-origin", "top right"]);
+            cslLeftMargin.values.push(["transform", "translate(-100%)"]);
+            cslLeftMargin.values.push(["margin-left", "-1cm"]);
+            stylesString.push(cslLeftMargin.toString());
         }
     }
     stylesString.push("</style>");
@@ -117,13 +134,13 @@ function getBibliographyStyles(bibStyles) {
 function getFootnoteStyles() {
     let stylesString = [];
     stylesString.push("<style scoped>");
-    stylesString.push(".footnote-left-margin { ");
-    stylesString.push("text-align: right;");
-    stylesString.push("position: absolute;");
-    stylesString.push("transform-origin: top right;");
-    stylesString.push("transform: translate(-100%);");
-    stylesString.push("margin-left: -1ch;");
-    stylesString.push("}");
+    let footnoteLeftMargin = new CssEntry(".footnote-left-margin");
+    footnoteLeftMargin.values.push(["text-align", "right"]);
+    footnoteLeftMargin.values.push(["position", "absolute"]);
+    footnoteLeftMargin.values.push(["transform-origin", "top right"]);
+    footnoteLeftMargin.values.push(["transform", "translate(-100%)"]);
+    footnoteLeftMargin.values.push(["margin-left", "-1ch"]);
+    stylesString.push(footnoteLeftMargin.toString());
     stylesString.push("</style>");
     return stylesString.join("\n");
 }
