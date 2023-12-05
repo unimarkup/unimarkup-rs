@@ -3,6 +3,7 @@
 use crate::html::citeproc::CiteprocWrapper;
 use logid::log;
 use std::path::PathBuf;
+use serde_json::Value;
 use unimarkup_commons::{
     config::icu_locid::{locale, Locale},
     lexer::span::Span,
@@ -74,16 +75,16 @@ impl<'a> Context<'a> {
                     .clone()
                     .unwrap_or(locale!("en-US"));
                 let citation_locales = doc.config.preamble.cite.citation_locales.clone();
-                let citation_ids = match serde_json::to_value(&doc.citations) {
+                let citation_ids = doc.citations.clone().into_iter().map(|c| match serde_json::to_value::<Vec<String>>(c) {
                     Ok(citation_ids) => citation_ids,
                     Err(e) => {
                         log!(
                             GeneralWarning::JSONSerialization,
                             format!("JSON serialization failed with error: '{:?}'", e)
                         );
-                        serde_json::to_value::<Vec<Vec<String>>>(vec![]).unwrap()
+                        serde_json::to_value::<Vec<String>>(vec![]).unwrap()
                     }
-                };
+                }).collect::<Value>();
                 rendered_citations = match citeproc.get_citation_strings(
                     &doc.config.preamble.cite.references,
                     doc_locale,
