@@ -1,6 +1,22 @@
+use std::collections::HashMap;
+
 use crate::render::OutputFormat;
 
-use spreadsheet_ods::{write_ods_buf_uncompressed, Sheet, WorkBook};
+use spreadsheet_ods::{read_ods_buf, write_ods_buf_uncompressed, Sheet, WorkBook};
+use unimarkup_commons::lexer::{
+    symbol::SymbolKind,
+    token::{iterator::TokenIterator, lex_str, TokenKind},
+};
+use unimarkup_inline::{
+    element::Inline,
+    parser::{parse_inlines, InlineContext},
+};
+use unimarkup_parser::elements::{
+    atomic::{Heading, Paragraph},
+    blocks::Block,
+    enclosed::VerbatimBlock,
+    indents::{BulletList, BulletListEntry},
+};
 
 pub mod render;
 
@@ -87,7 +103,185 @@ impl Umi {
         self
     }
 
-    // fn create_um() {}
+    fn read_inlines(&mut self, content: String) -> Vec<Inline> {
+        let token_vec = lex_str(&content);
+        let iterator = TokenIterator::from(token_vec.as_slice());
+        let inlines = parse_inlines(iterator, InlineContext::default(), None, None);
+        inlines.2.to_inlines()
+    }
+
+    fn fetch_next_line(&mut self, current_line: &mut UmiRow, new_line_index: usize) -> bool {
+        if new_line_index < self.elements.len() {
+            *current_line = self.elements[new_line_index].clone();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn read_row(&mut self, line: usize) -> Block {
+        let mut current_line = self.elements[line].clone();
+        let attributes: HashMap<String, String> =
+            serde_json::from_str(&current_line.attributes).unwrap();
+        match current_line.kind.as_str() {
+            "Heading" => {
+                let heading = Heading {
+                    id: current_line.id.clone(),
+                    level: unimarkup_parser::elements::atomic::HeadingLevel::try_from(
+                        attributes.get("level").unwrap().as_str(),
+                    )
+                    .unwrap(),
+                    content: self.read_inlines(current_line.content.clone()),
+                    attributes: (attributes.get("attributes").cloned()).filter(|s| !s.is_empty()),
+                    start: serde_json::from_str(attributes.get("start").unwrap()).unwrap(),
+                    end: serde_json::from_str(attributes.get("end").unwrap()).unwrap(),
+                };
+                Block::Heading(heading)
+            }
+            "Paragraph" => {
+                let paragraph = Paragraph {
+                    content: self.read_inlines(current_line.content.clone()),
+                };
+                Block::Paragraph(paragraph)
+            }
+            "VerbatimBlock" => {
+                let verbatim = VerbatimBlock {
+                    content: current_line.content.clone(),
+                    data_lang: attributes.get("data_lang").cloned(),
+                    attributes: attributes.get("attributes").cloned(),
+                    implicit_closed: attributes.get("implicit_closed").unwrap().parse().unwrap(),
+                    tick_len: attributes.get("tick_len").unwrap().parse().unwrap(),
+                    start: serde_json::from_str(attributes.get("start").unwrap()).unwrap(),
+                    end: serde_json::from_str(attributes.get("end").unwrap()).unwrap(),
+                };
+                Block::VerbatimBlock(verbatim)
+            }
+            "BulletList" => {
+                let mut bullet_list = BulletList {
+                    entries: vec![],
+                    start: serde_json::from_str(attributes.get("start").unwrap()).unwrap(),
+                    end: serde_json::from_str(attributes.get("end").unwrap()).unwrap(),
+                };
+
+                let bullet_list_depth = current_line.depth;
+                let mut current_line_index = line + 1;
+                self.fetch_next_line(&mut current_line, current_line_index);
+
+                while current_line.depth != bullet_list_depth {
+                    if current_line.depth == bullet_list_depth + 1 {
+                        // Append Element to Bullet List
+                        let block = self.read_row(current_line_index);
+                        let bullet_list_entry = match block {
+                            Block::BulletListEntry(block) => block,
+                            _ => panic!(),
+                        };
+                        bullet_list.entries.append(&mut vec![bullet_list_entry]);
+                    } else {
+                        break;
+                    }
+
+                    current_line_index += 1;
+                    if !self.fetch_next_line(&mut current_line, current_line_index) {
+                        break;
+                    }
+                }
+
+                Block::BulletList(bullet_list)
+            }
+            "BulletListEntry" => {
+                let mut bullet_list_entry = BulletListEntry {
+                    keyword: TokenKind::from(SymbolKind::from(
+                        attributes.get("keyword").unwrap().as_str(),
+                    ))
+                    .try_into()
+                    .unwrap(),
+                    heading: self.read_inlines(attributes.get("heading").unwrap().to_string()),
+                    body: vec![],
+                    start: serde_json::from_str(attributes.get("start").unwrap()).unwrap(),
+                    end: serde_json::from_str(attributes.get("end").unwrap()).unwrap(),
+                };
+
+                let bullet_list_entry_depth = current_line.depth;
+                let mut current_line_index = line + 1;
+                self.fetch_next_line(&mut current_line, current_line_index);
+
+                while current_line.depth != bullet_list_entry_depth {
+                    if current_line.depth == bullet_list_entry_depth + 1 {
+                        // Append Element to Bullet List Entry Body
+                        let block = self.read_row(current_line_index);
+                        bullet_list_entry.body.append(&mut vec![block]);
+                    } else {
+                        break;
+                    }
+
+                    current_line_index += 1;
+
+                    if !self.fetch_next_line(&mut current_line, current_line_index) {
+                        break;
+                    }
+                }
+
+                Block::BulletListEntry(bullet_list_entry)
+            }
+            &_ => panic!(),
+        }
+    }
+
+    pub fn create_um(&mut self) -> Vec<Block> {
+        self.elements.clear();
+        assert!(!self.ods.is_empty());
+
+        let wb: WorkBook = read_ods_buf(&self.ods).unwrap();
+        let sheet = wb.sheet(0);
+        let rows = sheet.used_grid_size().0;
+
+        for row_index in 1..rows {
+            self.elements.push(UmiRow::new(
+                sheet.cell(row_index, 0).unwrap().value.as_u8_opt().unwrap(),
+                sheet
+                    .cell(row_index, 1)
+                    .unwrap()
+                    .value
+                    .as_str_opt()
+                    .unwrap_or_default()
+                    .to_string(),
+                sheet
+                    .cell(row_index, 2)
+                    .unwrap()
+                    .value
+                    .as_str_opt()
+                    .unwrap_or_default()
+                    .to_string(),
+                sheet.cell(row_index, 3).unwrap().value.as_u8_opt().unwrap(),
+                sheet
+                    .cell(row_index, 4)
+                    .unwrap()
+                    .value
+                    .as_str_opt()
+                    .unwrap_or_default()
+                    .to_string(),
+                sheet
+                    .cell(row_index, 5)
+                    .unwrap()
+                    .value
+                    .as_str_opt()
+                    .unwrap_or_default()
+                    .to_string(),
+            ))
+        }
+
+        let mut um: Vec<Block> = vec![];
+
+        let mut index = 0;
+        while index < self.elements.len() {
+            if self.elements[index].depth == 0 {
+                um.push(self.read_row(index));
+            }
+            index += 1;
+        }
+
+        um
+    }
 }
 
 impl std::fmt::Display for Umi {
