@@ -2,6 +2,7 @@
 #![allow(clippy::needless_lifetimes)]
 #![allow(clippy::match_single_binding)]
 #![allow(clippy::clone_on_copy)]
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 

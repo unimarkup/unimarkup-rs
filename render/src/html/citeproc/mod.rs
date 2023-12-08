@@ -40,14 +40,14 @@ impl CiteprocWrapper {
         let style = get_style_string(style_id);
 
         self.module
-            .call::<()>("initProcessor", json_args!(citation_text, locale, style, for_pagedjs))
+            .call::<()>(
+                "initProcessor",
+                json_args!(citation_text, locale, style, for_pagedjs),
+            )
             .map_err(|_| CiteError::ProcessorInitializationError)?;
 
         self.module
-            .call(
-                "getCitationStrings",
-                citation_id_vectors,
-            )
+            .call("getCitationStrings", citation_id_vectors)
             .map_err(|_| CiteError::CitationError)
     }
 

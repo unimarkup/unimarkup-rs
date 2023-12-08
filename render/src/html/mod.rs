@@ -27,6 +27,7 @@ pub struct HtmlElement {
 
 #[derive(Debug, Default)]
 pub struct HtmlAttributes(Vec<HtmlAttribute>);
+
 #[derive(Debug, Default)]
 pub struct HtmlElements(Vec<HtmlElement>);
 

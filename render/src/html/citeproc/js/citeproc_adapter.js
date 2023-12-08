@@ -26,10 +26,10 @@ function getCitations(citationText) {
 
 function getCiteprocSys(localeText) {
     return {
-        retrieveLocale: function(lang) {
+        retrieveLocale: function (lang) {
             return localeText;
         },
-        retrieveItem: function(id){
+        retrieveItem: function (id) {
             return citations[id];
         }
     };
@@ -185,6 +185,7 @@ export function getCitationStrings(citationIds) {
 export function hasFootnotes() {
     return footnoteResults.length > 0;
 }
+
 export function getFootnotesString() {
     let joinedResults = footnoteResults.join("");
     let footnoteString = [];
