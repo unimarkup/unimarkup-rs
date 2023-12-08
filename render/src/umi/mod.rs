@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::render::OutputFormat;
 
 use spreadsheet_ods::{read_ods_buf, write_ods_buf_uncompressed, Sheet, WorkBook};
+use unimarkup_commons::config::Config;
 use unimarkup_commons::lexer::{
     symbol::SymbolKind,
     token::{iterator::TokenIterator, lex_str, TokenKind},
@@ -11,11 +12,14 @@ use unimarkup_inline::{
     element::Inline,
     parser::{parse_inlines, InlineContext},
 };
-use unimarkup_parser::elements::{
-    atomic::{Heading, Paragraph},
-    blocks::Block,
-    enclosed::VerbatimBlock,
-    indents::{BulletList, BulletListEntry},
+use unimarkup_parser::{
+    document::Document,
+    elements::{
+        atomic::{Heading, Paragraph},
+        blocks::Block,
+        enclosed::VerbatimBlock,
+        indents::{BulletList, BulletListEntry},
+    },
 };
 
 pub mod render;
@@ -54,14 +58,16 @@ impl UmiRow {
 pub struct Umi {
     pub elements: Vec<UmiRow>,
     pub lang: String,
+    pub config: Config,
     pub ods: Vec<u8>,
 }
 
 impl Umi {
-    fn with_um(elements: Vec<UmiRow>, lang: String) -> Self {
+    fn with_um(elements: Vec<UmiRow>, config: Config, lang: String) -> Self {
         Umi {
             elements,
             lang,
+            config,
             ods: vec![],
         }
     }
@@ -75,8 +81,17 @@ impl Umi {
         sheet.set_value(0, 1, "id");
         sheet.set_value(0, 2, "kind");
         sheet.set_value(0, 3, "depth");
-        sheet.set_value(0, 4, "content-en-US");
-        sheet.set_value(0, 5, "attributes-en-US");
+        sheet.set_value(
+            0,
+            4,
+            String::from("content-") + self.lang.to_string().as_str(),
+        );
+        sheet.set_value(
+            0,
+            5,
+            String::from("attributes-") + self.lang.to_string().as_str(),
+        );
+        sheet.set_value(0, 6, serde_yaml::to_string(&self.config).unwrap());
 
         for element in &self.elements {
             let row = element.position + 1;
@@ -224,7 +239,7 @@ impl Umi {
         }
     }
 
-    pub fn create_um(&mut self) -> Vec<Block> {
+    pub fn create_um(&mut self) -> Document {
         self.elements.clear();
         debug_assert!(!self.ods.is_empty());
 
@@ -276,8 +291,23 @@ impl Umi {
             }
             index += 1;
         }
-
-        um
+        Document {
+            blocks: um,
+            config: serde_yaml::from_str(
+                sheet
+                    .cell(0, 6)
+                    .unwrap()
+                    .value
+                    .as_cow_str_or("")
+                    .to_string()
+                    .as_str(),
+            )
+            .unwrap(),
+            macros: vec![],
+            variables: vec![],
+            metadata: vec![],
+            resources: vec![],
+        }
     }
 }
 
@@ -292,6 +322,7 @@ impl OutputFormat for Umi {
         Umi {
             elements: Vec::new(),
             lang: context.get_lang().to_string(),
+            config: context.get_config().clone(),
             ods: vec![],
         }
     }

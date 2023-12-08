@@ -48,7 +48,7 @@ pub struct I18n {
     #[serde(with = "locale::serde::single")]
     pub lang: Locale,
 
-    #[arg(long, value_parser = parse_to_hashset::<Locale>, required = false, default_value = "")]
+    #[arg(long, value_parser = parse_to_hashset::<Locale>, required = false, default_value = "en")]
     #[serde(with = "locale::serde::multiple")]
     pub output_langs: HashSet<Locale>,
 }

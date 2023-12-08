@@ -58,6 +58,7 @@ impl Renderer<Umi> for UmiRenderer {
 
         self.proceed(Umi::with_um(
             vec![paragraph],
+            context.get_config().clone(),
             context.get_lang().to_string(),
         ))
     }
@@ -101,7 +102,11 @@ impl Renderer<Umi> for UmiRenderer {
         );
         self.pos += 1;
 
-        self.proceed(Umi::with_um(vec![verbatim], context.get_lang().to_string()))
+        self.proceed(Umi::with_um(
+            vec![verbatim],
+            context.get_config().clone(),
+            context.get_lang().to_string(),
+        ))
     }
 
     fn render_heading(
@@ -137,7 +142,11 @@ impl Renderer<Umi> for UmiRenderer {
         );
         self.pos += 1;
 
-        self.proceed(Umi::with_um(vec![heading], context.get_lang().to_string()))
+        self.proceed(Umi::with_um(
+            vec![heading],
+            context.get_config().clone(),
+            context.get_lang().to_string(),
+        ))
     }
 
     fn render_bullet_list(
@@ -166,8 +175,11 @@ impl Renderer<Umi> for UmiRenderer {
         );
         self.pos += 1;
 
-        let mut bullet_list_content =
-            Umi::with_um(vec![bullet_list_heading], context.get_lang().to_string());
+        let mut bullet_list_content = Umi::with_um(
+            vec![bullet_list_heading],
+            context.get_config().clone(),
+            context.get_lang().to_string(),
+        );
 
         self.step_in();
         for entry in &bullet_list.entries {
@@ -219,6 +231,7 @@ impl Renderer<Umi> for UmiRenderer {
                     .clone(),
                 serde_json::to_string(&hashmap).unwrap(),
             )],
+            context.get_config().clone(),
             context.get_lang().to_string(),
         );
         self.pos += 1;
@@ -253,6 +266,7 @@ impl Renderer<Umi> for UmiRenderer {
                 res,
                 String::new(),
             )],
+            context.get_config().clone(),
             context.get_lang().to_string(),
         ))
     }

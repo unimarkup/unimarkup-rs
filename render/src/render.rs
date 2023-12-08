@@ -1,5 +1,6 @@
 //! Contains the [`Render`] trait definition.
 
+use unimarkup_commons::config::Config;
 use unimarkup_commons::{config::icu_locid::Locale, lexer::span::Span};
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
@@ -30,6 +31,10 @@ impl<'a> Context<'a> {
     /// Returns the locale for the natural language that is the main language for this rendering.
     pub fn get_lang(&self) -> &Locale {
         &self.doc.config.preamble.i18n.lang
+    }
+
+    pub fn get_config(&self) -> &Config {
+        &self.doc.config
     }
 }
 
