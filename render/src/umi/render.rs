@@ -101,10 +101,7 @@ impl Renderer<Umi> for UmiRenderer {
         );
         self.pos += 1;
 
-        self.proceed(Umi::with_um(
-            vec![verbatim],
-            context.get_lang().to_string(),
-        ))
+        self.proceed(Umi::with_um(vec![verbatim], context.get_lang().to_string()))
     }
 
     fn render_heading(
@@ -140,10 +137,7 @@ impl Renderer<Umi> for UmiRenderer {
         );
         self.pos += 1;
 
-        self.proceed(Umi::with_um(
-            vec![heading],
-            context.get_lang().to_string(),
-        ))
+        self.proceed(Umi::with_um(vec![heading], context.get_lang().to_string()))
     }
 
     fn render_bullet_list(

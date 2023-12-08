@@ -107,7 +107,7 @@ impl Umi {
     fn fetch_next_line(&mut self, new_line_index: usize) -> Option<UmiRow> {
         if new_line_index < self.elements.len() {
             Some(self.elements[new_line_index].clone())
-        }else{
+        } else {
             None
         }
     }
@@ -175,7 +175,7 @@ impl Umi {
 
                     current_line_index += 1;
                     let fetched = self.fetch_next_line(current_line_index);
-                    if fetched.is_none(){
+                    if fetched.is_none() {
                         break;
                     }
                     current_line = fetched.unwrap();
@@ -210,9 +210,9 @@ impl Umi {
                     }
 
                     current_line_index += 1;
-                    
+
                     let fetched = self.fetch_next_line(current_line_index);
-                    if fetched.is_none(){
+                    if fetched.is_none() {
                         break;
                     }
                     current_line = fetched.unwrap();
