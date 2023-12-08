@@ -66,17 +66,11 @@ impl Umi {
         }
     }
 
-    // fn with_wb() -> Self{}
-    // Merge two Umi Structs
-    fn merge(&mut self, other_umi: &mut Umi) {
-        self.elements.append(&mut other_umi.elements);
-    }
-
     pub fn create_workbook(&mut self) -> &mut Self {
         let mut wb = WorkBook::new_empty();
 
         let mut sheet = Sheet::new("umi");
-        // Set the Header Row, could be left out if it is not meant for viewing
+        // Set the Header Row
         sheet.set_value(0, 0, "position");
         sheet.set_value(0, 1, "id");
         sheet.set_value(0, 2, "kind");
@@ -110,12 +104,11 @@ impl Umi {
         inlines.2.to_inlines()
     }
 
-    fn fetch_next_line(&mut self, current_line: &mut UmiRow, new_line_index: usize) -> bool {
+    fn fetch_next_line(&mut self, new_line_index: usize) -> Option<UmiRow> {
         if new_line_index < self.elements.len() {
-            *current_line = self.elements[new_line_index].clone();
-            true
-        } else {
-            false
+            Some(self.elements[new_line_index].clone())
+        }else{
+            None
         }
     }
 
@@ -165,9 +158,9 @@ impl Umi {
 
                 let bullet_list_depth = current_line.depth;
                 let mut current_line_index = line + 1;
-                self.fetch_next_line(&mut current_line, current_line_index);
+                current_line = self.fetch_next_line(current_line_index).unwrap();
 
-                while current_line.depth != bullet_list_depth {
+                while current_line.depth > bullet_list_depth {
                     if current_line.depth == bullet_list_depth + 1 {
                         // Append Element to Bullet List
                         let block = self.read_row(current_line_index);
@@ -181,9 +174,11 @@ impl Umi {
                     }
 
                     current_line_index += 1;
-                    if !self.fetch_next_line(&mut current_line, current_line_index) {
+                    let fetched = self.fetch_next_line(current_line_index);
+                    if fetched.is_none(){
                         break;
                     }
+                    current_line = fetched.unwrap();
                 }
 
                 Block::BulletList(bullet_list)
@@ -203,9 +198,9 @@ impl Umi {
 
                 let bullet_list_entry_depth = current_line.depth;
                 let mut current_line_index = line + 1;
-                self.fetch_next_line(&mut current_line, current_line_index);
+                current_line = self.fetch_next_line(current_line_index).unwrap();
 
-                while current_line.depth != bullet_list_entry_depth {
+                while current_line.depth > bullet_list_entry_depth {
                     if current_line.depth == bullet_list_entry_depth + 1 {
                         // Append Element to Bullet List Entry Body
                         let block = self.read_row(current_line_index);
@@ -215,10 +210,12 @@ impl Umi {
                     }
 
                     current_line_index += 1;
-
-                    if !self.fetch_next_line(&mut current_line, current_line_index) {
+                    
+                    let fetched = self.fetch_next_line(current_line_index);
+                    if fetched.is_none(){
                         break;
                     }
+                    current_line = fetched.unwrap();
                 }
 
                 Block::BulletListEntry(bullet_list_entry)
@@ -229,7 +226,7 @@ impl Umi {
 
     pub fn create_um(&mut self) -> Vec<Block> {
         self.elements.clear();
-        assert!(!self.ods.is_empty());
+        debug_assert!(!self.ods.is_empty());
 
         let wb: WorkBook = read_ods_buf(&self.ods).unwrap();
         let sheet = wb.sheet(0);
@@ -299,8 +296,8 @@ impl OutputFormat for Umi {
         }
     }
 
+    // Merge two umi elements
     fn append(&mut self, mut other: Self) -> Result<(), crate::log_id::RenderError> {
-        // Append two Umi Elements
         self.elements.append(&mut other.elements);
         Ok(())
     }

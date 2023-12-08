@@ -14,7 +14,7 @@ pub struct Output {
     /// If this option is not set, the input is rendered to all supported formats.
     ///
     /// **Supported formats:** `html`
-    #[arg(long, alias = "output-formats", value_parser = parse_to_hashset::<OutputFormatKind>, required = false, default_value = "umi")]
+    #[arg(long, alias = "output-formats", value_parser = parse_to_hashset::<OutputFormatKind>, required = false, default_value = "html")]
     pub formats: HashSet<OutputFormatKind>,
     /// `true` overwrites existing output files
     #[arg(long, alias = "overwrite-out-files")]

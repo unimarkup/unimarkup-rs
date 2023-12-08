@@ -14,19 +14,22 @@ pub struct UmiRenderer {
 }
 
 impl UmiRenderer {
+    // Step into a nested element (Should be called by parent)
     fn step_in(&mut self) {
         self.depth += 1;
     }
 
+    // Step out of a nested element (Should be called by parent)
     fn step_out(&mut self) {
         self.depth -= 1;
     }
 
-    fn proceed(&mut self, new_umi: &mut Umi) -> Result<Umi, crate::log_id::RenderError> {
+    // Should always be called after element has been fully rendered to Umi
+    fn proceed(&mut self, new_umi: Umi) -> Result<Umi, crate::log_id::RenderError> {
         if self.depth != 0 {
             Ok(new_umi.clone())
         } else {
-            self.umi.merge(new_umi);
+            let _ = self.umi.append(new_umi);
             Ok(self.umi.clone())
         }
     }
@@ -53,7 +56,7 @@ impl Renderer<Umi> for UmiRenderer {
         );
         self.pos += 1;
 
-        self.proceed(&mut Umi::with_um(
+        self.proceed(Umi::with_um(
             vec![paragraph],
             context.get_lang().to_string(),
         ))
@@ -98,7 +101,7 @@ impl Renderer<Umi> for UmiRenderer {
         );
         self.pos += 1;
 
-        self.proceed(&mut Umi::with_um(
+        self.proceed(Umi::with_um(
             vec![verbatim],
             context.get_lang().to_string(),
         ))
@@ -137,7 +140,7 @@ impl Renderer<Umi> for UmiRenderer {
         );
         self.pos += 1;
 
-        self.proceed(&mut Umi::with_um(
+        self.proceed(Umi::with_um(
             vec![heading],
             context.get_lang().to_string(),
         ))
@@ -178,7 +181,7 @@ impl Renderer<Umi> for UmiRenderer {
         }
         self.step_out();
 
-        self.proceed(&mut bullet_list_content)
+        self.proceed(bullet_list_content)
     }
 
     fn render_bullet_list_entry(
@@ -229,12 +232,12 @@ impl Renderer<Umi> for UmiRenderer {
         // Render All Bullet List Body Elements
         self.step_in();
         if !bullet_list_entry.body.is_empty() {
-            let next_entry = &mut self.render_blocks(&bullet_list_entry.body, context)?;
-            entry.merge(next_entry);
+            let next_entry = self.render_blocks(&bullet_list_entry.body, context)?;
+            let _ = entry.append(next_entry);
         }
         self.step_out();
 
-        self.proceed(&mut entry)
+        self.proceed(entry)
     }
 
     fn render_inlines(
