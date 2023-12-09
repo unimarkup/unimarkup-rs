@@ -1,14 +1,15 @@
-use std::collections::HashMap;
 use std::{collections::HashSet, path::PathBuf};
+use std::error::Error;
+use std::str::FromStr;
 
 use clap::{Args, Parser};
-use logid::err;
+use logid::{err, log};
 use serde::{Deserialize, Serialize};
 
 use self::{log_id::ConfigErr, output::Output, preamble::Preamble};
 
 pub use icu_locid;
-use icu_locid::Locale;
+use icu_locid::{Locale, locale};
 
 pub mod locale;
 pub mod log_id;
@@ -117,23 +118,28 @@ where
     Ok(HashSet::from_iter(entries?))
 }
 
-pub fn parse_to_locale_pathbuf_hashset(s: &str) -> Result<HashMap<Locale, PathBuf>, clap::Error> {
+fn parse_locale_path_buf(s: &str) -> Result<(Locale, PathBuf), Box<dyn Error + Send + Sync + 'static>>
+{
     if s.is_empty() {
-        return Ok(HashMap::new());
+        return Ok((locale!("en"), PathBuf::from_str("invalid path").unwrap()));
     }
-
-    let mut result: HashMap<Locale, PathBuf> = HashMap::new();
-    let entries = s.split('\n');
-    for entry in entries {
-        let split_entry: Vec<String> = entry.split(':').map(|e| e.to_string()).collect();
-        let locale: Locale = split_entry[0]
-            .trim()
-            .parse()
-            .expect("Parsing the locale failed");
-        let path: PathBuf = PathBuf::from(split_entry[1].trim());
-        result.insert(locale, path);
-    }
-    Ok(result)
+    let pos = s
+        .find('=')
+        .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
+    let mut locale = locale!("en");
+    match s[..pos].parse::<Locale>() {
+        Ok(l) => locale = l,
+        Err(e) => {
+            log!(
+                ConfigErr::InvalidFile,
+                format!("Parsing the locale failed with error: '{:?}'", e)
+            );
+        }
+    };
+    let path_buf: PathBuf = s[pos + 1..]
+        .parse()
+        .unwrap();
+    Ok((locale, path_buf))
 }
 
 // Define extension trait

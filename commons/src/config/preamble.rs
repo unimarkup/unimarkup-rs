@@ -9,7 +9,7 @@ use logid::err;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    locale, log_id::ConfigErr, parse_to_hashset, parse_to_locale_pathbuf_hashset, ConfigFns,
+    locale, log_id::ConfigErr, parse_to_hashset, parse_locale_path_buf, ConfigFns,
     ReplaceIfNone,
 };
 
@@ -111,15 +111,25 @@ pub struct Citedata {
     #[serde(default)]
     pub references: HashSet<PathBuf>,
     /// Optional files containing locale information to render citations.
-    #[arg(long, value_parser = parse_to_locale_pathbuf_hashset, required = false, default_value = "")]
+    #[clap(skip)]
     #[serde(with = "locale::serde::hashmap", default)]
     pub citation_locales: HashMap<Locale, PathBuf>,
+
+    #[arg(long = "csl-locale", value_parser = parse_locale_path_buf, required = false, default_value = "")]
+    #[serde(skip)]
+    pub csl_locales: Vec<(Locale, PathBuf)>,
 }
 
 impl ConfigFns for Citedata {
     fn merge(&mut self, other: Self) {
         self.style.replace_none(other.style);
         self.references.extend(other.references);
+        for locale_path_buf in self.csl_locales.clone() {
+            self.citation_locales.insert(locale_path_buf.0, locale_path_buf.1);
+        }
+        for locale_path_buf in other.csl_locales.clone() {
+            self.citation_locales.insert(locale_path_buf.0, locale_path_buf.1);
+        }
         self.citation_locales.extend(other.citation_locales);
     }
 
