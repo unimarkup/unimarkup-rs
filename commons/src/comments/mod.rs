@@ -54,10 +54,12 @@ impl Comment {
     }
 
     pub fn parse(iter: &mut TokenIterator) -> Option<Self> {
+        let peek_index = iter.peek_index();
         let next_token_opt = iter.peeking_next(|_| true);
         let open_token = match next_token_opt {
             Some(token) if token.kind == COMMENT_TOKEN_KIND => token,
             Some(_) | None => {
+                iter.set_peek_index(peek_index);
                 return None;
             }
         };
@@ -79,6 +81,7 @@ impl Comment {
             end = t.end;
         }
 
+        // Newlines are not part of the comment
         let implicit_closed = if iter.peek_kind() == Some(COMMENT_TOKEN_KIND) {
             let close_token = iter.peeking_next(|_| true).expect("Peeked kind before.");
             end = close_token.end;

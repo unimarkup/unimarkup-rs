@@ -15,6 +15,23 @@ pub struct AttributeTokens {
     pub(crate) end: Position,
 }
 
+impl Element for AttributeTokens {
+    fn as_unimarkup(&self) -> String {
+        self.tokens.iter().fold(String::new(), |mut s, t| {
+            s.push_str(&t.as_unimarkup());
+            s
+        })
+    }
+
+    fn start(&self) -> crate::lexer::position::Position {
+        self.start
+    }
+
+    fn end(&self) -> crate::lexer::position::Position {
+        self.end
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct AttributeToken {
     pub(crate) kind: AttributeTokenKind,
@@ -50,7 +67,7 @@ pub enum AttributeTokenKind {
     Ident(Ident),
     /// Value part of a non-nested attribute.
     /// May only be part of the complete value, because the value might be split by newlines or comments.
-    ValuePart(TokenPart),
+    ValuePart(ValuePart),
     /// Selector part for a nested attribute.
     /// May only be part of the selector, because it can span multiple lines in case of a selector.
     ///
@@ -74,17 +91,12 @@ pub enum AttributeTokenKind {
     ///
     /// **Note:** CSS comment syntax is **not** supported.
     Comment(Comment),
-    /// The `!important` marker.
-    /// See: https://www.w3.org/TR/css-syntax-3/#!important-diagram
-    Important,
-    /// A single comma used as value separator.
-    Comma,
     /// A single semicolon used as declaration separator.
     Semicolon,
-    /// A quoted value (e.g. `"value"` or `'value'`).
-    QuotedValue(QuotedValue),
-    /// A single non-escaped whitespace used as value separator.
-    /// This will be turned into a single space when rendering back to Unimarkup.
+    /// A single comma used as value separator.
+    Comma,
+    /// A quoted part (e.g. `"value"` or `'value'`).
+    QuotedPart(QuotedPart),
     Whitespace,
     Newline,
 }
@@ -93,7 +105,7 @@ impl AttributeTokenKind {
     pub fn as_unimarkup(&self) -> String {
         match self {
             AttributeTokenKind::Ident(ident) => ident.0.clone() + ": ",
-            AttributeTokenKind::ValuePart(value_part) => value_part.0.clone(),
+            AttributeTokenKind::ValuePart(value_part) => value_part.as_unimarkup(),
             AttributeTokenKind::SelectorPart(nested_ident_part) => nested_ident_part.0.clone(),
             AttributeTokenKind::AtRuleIdent(at_rule_ident) => {
                 format!("@{}", at_rule_ident.as_str())
@@ -114,10 +126,9 @@ impl AttributeTokenKind {
             }
             AttributeTokenKind::Logic(logic) => logic.as_unimarkup(),
             AttributeTokenKind::Comment(comment) => comment.as_unimarkup(),
-            AttributeTokenKind::Important => "!important".to_string(),
-            AttributeTokenKind::Comma => SymbolKind::Comma.as_str().to_string(),
             AttributeTokenKind::Semicolon => SymbolKind::Semicolon.as_str().to_string(),
-            AttributeTokenKind::QuotedValue(value) => {
+            AttributeTokenKind::Comma => SymbolKind::Comma.as_str().to_string(),
+            AttributeTokenKind::QuotedPart(value) => {
                 let quote = value.quote;
                 format!("{quote}{}{quote}", value.as_unimarkup())
             }
@@ -128,21 +139,19 @@ impl AttributeTokenKind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct QuotedValue {
+pub struct QuotedPart {
     pub(crate) parts: Vec<QuotedValuePart>,
     pub(crate) quote: char,
-    pub(crate) start: Position,
-    pub(crate) end: Position,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct QuotedValuePart {
-    pub(crate) kind: QuotedValuePartKind,
+    pub(crate) kind: QuotedPartKind,
     pub(crate) start: Position,
     pub(crate) end: Position,
 }
 
-impl Element for QuotedValue {
+impl Element for QuotedPart {
     fn as_unimarkup(&self) -> String {
         self.parts.iter().fold(String::new(), |mut s, q| {
             s.push_str(&q.kind.as_unimarkup());
@@ -151,16 +160,16 @@ impl Element for QuotedValue {
     }
 
     fn start(&self) -> Position {
-        self.start
+        self.parts.first().map(|p| p.start).unwrap_or_default()
     }
 
     fn end(&self) -> Position {
-        self.end
+        self.parts.last().map(|p| p.end).unwrap_or_default()
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum QuotedValuePartKind {
+pub enum QuotedPartKind {
     /// Contains plain content.
     /// Including escaped graphemes and whitespaces.
     /// Escaped graphemes are added to the content **without** the leading backslash.
@@ -176,16 +185,16 @@ pub enum QuotedValuePartKind {
     Newline,
 }
 
-impl QuotedValuePartKind {
+impl QuotedPartKind {
     pub fn as_unimarkup(&self) -> String {
         match self {
-            QuotedValuePartKind::Plain(plain) => plain.clone(),
-            QuotedValuePartKind::ImplicitSubstitution(implicit_subst) => {
+            QuotedPartKind::Plain(plain) => plain.clone(),
+            QuotedPartKind::ImplicitSubstitution(implicit_subst) => {
                 implicit_subst.orig().to_string()
             }
-            QuotedValuePartKind::NamedSubstitution(named_subst) => named_subst.0.clone(),
-            QuotedValuePartKind::Logic(logic) => logic.as_unimarkup(),
-            QuotedValuePartKind::EscapedNewline | QuotedValuePartKind::Newline => {
+            QuotedPartKind::NamedSubstitution(named_subst) => named_subst.0.clone(),
+            QuotedPartKind::Logic(logic) => logic.as_unimarkup(),
+            QuotedPartKind::EscapedNewline | QuotedPartKind::Newline => {
                 SymbolKind::Newline.as_str().to_string()
             }
         }
@@ -202,6 +211,12 @@ impl std::ops::Deref for Ident {
     }
 }
 
+impl From<String> for Ident {
+    fn from(value: String) -> Self {
+        Ident(value)
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct TokenPart(String);
 
@@ -210,5 +225,30 @@ impl std::ops::Deref for TokenPart {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl From<String> for TokenPart {
+    fn from(value: String) -> Self {
+        TokenPart(value)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ValuePart {
+    Plain(String),
+    Num(usize),
+    /// The `!important` marker.
+    /// See: https://www.w3.org/TR/css-syntax-3/#!important-diagram
+    Important,
+}
+
+impl ValuePart {
+    pub fn as_unimarkup(&self) -> String {
+        match self {
+            ValuePart::Plain(plain) => plain.clone(),
+            ValuePart::Num(num) => num.to_string(),
+            ValuePart::Important => "!important".to_string(),
+        }
     }
 }
