@@ -291,18 +291,21 @@ impl Umi {
             }
             index += 1;
         }
+        let mut config = self.config.clone();
+        config.preamble = serde_yaml::from_str(
+            sheet
+                .cell(0, 6)
+                .unwrap()
+                .value
+                .as_cow_str_or("")
+                .to_string()
+                .as_str(),
+        )
+        .unwrap();
+
         Document {
             blocks: um,
-            config: serde_yaml::from_str(
-                sheet
-                    .cell(0, 6)
-                    .unwrap()
-                    .value
-                    .as_cow_str_or("")
-                    .to_string()
-                    .as_str(),
-            )
-            .unwrap(),
+            config,
             macros: vec![],
             variables: vec![],
             metadata: vec![],
