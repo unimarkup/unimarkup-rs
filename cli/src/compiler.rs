@@ -47,7 +47,7 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
     for format in um.get_formats() {
         match format {
             OutputFormatKind::Html => write_file(
-                &um.render_html()
+                &um.render_html(false)
                     .map_err(|_| GeneralError::Render)?
                     .to_string(),
                 &out_path,

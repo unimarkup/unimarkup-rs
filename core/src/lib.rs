@@ -43,8 +43,8 @@ impl Unimarkup {
         unimarkup_render::render::render(&self.doc, renderer)
     }
 
-    pub fn render_html(&self) -> Result<Html, RenderError> {
-        self.render(HtmlRenderer::default())
+    pub fn render_html(&self, use_paged_js: bool) -> Result<Html, RenderError> {
+        self.render(HtmlRenderer::new(use_paged_js))
     }
 
     pub fn render_umi(&self) -> Result<Umi, RenderError> {
@@ -52,6 +52,6 @@ impl Unimarkup {
     }
 
     pub fn render_pdf(&self) -> Result<Vec<u8>, RenderError> {
-        render_pdf(&self.render_html()?.to_string())
+        render_pdf(&self.render_html(true)?.to_string())
     }
 }

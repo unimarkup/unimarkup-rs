@@ -1,3 +1,4 @@
+use crate::log_id::RenderError;
 use unimarkup_commons::lexer::{span::Span, symbol::SymbolKind, token::TokenKind};
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
@@ -8,18 +9,46 @@ use unimarkup_inline::element::{
     textbox::{hyperlink::Hyperlink, TextBox},
     InlineElement,
 };
+use unimarkup_inline::types::*;
+use unimarkup_parser::elements::blocks::Block;
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
 
 use crate::render::{Context, OutputFormat, Renderer};
 
 use super::{
-    highlight, tag::HtmlTag, Html, HtmlAttribute, HtmlAttributes, HtmlBody, HtmlElement, HtmlHead,
+    highlight, tag::HtmlTag, Html, HtmlAttribute, HtmlAttributes, HtmlBody, HtmlElement,
+    HtmlElements, HtmlHead,
 };
 
+static POLY_FILL: &str = include_str!("paged.polyfill.js");
+
 #[derive(Debug, Default)]
-pub struct HtmlRenderer {}
+pub struct HtmlRenderer {
+    use_paged_js: bool,
+}
+
+impl HtmlRenderer {
+    pub fn new(use_paged_js: bool) -> Self {
+        HtmlRenderer { use_paged_js }
+    }
+}
 
 impl Renderer<Html> for HtmlRenderer {
+    fn get_target(&mut self) -> Result<Html, RenderError> {
+        let mut html = Html::default();
+        if self.use_paged_js {
+            html = Html::with_head(HtmlHead {
+                elements: HtmlElements::from(Vec::from([HtmlElement {
+                    tag: HtmlTag::Script,
+                    content: Some(POLY_FILL.to_string()),
+                    ..HtmlElement::default()
+                }])),
+                ..HtmlHead::default()
+            });
+        }
+        Ok(html)
+    }
+
     fn render_paragraph(
         &mut self,
         paragraph: &unimarkup_parser::elements::atomic::Paragraph,
