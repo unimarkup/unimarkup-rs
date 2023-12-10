@@ -9,8 +9,6 @@ use unimarkup_inline::element::{
     textbox::{hyperlink::Hyperlink, TextBox},
     Inline, InlineElement,
 };
-use unimarkup_inline::types::*;
-use unimarkup_parser::elements::blocks::Block;
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
 
 use crate::render::{Context, OutputFormat, Renderer};
