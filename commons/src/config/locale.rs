@@ -32,21 +32,20 @@ pub mod serde {
     pub mod multiple {
         use super::*;
         use std::collections::HashSet;
+        use logid::log;
+        use serde::de::{SeqAccess, Visitor};
+        use serde::ser::SerializeSeq;
+        use crate::config::log_id::ConfigWarning;
 
         pub fn serialize<S>(locales: &HashSet<Locale>, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
-            let mut res = String::new();
-
-            for locale in locales.iter() {
-                res.push_str(&locale.to_string());
-                res.push(',');
+            let mut seq = serializer.serialize_seq(Some(locales.len()))?;
+            for locale in locales {
+                seq.serialize_element(&locale.to_string())?;
             }
-
-            res.pop();
-
-            serializer.serialize_str(&res)
+            seq.end()
         }
 
         // The signature of a deserialize_with function must follow the pattern:
@@ -60,11 +59,38 @@ pub mod serde {
         where
             D: Deserializer<'de>,
         {
-            let s = String::deserialize(deserializer)?;
+            deserializer.deserialize_seq(LocaleSeqVisitor {})
+        }
 
-            s.split(',')
-                .map(|lang| lang.parse().map_err(serde::de::Error::custom))
-                .collect()
+        struct LocaleSeqVisitor {}
+
+        impl<'de> Visitor<'de> for LocaleSeqVisitor {
+            type Value = HashSet<Locale>;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("Sequence of locales.")
+            }
+            fn visit_seq<M>(self, mut access: M) -> Result<Self::Value, M::Error>
+                where
+                    M: SeqAccess<'de>,
+            {
+                let mut set = HashSet::with_capacity(access.size_hint().unwrap_or(0));
+                while let Some(value) = access.next_element::<String>()? {
+                    match value.parse::<Locale>() {
+                        Ok(locale) => {
+                            set.insert(locale);
+                        }
+                        Err(e) => {
+                            log!(
+                                ConfigWarning::InvalidOutputLang,
+                                format!("Could not parse the output language to locale with error: '{}'", e)
+                            );
+                        }
+                    }
+                    let locale = value.parse::<Locale>().map_err(serde::de::Error::custom)?;
+                    set.insert(locale);
+                }
+                Ok(set)
+            }
         }
     }
 
