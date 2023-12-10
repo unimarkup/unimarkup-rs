@@ -6,3 +6,4 @@
 pub mod html;
 pub mod log_id;
 pub mod render;
+pub mod umi;

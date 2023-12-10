@@ -42,14 +42,18 @@ impl ConfigFns for Preamble {
     }
 }
 
+pub fn default_locale() -> Locale {
+    icu_locid::locale!("en")
+}
+
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct I18n {
     #[arg(long, value_parser = locale::clap::parse_locale, default_value = "en")]
-    #[serde(with = "locale::serde::single")]
+    #[serde(with = "locale::serde::single", default = "self::default_locale")]
     pub lang: Locale,
 
     #[arg(long, value_parser = parse_to_hashset::<Locale>, required = false, default_value = "")]
-    #[serde(with = "locale::serde::multiple")]
+    #[serde(with = "locale::serde::multiple", default)]
     pub output_langs: HashSet<Locale>,
 }
 
@@ -68,12 +72,16 @@ impl ConfigFns for I18n {
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderConfig {
     #[arg(long = "ignore-file", value_parser = parse_ignore_file, required = false, default_value = "")]
+    #[serde(default)]
     pub ignore: HashSet<String>,
     #[arg(long, value_parser = parse_parameter, required = false, default_value = "")]
+    #[serde(default)]
     pub parameter: HashMap<String, String>,
     #[arg(long)]
+    #[serde(default)]
     pub keep_comments: bool,
     #[arg(long)]
+    #[serde(default)]
     pub allow_unsafe: bool,
 }
 
@@ -97,6 +105,7 @@ pub struct Citedata {
     #[arg(long = "citation-style")]
     pub style: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    #[serde(default)]
     pub references: HashSet<PathBuf>,
 }
 
@@ -134,12 +143,14 @@ pub struct Metadata {
     #[arg(long)]
     pub title: Option<String>,
     #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
+    #[serde(default)]
     pub authors: HashSet<String>,
     #[arg(long)]
     pub description: Option<String>,
     #[arg(long)]
     pub base: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    #[serde(default)]
     pub fonts: HashSet<PathBuf>,
 }
 
@@ -177,8 +188,10 @@ pub fn parse_parameter(_s: &str) -> Result<HashMap<String, String>, clap::Error>
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HtmlSpecificParameter {
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    #[serde(default)]
     pub favicons: HashSet<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
+    #[serde(default)]
     pub keywords: HashSet<String>,
 }
 
