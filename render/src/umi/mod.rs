@@ -91,11 +91,15 @@ impl Umi {
             5,
             String::from("attributes-") + self.lang.to_string().as_str(),
         );
-        sheet.set_value(0, 6, serde_yaml::to_string(&self.config).unwrap());
+
+        // Row 1: Config
+        sheet.set_value(1, 0, 0);
+        sheet.set_value(1, 2, "config");
+        sheet.set_value(1, 4, serde_yaml::to_string(&self.config).unwrap());
 
         for element in &self.elements {
-            let row = element.position + 1;
-            sheet.set_value(row.into(), 0, element.position);
+            let row = element.position + 2;
+            sheet.set_value(row.into(), 0, element.position + 1);
             sheet.set_value(row.into(), 1, element.id.clone());
             sheet.set_value(row.into(), 2, element.kind.clone());
             sheet.set_value(row.into(), 3, element.depth);
@@ -247,7 +251,7 @@ impl Umi {
         let sheet = wb.sheet(0);
         let rows = sheet.used_grid_size().0;
 
-        for row_index in 1..rows {
+        for row_index in 2..rows {
             self.elements.push(UmiRow::new(
                 sheet.cell(row_index, 0).unwrap().value.as_u8_opt().unwrap(),
                 sheet
@@ -294,7 +298,7 @@ impl Umi {
         let mut config = self.config.clone();
         config.preamble = serde_yaml::from_str(
             sheet
-                .cell(0, 6)
+                .cell(1, 4)
                 .unwrap()
                 .value
                 .as_cow_str_or("")
