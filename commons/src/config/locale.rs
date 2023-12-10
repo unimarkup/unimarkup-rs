@@ -104,6 +104,7 @@ pub mod serde {
         use super::*;
         use std::collections::HashMap;
         use std::path::PathBuf;
+        use serde::ser::SerializeMap;
 
         pub fn serialize<S>(
             locales_map: &HashMap<Locale, PathBuf>,
@@ -112,24 +113,11 @@ pub mod serde {
         where
             S: Serializer,
         {
-            let mut res = String::new();
-
-            for entry in locales_map.iter() {
-                res.push_str("  ");
-                res.push_str(&entry.0.to_string());
-                res.push_str(": ");
-                res.push_str(
-                    entry
-                        .1
-                        .to_str()
-                        .expect("couldn't convert PathBuf to String"),
-                );
-                res.push('\n');
+            let mut map = serializer.serialize_map(Some(locales_map.len()))?;
+            for (locale, path) in locales_map {
+                map.serialize_entry(&locale.to_string(),path)?;
             }
-
-            res.pop();
-
-            serializer.serialize_str(&res)
+            map.end()
         }
 
         // The signature of a deserialize_with function must follow the pattern:
