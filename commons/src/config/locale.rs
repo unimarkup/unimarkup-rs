@@ -104,6 +104,7 @@ pub mod serde {
         use super::*;
         use std::collections::HashMap;
         use std::path::PathBuf;
+        use serde::de::{MapAccess, Visitor};
         use serde::ser::SerializeMap;
 
         pub fn serialize<S>(
@@ -128,19 +129,28 @@ pub mod serde {
         //
         // although it may also be generic over the output types T.
         pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<Locale, PathBuf>, D::Error>
-        where
-            D: Deserializer<'de>,
+            where
+                D: Deserializer<'de>,
         {
-            let s = HashMap::<String, String>::deserialize(deserializer)?;
-            let mut result: HashMap<Locale, PathBuf> = HashMap::new();
-
-            for entry in s {
-                result.insert(
-                    entry.0.parse().expect("Parsing the locale failed"),
-                    PathBuf::from(entry.1),
-                );
+            deserializer.deserialize_map(LocaleMapVisitor {})
+        }
+        struct LocaleMapVisitor {}
+        impl<'de> Visitor<'de> for LocaleMapVisitor {
+            type Value = HashMap<Locale, PathBuf>;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("Map with locale as key and file path as value.")
             }
-            Ok(result)
+            fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
+                where
+                    M: MapAccess<'de>,
+            {
+                let mut map = HashMap::with_capacity(access.size_hint().unwrap_or(0));
+                while let Some((key, value)) = access.next_entry::<String, PathBuf>()? {
+                    let locale = key.parse::<Locale>().map_err(serde::de::Error::custom)?;
+                    map.insert(locale, value);
+                }
+                Ok(map)
+            }
         }
     }
 }
