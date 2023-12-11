@@ -22,7 +22,3 @@ unimarkup-inline = { path = "../inline/", version = "0" }
 unimarkup-parser = { path = "../parser/", version = "0" }
 syntect = "5.0"
 rustyscript = "0.1.1"
-spreadsheet-ods = "0.17.0"
-serde.workspace = true
-serde_json.workspace = true
-serde_yaml.workspace = true

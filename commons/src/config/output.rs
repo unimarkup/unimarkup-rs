@@ -70,7 +70,6 @@ impl ConfigFns for Output {
 pub enum OutputFormatKind {
     #[default]
     Html,
-    Umi,
 }
 
 impl OutputFormatKind {
@@ -78,7 +77,6 @@ impl OutputFormatKind {
     pub fn extension(&self) -> &str {
         match self {
             OutputFormatKind::Html => "html",
-            OutputFormatKind::Umi => "umi",
         }
     }
 }
@@ -89,7 +87,6 @@ impl FromStr for OutputFormatKind {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "html" => Ok(OutputFormatKind::Html),
-            "umi" => Ok(OutputFormatKind::Umi),
             o => Err(format!("Bad output format: {}", o)),
         }
     }
