@@ -60,12 +60,12 @@ impl HeadingLevel {
     /// The `str` representation of the [`HeadingLevel`].
     pub fn as_str(&self) -> &'static str {
         match self {
-            HeadingLevel::Level1 => "# ",
-            HeadingLevel::Level2 => "## ",
-            HeadingLevel::Level3 => "### ",
-            HeadingLevel::Level4 => "#### ",
-            HeadingLevel::Level5 => "##### ",
-            HeadingLevel::Level6 => "###### ",
+            HeadingLevel::Level1 => "#",
+            HeadingLevel::Level2 => "##",
+            HeadingLevel::Level3 => "###",
+            HeadingLevel::Level4 => "####",
+            HeadingLevel::Level5 => "#####",
+            HeadingLevel::Level6 => "######",
         }
     }
 }

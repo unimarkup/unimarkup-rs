@@ -3,11 +3,13 @@
 
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
+use serde::{Deserialize, Serialize};
+
 use super::span::SpanLen;
 
 /// Indicates position of a symbol or token in a Unimarkup document. Both line and column
 /// counting starts from 1.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Position {
     /// Line the symbol or token is found at
     pub line: usize,

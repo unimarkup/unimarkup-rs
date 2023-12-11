@@ -4,6 +4,7 @@ use crate::html::citeproc::CiteprocWrapper;
 use logid::log;
 use serde_json::Value;
 use std::path::PathBuf;
+use unimarkup_commons::config::Config;
 use unimarkup_commons::{
     config::icu_locid::{locale, Locale},
     lexer::span::Span,
@@ -137,6 +138,10 @@ impl<'a> Context<'a> {
             footnotes,
             bibliography,
         }
+    }
+
+    pub fn get_config(&self) -> &Config {
+        &self.doc.config
     }
 }
 
