@@ -9,8 +9,7 @@ use logid::err;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    locale, log_id::ConfigErr, parse_to_hashset, parse_locale_path_buf, ConfigFns,
-    ReplaceIfNone,
+    locale, log_id::ConfigErr, parse_locale_path_buf, parse_to_hashset, ConfigFns, ReplaceIfNone,
 };
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -125,10 +124,12 @@ impl ConfigFns for Citedata {
         self.style.replace_none(other.style);
         self.references.extend(other.references);
         for locale_path_buf in self.csl_locales.clone() {
-            self.citation_locales.insert(locale_path_buf.0, locale_path_buf.1);
+            self.citation_locales
+                .insert(locale_path_buf.0, locale_path_buf.1);
         }
         for locale_path_buf in other.csl_locales.clone() {
-            self.citation_locales.insert(locale_path_buf.0, locale_path_buf.1);
+            self.citation_locales
+                .insert(locale_path_buf.0, locale_path_buf.1);
         }
         self.citation_locales.extend(other.citation_locales);
     }

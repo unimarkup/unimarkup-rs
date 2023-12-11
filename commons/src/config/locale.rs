@@ -31,11 +31,11 @@ pub mod serde {
 
     pub mod multiple {
         use super::*;
-        use std::collections::HashSet;
+        use crate::config::log_id::ConfigWarning;
         use logid::log;
         use serde::de::{SeqAccess, Visitor};
         use serde::ser::SerializeSeq;
-        use crate::config::log_id::ConfigWarning;
+        use std::collections::HashSet;
 
         pub fn serialize<S>(locales: &HashSet<Locale>, serializer: S) -> Result<S::Ok, S::Error>
         where
@@ -70,8 +70,8 @@ pub mod serde {
                 formatter.write_str("Sequence of locales.")
             }
             fn visit_seq<M>(self, mut access: M) -> Result<Self::Value, M::Error>
-                where
-                    M: SeqAccess<'de>,
+            where
+                M: SeqAccess<'de>,
             {
                 let mut set = HashSet::with_capacity(access.size_hint().unwrap_or(0));
                 while let Some(value) = access.next_element::<String>()? {
@@ -128,10 +128,10 @@ pub mod serde {
 
     pub mod hashmap {
         use super::*;
-        use std::collections::HashMap;
-        use std::path::PathBuf;
         use serde::de::{MapAccess, Visitor};
         use serde::ser::SerializeMap;
+        use std::collections::HashMap;
+        use std::path::PathBuf;
 
         pub fn serialize<S>(
             locales_map: &HashMap<Locale, PathBuf>,
@@ -142,7 +142,7 @@ pub mod serde {
         {
             let mut map = serializer.serialize_map(Some(locales_map.len()))?;
             for (locale, path) in locales_map {
-                map.serialize_entry(&locale.to_string(),path)?;
+                map.serialize_entry(&locale.to_string(), path)?;
             }
             map.end()
         }
@@ -155,8 +155,8 @@ pub mod serde {
         //
         // although it may also be generic over the output types T.
         pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<Locale, PathBuf>, D::Error>
-            where
-                D: Deserializer<'de>,
+        where
+            D: Deserializer<'de>,
         {
             deserializer.deserialize_map(LocaleMapVisitor {})
         }
@@ -167,8 +167,8 @@ pub mod serde {
                 formatter.write_str("Map with locale as key and file path as value.")
             }
             fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
-                where
-                    M: MapAccess<'de>,
+            where
+                M: MapAccess<'de>,
             {
                 let mut map = HashMap::with_capacity(access.size_hint().unwrap_or(0));
                 while let Some((key, value)) = access.next_entry::<String, PathBuf>()? {

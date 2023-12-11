@@ -1,6 +1,6 @@
-use std::{collections::HashSet, path::PathBuf};
 use std::error::Error;
 use std::str::FromStr;
+use std::{collections::HashSet, path::PathBuf};
 
 use clap::{Args, Parser};
 use logid::{err, log};
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use self::{log_id::ConfigErr, output::Output, preamble::Preamble};
 
 pub use icu_locid;
-use icu_locid::{Locale, locale};
+use icu_locid::{locale, Locale};
 
 pub mod locale;
 pub mod log_id;
@@ -118,8 +118,9 @@ where
     Ok(HashSet::from_iter(entries?))
 }
 
-fn parse_locale_path_buf(s: &str) -> Result<(Locale, PathBuf), Box<dyn Error + Send + Sync + 'static>>
-{
+fn parse_locale_path_buf(
+    s: &str,
+) -> Result<(Locale, PathBuf), Box<dyn Error + Send + Sync + 'static>> {
     if s.is_empty() {
         return Ok((locale!("en"), PathBuf::from_str("invalid path").unwrap()));
     }
@@ -136,9 +137,7 @@ fn parse_locale_path_buf(s: &str) -> Result<(Locale, PathBuf), Box<dyn Error + S
             );
         }
     };
-    let path_buf: PathBuf = s[pos + 1..]
-        .parse()
-        .unwrap();
+    let path_buf: PathBuf = s[pos + 1..].parse().unwrap();
     Ok((locale, path_buf))
 }
 
