@@ -33,6 +33,7 @@ pub struct HtmlElements(Vec<HtmlElement>);
 pub struct HtmlHead {
     pub elements: HtmlElements,
     pub syntax_highlighting_used: bool,
+    pub paged_js_used: bool,
     pub styles: HtmlAttributes, //TODO: replace with CSS struct
 }
 
@@ -41,6 +42,7 @@ impl HtmlHead {
         self.elements.append(&mut other.elements);
         self.styles.append(&mut other.styles);
         self.syntax_highlighting_used |= other.syntax_highlighting_used;
+        self.paged_js_used |= other.paged_js_used;
     }
 }
 
@@ -97,6 +99,7 @@ impl OutputFormat for Html {
             head: HtmlHead {
                 elements: HtmlElements(Vec::new()),
                 syntax_highlighting_used: false,
+                paged_js_used: false,
                 styles: HtmlAttributes(Vec::new()),
             },
             body: HtmlBody {
@@ -181,13 +184,18 @@ impl std::ops::DerefMut for HtmlElements {
 impl std::fmt::Display for HtmlHead {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "<head>{}", self.elements)?;
-
-        if self.syntax_highlighting_used {
-            write!(
+        let highlighting = if self.paged_js_used {
+            let _ = write!(
                 f,
-                "<style>{}</style>",
-                include_str!("../../styles/syntax_highlighting.css")
-            )?;
+                "<script>{}</script>",
+                include_str!("paged.polyfill.min.js")
+            );
+            include_str!("../../styles/syntax_highlighting_paged_js.css")
+        } else {
+            include_str!("../../styles/syntax_highlighting.css")
+        };
+        if self.syntax_highlighting_used {
+            write!(f, "<style>{}</style>", highlighting)?;
         }
 
         //TODO: write other head styles (try to use LightningCss optimizations)

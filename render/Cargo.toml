@@ -20,10 +20,9 @@ unimarkup-inline = { path = "../inline/", version = "0" }
 unimarkup-parser = { path = "../parser/", version = "0" }
 syntect = "5.0"
 spreadsheet-ods = "0.17.0"
+headless_chrome = { version = "1.0.8" }
+tempfile = "3.8.0"
 mathemascii = "0.4.0"
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
-
-headless_chrome.workspace = true
-tempfile.workspace = true
