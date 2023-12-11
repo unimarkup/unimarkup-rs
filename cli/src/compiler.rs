@@ -55,7 +55,10 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
                 format.extension(),
             )?,
             OutputFormatKind::Pdf => write_raw_file(
-                um.render_pdf().map_err(|_| GeneralError::Render)?,
+                &um.render_pdf().map_err(|err| {
+                    log!(err);
+                    GeneralError::Render
+                })?,
                 &out_path,
                 format.extension(),
             )?,
@@ -74,7 +77,7 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
 }
 
 fn write_raw_file(
-    content: Vec<u8>,
+    content: &[u8],
     out_path: impl AsRef<Path>,
     extension: &str,
 ) -> Result<(), GeneralError> {
@@ -100,5 +103,5 @@ fn write_file(
     out_path: impl AsRef<Path>,
     extension: &str,
 ) -> Result<(), GeneralError> {
-    write_raw_file(content.as_bytes().to_vec(), out_path, extension)
+    write_raw_file(content.as_bytes(), out_path, extension)
 }
