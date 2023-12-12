@@ -314,6 +314,7 @@ impl Umi {
             variables: vec![],
             metadata: vec![],
             resources: vec![],
+            citations: vec![],
         }
     }
 }

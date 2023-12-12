@@ -51,8 +51,8 @@ pub fn default_locale() -> Locale {
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct I18n {
     #[arg(long, value_parser = locale::clap::parse_locale, default_value = "en")]
-    #[serde(with = "locale::serde::single", default = "self::default_locale")]
-    pub lang: Locale,
+    #[serde(with = "locale::serde::optional")]
+    pub lang: Option<Locale>,
 
     #[arg(long, value_parser = parse_to_hashset::<Locale>, required = false, default_value = "")]
     #[serde(with = "locale::serde::multiple", default)]
