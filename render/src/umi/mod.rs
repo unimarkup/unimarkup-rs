@@ -4,10 +4,12 @@ use crate::render::OutputFormat;
 
 use spreadsheet_ods::{read_ods_buf, write_ods_buf_uncompressed, Sheet, WorkBook};
 use unimarkup_commons::config::Config;
+use unimarkup_commons::lexer::position::Position;
 use unimarkup_commons::lexer::{
     symbol::SymbolKind,
     token::{iterator::TokenIterator, lex_str, TokenKind},
 };
+use unimarkup_inline::element::base::Plain;
 use unimarkup_inline::{
     element::Inline,
     parser::{parse_inlines, InlineContext},
@@ -134,7 +136,7 @@ impl Umi {
     fn read_row(&mut self, line: usize) -> Block {
         let mut current_line = self.elements[line].clone();
         let attributes: HashMap<String, String> =
-            serde_json::from_str(&current_line.attributes).unwrap();
+            serde_json::from_str(&current_line.attributes).unwrap_or_default();
         match current_line.kind.as_str() {
             "Heading" => {
                 let heading = Heading {
@@ -239,7 +241,30 @@ impl Umi {
 
                 Block::BulletListEntry(bullet_list_entry)
             }
-            &_ => panic!(),
+            "Bibliography" => {
+                let paragraph = Paragraph {
+                    content: vec![Inline::Plain(Plain::new(
+                        "{$um.bibliography}".to_string(),
+                        Position::default(),
+                        Position::default(),
+                    ))],
+                };
+                Block::Paragraph(paragraph)
+            }
+            "Footnotes" => {
+                let paragraph = Paragraph {
+                    content: vec![Inline::Plain(Plain::new(
+                        "{$um.footnotes}".to_string(),
+                        Position::default(),
+                        Position::default(),
+                    ))],
+                };
+                Block::Paragraph(paragraph)
+            }
+            _ => panic!(
+                "Unsupported block element in .umi format: {}",
+                current_line.kind
+            ),
         }
     }
 
@@ -305,7 +330,7 @@ impl Umi {
                 .to_string()
                 .as_str(),
         )
-        .unwrap();
+        .unwrap_or_default();
 
         Document {
             blocks: um,

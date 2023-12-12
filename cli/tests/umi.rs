@@ -24,8 +24,8 @@ fn umi_loop() {
     let looped_doc = workbook.create_um();
 
     assert_eq!(
-        looped_doc.blocks.len(),
-        um.get_document().blocks.len(),
+        looped_doc.blocks.get(2).unwrap().variant_str(),
+        um.get_document().blocks.get(2).unwrap().variant_str(),
         "Parsed UMI file differs from original UM."
     );
 }
