@@ -7,6 +7,7 @@ use unimarkup_commons::config::Config;
 use unimarkup_commons::lexer::{
     symbol::SymbolKind,
     token::{iterator::TokenIterator, lex_str, TokenKind},
+    position::Position,
 };
 use unimarkup_inline::{
     element::Inline,
@@ -95,7 +96,7 @@ impl Umi {
         // Row 1: Config
         sheet.set_value(1, 0, 0);
         sheet.set_value(1, 2, "config");
-        sheet.set_value(1, 4, serde_yaml::to_string(&self.config).unwrap());
+        sheet.set_value(1, 4, serde_yaml::to_string(&self.config).unwrap_or_default());
 
         for element in &self.elements {
             let row = element.position + 2;
@@ -134,19 +135,19 @@ impl Umi {
     fn read_row(&mut self, line: usize) -> Block {
         let mut current_line = self.elements[line].clone();
         let attributes: HashMap<String, String> =
-            serde_json::from_str(&current_line.attributes).unwrap();
+            serde_json::from_str(&current_line.attributes).unwrap_or_default();
         match current_line.kind.as_str() {
             "Heading" => {
                 let heading = Heading {
                     id: current_line.id.clone(),
                     level: unimarkup_parser::elements::atomic::HeadingLevel::try_from(
-                        attributes.get("level").unwrap().as_str(),
+                        attributes.get("level").unwrap_or(&String::from("#")).as_str(),
                     )
                     .unwrap(),
                     content: self.read_inlines(current_line.content.clone()),
                     attributes: (attributes.get("attributes").cloned()).filter(|s| !s.is_empty()),
-                    start: serde_json::from_str(attributes.get("start").unwrap()).unwrap(),
-                    end: serde_json::from_str(attributes.get("end").unwrap()).unwrap(),
+                    start: Position::new(1, 1),
+                    end: Position::new(1, 1),
                 };
                 Block::Heading(heading)
             }
@@ -161,23 +162,23 @@ impl Umi {
                     content: current_line.content.clone(),
                     data_lang: attributes.get("data_lang").cloned(),
                     attributes: attributes.get("attributes").cloned(),
-                    implicit_closed: attributes.get("implicit_closed").unwrap().parse().unwrap(),
-                    tick_len: attributes.get("tick_len").unwrap().parse().unwrap(),
-                    start: serde_json::from_str(attributes.get("start").unwrap()).unwrap(),
-                    end: serde_json::from_str(attributes.get("end").unwrap()).unwrap(),
+                    implicit_closed: attributes.get("implicit_closed").unwrap_or(&String::new()).parse().unwrap_or_default(),
+                    tick_len: attributes.get("tick_len").unwrap_or(&String::new()).parse().unwrap_or_default(),
+                    start: Position::new(1, 1),
+                    end: Position::new(1, 1),
                 };
                 Block::VerbatimBlock(verbatim)
             }
             "BulletList" => {
                 let mut bullet_list = BulletList {
                     entries: vec![],
-                    start: serde_json::from_str(attributes.get("start").unwrap()).unwrap(),
-                    end: serde_json::from_str(attributes.get("end").unwrap()).unwrap(),
+                    start: Position::new(1, 1),
+                    end: Position::new(1, 1),
                 };
 
                 let bullet_list_depth = current_line.depth;
                 let mut current_line_index = line + 1;
-                current_line = self.fetch_next_line(current_line_index).unwrap();
+                current_line = self.fetch_next_line(current_line_index).unwrap_or_default();
 
                 while current_line.depth > bullet_list_depth {
                     if current_line.depth == bullet_list_depth + 1 {
@@ -185,7 +186,7 @@ impl Umi {
                         let block = self.read_row(current_line_index);
                         let bullet_list_entry = match block {
                             Block::BulletListEntry(block) => block,
-                            _ => panic!(),
+                            _ => break,
                         };
                         bullet_list.entries.append(&mut vec![bullet_list_entry]);
                     } else {
@@ -197,7 +198,7 @@ impl Umi {
                     if fetched.is_none() {
                         break;
                     }
-                    current_line = fetched.unwrap();
+                    current_line = fetched.unwrap_or_default();
                 }
 
                 Block::BulletList(bullet_list)
@@ -205,19 +206,19 @@ impl Umi {
             "BulletListEntry" => {
                 let mut bullet_list_entry = BulletListEntry {
                     keyword: TokenKind::from(SymbolKind::from(
-                        attributes.get("keyword").unwrap().as_str(),
+                        attributes.get("keyword").unwrap_or(&String::from('-')).as_str(),
                     ))
                     .try_into()
                     .unwrap(),
-                    heading: self.read_inlines(attributes.get("heading").unwrap().to_string()),
+                    heading: self.read_inlines(attributes.get("heading").unwrap_or(&String::new()).to_string()),
                     body: vec![],
-                    start: serde_json::from_str(attributes.get("start").unwrap()).unwrap(),
-                    end: serde_json::from_str(attributes.get("end").unwrap()).unwrap(),
+                    start: Position::new(1, 1),
+                    end: Position::new(1, 1),
                 };
 
                 let bullet_list_entry_depth = current_line.depth;
                 let mut current_line_index = line + 1;
-                current_line = self.fetch_next_line(current_line_index).unwrap();
+                current_line = self.fetch_next_line(current_line_index).unwrap_or_default();
 
                 while current_line.depth > bullet_list_entry_depth {
                     if current_line.depth == bullet_list_entry_depth + 1 {
@@ -234,7 +235,7 @@ impl Umi {
                     if fetched.is_none() {
                         break;
                     }
-                    current_line = fetched.unwrap();
+                    current_line = fetched.unwrap_or_default();
                 }
 
                 Block::BulletListEntry(bullet_list_entry)
@@ -247,38 +248,38 @@ impl Umi {
         self.elements.clear();
         debug_assert!(!self.ods.is_empty());
 
-        let wb: WorkBook = read_ods_buf(&self.ods).unwrap();
+        let wb: WorkBook = read_ods_buf(&self.ods).unwrap_or_default();
         let sheet = wb.sheet(0);
         let rows = sheet.used_grid_size().0;
 
         for row_index in 2..rows {
             self.elements.push(UmiRow::new(
-                sheet.cell(row_index, 0).unwrap().value.as_u8_opt().unwrap(),
+                sheet.cell(row_index, 0).unwrap_or_default().value.as_u8_opt().unwrap_or(0),
                 sheet
                     .cell(row_index, 1)
-                    .unwrap()
+                    .unwrap_or_default()
                     .value
                     .as_str_opt()
                     .unwrap_or_default()
                     .to_string(),
                 sheet
                     .cell(row_index, 2)
-                    .unwrap()
+                    .unwrap_or_default()
                     .value
                     .as_str_opt()
                     .unwrap_or_default()
                     .to_string(),
-                sheet.cell(row_index, 3).unwrap().value.as_u8_opt().unwrap(),
+                sheet.cell(row_index, 3).unwrap_or_default().value.as_u8_opt().unwrap_or(0),
                 sheet
                     .cell(row_index, 4)
-                    .unwrap()
+                    .unwrap_or_default()
                     .value
                     .as_str_opt()
                     .unwrap_or_default()
                     .to_string(),
                 sheet
                     .cell(row_index, 5)
-                    .unwrap()
+                    .unwrap_or_default()
                     .value
                     .as_str_opt()
                     .unwrap_or_default()
@@ -299,13 +300,13 @@ impl Umi {
         config.preamble = serde_yaml::from_str(
             sheet
                 .cell(1, 4)
-                .unwrap()
+                .unwrap_or_default()
                 .value
                 .as_cow_str_or("")
                 .to_string()
                 .as_str(),
         )
-        .unwrap();
+        .unwrap_or_default();
 
         Document {
             blocks: um,
