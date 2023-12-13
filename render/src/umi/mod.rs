@@ -5,9 +5,9 @@ use crate::render::OutputFormat;
 use spreadsheet_ods::{read_ods_buf, write_ods_buf_uncompressed, Sheet, WorkBook};
 use unimarkup_commons::config::Config;
 use unimarkup_commons::lexer::{
+    position::Position,
     symbol::SymbolKind,
     token::{iterator::TokenIterator, lex_str, TokenKind},
-    position::Position,
 };
 use unimarkup_inline::{
     element::Inline,
@@ -30,6 +30,7 @@ pub struct UmiRow {
     position: u8,
     id: String,
     kind: String,
+    typ: String,
     depth: u8,
     content: String,
     attributes: String,
@@ -40,6 +41,7 @@ impl UmiRow {
         position: u8,
         id: String,
         kind: String,
+        typ: String,
         depth: u8,
         content: String,
         attributes: String,
@@ -48,6 +50,7 @@ impl UmiRow {
             position,
             id,
             kind,
+            typ,
             depth,
             content,
             attributes,
@@ -81,31 +84,37 @@ impl Umi {
         sheet.set_value(0, 0, "position");
         sheet.set_value(0, 1, "id");
         sheet.set_value(0, 2, "kind");
-        sheet.set_value(0, 3, "depth");
+        sheet.set_value(0, 3, "type");
+        sheet.set_value(0, 4, "depth");
         sheet.set_value(
             0,
-            4,
+            5,
             String::from("content-") + self.lang.to_string().as_str(),
         );
         sheet.set_value(
             0,
-            5,
+            6,
             String::from("attributes-") + self.lang.to_string().as_str(),
         );
 
         // Row 1: Config
         sheet.set_value(1, 0, 0);
         sheet.set_value(1, 2, "config");
-        sheet.set_value(1, 4, serde_yaml::to_string(&self.config).unwrap_or_default());
+        sheet.set_value(
+            1,
+            4,
+            serde_yaml::to_string(&self.config).unwrap_or_default(),
+        );
 
         for element in &self.elements {
             let row = element.position + 2;
             sheet.set_value(row.into(), 0, element.position + 1);
             sheet.set_value(row.into(), 1, element.id.clone());
             sheet.set_value(row.into(), 2, element.kind.clone());
-            sheet.set_value(row.into(), 3, element.depth);
-            sheet.set_value(row.into(), 4, element.content.clone());
-            sheet.set_value(row.into(), 5, element.attributes.clone());
+            sheet.set_value(row.into(), 3, element.typ.clone());
+            sheet.set_value(row.into(), 4, element.depth);
+            sheet.set_value(row.into(), 5, element.content.clone());
+            sheet.set_value(row.into(), 6, element.attributes.clone());
         }
 
         wb.push_sheet(sheet);
@@ -134,18 +143,18 @@ impl Umi {
 
     fn read_row(&mut self, line: usize) -> Block {
         let mut current_line = self.elements[line].clone();
-        let attributes: HashMap<String, String> =
-            serde_json::from_str(&current_line.attributes).unwrap_or_default();
+        let typ: HashMap<String, String> =
+            serde_json::from_str(&current_line.typ).unwrap_or_default();
         match current_line.kind.as_str() {
             "Heading" => {
                 let heading = Heading {
                     id: current_line.id.clone(),
                     level: unimarkup_parser::elements::atomic::HeadingLevel::try_from(
-                        attributes.get("level").unwrap_or(&String::from("#")).as_str(),
+                        typ.get("level").unwrap_or(&String::from("#")).as_str(),
                     )
                     .unwrap(),
                     content: self.read_inlines(current_line.content.clone()),
-                    attributes: (attributes.get("attributes").cloned()).filter(|s| !s.is_empty()),
+                    attributes: Some(current_line.attributes),
                     start: Position::new(1, 1),
                     end: Position::new(1, 1),
                 };
@@ -160,10 +169,18 @@ impl Umi {
             "VerbatimBlock" => {
                 let verbatim = VerbatimBlock {
                     content: current_line.content.clone(),
-                    data_lang: attributes.get("data_lang").cloned(),
-                    attributes: attributes.get("attributes").cloned(),
-                    implicit_closed: attributes.get("implicit_closed").unwrap_or(&String::new()).parse().unwrap_or_default(),
-                    tick_len: attributes.get("tick_len").unwrap_or(&String::new()).parse().unwrap_or_default(),
+                    data_lang: typ.get("data_lang").cloned(),
+                    attributes: Some(current_line.attributes),
+                    implicit_closed: typ
+                        .get("implicit_closed")
+                        .unwrap_or(&String::new())
+                        .parse()
+                        .unwrap_or_default(),
+                    tick_len: typ
+                        .get("tick_len")
+                        .unwrap_or(&String::new())
+                        .parse()
+                        .unwrap_or_default(),
                     start: Position::new(1, 1),
                     end: Position::new(1, 1),
                 };
@@ -206,11 +223,12 @@ impl Umi {
             "BulletListEntry" => {
                 let mut bullet_list_entry = BulletListEntry {
                     keyword: TokenKind::from(SymbolKind::from(
-                        attributes.get("keyword").unwrap_or(&String::from('-')).as_str(),
+                        typ.get("keyword").unwrap_or(&String::from('-')).as_str(),
                     ))
                     .try_into()
                     .unwrap(),
-                    heading: self.read_inlines(attributes.get("heading").unwrap_or(&String::new()).to_string()),
+                    heading: self
+                        .read_inlines(typ.get("heading").unwrap_or(&String::new()).to_string()),
                     body: vec![],
                     start: Position::new(1, 1),
                     end: Position::new(1, 1),
@@ -254,7 +272,12 @@ impl Umi {
 
         for row_index in 2..rows {
             self.elements.push(UmiRow::new(
-                sheet.cell(row_index, 0).unwrap_or_default().value.as_u8_opt().unwrap_or(0),
+                sheet
+                    .cell(row_index, 0)
+                    .unwrap_or_default()
+                    .value
+                    .as_u8_opt()
+                    .unwrap_or(0),
                 sheet
                     .cell(row_index, 1)
                     .unwrap_or_default()
@@ -269,16 +292,28 @@ impl Umi {
                     .as_str_opt()
                     .unwrap_or_default()
                     .to_string(),
-                sheet.cell(row_index, 3).unwrap_or_default().value.as_u8_opt().unwrap_or(0),
                 sheet
-                    .cell(row_index, 4)
+                    .cell(row_index, 3)
                     .unwrap_or_default()
                     .value
                     .as_str_opt()
                     .unwrap_or_default()
                     .to_string(),
                 sheet
+                    .cell(row_index, 4)
+                    .unwrap_or_default()
+                    .value
+                    .as_u8_opt()
+                    .unwrap_or(0),
+                sheet
                     .cell(row_index, 5)
+                    .unwrap_or_default()
+                    .value
+                    .as_str_opt()
+                    .unwrap_or_default()
+                    .to_string(),
+                sheet
+                    .cell(row_index, 6)
                     .unwrap_or_default()
                     .value
                     .as_str_opt()
