@@ -4,6 +4,7 @@ use crate::html::citeproc::CiteprocWrapper;
 use logid::log;
 use serde_json::Value;
 use std::path::PathBuf;
+use unimarkup_commons::config::output::OutputFormatKind;
 use unimarkup_commons::config::Config;
 use unimarkup_commons::{
     config::icu_locid::{locale, Locale},
@@ -53,14 +54,14 @@ impl<'a> Context<'a> {
         self.rendered_citations.get(index)
     }
 
-    fn new(doc: &'a Document) -> Self {
+    fn new(doc: &'a Document, format: OutputFormatKind) -> Self {
         let rendered_citations: Vec<String>;
         let footnotes: String;
         let bibliography: String;
 
         match CiteprocWrapper::new() {
             Ok(mut citeproc) => {
-                let for_pagedjs = false;
+                let for_pagedjs = matches!(format, OutputFormatKind::Html);
                 let style = doc
                     .config
                     .preamble
@@ -147,9 +148,10 @@ impl<'a> Context<'a> {
 
 pub fn render<T: OutputFormat>(
     doc: &Document,
+    format: OutputFormatKind,
     mut renderer: impl Renderer<T>,
 ) -> Result<T, RenderError> {
-    let context = Context::new(doc);
+    let context = Context::new(doc, format);
     let mut t = T::new(&context);
 
     t.append(renderer.render_blocks(&doc.blocks, &context)?)?;
