@@ -127,9 +127,8 @@ impl ConfigFns for Citedata {
     fn merge(&mut self, other: Self) {
         self.style.replace_none(other.style);
         self.references.extend(other.references);
-        for locale_path_buf in self.csl_locales.clone() {
-            self.citation_locales
-                .insert(locale_path_buf.0, locale_path_buf.1);
+        for (locale, pathbuf) in self.csl_locales.clone() {
+            self.citation_locales.insert(locale, pathbuf);
         }
         for locale_path_buf in other.csl_locales.clone() {
             self.citation_locales

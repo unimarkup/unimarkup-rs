@@ -70,18 +70,16 @@ csl_files!(
 
 pub fn get_style_string(path: PathBuf) -> String {
     if path.is_file() {
-        match fs::read_to_string(&path) {
-            Ok(csl_style) => {
-                return csl_style;
-            }
+        return match fs::read_to_string(&path) {
+            Ok(csl_style) => csl_style,
             Err(_) => {
                 log!(
                     GeneralWarning::FileRead,
                     format!("Could not read style file: '{:?}'", path.clone()),
                 );
-                return IEEE.to_string();
+                IEEE.to_string()
             }
-        }
+        };
     }
     match path.to_str().unwrap_or("ieee") {
         "american-medical-association" => AMERICAN_MEDICAL_ASSOCIATION.to_string(),
@@ -99,5 +97,72 @@ pub fn get_style_string(path: PathBuf) -> String {
             );
             IEEE.to_string()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::html::citeproc::csl_files::{get_locale_string, get_style_string};
+    use std::collections::HashMap;
+    use std::path::PathBuf;
+    use std::str::FromStr;
+    use unimarkup_commons::config::icu_locid::locale;
+
+    #[test]
+    fn get_locale_string_not_in_hashmap() {
+        let mut map = HashMap::new();
+        map.insert(locale!("fr"), PathBuf::from_str("path/to/fr").unwrap());
+        let actual = get_locale_string(locale!("de-DE"), map);
+        assert!(actual.contains("xml:lang=\"de-DE\""));
+    }
+
+    #[test]
+    fn get_locale_string_path_not_found() {
+        let mut map = HashMap::new();
+        map.insert(
+            locale!("de-DE"),
+            PathBuf::from_str("invalid/path/to/de-DE").unwrap(),
+        );
+        let actual = get_locale_string(locale!("de-DE"), map);
+        assert!(actual.contains("xml:lang=\"de-DE\""));
+    }
+
+    #[test]
+    fn get_locale_string_from_path() {
+        let mut map = HashMap::new();
+        map.insert(
+            locale!("nl-NL"),
+            PathBuf::from_str("./src/html/citeproc/test_files/locales-nl-NL.xml").unwrap(),
+        );
+        let actual = get_locale_string(locale!("nl-NL"), map);
+        assert!(actual.contains("xml:lang=\"nl-NL\""));
+    }
+
+    #[test]
+    fn get_locale_string_default() {
+        let map = HashMap::new();
+        let actual = get_locale_string(locale!("nl-NL"), map);
+        assert!(actual.contains("xml:lang=\"en-US\""));
+    }
+
+    #[test]
+    fn get_style_string_file_found() {
+        let path = PathBuf::from_str("./csl_styles/apa.csl").unwrap();
+        let actual = get_style_string(path);
+        assert!(actual.contains("<title>American Psychological Association 7th edition</title>"));
+    }
+
+    #[test]
+    fn get_style_string_file_not_found() {
+        let path = PathBuf::from_str("invalid/path/file.csl").unwrap();
+        let actual = get_style_string(path);
+        assert!(actual.contains("<title>IEEE</title>"));
+    }
+
+    #[test]
+    fn get_style_string_no_file() {
+        let path = PathBuf::from_str("harvard-cite-them-right").unwrap();
+        let actual = get_style_string(path);
+        assert!(actual.contains("<title>Cite Them Right 12th edition - Harvard</title>"));
     }
 }
