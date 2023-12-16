@@ -44,13 +44,13 @@ impl Renderer<Umi> for UmiRenderer {
         let content = self.render_inlines(&paragraph.content, context)?;
 
         let hashmap: HashMap<String, String> = HashMap::new();
-        let typ = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
+        let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
 
         let paragraph = UmiRow::new(
             self.pos,
             String::new(),
             String::from(Block::Paragraph(paragraph.to_owned()).variant_str()),
-            typ,
+            properties,
             self.depth,
             content.elements[0].content.clone(),
             String::new(),
@@ -79,13 +79,13 @@ impl Renderer<Umi> for UmiRenderer {
             String::from("implicit_closed"),
             verbatim.implicit_closed.to_string(),
         );
-        let typ = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
+        let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
 
         let verbatim = UmiRow::new(
             self.pos,
             String::new(),
             String::from("VerbatimBlock"),
-            typ,
+            properties,
             self.depth,
             verbatim.content.clone(),
             verbatim.attributes.clone().unwrap_or_default(),
@@ -106,7 +106,7 @@ impl Renderer<Umi> for UmiRenderer {
     ) -> Result<Umi, crate::log_id::RenderError> {
         let mut hashmap: HashMap<String, String> = HashMap::new();
         hashmap.insert(String::from("level"), heading.level.as_str().to_string());
-        let typ = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
+        let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
 
         let content = self.render_inlines(&heading.content, context)?;
 
@@ -114,7 +114,7 @@ impl Renderer<Umi> for UmiRenderer {
             self.pos,
             heading.id.clone(),
             String::from("Heading"),
-            typ,
+            properties,
             self.depth,
             content.elements[0].content.clone(),
             heading.attributes.clone().unwrap_or_default(),
@@ -134,13 +134,13 @@ impl Renderer<Umi> for UmiRenderer {
         context: &Context,
     ) -> Result<Umi, crate::log_id::RenderError> {
         let hashmap: HashMap<String, String> = HashMap::new();
-        let typ = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
+        let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
 
         let bullet_list_heading = UmiRow::new(
             self.pos,
             String::new(),
             String::from("BulletList"),
-            typ,
+            properties,
             self.depth,
             String::new(),
             String::new(),
@@ -179,7 +179,7 @@ impl Renderer<Umi> for UmiRenderer {
                 .content
                 .clone(),
         );
-        let typ = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
+        let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
         let mut entry = Umi::with_um(
             vec![UmiRow::new(
                 self.pos,
@@ -187,7 +187,7 @@ impl Renderer<Umi> for UmiRenderer {
                 Block::BulletListEntry(bullet_list_entry.to_owned())
                     .variant_str()
                     .to_string(),
-                typ,
+                properties,
                 self.depth,
                 self.render_inlines(&bullet_list_entry.heading, context)?
                     .elements[0]

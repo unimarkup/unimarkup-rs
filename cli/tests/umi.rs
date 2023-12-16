@@ -21,7 +21,7 @@ fn umi_loop() {
     let mut umi = um.render_umi().unwrap();
     let workbook = umi.create_workbook();
 
-    let looped_doc = workbook.create_um();
+    let looped_doc = workbook.create_um().map_err(|_| panic!()).unwrap();
 
     assert_eq!(
         looped_doc.blocks.len(),

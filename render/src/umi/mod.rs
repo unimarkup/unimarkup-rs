@@ -13,6 +13,7 @@ use unimarkup_inline::{
     element::Inline,
     parser::{parse_inlines, InlineContext},
 };
+use unimarkup_parser::log_id::ParserError;
 use unimarkup_parser::{
     document::Document,
     elements::{
@@ -30,7 +31,7 @@ pub struct UmiRow {
     position: u8,
     id: String,
     kind: String,
-    typ: String,
+    properties: String,
     depth: u8,
     content: String,
     attributes: String,
@@ -41,7 +42,7 @@ impl UmiRow {
         position: u8,
         id: String,
         kind: String,
-        typ: String,
+        properties: String,
         depth: u8,
         content: String,
         attributes: String,
@@ -50,7 +51,7 @@ impl UmiRow {
             position,
             id,
             kind,
-            typ,
+            properties,
             depth,
             content,
             attributes,
@@ -84,7 +85,7 @@ impl Umi {
         sheet.set_value(0, 0, "position");
         sheet.set_value(0, 1, "id");
         sheet.set_value(0, 2, "kind");
-        sheet.set_value(0, 3, "type");
+        sheet.set_value(0, 3, "properties");
         sheet.set_value(0, 4, "depth");
         sheet.set_value(
             0,
@@ -111,7 +112,7 @@ impl Umi {
             sheet.set_value(row.into(), 0, element.position + 1);
             sheet.set_value(row.into(), 1, element.id.clone());
             sheet.set_value(row.into(), 2, element.kind.clone());
-            sheet.set_value(row.into(), 3, element.typ.clone());
+            sheet.set_value(row.into(), 3, element.properties.clone());
             sheet.set_value(row.into(), 4, element.depth);
             sheet.set_value(row.into(), 5, element.content.clone());
             sheet.set_value(row.into(), 6, element.attributes.clone());
@@ -141,50 +142,54 @@ impl Umi {
         }
     }
 
-    fn read_row(&mut self, line: usize) -> Block {
+    fn read_row(&mut self, line: usize) -> Result<Block, ParserError> {
         let mut current_line = self.elements[line].clone();
-        let typ: HashMap<String, String> =
-            serde_json::from_str(&current_line.typ).unwrap_or_default();
+        let properties: HashMap<String, String> =
+            serde_json::from_str(&current_line.properties).unwrap_or_default();
         match current_line.kind.as_str() {
             "Heading" => {
                 let heading = Heading {
                     id: current_line.id.clone(),
                     level: unimarkup_parser::elements::atomic::HeadingLevel::try_from(
-                        typ.get("level").unwrap_or(&String::from("#")).as_str(),
+                        properties
+                            .get("level")
+                            .ok_or(ParserError::NoUnimarkupDetected)?
+                            .as_str(),
                     )
-                    .unwrap(),
+                    .ok()
+                    .ok_or(ParserError::NoUnimarkupDetected)?,
                     content: self.read_inlines(current_line.content.clone()),
                     attributes: Some(current_line.attributes),
                     start: Position::new(1, 1),
                     end: Position::new(1, 1),
                 };
-                Block::Heading(heading)
+                Ok(Block::Heading(heading))
             }
             "Paragraph" => {
                 let paragraph = Paragraph {
                     content: self.read_inlines(current_line.content.clone()),
                 };
-                Block::Paragraph(paragraph)
+                Ok(Block::Paragraph(paragraph))
             }
             "VerbatimBlock" => {
                 let verbatim = VerbatimBlock {
                     content: current_line.content.clone(),
-                    data_lang: typ.get("data_lang").cloned(),
+                    data_lang: properties.get("data_lang").cloned(),
                     attributes: Some(current_line.attributes),
-                    implicit_closed: typ
+                    implicit_closed: properties
                         .get("implicit_closed")
-                        .unwrap_or(&String::new())
+                        .ok_or(ParserError::NoUnimarkupDetected)?
                         .parse()
                         .unwrap_or_default(),
-                    tick_len: typ
+                    tick_len: properties
                         .get("tick_len")
-                        .unwrap_or(&String::new())
+                        .ok_or(ParserError::NoUnimarkupDetected)?
                         .parse()
                         .unwrap_or_default(),
                     start: Position::new(1, 1),
                     end: Position::new(1, 1),
                 };
-                Block::VerbatimBlock(verbatim)
+                Ok(Block::VerbatimBlock(verbatim))
             }
             "BulletList" => {
                 let mut bullet_list = BulletList {
@@ -202,7 +207,7 @@ impl Umi {
                         // Append Element to Bullet List
                         let block = self.read_row(current_line_index);
                         let bullet_list_entry = match block {
-                            Block::BulletListEntry(block) => block,
+                            Ok(Block::BulletListEntry(block)) => block,
                             _ => break,
                         };
                         bullet_list.entries.append(&mut vec![bullet_list_entry]);
@@ -218,17 +223,25 @@ impl Umi {
                     current_line = fetched.unwrap_or_default();
                 }
 
-                Block::BulletList(bullet_list)
+                Ok(Block::BulletList(bullet_list))
             }
             "BulletListEntry" => {
                 let mut bullet_list_entry = BulletListEntry {
                     keyword: TokenKind::from(SymbolKind::from(
-                        typ.get("keyword").unwrap_or(&String::from('-')).as_str(),
+                        properties
+                            .get("keyword")
+                            .ok_or(ParserError::NoUnimarkupDetected)?
+                            .as_str(),
                     ))
                     .try_into()
-                    .unwrap(),
-                    heading: self
-                        .read_inlines(typ.get("heading").unwrap_or(&String::new()).to_string()),
+                    .ok()
+                    .ok_or(ParserError::NoUnimarkupDetected)?,
+                    heading: self.read_inlines(
+                        properties
+                            .get("heading")
+                            .ok_or(ParserError::NoUnimarkupDetected)?
+                            .to_string(),
+                    ),
                     body: vec![],
                     start: Position::new(1, 1),
                     end: Position::new(1, 1),
@@ -241,7 +254,7 @@ impl Umi {
                 while current_line.depth > bullet_list_entry_depth {
                     if current_line.depth == bullet_list_entry_depth + 1 {
                         // Append Element to Bullet List Entry Body
-                        let block = self.read_row(current_line_index);
+                        let block = self.read_row(current_line_index)?;
                         bullet_list_entry.body.append(&mut vec![block]);
                     } else {
                         break;
@@ -256,13 +269,13 @@ impl Umi {
                     current_line = fetched.unwrap_or_default();
                 }
 
-                Block::BulletListEntry(bullet_list_entry)
+                Ok(Block::BulletListEntry(bullet_list_entry))
             }
             &_ => panic!(),
         }
     }
 
-    pub fn create_um(&mut self) -> Document {
+    pub fn create_um(&mut self) -> Result<Document, ParserError> {
         self.elements.clear();
         debug_assert!(!self.ods.is_empty());
 
@@ -327,7 +340,7 @@ impl Umi {
         let mut index = 0;
         while index < self.elements.len() {
             if self.elements[index].depth == 0 {
-                um.push(self.read_row(index));
+                um.push(self.read_row(index)?);
             }
             index += 1;
         }
@@ -343,14 +356,14 @@ impl Umi {
         )
         .unwrap_or_default();
 
-        Document {
+        Ok(Document {
             blocks: um,
             config,
             macros: vec![],
             variables: vec![],
             metadata: vec![],
             resources: vec![],
-        }
+        })
     }
 }
 
