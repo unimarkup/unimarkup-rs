@@ -156,8 +156,12 @@ pub fn render<T: OutputFormat>(
 
     t.append(renderer.render_blocks(&doc.blocks, &context)?)?;
 
-    t.append(renderer.render_footnotes(&context)?)?;
-    t.append(renderer.render_bibliography(&context)?)?;
+    if !context.footnotes.is_empty() {
+        t.append(renderer.render_footnotes(&context)?)?;
+    }
+    if !context.bibliography.is_empty() {
+        t.append(renderer.render_bibliography(&context)?)?;
+    }
 
     Ok(t)
 }
