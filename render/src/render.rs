@@ -55,6 +55,14 @@ impl<'a> Context<'a> {
     }
 
     fn new(doc: &'a Document, format: OutputFormatKind) -> Self {
+        if doc.citations.is_empty() {
+            return Context {
+                doc,
+                rendered_citations: vec![],
+                footnotes: "".to_string(),
+                bibliography: "".to_string(),
+            };
+        }
         let rendered_citations: Vec<String>;
         let footnotes: String;
         let bibliography: String;
