@@ -1,9 +1,12 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use crate::render::OutputFormat;
 
+use crate::log_id::ParserError;
 use spreadsheet_ods::{read_ods_buf, write_ods_buf_uncompressed, Sheet, WorkBook};
-use unimarkup_commons::config::Config;
+use unimarkup_commons::config::output::Output;
+use unimarkup_commons::config::{Config, MergingConfig};
 use unimarkup_commons::lexer::{
     position::Position,
     symbol::SymbolKind,
@@ -13,7 +16,6 @@ use unimarkup_inline::{
     element::Inline,
     parser::{parse_inlines, InlineContext},
 };
-use unimarkup_parser::log_id::ParserError;
 use unimarkup_parser::{
     document::Document,
     elements::{
@@ -100,11 +102,11 @@ impl Umi {
 
         // Row 1: Config
         sheet.set_value(1, 0, 0);
-        sheet.set_value(1, 2, "config");
+        sheet.set_value(1, 2, "Preamble");
         sheet.set_value(
             1,
             4,
-            serde_yaml::to_string(&self.config).unwrap_or_default(),
+            serde_yaml::to_string(&self.config.preamble).unwrap_or_default(),
         );
 
         for element in &self.elements {
@@ -153,11 +155,17 @@ impl Umi {
                     level: unimarkup_parser::elements::atomic::HeadingLevel::try_from(
                         properties
                             .get("level")
-                            .ok_or(ParserError::NoUnimarkupDetected)?
+                            .ok_or(ParserError::MissingProperty((
+                                "level".into(),
+                                current_line.position,
+                            )))?
                             .as_str(),
                     )
                     .ok()
-                    .ok_or(ParserError::NoUnimarkupDetected)?,
+                    .ok_or(ParserError::InvalidPropertyValue((
+                        "level".into(),
+                        current_line.position,
+                    )))?,
                     content: self.read_inlines(current_line.content.clone()),
                     attributes: Some(current_line.attributes),
                     start: Position::new(1, 1),
@@ -178,12 +186,18 @@ impl Umi {
                     attributes: Some(current_line.attributes),
                     implicit_closed: properties
                         .get("implicit_closed")
-                        .ok_or(ParserError::NoUnimarkupDetected)?
+                        .ok_or(ParserError::MissingProperty((
+                            "implicit_closed".into(),
+                            current_line.position,
+                        )))?
                         .parse()
                         .unwrap_or_default(),
                     tick_len: properties
                         .get("tick_len")
-                        .ok_or(ParserError::NoUnimarkupDetected)?
+                        .ok_or(ParserError::MissingProperty((
+                            "tick_len".into(),
+                            current_line.position,
+                        )))?
                         .parse()
                         .unwrap_or_default(),
                     start: Position::new(1, 1),
@@ -230,16 +244,25 @@ impl Umi {
                     keyword: TokenKind::from(SymbolKind::from(
                         properties
                             .get("keyword")
-                            .ok_or(ParserError::NoUnimarkupDetected)?
+                            .ok_or(ParserError::MissingProperty((
+                                "keyword".into(),
+                                current_line.position,
+                            )))?
                             .as_str(),
                     ))
                     .try_into()
                     .ok()
-                    .ok_or(ParserError::NoUnimarkupDetected)?,
+                    .ok_or(ParserError::InvalidPropertyValue((
+                        "keyword".into(),
+                        current_line.position,
+                    )))?,
                     heading: self.read_inlines(
                         properties
                             .get("heading")
-                            .ok_or(ParserError::NoUnimarkupDetected)?
+                            .ok_or(ParserError::MissingProperty((
+                                "heading".into(),
+                                current_line.position,
+                            )))?
                             .to_string(),
                     ),
                     body: vec![],
@@ -271,7 +294,7 @@ impl Umi {
 
                 Ok(Block::BulletListEntry(bullet_list_entry))
             }
-            &_ => panic!(),
+            &_ => Err(ParserError::UnknownKind(current_line.position)),
         }
     }
 
@@ -344,17 +367,21 @@ impl Umi {
             }
             index += 1;
         }
-        let mut config = self.config.clone();
-        config.preamble = serde_yaml::from_str(
-            sheet
-                .cell(1, 4)
-                .unwrap_or_default()
-                .value
-                .as_cow_str_or("")
-                .to_string()
-                .as_str(),
-        )
-        .unwrap_or_default();
+        let config = Config {
+            preamble: serde_yaml::from_str(
+                sheet
+                    .cell(1, 4)
+                    .unwrap_or_default()
+                    .value
+                    .as_cow_str_or("")
+                    .to_string()
+                    .as_str(),
+            )
+            .unwrap_or_default(),
+            output: Output::default(),
+            input: PathBuf::default(),
+            merging: MergingConfig::default(),
+        };
 
         Ok(Document {
             blocks: um,
