@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use crate::render::OutputFormat;
 
 use crate::log_id::ParserError;
-use spreadsheet_ods::{read_ods_buf, write_ods_buf_uncompressed, Sheet, WorkBook};
+use spreadsheet_ods::{
+    read_ods_buf, write_ods_buf_uncompressed, Sheet, Value, ValueType, WorkBook,
+};
 use unimarkup_commons::config::output::Output;
 use unimarkup_commons::config::{Config, MergingConfig};
 use unimarkup_commons::lexer::{
@@ -27,6 +29,14 @@ use unimarkup_parser::{
 };
 
 pub mod render;
+
+fn unpack_content_safe(value: Value) -> String {
+    if value.value_type() == ValueType::Text {
+        value.as_str_or("").into()
+    } else {
+        value.as_cow_str_or("").into()
+    }
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct UmiRow {
@@ -105,7 +115,7 @@ impl Umi {
         sheet.set_value(1, 2, "Preamble");
         sheet.set_value(
             1,
-            4,
+            5,
             serde_yaml::to_string(&self.config.preamble).unwrap_or_default(),
         );
 
@@ -167,7 +177,7 @@ impl Umi {
                         current_line.position,
                     )))?,
                     content: self.read_inlines(current_line.content.clone()),
-                    attributes: Some(current_line.attributes),
+                    attributes: Some(current_line.attributes).filter(|s| !s.is_empty()),
                     start: Position::new(1, 1),
                     end: Position::new(1, 1),
                 };
@@ -183,7 +193,7 @@ impl Umi {
                 let verbatim = VerbatimBlock {
                     content: current_line.content.clone(),
                     data_lang: properties.get("data_lang").cloned(),
-                    attributes: Some(current_line.attributes),
+                    attributes: Some(current_line.attributes).filter(|s| !s.is_empty()),
                     implicit_closed: properties
                         .get("implicit_closed")
                         .ok_or(ParserError::MissingProperty((
@@ -225,8 +235,6 @@ impl Umi {
                             _ => break,
                         };
                         bullet_list.entries.append(&mut vec![bullet_list_entry]);
-                    } else {
-                        break;
                     }
 
                     current_line_index += 1;
@@ -279,8 +287,6 @@ impl Umi {
                         // Append Element to Bullet List Entry Body
                         let block = self.read_row(current_line_index)?;
                         bullet_list_entry.body.append(&mut vec![block]);
-                    } else {
-                        break;
                     }
 
                     current_line_index += 1;
@@ -341,13 +347,7 @@ impl Umi {
                     .value
                     .as_u8_opt()
                     .unwrap_or(0),
-                sheet
-                    .cell(row_index, 5)
-                    .unwrap_or_default()
-                    .value
-                    .as_str_opt()
-                    .unwrap_or_default()
-                    .to_string(),
+                unpack_content_safe(sheet.cell(row_index, 5).unwrap_or_default().value),
                 sheet
                     .cell(row_index, 6)
                     .unwrap_or_default()
