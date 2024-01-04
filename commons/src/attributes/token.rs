@@ -142,6 +142,7 @@ impl AttributeTokenKind {
 pub struct QuotedPart {
     pub(crate) parts: Vec<QuotedValuePart>,
     pub(crate) quote: char,
+    pub(crate) implicit_closed: bool,
 }
 
 #[derive(Debug, PartialEq, Clone)]

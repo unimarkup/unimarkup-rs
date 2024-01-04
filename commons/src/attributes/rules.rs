@@ -1,9 +1,6 @@
 use itertools::Itertools;
 
-use crate::{
-    lexer::token::TokenKind,
-    parsing::{Element, Parser},
-};
+use crate::lexer::token::TokenKind;
 
 use super::{
     token::{AttributeToken, AttributeTokenKind},
@@ -104,15 +101,10 @@ at_rules!(
     "property" -> Property: "https://developer.mozilla.org/en-US/docs/Web/CSS/@property"
 );
 
-pub(crate) fn parse_at_rule<'slice, 'input, P, T, C>(
-    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+pub(crate) fn parse_at_rule<'slice, 'input>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input>,
     attrb_tokens: &mut Vec<AttributeToken>,
-) -> bool
-where
-    P: Parser<'slice, 'input, T, C>,
-    T: Element,
-    C: Default,
-{
+) -> bool {
     let mut ident_tokens = tokenizer.iter.peeking_take_while(|t| {
         !matches!(
             t.kind,
@@ -154,41 +146,26 @@ where
 }
 
 /// At-rule parser for `media` and `container`.
-fn parse_conditional<'slice, 'input, P, T, C>(
-    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+fn parse_conditional<'slice, 'input>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input>,
     attrb_tokens: &mut Vec<AttributeToken>,
-) -> bool
-where
-    P: Parser<'slice, 'input, T, C>,
-    T: Element,
-    C: Default,
-{
+) -> bool {
     todo!()
 }
 
-fn parse_conditional_prelude<'slice, 'input, P, T, C>(
-    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+fn parse_conditional_prelude<'slice, 'input>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input>,
     attrb_tokens: &mut Vec<AttributeToken>,
-) -> bool
-where
-    P: Parser<'slice, 'input, T, C>,
-    T: Element,
-    C: Default,
-{
+) -> bool {
     todo!()
 }
 
-fn parse_token_parts<'slice, 'input, P, T, C>(
-    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+fn parse_token_parts<'slice, 'input>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input>,
     attrb_tokens: &mut Vec<AttributeToken>,
     scope: usize,
     quote: Option<TokenKind>,
-) -> bool
-where
-    P: Parser<'slice, 'input, T, C>,
-    T: Element,
-    C: Default,
-{
+) -> bool {
     let mut tokens = tokenizer.iter.peeking_take_while(|t| match quote {
         Some(quote_token) => {
             t.kind != quote_token
@@ -219,62 +196,37 @@ where
     todo!()
 }
 
-fn parse_layer<'slice, 'input, P, T, C>(
-    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+fn parse_layer<'slice, 'input>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input>,
     attrb_tokens: &mut Vec<AttributeToken>,
-) -> bool
-where
-    P: Parser<'slice, 'input, T, C>,
-    T: Element,
-    C: Default,
-{
+) -> bool {
     todo!()
 }
 
-fn parse_scope<'slice, 'input, P, T, C>(
-    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+fn parse_scope<'slice, 'input>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input>,
     attrb_tokens: &mut Vec<AttributeToken>,
-) -> bool
-where
-    P: Parser<'slice, 'input, T, C>,
-    T: Element,
-    C: Default,
-{
+) -> bool {
     todo!()
 }
 
-fn parse_keyframes<'slice, 'input, P, T, C>(
-    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+fn parse_keyframes<'slice, 'input>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input>,
     attrb_tokens: &mut Vec<AttributeToken>,
-) -> bool
-where
-    P: Parser<'slice, 'input, T, C>,
-    T: Element,
-    C: Default,
-{
+) -> bool {
     todo!()
 }
 
-fn parse_page<'slice, 'input, P, T, C>(
-    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+fn parse_page<'slice, 'input>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input>,
     attrb_tokens: &mut Vec<AttributeToken>,
-) -> bool
-where
-    P: Parser<'slice, 'input, T, C>,
-    T: Element,
-    C: Default,
-{
+) -> bool {
     todo!()
 }
 
-fn parse_supports<'slice, 'input, P, T, C>(
-    tokenizer: &mut AttributeTokenizer<'slice, 'input, P, T, C>,
+fn parse_supports<'slice, 'input>(
+    tokenizer: &mut AttributeTokenizer<'slice, 'input>,
     attrb_tokens: &mut Vec<AttributeToken>,
-) -> bool
-where
-    P: Parser<'slice, 'input, T, C>,
-    T: Element,
-    C: Default,
-{
+) -> bool {
     todo!()
 }
