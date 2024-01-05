@@ -10,9 +10,8 @@ use crate::{
     parsing::{Element, Parser, ParserError},
 };
 
-use super::{
-    rules::AtRuleId,
-    token::{AttributeToken, AttributeTokenKind, AttributeTokens, QuotedPart, QuotedValuePart},
+use super::token::{
+    AttributeToken, AttributeTokenKind, AttributeTokens, QuotedPart, QuotedValuePart,
 };
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -64,81 +63,6 @@ impl<'slice, 'input> Parser<'slice, 'input, AttributeTokens, AttributeContext>
             return (self, Err(ParserError::InvalidStart));
         }
 
-        // while let Some(next_kind) = self.iter.peek_kind() {
-        //     match next_kind {
-        //         TokenKind::At(len) => {
-        //             if len != 1 {
-        //                 // TODO: set log error for multiple `@`
-        //                 return (self, Err(ParserError::SyntaxViolation));
-        //             }
-        //             let at_rule_parsed = rules::parse_at_rule(&mut self, &mut attrb_tokens);
-        //             if !at_rule_parsed {
-        //                 return (self, Err(ParserError::SyntaxViolation));
-        //             }
-        //         }
-        //         TokenKind::Semicolon(len) => {
-        //             self.parse_semicolon(&mut attrb_tokens, len);
-        //         }
-        //         TokenKind::OpenBrace => {
-        //             // Only logic allowed at this point
-        //             // TODO: add logic parser
-        //             self.iter
-        //                 .next()
-        //                 .expect("Peek was some, so next must return value.");
-        //         }
-        //         TokenKind::CloseBrace => {
-        //             // Must be closing brace, because inner braces are consumed in recursive fn calls.
-        //             let token = self
-        //                 .iter
-        //                 .next()
-        //                 .expect("Peek was some, so next must return value.");
-
-        //             return (
-        //                 self,
-        //                 Ok(AttributeTokens {
-        //                     tokens: attrb_tokens,
-        //                     implicit_closed: false,
-        //                     start: open_token.start,
-        //                     end: token.end,
-        //                 }),
-        //             );
-        //         }
-        //         TokenKind::Whitespace => {
-        //             let token = self
-        //                 .iter
-        //                 .next()
-        //                 .expect("Peek was some, so next must return value.");
-        //             attrb_tokens.push(AttributeToken {
-        //                 kind: AttributeTokenKind::Whitespace,
-        //                 start: token.start,
-        //                 end: token.end,
-        //             })
-        //         }
-        //         TokenKind::Newline => {
-        //             let token = self
-        //                 .iter
-        //                 .next()
-        //                 .expect("Peek was some, so next must return value.");
-        //             attrb_tokens.push(AttributeToken {
-        //                 kind: AttributeTokenKind::Newline,
-        //                 start: token.start,
-        //                 end: token.end,
-        //             })
-        //         }
-        //         TokenKind::EscapedWhitespace | TokenKind::EscapedNewline => {
-        //             // TODO: set error that escaped whitespace/newline is not allowed as identifier start
-        //             return (self, Err(ParserError::SyntaxViolation));
-        //         }
-        //         _ => {
-        //             // Note: Quotes may be part of the ident
-        //             let res = self.parse_single_or_nested(&mut attrb_tokens);
-        //             if let Err(err) = res {
-        //                 return (self, Err(err));
-        //             }
-        //         }
-        //     }
-        // }
-
         match self.parse_block(&mut attrb_tokens) {
             Ok(impl_closed) => {
                 if impl_closed {
@@ -176,17 +100,6 @@ impl<'slice, 'input> Parser<'slice, 'input, AttributeTokens, AttributeContext>
             }
             Err(err) => (self, Err(err)),
         }
-
-        // let end = attrb_tokens.last().map(|t| t.end).unwrap_or(open_token.end);
-        // (
-        //     self,
-        //     Ok(AttributeTokens {
-        //         tokens: attrb_tokens,
-        //         implicit_closed: true,
-        //         start: open_token.start,
-        //         end,
-        //     }),
-        // )
     }
 
     fn context(&self) -> &AttributeContext {
@@ -756,11 +669,13 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
         if len == Comment::keyword_len() {
             let comment = Comment::parse(&mut self.iter)
                 .expect("Valid comment start always leads to a comment.");
-            // TODO: add implicit closed info from comment
+            let start = comment.start();
+            let end = comment.end();
+
             attrb_tokens.push(AttributeToken {
-                kind: AttributeTokenKind::Semicolon,
-                start: comment.start(),
-                end: comment.end(),
+                kind: AttributeTokenKind::Comment(comment),
+                start,
+                end,
             })
         } else {
             // Multiple semicolons are combined to one, because CSS syntax uses semicolons as statement ends.
@@ -797,7 +712,7 @@ enum QuoteParsing {
 mod test {
     use crate::{
         attributes::token::{
-            AttributeTokenKind, AttributeTokens, Ident, QuotedPartKind, QuotedValuePart,
+            AttributeTokenKind, AttributeTokens, Ident, QuotedPartKind, TokenPart,
         },
         lexer::token::iterator::TokenIterator,
         parsing::{Parser, ParserError},
@@ -876,5 +791,99 @@ mod test {
             AttributeTokenKind::Semicolon,
             "Semicolon not correctly parsed."
         );
+    }
+
+    #[test]
+    fn two_html_attrbs() {
+        // 'class' ident directly after ';' to not get a 'Whitespace' token
+        let s = "{id: 'my-id';class: 'some-class other-class'}";
+        let tokens = attrb_tokens(s).unwrap();
+
+        assert_eq!(
+            tokens.tokens.len(),
+            5,
+            "Ident one, quoted value part, semicolon, ident two, and second quoted value were not correctly parsed."
+        );
+        assert_eq!(
+            tokens.tokens[0].kind,
+            AttributeTokenKind::Ident(Ident::from("id".to_string())),
+            "'id' ident not correctly parsed."
+        );
+
+        let value_kind = &tokens.tokens[1].kind;
+        if let AttributeTokenKind::QuotedPart(quoted_part) = value_kind {
+            assert_eq!(quoted_part.quote, '\'', "Wrong quote char detected.");
+            assert_eq!(
+                quoted_part.parts[0].kind,
+                QuotedPartKind::Plain("my-id".to_string()),
+                "'my-id' not part of the parsed quoted value."
+            );
+        } else {
+            panic!("Detected '{:?}' instead of a quoted part.", value_kind);
+        }
+
+        assert_eq!(
+            tokens.tokens[2].kind,
+            AttributeTokenKind::Semicolon,
+            "Semicolon not correctly parsed."
+        );
+
+        assert_eq!(
+            tokens.tokens[3].kind,
+            AttributeTokenKind::Ident(Ident::from("class".to_string())),
+            "'class' ident not correctly parsed."
+        );
+
+        let value_kind = &tokens.tokens[4].kind;
+        if let AttributeTokenKind::QuotedPart(quoted_part) = value_kind {
+            assert_eq!(quoted_part.quote, '\'', "Wrong quote char detected.");
+            assert_eq!(
+                quoted_part.parts[0].kind,
+                QuotedPartKind::Plain("some-class other-class".to_string()),
+                "'some-class other-class' not part of the parsed quoted value."
+            );
+        } else {
+            panic!("Detected '{:?}' instead of a quoted part.", value_kind);
+        }
+    }
+
+    #[test]
+    fn nested_attrb() {
+        let s = "{#some-id{color: red}}";
+        let tokens = attrb_tokens(s).unwrap();
+
+        assert_eq!(
+            tokens.tokens.len(),
+            2,
+            "Selector and nested block were not correctly parsed."
+        );
+        assert_eq!(
+            tokens.tokens[0].kind,
+            AttributeTokenKind::SelectorPart(TokenPart::from("#some-id".to_string())),
+            "'#some-id' selector not correctly parsed."
+        );
+
+        let value_kind = &tokens.tokens[1].kind;
+        if let AttributeTokenKind::Nested(nested_tokens) = value_kind {
+            assert_eq!(
+                nested_tokens.tokens.len(),
+                2,
+                "Nested ident and value not correctly parsed."
+            );
+            assert_eq!(
+                nested_tokens.tokens[0].kind,
+                AttributeTokenKind::Ident(Ident::from("color".to_string())),
+                "'color' ident not parsed in the nested block."
+            );
+            assert_eq!(
+                nested_tokens.tokens[1].kind,
+                AttributeTokenKind::ValuePart(crate::attributes::token::ValuePart::Plain(
+                    "red".to_string()
+                )),
+                "'color' ident not parsed in the nested block."
+            );
+        } else {
+            panic!("Detected '{:?}' instead of a nested block.", value_kind);
+        }
     }
 }
