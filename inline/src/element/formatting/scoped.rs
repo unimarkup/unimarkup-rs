@@ -76,3 +76,4 @@ macro_rules! scoped_parser {
 
 scoped_parser!(parse_verbatim, Verbatim);
 scoped_parser!(parse_math, Math);
+scoped_parser!(parse_distinct_reference, Cite);

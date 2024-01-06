@@ -217,6 +217,9 @@ fn get_scoped_parser(kind: InlineTokenKind, logic_only: bool) -> Option<InlinePa
         InlineTokenKind::Math if !logic_only => {
             Some(crate::element::formatting::scoped::parse_math)
         }
+        InlineTokenKind::Cite if !logic_only => {
+            Some(crate::element::formatting::scoped::parse_distinct_reference)
+        }
         InlineTokenKind::OpenBracket if !logic_only => Some(crate::element::textbox::parse),
         _ => None,
     }

@@ -189,7 +189,8 @@ inline_formats!(
     Overline,
     Verbatim,
     Quote,
-    Math
+    Math,
+    Cite
 );
 
 format_to_inline!(
@@ -203,7 +204,8 @@ format_to_inline!(
     Overline,
     Verbatim,
     Quote,
-    Math
+    Math,
+    Cite
 );
 
 const BOLD_INDEX: usize = 0;

@@ -19,6 +19,7 @@ use unimarkup_inline::element::{
     textbox::{citation::Citation, hyperlink::Hyperlink, TextBox},
     Inline,
 };
+use unimarkup_inline::element::formatting::Cite;
 use unimarkup_parser::{
     document::Document,
     elements::{
@@ -258,6 +259,12 @@ pub trait Renderer<T: OutputFormat> {
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
     }
+
+    fn render_distinct_reference(
+        &mut self,
+        _distinctReference: &Cite,
+        _context: &Context,
+    ) -> Result<T, RenderError> { Err(RenderError::Unimplemented) }
 
     fn render_bibliography(&mut self, _context: &Context) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -500,6 +507,7 @@ pub trait Renderer<T: OutputFormat> {
             Inline::Hyperlink(hyperlink) => self.render_hyperlink(hyperlink, context),
             Inline::Citation(citation) => self.render_citation(citation, context),
 
+            Inline::Cite(distinctReference) => self.render_distinct_reference(distinctReference, context),
             Inline::NamedSubstitution(_) => todo!(),
             Inline::ImplicitSubstitution(_) => todo!(),
             Inline::DirectUri(_) => todo!(),
