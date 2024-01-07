@@ -1,26 +1,31 @@
 use cssparser::ParseError;
 use lightningcss::{
-    error::ParserError, selector::SelectorList, stylesheet::ParserOptions, traits::ParseWithOptions,
+    error::ParserError, properties::PropertyId, selector::SelectorList, stylesheet::ParserOptions,
+    traits::ParseWithOptions,
 };
 
-use super::token::{AttributeToken, QuotedValuePart};
+use super::{html::HtmlAttributeId, token::AttributeToken, um::UmAttributeId};
 
 /// Resolved attributes have replaced all logic elements by their respective return value.
 /// Resolved attributes still preserve the attribute order in the given content.
 #[derive(Debug, Default, PartialEq, Clone)]
-pub struct ResolvedAttributes<'tslice>(Vec<ResolvedAttribute<'tslice>>);
+pub struct ResolvedAttributes<'tslice> {
+    pub html: Vec<ResolvedAttribute<'tslice>>,
+    pub css: Vec<ResolvedAttribute<'tslice>>,
+    pub um: Vec<ResolvedAttribute<'tslice>>,
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ResolvedAttribute<'tslice> {
-    Property(ResolvedProperty<'tslice>),
+    Single(ResolvedSingleAttribute<'tslice>),
     AtRule(ResolvedAtRule<'tslice>),
     Nested(ResolvedNestedAttribute<'tslice>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ResolvedNestedAttribute<'tslice> {
-    selectors: ResolvedAttributeSelectors<'tslice>,
-    body: Vec<ResolvedAttribute<'tslice>>,
+    pub(crate) selectors: ResolvedAttributeSelectors,
+    pub(crate) body: Vec<ResolvedAttribute<'tslice>>,
 }
 
 impl ResolvedNestedAttribute<'_> {
@@ -34,53 +39,59 @@ impl ResolvedNestedAttribute<'_> {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ResolvedAttributeSelectors<'tslice> {
-    selectors: ResolvedAttributeString<'tslice, AttributeToken>,
+pub struct ResolvedAttributeSelectors {
+    selectors: String,
 }
 
-impl ResolvedAttributeSelectors<'_> {
+impl ResolvedAttributeSelectors {
     #[inline]
     pub fn selectors<'a>(
         &'a self,
         options: ParserOptions<'_, 'a>,
     ) -> Result<SelectorList<'a>, ParseError<'_, ParserError<'_>>> {
-        SelectorList::<'a>::parse_string_with_options(&self.selectors.value, options)
+        SelectorList::<'a>::parse_string_with_options(&self.selectors, options)
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ResolvedAttributeIdent<'tslice> {
-    /// The parsed token this ident is associated with.
-    /// Ident can only be from one token.
-    ///
-    /// Quoted identifiers are allowed, but must **not** span multiple lines.
-    /// e.g. `"custom ident": <some value>`
-    ident: &'tslice AttributeToken,
+pub enum ResolvedAttributeIdent<'tslice> {
+    Html(HtmlAttributeId<'tslice>),
+    Css(PropertyId<'tslice>),
+    Um(UmAttributeId<'tslice>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum ResolvedProperty<'tslice> {
-    Single(ResolvedSingleProperty<'tslice>),
-    Array(ResolvedArrayProperty<'tslice>),
+pub enum ResolvedSingleAttribute<'tslice> {
+    Flat(ResolvedFlatAttribute<'tslice>),
+    Array(ResolvedArrayAttribute<'tslice>),
+}
+
+impl ResolvedSingleAttribute<'_> {
+    pub fn ident(&self) -> &ResolvedAttributeIdent {
+        match self {
+            ResolvedSingleAttribute::Flat(flat) => &flat.ident,
+            ResolvedSingleAttribute::Array(array) => &array.ident,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ResolvedSingleProperty<'tslice> {
-    ident: ResolvedAttributeIdent<'tslice>,
-    value: ResolvedSinglePropertyValue<'tslice>,
-    important: bool,
+pub struct ResolvedFlatAttribute<'tslice> {
+    pub(crate) ident: ResolvedAttributeIdent<'tslice>,
+    pub(crate) value: ResolvedFlatAttributeValue,
+    pub(crate) important: bool,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ResolvedAttributeString<'tslice, T> {
-    tokens: &'tslice [T],
+pub struct ResolvedAttributeString<'tslice> {
+    pub(crate) tokens: &'tslice [AttributeToken],
     /// Mapping from a token `T` in the `tokens` slice to the length the token resolved to in the resulting string.
     /// First entry in the vector corresponds to the first entry in the slice.
     ///
     /// This is needed to get correct error mapping from `cssparser` to parsed [`AttributeToken`]s or [`QuotedValuePart`].
-    resolved_length: Vec<ResolvedTokenLength>,
+    pub(crate) resolved_length: Vec<ResolvedTokenLength>,
     /// The string the referenced tokens resolved to.
-    value: String,
+    pub(crate) value: String,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -90,23 +101,23 @@ pub struct ResolvedTokenLength {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum ResolvedSinglePropertyValue<'tslice> {
+pub enum ResolvedFlatAttributeValue {
     /// A single (`'`) or double (`"`) quoted value (e.g. `prop: "some value"`)
-    Quoted(ResolvedAttributeString<'tslice, QuotedValuePart>, char),
+    Quoted(String, char),
     /// A whitespace or comma separated value (e.g. `prop: "some" "value"`)
-    Array(Vec<ResolvedSinglePropertyValue<'tslice>>),
+    Array(Vec<ResolvedFlatAttributeValue>),
     Float(f64),
-    Int(u64),
+    Int(isize),
     Bool(bool),
     /// A value that is not a bool, number, quoted string, or whitespace/comma separated.
     /// e.g. `prop: #ffffff`
-    Other(ResolvedAttributeString<'tslice, AttributeToken>),
+    Other(String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ResolvedArrayProperty<'tslice> {
+pub struct ResolvedArrayAttribute<'tslice> {
     ident: ResolvedAttributeIdent<'tslice>,
-    value: Vec<ResolvedProperty<'tslice>>,
+    value: Vec<ResolvedSingleAttribute<'tslice>>,
 }
 
 #[derive(Debug, PartialEq, Clone)]

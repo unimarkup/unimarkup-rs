@@ -267,7 +267,8 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
         // Peeked some token before calling "value_part"
         let open_token = self.iter.peek().ok_or(ParserError::SyntaxViolation)?;
         let mut end = Position::default();
-        let mut is_num = false;
+        let mut possible_int = false;
+        let mut possible_float = false;
 
         while let Some(token) = self.iter.peek() {
             match token.kind {
@@ -284,15 +285,17 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                 }
                 _ => {
                     self.iter.next();
+                    let might_be_int_part = matches!(
+                        token.kind,
+                        TokenKind::Digit(_) | TokenKind::Minus(1) | TokenKind::Underline(1)
+                    );
+                    // "Plain" might lead to "e" or "E" for exponent
+                    let might_be_float_part = might_be_int_part
+                        || (matches!(token.kind, TokenKind::Plain | TokenKind::Dot(1))
+                            && (token.end.col_utf8 - token.start.col_utf8) == 1);
 
-                    if is_num && !matches!(token.kind, TokenKind::Digit(_)) {
-                        is_num = false;
-                    } else if !is_num
-                        && part.is_empty()
-                        && matches!(token.kind, TokenKind::Digit(_))
-                    {
-                        is_num = true;
-                    }
+                    possible_int = (possible_int || part.is_empty()) && might_be_int_part;
+                    possible_float = (possible_float || part.is_empty()) && might_be_float_part;
 
                     part.push_str(&token.input[token.offset.start..token.offset.end]);
                     end = token.end;
@@ -301,12 +304,21 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
         }
 
         if !part.is_empty() {
-            let combined_part = if is_num {
+            let combined_part = if possible_int {
                 match part.parse() {
-                    Ok(num) => super::token::ValuePart::Num(num),
+                    Ok(num) => super::token::ValuePart::Int(num),
                     Err(_) => super::token::ValuePart::Plain(part),
                 }
-            } else if part == "!important" {
+            } else if possible_float {
+                match part.parse() {
+                    Ok(num) => super::token::ValuePart::Float(num),
+                    Err(_) => super::token::ValuePart::Plain(part),
+                }
+            } else if part.to_lowercase() == "true" {
+                super::token::ValuePart::Bool(true)
+            } else if part.to_lowercase() == "false" {
+                super::token::ValuePart::Bool(false)
+            } else if part.to_lowercase() == "!important" {
                 super::token::ValuePart::Important
             } else {
                 super::token::ValuePart::Plain(part)

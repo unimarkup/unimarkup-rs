@@ -238,7 +238,9 @@ impl From<String> for TokenPart {
 #[derive(Debug, PartialEq, Clone)]
 pub enum ValuePart {
     Plain(String),
-    Num(usize),
+    Float(f64),
+    Int(isize),
+    Bool(bool),
     /// The `!important` marker.
     /// See: https://www.w3.org/TR/css-syntax-3/#!important-diagram
     Important,
@@ -248,7 +250,9 @@ impl ValuePart {
     pub fn as_unimarkup(&self) -> String {
         match self {
             ValuePart::Plain(plain) => plain.clone(),
-            ValuePart::Num(num) => num.to_string(),
+            ValuePart::Float(val) => val.to_string(),
+            ValuePart::Int(val) => val.to_string(),
+            ValuePart::Bool(val) => val.to_string(),
             ValuePart::Important => "!important".to_string(),
         }
     }
