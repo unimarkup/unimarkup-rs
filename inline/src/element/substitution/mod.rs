@@ -1,6 +1,5 @@
-use std::rc::Rc;
 use unimarkup_commons::lexer::{position::Position, token::implicit::ImplicitSubstitutionKind};
-use unimarkup_commons::lexer::token::iterator::{EndMatcher, PeekingNext};
+use unimarkup_commons::lexer::token::iterator::PeekingNext;
 use crate::InlineTokenKind;
 use crate::parser::InlineParser;
 
@@ -77,23 +76,26 @@ impl InlineElement for DirectUri {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DistinctReference {
     id: String,
+    fields: Vec<String>,
     start: Position,
     end: Position,
 }
 
 impl DistinctReference {
-    pub fn new(id: String, start: Position, end: Position) -> Self {
-        Self { id, start, end }
+    pub fn new(id: String, fields: Vec<String>, start: Position, end: Position) -> Self {
+        Self { id, fields, start, end }
     }
 
     pub fn id(&self) -> &str {
         &self.id
     }
+
+    pub fn fields(&self) -> &Vec<String> { &self.fields }
 }
 
 impl InlineElement for DistinctReference {
     fn as_unimarkup(&self) -> String {
-        self.id.clone()
+        format!("{}.{}", self.id.clone(), self.fields.clone().join(""))
     }
 
     fn start(&self) -> unimarkup_commons::lexer::position::Position {
@@ -116,48 +118,44 @@ pub(crate) fn parse_distinct_reference<'s, 'i>(
 
     let open_token = open_token_opt.expect("Checked above to be not None.");
 
-    // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
-    if parser.iter.peek_kind().map_or(true, |t| t.is_space()) {
-        return (parser, None);
-    }
-
     parser.iter.next(); // consume open token => now it will lead to Some(inline)
 
-    // ignore implicits, because only escapes and logic elements are allowed in following inline verbatim
-    let prev_context_flags = parser.context.flags;
+    let mut parsed_token_strings = Vec::new();
+    let mut entries = Vec::new();
 
-    let (mut scoped_parser, outer_open_formats) =
-        parser.nest_scoped(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-            !matcher.prev_is_space()
-                && matcher.consumed_matches(&[InlineTokenKind::Cite.into()])
-        })));
-    scoped_parser.context.flags.allow_implicits = false;
-    scoped_parser.context.flags.keep_whitespaces = true;
-    scoped_parser.context.flags.logic_only = true;
+    while let Some(kind) = parser.iter.peek_kind() {
+        let token = parser.iter.next().unwrap();
+        if kind == InlineTokenKind::Eoi || kind == InlineTokenKind::Cite {
+            break;
+        }
+        if kind == InlineTokenKind::Dot || token.as_str() == "." {
+            entries.push(parsed_token_strings.join(""));
+            parsed_token_strings = Vec::new();
+        } else {
+            parsed_token_strings.push(token.as_str().to_string());
+        }
+    }
 
-    let (updated_parser, inner) = InlineParser::parse(scoped_parser);
-    scoped_parser = updated_parser;
-
-    let end_reached = scoped_parser.iter.end_reached();
-    parser = scoped_parser.unfold_scoped(outer_open_formats);
-    parser.context.flags = prev_context_flags;
+    entries.push(parsed_token_strings.join(""));
+    if entries.len() < 2 {
+        entries.push("authors".to_string());
+    }
+    let id = entries[0].clone();
+    entries.remove(0);
 
     let prev_token = parser.iter.prev_token().expect(
         "Previous token must exist, because peek above would else have returned None.",
     );
 
-    let (end, implicit_end) = if end_reached {
+    let end = if parser.iter.end_reached() {
         //TODO: Check for optional attributes here
-        (prev_token.end, false)
+        prev_token.end
     } else {
-        (
-            crate::element::helper::implicit_end_using_prev(&prev_token),
-            true,
-        )
+        crate::element::helper::implicit_end_using_prev(&prev_token)
     };
 
     (
         parser,
-        Some(Inline::DistinctReference(DistinctReference::new(inner[0].as_unimarkup(), open_token.start, end)))
+        Some(Inline::DistinctReference(DistinctReference::new(id, entries, open_token.start, end)))
     )
 }

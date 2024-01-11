@@ -191,7 +191,7 @@ impl Renderer<Html> for HtmlRenderer {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::PlainContent,
             attributes: HtmlAttributes::default(),
-            content: Some(distinct_reference.id().to_string())
+            content: Some(format!("{}::{}", distinct_reference.id().to_string(), distinct_reference.fields().join("!")))
         }));
         Ok(html)
     }
