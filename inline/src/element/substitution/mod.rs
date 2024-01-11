@@ -1,7 +1,7 @@
-use unimarkup_commons::lexer::{position::Position, token::implicit::ImplicitSubstitutionKind};
-use unimarkup_commons::lexer::token::iterator::PeekingNext;
-use crate::InlineTokenKind;
 use crate::parser::InlineParser;
+use crate::InlineTokenKind;
+use unimarkup_commons::lexer::token::iterator::PeekingNext;
+use unimarkup_commons::lexer::{position::Position, token::implicit::ImplicitSubstitutionKind};
 
 use super::{Inline, InlineElement};
 
@@ -83,14 +83,21 @@ pub struct DistinctReference {
 
 impl DistinctReference {
     pub fn new(id: String, fields: Vec<String>, start: Position, end: Position) -> Self {
-        Self { id, fields, start, end }
+        Self {
+            id,
+            fields,
+            start,
+            end,
+        }
     }
 
     pub fn id(&self) -> &str {
         &self.id
     }
 
-    pub fn fields(&self) -> &Vec<String> { &self.fields }
+    pub fn fields(&self) -> &Vec<String> {
+        &self.fields
+    }
 }
 
 impl InlineElement for DistinctReference {
@@ -138,14 +145,17 @@ pub(crate) fn parse_distinct_reference<'s, 'i>(
 
     entries.push(parsed_token_strings.join(""));
     if entries.len() < 2 {
-        entries.push("authors".to_string());
+        entries.push("author".to_string());
+        entries.push("0".to_string());
+        entries.push("family".to_string());
     }
     let id = entries[0].clone();
     entries.remove(0);
 
-    let prev_token = parser.iter.prev_token().expect(
-        "Previous token must exist, because peek above would else have returned None.",
-    );
+    let prev_token = parser
+        .iter
+        .prev_token()
+        .expect("Previous token must exist, because peek above would else have returned None.");
 
     let end = if parser.iter.end_reached() {
         //TODO: Check for optional attributes here
@@ -156,6 +166,11 @@ pub(crate) fn parse_distinct_reference<'s, 'i>(
 
     (
         parser,
-        Some(Inline::DistinctReference(DistinctReference::new(id, entries, open_token.start, end)))
+        Some(Inline::DistinctReference(DistinctReference::new(
+            id,
+            entries,
+            open_token.start,
+            end,
+        ))),
     )
 }

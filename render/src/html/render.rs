@@ -1,5 +1,7 @@
 use crate::log_id::RenderError;
+use serde_json::Value;
 use unimarkup_commons::lexer::{span::Span, symbol::SymbolKind, token::TokenKind};
+use unimarkup_inline::element::substitution::DistinctReference;
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
@@ -9,7 +11,6 @@ use unimarkup_inline::element::{
     textbox::{citation::Citation, hyperlink::Hyperlink, TextBox},
     InlineElement,
 };
-use unimarkup_inline::element::substitution::DistinctReference;
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
 
 use crate::render::{Context, OutputFormat, Renderer};
@@ -187,11 +188,39 @@ impl Renderer<Html> for HtmlRenderer {
         Ok(html)
     }
 
-    fn render_distinct_reference(&mut self, distinct_reference: &DistinctReference, _context: &Context) -> Result<Html, RenderError> {
+    fn render_distinct_reference(
+        &mut self,
+        distinct_reference: &DistinctReference,
+        context: &Context,
+    ) -> Result<Html, RenderError> {
+        let mut selected_item: Option<Value> = None;
+        for csl_item in context.csl_data.clone().items {
+            if csl_item.id.to_string() == distinct_reference.id() {
+                selected_item = Some(serde_json::to_value(csl_item).unwrap());
+                break;
+            }
+        }
+        let content;
+        if let Some(item_value) = selected_item {
+            let mut result_value = item_value.clone();
+            for field in distinct_reference.fields().clone() {
+                result_value = match field.parse::<usize>() {
+                    Ok(n) => result_value[n].clone(),
+                    Err(_) => result_value[field].clone(),
+                };
+            }
+            content = if let Some(s) = result_value.as_str() {
+                s.to_string()
+            } else {
+                result_value.to_string()
+            }
+        } else {
+            content = "########### CITATION ERROR ###########".to_string()
+        }
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::PlainContent,
             attributes: HtmlAttributes::default(),
-            content: Some(format!("{}::{}", distinct_reference.id().to_string(), distinct_reference.fields().join("!")))
+            content: Some(content),
         }));
         Ok(html)
     }

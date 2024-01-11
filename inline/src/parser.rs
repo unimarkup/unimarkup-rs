@@ -2,11 +2,11 @@
 
 use unimarkup_commons::lexer::token::iterator::{IteratorEndFn, IteratorPrefixFn, TokenIterator};
 
+use crate::InlineTokenKind::Cite;
 use crate::{
     element::{formatting::OpenFormatMap, Inline},
     tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind},
 };
-use crate::InlineTokenKind::Cite;
 
 /// Parser function type for inline element parsing.
 pub(crate) type InlineParserFn =
@@ -110,9 +110,7 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
 
             let parser_fn_opt = if kind == Cite {
                 get_distinct_reference_parser()
-            }
-            else if (!parser.context.flags.logic_only
-                && kind.is_scoped_format_keyword())
+            } else if (!parser.context.flags.logic_only && kind.is_scoped_format_keyword())
                 || kind.is_open_parenthesis()
             {
                 get_scoped_parser(kind, parser.context.flags.logic_only)

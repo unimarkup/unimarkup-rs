@@ -1,16 +1,16 @@
 //! Contains all Unimarkup [`Inline`] elements.
 
+use crate::element::substitution::DistinctReference;
 use unimarkup_commons::{
     lexer::{position::Position, span::Span},
     parsing::Element,
 };
-use crate::element::substitution::DistinctReference;
 
 use self::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
         Bold, Highlight, Italic, Math, Overline, Quote, Strikethrough, Subscript, Superscript,
-        Underline, Verbatim
+        Underline, Verbatim,
     },
     substitution::{named::NamedSubstitution, DirectUri, ImplicitSubstitution},
     textbox::{citation::Citation, hyperlink::Hyperlink, TextBox},
@@ -128,7 +128,7 @@ pub enum Inline {
     DirectUri(DirectUri),
 
     /// Distinct reference
-    DistinctReference(DistinctReference)
+    DistinctReference(DistinctReference),
 }
 
 impl Inline {

@@ -36,14 +36,14 @@ impl CiteprocWrapper {
     // disambiguation and short forms of citations if the same entry was cited before
     pub fn get_citation_strings(
         &mut self,
-        citation_paths: &HashSet<PathBuf>,
+        csl_data: CslData,
         doc_locale: Locale,
         citation_locales: HashMap<Locale, PathBuf>,
         style_id: PathBuf,
         citation_id_vectors: &[serde_json::Value],
         for_pagedjs: bool,
     ) -> Result<Vec<String>, CiteError> {
-        let citation_text = get_csl_string(citation_paths);
+        let citation_text = serde_json::ser::to_string(&csl_data).unwrap();
         let locale = get_locale_string(doc_locale, citation_locales);
         let style = get_style_string(style_id);
 
@@ -80,7 +80,7 @@ impl CiteprocWrapper {
     }
 }
 
-fn get_csl_string(references: &HashSet<PathBuf>) -> String {
+pub fn get_csl_data(references: &HashSet<PathBuf>) -> CslData {
     let mut citation_items: Vec<CslItem> = vec![];
     for reference in references {
         if let Ok(citation_string) = fs::read_to_string(reference.clone().into_os_string()) {
@@ -100,10 +100,9 @@ fn get_csl_string(references: &HashSet<PathBuf>) -> String {
             );
         }
     }
-    let csl_data = CslData {
+    CslData {
         items: citation_items,
-    };
-    serde_json::ser::to_string_pretty(&csl_data).unwrap()
+    }
 }
 
 #[cfg(test)]
@@ -130,7 +129,7 @@ mod tests {
         let serde_result = serde_json::to_value(vec![vec!["id-1"], vec!["id-1", "id-2"]]).unwrap();
         let for_pagedjs = false;
         let actual_citations = under_test.get_citation_strings(
-            &citation_paths,
+            get_csl_data(&citation_paths),
             doc_locale,
             citation_locales,
             style_id,
@@ -172,7 +171,7 @@ mod tests {
         let serde_result = serde_json::to_value(vec![vec!["id-1"], vec!["id-1", "id-2"]]).unwrap();
         let for_pagedjs = false;
         let actual_citations = under_test.get_citation_strings(
-            &citation_paths,
+            get_csl_data(&citation_paths),
             doc_locale,
             citation_locales,
             style_id,
@@ -213,7 +212,7 @@ mod tests {
         let serde_result = serde_json::to_value(vec![vec!["id-1"], vec!["id-1", "id-2"]]).unwrap();
         let for_pagedjs = true;
         let actual_citations = under_test.get_citation_strings(
-            &citation_paths,
+            get_csl_data(&citation_paths),
             doc_locale,
             citation_locales,
             style_id,
@@ -244,8 +243,7 @@ mod tests {
         paths.insert(
             PathBuf::from_str("./src/html/citeproc/test_files/citation_items2.csl").unwrap(),
         );
-        let actual_string = get_csl_string(&paths);
-        let actual_object: CslData = serde_json::from_str(&actual_string).unwrap();
+        let actual_object: CslData = get_csl_data(&paths);
 
         assert_eq!(actual_object.items.len(), 8);
     }
