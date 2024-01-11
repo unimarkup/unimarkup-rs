@@ -9,7 +9,7 @@ use unimarkup_inline::element::{
     textbox::{citation::Citation, hyperlink::Hyperlink, TextBox},
     InlineElement,
 };
-use unimarkup_inline::element::formatting::Cite;
+use unimarkup_inline::element::substitution::DistinctReference;
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
 
 use crate::render::{Context, OutputFormat, Renderer};
@@ -187,11 +187,11 @@ impl Renderer<Html> for HtmlRenderer {
         Ok(html)
     }
 
-    fn render_distinct_reference(&mut self, distinctReference: &Cite, _context: &Context) -> Result<Html, RenderError> {
+    fn render_distinct_reference(&mut self, distinct_reference: &DistinctReference, _context: &Context) -> Result<Html, RenderError> {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::PlainContent,
             attributes: HtmlAttributes::default(),
-            content: Some(distinctReference.inner().as_unimarkup())
+            content: Some(distinct_reference.id().to_string())
         }));
         Ok(html)
     }
