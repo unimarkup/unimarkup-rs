@@ -55,6 +55,12 @@ where
     }
 }
 
+impl std::fmt::Display for Token<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", String::from(self))
+    }
+}
+
 impl From<&Token<'_>> for String {
     fn from(value: &Token<'_>) -> Self {
         match value.kind {

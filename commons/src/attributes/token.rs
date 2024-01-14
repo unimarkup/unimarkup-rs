@@ -1,6 +1,10 @@
 use crate::{
     comments::Comment,
-    lexer::{position::Position, symbol::SymbolKind, token::implicit::ImplicitSubstitutionKind},
+    lexer::{
+        position::Position,
+        symbol::SymbolKind,
+        token::{implicit::ImplicitSubstitutionKind, TokenKind},
+    },
     logic::LogicAst,
     parsing::Element,
 };
@@ -55,23 +59,23 @@ impl Element for AttributeToken {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum AttributeTokenKind {
-    /// Attribute ident that ends with `: `.
+    /// Marks previous [`SelectorIdentPart`]s to be for an attribute ident that ends with `: `.
     /// The stored ident does **not** include the ending `: `.
     /// Quoted idents are allowed for Unimarkup attributes, but must not span multiple lines.
     /// e.g. `"quoted ident": 2023`
     ///
     /// **Note:** The whitespace after `:` is required, but may be any non-escaped whitespace.
     /// This requirement differs from the CSS specification, but makes distinguishing single or nested properties much easier.
-    /// It also allows to create properties with object-like arrays as value.
+    /// It also allows to create attributes with arrays using `[]` instead of implicit arrays via comma or space.
     /// See: https://www.w3.org/TR/css-syntax-3/#parsing, https://github.com/w3c/csswg-drafts/issues/9317
-    Ident(Ident),
-    /// Value part of a non-nested attribute.
-    /// May only be part of the complete value, because the value might be split by newlines or comments.
-    ValuePart(ValuePart),
-    /// Selector part for a nested attribute.
-    /// May only be part of the selector, because it can span multiple lines in case of a selector.
     ///
-    SelectorPart(TokenPart),
+    /// **Note:** There is no `SelectorMarker`, because `Nested` implicitly marks previous parts as selector parts.
+    /// Consequently, all ident or selector parts up until either an `IdentMarker` or `Nested` token are part of the same ident/selector.
+    IdentMarker,
+    /// Ident or selector part for a flat or nested attribute.
+    /// May only be part of the selector/ident, because a selector may span multiple lines,
+    /// or an idenat having comments between ident and the colon to mark it as ident instead of selector.
+    IdentOrSelectorPart(IdentOrSelectorPart),
     /// At-rule ident starting with `@`.
     /// The stored ident does **not** include the `@`.
     ///
@@ -81,10 +85,27 @@ pub enum AttributeTokenKind {
     /// Rule prelude part that is between an at-rule ident and a semicolon or nested block.
     /// May only be part of the prelude, because it can span multiple lines.
     /// e.g. `@<rule ident> <prelude part> {<optional nested block>}`
-    AtRulePreludePart(TokenPart),
+    AtRulePreludePart(String),
+    /// Flat value of an attribute that is not nested and is not an array.
+    FlatValue(ValuePart),
     /// Tokens surrounded by `{}`.
     /// Nested blocks are implicity closed if the underlying token iterator ends, before `}` is reached.
+    /// A semicolon is optional after the closing `}`.
     Nested(AttributeTokens),
+    /// Tokens surrounded by `[]`.
+    /// Arrays are implicity closed if the underlying token iterator ends, before `]` is reached.
+    Array(AttributeTokens),
+    /// A logic element that may resolve to one or more attributes, or a value of an attribute.
+    ///
+    /// ```text
+    /// {
+    ///   #id-selector {
+    ///     {$attrb_var};
+    ///   }
+    ///   {$other_attrbs};
+    ///   class: {$my_classes};
+    /// }
+    /// ```
     Logic(LogicAst),
     /// A Unimarkup comment.
     /// e.g. `;; This is a comment`
@@ -95,23 +116,26 @@ pub enum AttributeTokenKind {
     Semicolon,
     /// A single comma used as value separator.
     Comma,
-    /// A quoted part (e.g. `"value"` or `'value'`).
-    QuotedPart(QuotedPart),
-    Whitespace,
+    /// The `!important` marker.
+    /// See: https://www.w3.org/TR/css-syntax-3/#!important-diagram
+    Important,
     Newline,
+    /// Invalid token found while tokenization.
+    /// Contains the [`TokenKind`] and content causing the invalid attribute token.
+    Invalid(TokenKind, String),
 }
 
 impl AttributeTokenKind {
     pub fn as_unimarkup(&self) -> String {
         match self {
-            AttributeTokenKind::Ident(ident) => ident.0.clone() + ": ",
-            AttributeTokenKind::ValuePart(value_part) => value_part.as_unimarkup(),
-            AttributeTokenKind::SelectorPart(nested_ident_part) => nested_ident_part.0.clone(),
+            AttributeTokenKind::IdentMarker => ": ".to_string(),
+            AttributeTokenKind::FlatValue(value_part) => value_part.as_unimarkup(),
+            AttributeTokenKind::IdentOrSelectorPart(part) => part.as_unimarkup(),
             AttributeTokenKind::AtRuleIdent(at_rule_ident) => {
                 format!("@{}", at_rule_ident.as_str())
             }
             AttributeTokenKind::AtRulePreludePart(at_rule_prelude_part) => {
-                at_rule_prelude_part.0.clone()
+                at_rule_prelude_part.clone()
             }
             AttributeTokenKind::Nested(inner) => {
                 format!(
@@ -124,16 +148,40 @@ impl AttributeTokenKind {
                     }
                 )
             }
+            AttributeTokenKind::Array(inner) => {
+                format!(
+                    "[{}{}",
+                    inner.as_unimarkup(),
+                    if inner.implicit_closed {
+                        ""
+                    } else {
+                        SymbolKind::CloseBracket.as_str()
+                    }
+                )
+            }
             AttributeTokenKind::Logic(logic) => logic.as_unimarkup(),
             AttributeTokenKind::Comment(comment) => comment.as_unimarkup(),
             AttributeTokenKind::Semicolon => SymbolKind::Semicolon.as_str().to_string(),
             AttributeTokenKind::Comma => SymbolKind::Comma.as_str().to_string(),
-            AttributeTokenKind::QuotedPart(value) => {
-                let quote = value.quote;
-                format!("{quote}{}{quote}", value.as_unimarkup())
-            }
-            AttributeTokenKind::Whitespace => SymbolKind::Whitespace.as_str().to_string(),
+            AttributeTokenKind::Important => "!important".to_string(),
             AttributeTokenKind::Newline => SymbolKind::Newline.as_str().to_string(),
+            AttributeTokenKind::Invalid(_, c) => c.clone(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum IdentOrSelectorPart {
+    Plain(String),
+    /// A quoted part (e.g. `"value"` or `'value'`).
+    Quoted(QuotedPart),
+}
+
+impl IdentOrSelectorPart {
+    pub fn as_unimarkup(&self) -> String {
+        match self {
+            IdentOrSelectorPart::Plain(plain) => plain.clone(),
+            IdentOrSelectorPart::Quoted(q) => q.as_unimarkup(),
         }
     }
 }
@@ -154,10 +202,12 @@ pub struct QuotedValuePart {
 
 impl Element for QuotedPart {
     fn as_unimarkup(&self) -> String {
-        self.parts.iter().fold(String::new(), |mut s, q| {
+        let quote = self.quote;
+        let inner = self.parts.iter().fold(String::new(), |mut s, q| {
             s.push_str(&q.kind.as_unimarkup());
             s
-        })
+        });
+        format!("{quote}{inner}{quote}")
     }
 
     fn start(&self) -> Position {
@@ -180,7 +230,7 @@ pub enum QuotedPartKind {
     ImplicitSubstitution(ImplicitSubstitutionKind),
     /// Named substitutions are converted to their *rendered* representations.
     /// This is possible, because the content of named susbtitutions may only consist of plain content, whitespaces, newlines, escaped variants, or implicit substitutions.
-    NamedSubstitution(Ident),
+    NamedSubstitution(String),
     Logic(LogicAst),
     EscapedNewline,
     Newline,
@@ -193,7 +243,7 @@ impl QuotedPartKind {
             QuotedPartKind::ImplicitSubstitution(implicit_subst) => {
                 implicit_subst.orig().to_string()
             }
-            QuotedPartKind::NamedSubstitution(named_subst) => named_subst.0.clone(),
+            QuotedPartKind::NamedSubstitution(named_subst) => named_subst.clone(),
             QuotedPartKind::Logic(logic) => logic.as_unimarkup(),
             QuotedPartKind::EscapedNewline | QuotedPartKind::Newline => {
                 SymbolKind::Newline.as_str().to_string()
@@ -201,59 +251,78 @@ impl QuotedPartKind {
         }
     }
 }
-#[derive(Debug, PartialEq, Clone)]
-pub struct Ident(String);
-
-impl std::ops::Deref for Ident {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl From<String> for Ident {
-    fn from(value: String) -> Self {
-        Ident(value)
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct TokenPart(String);
-
-impl std::ops::Deref for TokenPart {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl From<String> for TokenPart {
-    fn from(value: String) -> Self {
-        TokenPart(value)
-    }
-}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ValuePart {
+    CssFn(CssFn),
+    /// A quoted part (e.g. `"value"` or `'value'`).
+    Quoted(QuotedPart),
     Plain(String),
     Float(f64),
     Int(isize),
     Bool(bool),
-    /// The `!important` marker.
-    /// See: https://www.w3.org/TR/css-syntax-3/#!important-diagram
-    Important,
 }
 
 impl ValuePart {
     pub fn as_unimarkup(&self) -> String {
         match self {
+            ValuePart::CssFn(css_fn) => css_fn.as_unimarkup(),
+            ValuePart::Quoted(q) => q.as_unimarkup(),
             ValuePart::Plain(plain) => plain.clone(),
             ValuePart::Float(val) => val.to_string(),
             ValuePart::Int(val) => val.to_string(),
             ValuePart::Bool(val) => val.to_string(),
-            ValuePart::Important => "!important".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct CssFn {
+    pub(crate) name: String,
+    pub(crate) inner: Vec<AttributeToken>,
+    pub(crate) implicit_closed: bool,
+}
+
+impl CssFn {
+    pub fn as_unimarkup(&self) -> String {
+        let s = self.inner.iter().fold(String::new(), |mut s, i| {
+            s.push_str(&i.as_unimarkup());
+            s
+        });
+        format!(
+            "{}({}{}",
+            self.name,
+            s,
+            if self.implicit_closed { "" } else { ")" }
+        )
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum EnclosedSymbolKind {
+    Brace,
+    Bracket,
+    Parenthesis,
+    /// `<` or `>`
+    Angle,
+}
+
+impl EnclosedSymbolKind {
+    pub fn open_symbol(&self) -> SymbolKind {
+        match self {
+            EnclosedSymbolKind::Brace => SymbolKind::OpenBrace,
+            EnclosedSymbolKind::Bracket => SymbolKind::OpenBracket,
+            EnclosedSymbolKind::Parenthesis => SymbolKind::OpenParenthesis,
+            EnclosedSymbolKind::Angle => SymbolKind::Lt,
+        }
+    }
+
+    pub fn close_symbol(&self) -> SymbolKind {
+        match self {
+            EnclosedSymbolKind::Brace => SymbolKind::CloseBrace,
+            EnclosedSymbolKind::Bracket => SymbolKind::CloseBracket,
+            EnclosedSymbolKind::Parenthesis => SymbolKind::CloseParenthesis,
+            EnclosedSymbolKind::Angle => SymbolKind::Gt,
         }
     }
 }
