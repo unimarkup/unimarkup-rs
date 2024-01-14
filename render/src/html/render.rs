@@ -212,7 +212,15 @@ impl Renderer<Html> for HtmlRenderer {
             content = if let Some(s) = result_value.as_str() {
                 s.to_string()
             } else {
-                result_value.to_string()
+                let content_as_string = result_value.to_string();
+                if content_as_string.ends_with(".0") {
+                    match content_as_string[..content_as_string.len() - 2].parse::<usize>() {
+                        Ok(n) => n.to_string(),
+                        Err(_) => content_as_string
+                    }
+                } else {
+                    content_as_string
+                }
             }
         } else {
             content = "########### CITATION ERROR ###########".to_string()
