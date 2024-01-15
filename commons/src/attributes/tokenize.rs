@@ -3,16 +3,13 @@ use itertools::PeekingNext;
 use crate::{
     attributes::rules,
     comments::Comment,
-    lexer::{
-        position::Position,
-        token::{iterator::TokenIterator, Token, TokenKind},
-    },
+    lexer::token::{iterator::TokenIterator, Token, TokenKind},
     parsing::{Element, Parser, ParserError},
 };
 
 use super::token::{
-    AttributeToken, AttributeTokenKind, AttributeTokens, CssFn, QuotedPart, QuotedValuePart,
-    ValuePart,
+    AttributeToken, AttributeTokenKind, AttributeTokens, CssFn, IdentOrSelectorPart, QuotedIdent,
+    QuotedPart, QuotedValuePart, ValuePart, ValueSeparator,
 };
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -142,9 +139,7 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                 TokenKind::OpenBrace => {
                     // Only logic allowed at this point
                     // TODO: add logic parser
-                    self.iter
-                        .next()
-                        .expect("Peek was some, so next must return value.");
+                    self.iter.next();
                 }
                 TokenKind::CloseBrace => {
                     // Must be closing brace, because inner braces are consumed in inner fn calls.
@@ -152,10 +147,7 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                 }
                 TokenKind::Whitespace | TokenKind::Blankline => {
                     // not interested in whitespace
-                    let token = self
-                        .iter
-                        .next()
-                        .expect("Peek was some, so next must return value.");
+                    self.iter.next();
                 }
                 TokenKind::Newline => {
                     let token = self
@@ -216,10 +208,11 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
     }
 
     fn parse_single_value(&mut self, attrb_tokens: &mut Vec<AttributeToken>) {
-        let mut value_pushed = false;
         let mut important_pushed = false;
 
         while let Some(token) = self.iter.peek() {
+            let mut token_parsed = false;
+
             match token.kind {
                 TokenKind::OpenBrace => {
                     // TODO: check for logic element
@@ -240,6 +233,8 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                     if len != Comment::keyword_len() {
                         return;
                     }
+
+                    token_parsed = true;
                 }
                 TokenKind::OpenBracket
                 | TokenKind::CloseBracket
@@ -250,28 +245,81 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                     end: token.end,
                 }),
                 TokenKind::Newline => {
-                    self.iter.next();
+                    let prev_was_separator = attrb_tokens
+                        .last()
+                        .map(|attrb| matches!(attrb.kind, AttributeTokenKind::ValueSeparator(_)))
+                        .unwrap_or_default();
+
+                    if !prev_was_separator {
+                        attrb_tokens.push(AttributeToken {
+                            kind: AttributeTokenKind::ValueSeparator(ValueSeparator::Whitespace),
+                            start: token.start,
+                            end: token.end,
+                        })
+                    }
+
                     attrb_tokens.push(AttributeToken {
                         kind: AttributeTokenKind::Newline,
                         start: token.start,
                         end: token.end,
                     })
                 }
-                TokenKind::Whitespace | TokenKind::Blankline | TokenKind::Comma(1) => {
-                    // CSS array separations are considered as one single value
-                    self.iter.next();
-                }
-                TokenKind::ExclamationMark(1) if !important_pushed => {
-                    // TODO: might be "!important"
+                TokenKind::Whitespace | TokenKind::Blankline | TokenKind::Comma(_) => {
+                    let prev_was_separator = attrb_tokens
+                        .last()
+                        .map(|attrb| matches!(attrb.kind, AttributeTokenKind::ValueSeparator(_)))
+                        .unwrap_or_default();
+
+                    if !prev_was_separator {
+                        let separator = if matches!(token.kind, TokenKind::Comma(_)) {
+                            ValueSeparator::Comma
+                        } else {
+                            ValueSeparator::Whitespace
+                        };
+
+                        attrb_tokens.push(AttributeToken {
+                            kind: AttributeTokenKind::ValueSeparator(separator),
+                            start: token.start,
+                            end: token.end,
+                        })
+                    }
                 }
                 _ if !important_pushed => {
-                    self.parse_value_part(attrb_tokens);
+                    // Might be "!important"
+                    let peek_index = self.iter.peek_index();
+                    if token.kind == TokenKind::ExclamationMark(1) {
+                        self.iter.peeking_next(|_| true); // skip peeked exclamation token
+                        if let Some(possible_important) =
+                            self.iter.peeking_next(|t| t.kind == TokenKind::Plain)
+                        {
+                            if possible_important.to_string().to_lowercase() == "important" {
+                                attrb_tokens.push(AttributeToken {
+                                    kind: AttributeTokenKind::Important,
+                                    start: token.start,
+                                    end: token.end,
+                                });
+                                self.iter.skip_to_peek();
+                                important_pushed = true;
+                            }
+                        }
+                    }
+
+                    if !important_pushed {
+                        self.iter.set_peek_index(peek_index);
+                        self.parse_value_part(attrb_tokens);
+                    }
+
+                    token_parsed = true;
                 }
                 _ => attrb_tokens.push(AttributeToken {
                     kind: AttributeTokenKind::Invalid(token.kind, token.to_string()),
                     start: token.start,
                     end: token.end,
                 }),
+            }
+
+            if !token_parsed {
+                self.iter.next();
             }
         }
     }
@@ -297,6 +345,7 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                 | TokenKind::CloseBracket
                 | TokenKind::CloseParenthesis
                 | TokenKind::Semicolon(_)
+                | TokenKind::Comma(_)
                 | TokenKind::Whitespace
                 | TokenKind::Blankline
                 | TokenKind::Newline
@@ -320,7 +369,7 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                     return self.parse_css_fn(attrb_tokens, first_token, part);
                 }
                 TokenKind::SingleQuote | TokenKind::DoubleQuote => {
-                    attrb_tokens.push(self.parse_quote(QuoteParsing::Value));
+                    attrb_tokens.push(self.parse_quote_value());
                     return;
                 }
                 _ => {
@@ -412,7 +461,7 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                         })
                     }
 
-                    inner_attrbs.push(self.parse_quote(QuoteParsing::Value));
+                    inner_attrbs.push(self.parse_quote_value());
                 }
                 TokenKind::EscapedNewline | TokenKind::EscapedWhitespace => {
                     attrb_tokens.push(AttributeToken {
@@ -544,7 +593,6 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
         };
         let mut start_pos = Some(start_token.start);
         let mut end = start_token.end;
-        let mut quote_parsing = QuoteParsing::Ident;
 
         while let Some(token) = self.iter.peek() {
             if start_pos.is_none() {
@@ -639,16 +687,9 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                     break;
                 }
                 TokenKind::SingleQuote | TokenKind::DoubleQuote => {
-                    attrb_tokens.push(self.parse_quote(quote_parsing));
+                    attrb_tokens.push(self.parse_quote_ident());
                 }
                 _ => {
-                    // treat quoted content in attribute selectors (`[]`) as values
-                    if token.kind == TokenKind::OpenBracket {
-                        quote_parsing = QuoteParsing::Value;
-                    } else if token.kind == TokenKind::CloseBracket {
-                        quote_parsing = QuoteParsing::Ident;
-                    }
-
                     self.iter.next();
                     ident_or_selector.push_str(&token.to_string());
                 }
@@ -673,7 +714,64 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
         IdentSelectorKind::Selector
     }
 
-    fn parse_quote(&mut self, variant: QuoteParsing) -> AttributeToken {
+    fn parse_quote_ident(&mut self) -> AttributeToken {
+        let open_quote = self
+            .iter
+            .next()
+            .expect("Quote parsing is called when next is a quote.");
+        let quote_char = if open_quote.kind == TokenKind::DoubleQuote {
+            '"'
+        } else {
+            '\''
+        };
+
+        let mut ident = String::new();
+        let mut end = open_quote.end;
+
+        while let Some(token) = self.iter.peek() {
+            match token.kind {
+                TokenKind::Newline | TokenKind::EscapedNewline => {
+                    break;
+                }
+                k if k == open_quote.kind => {
+                    // closing quote
+                    self.iter.next();
+                    return AttributeToken {
+                        kind: AttributeTokenKind::IdentOrSelectorPart(IdentOrSelectorPart::Quoted(
+                            QuotedIdent {
+                                ident,
+                                quote: quote_char,
+                                implicit_closed: false,
+                            },
+                        )),
+                        start: open_quote.start,
+                        end: token.end,
+                    };
+                }
+                _ => {
+                    self.iter.next();
+                    ident.push_str(&token.to_string());
+                }
+            }
+
+            end = token.end;
+        }
+
+        self.iter.skip_to_peek();
+        AttributeToken {
+            kind: AttributeTokenKind::IdentOrSelectorPart(IdentOrSelectorPart::Quoted(
+                QuotedIdent {
+                    ident,
+                    quote: quote_char,
+                    implicit_closed: true,
+                },
+            )),
+            start: open_quote.start,
+            end,
+        }
+    }
+
+    fn parse_quote_value(&mut self) -> AttributeToken {
         let open_quote = self
             .iter
             .next()
@@ -689,8 +787,7 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
         let mut end = open_quote.end;
 
         while let Some(token) = self.iter.peeking_next(|_| true) {
-            if (variant == QuoteParsing::Value
-                && matches!(token.kind, TokenKind::ImplicitSubstitution(_)))
+            if (matches!(token.kind, TokenKind::ImplicitSubstitution(_)))
                 || matches!(token.kind, TokenKind::Newline | TokenKind::EscapedNewline)
                 || token.kind == open_quote.kind
             {
@@ -707,18 +804,18 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
             }
 
             match token.kind {
-                TokenKind::ImplicitSubstitution(subst) if variant == QuoteParsing::Value => {
+                TokenKind::ImplicitSubstitution(subst) => {
                     quote_tokens.push(QuotedValuePart {
                         kind: super::token::QuotedPartKind::ImplicitSubstitution(subst),
                         start,
                         end,
                     });
                 }
-                TokenKind::OpenBrace if variant == QuoteParsing::Value => {
+                TokenKind::OpenBrace => {
                     // might be logic
                     // TODO implement logic parsing
                 }
-                TokenKind::Colon(2) if variant == QuoteParsing::Value => {
+                TokenKind::Colon(2) => {
                     // might be named subst
                     // TODO: implement named subst
                 }
@@ -812,14 +909,6 @@ enum IdentSelectorKind {
     NoValue,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum QuoteParsing {
-    /// To consider tokens allowed for quoted idents.
-    Ident,
-    /// To consider tokens allowed for attribute values.
-    Value,
-}
-
 fn value_part_to_value(part: String, possible_int: bool, possible_float: bool) -> ValuePart {
     if possible_int {
         match part.parse() {
@@ -845,6 +934,7 @@ mod test {
     use crate::{
         attributes::token::{
             AttributeTokenKind, AttributeTokens, IdentOrSelectorPart, QuotedPartKind, ValuePart,
+            ValueSeparator,
         },
         lexer::token::iterator::TokenIterator,
         parsing::{Parser, ParserError},
@@ -935,10 +1025,112 @@ mod test {
     }
 
     #[test]
+    fn single_html_class_attrb() {
+        let s = "{class: first-class second-class;}";
+        let tokens = attrb_tokens(s).unwrap();
+
+        assert_eq!(
+            tokens.tokens.len(),
+            6,
+            "Ident, ident marker, first value part, value separator, second value part, and semicolon were not correctly parsed."
+        );
+        assert_eq!(
+            tokens.tokens[0].kind,
+            AttributeTokenKind::IdentOrSelectorPart(IdentOrSelectorPart::Plain(
+                "class".to_string()
+            )),
+            "'class' ident not correctly parsed."
+        );
+
+        let value_kind = &tokens.tokens[2].kind;
+        let AttributeTokenKind::FlatValue(value) = value_kind else {
+            panic!()
+        };
+        let ValuePart::Plain(plain_part) = value else {
+            panic!()
+        };
+        assert_eq!(
+            plain_part, "first-class",
+            "'first-class' not part of the first parsed value part."
+        );
+
+        let AttributeTokenKind::ValueSeparator(separator) = &tokens.tokens[3].kind else {
+            panic!()
+        };
+        assert_eq!(
+            separator,
+            &ValueSeparator::Whitespace,
+            "Whitespace not detected as value separator."
+        );
+
+        let value_kind = &tokens.tokens[4].kind;
+        let AttributeTokenKind::FlatValue(value) = value_kind else {
+            panic!()
+        };
+        let ValuePart::Plain(plain_part) = value else {
+            panic!()
+        };
+        assert_eq!(
+            plain_part, "second-class",
+            "'second-class' not part of the second parsed value part."
+        );
+    }
+
+    #[test]
+    fn single_css_margin_attrb() {
+        let s = "{margin: 2px, 3px;}";
+        let tokens = attrb_tokens(s).unwrap();
+
+        assert_eq!(
+            tokens.tokens.len(),
+            6,
+            "Ident, ident marker, first value part, value separator, second value part, and semicolon were not correctly parsed."
+        );
+        assert_eq!(
+            tokens.tokens[0].kind,
+            AttributeTokenKind::IdentOrSelectorPart(IdentOrSelectorPart::Plain(
+                "margin".to_string()
+            )),
+            "'margin' ident not correctly parsed."
+        );
+
+        let value_kind = &tokens.tokens[2].kind;
+        let AttributeTokenKind::FlatValue(value) = value_kind else {
+            panic!()
+        };
+        let ValuePart::Plain(plain_part) = value else {
+            panic!()
+        };
+        assert_eq!(
+            plain_part, "2px",
+            "'2px' not part of the first parsed value part."
+        );
+
+        let AttributeTokenKind::ValueSeparator(separator) = &tokens.tokens[3].kind else {
+            panic!()
+        };
+        assert_eq!(
+            separator,
+            &ValueSeparator::Comma,
+            "Comma not detected as value separator."
+        );
+
+        let value_kind = &tokens.tokens[4].kind;
+        let AttributeTokenKind::FlatValue(value) = value_kind else {
+            panic!()
+        };
+        let ValuePart::Plain(plain_part) = value else {
+            panic!()
+        };
+        assert_eq!(
+            plain_part, "3px",
+            "'3px' not part of the second parsed value part."
+        );
+    }
+
+    #[test]
     fn two_html_attrbs() {
-        // TODO: should also accept `id: my-id; class: some-class other-class`
-        // 'class' ident directly after ';' to not get a 'Whitespace' token
-        let s = "{id: 'my-id';class: 'some-class other-class'}";
+        let s = "{id: 'my-id'; class: 'some-class other-class'}";
         let tokens = attrb_tokens(s).unwrap();
 
         assert_eq!(

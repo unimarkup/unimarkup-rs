@@ -88,6 +88,9 @@ pub enum AttributeTokenKind {
     AtRulePreludePart(String),
     /// Flat value of an attribute that is not nested and is not an array.
     FlatValue(ValuePart),
+    /// Value separator for flat values.
+    /// e.g. whitespace for `margin: 2px 3px;`
+    ValueSeparator(ValueSeparator),
     /// Tokens surrounded by `{}`.
     /// Nested blocks are implicity closed if the underlying token iterator ends, before `}` is reached.
     /// A semicolon is optional after the closing `}`.
@@ -130,6 +133,7 @@ impl AttributeTokenKind {
         match self {
             AttributeTokenKind::IdentMarker => ": ".to_string(),
             AttributeTokenKind::FlatValue(value_part) => value_part.as_unimarkup(),
+            AttributeTokenKind::ValueSeparator(separator) => separator.as_unimarkup(),
             AttributeTokenKind::IdentOrSelectorPart(part) => part.as_unimarkup(),
             AttributeTokenKind::AtRuleIdent(at_rule_ident) => {
                 format!("@{}", at_rule_ident.as_str())
@@ -174,7 +178,7 @@ impl AttributeTokenKind {
 pub enum IdentOrSelectorPart {
     Plain(String),
     /// A quoted part (e.g. `"value"` or `'value'`).
-    Quoted(QuotedPart),
+    Quoted(QuotedIdent),
 }
 
 impl IdentOrSelectorPart {
@@ -187,17 +191,39 @@ impl IdentOrSelectorPart {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct QuotedIdent {
+    pub(crate) ident: String,
+    pub(crate) quote: char,
+    pub(crate) implicit_closed: bool,
+}
+
+impl QuotedIdent {
+    pub fn as_unimarkup(&self) -> String {
+        self.ident.clone()
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct QuotedPart {
     pub(crate) parts: Vec<QuotedValuePart>,
     pub(crate) quote: char,
     pub(crate) implicit_closed: bool,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct QuotedValuePart {
-    pub(crate) kind: QuotedPartKind,
-    pub(crate) start: Position,
-    pub(crate) end: Position,
+impl QuotedPart {
+    pub fn resolve(&self) -> String {
+        let quote = self.quote;
+        let inner = self.parts.iter().fold(String::new(), |mut s, q| {
+            s.push_str(&q.kind.resolve());
+            s
+        });
+
+        if self.implicit_closed {
+            format!("{quote}{inner}")
+        } else {
+            format!("{quote}{inner}{quote}")
+        }
+    }
 }
 
 impl Element for QuotedPart {
@@ -207,7 +233,12 @@ impl Element for QuotedPart {
             s.push_str(&q.kind.as_unimarkup());
             s
         });
-        format!("{quote}{inner}{quote}")
+
+        if self.implicit_closed {
+            format!("{quote}{inner}")
+        } else {
+            format!("{quote}{inner}{quote}")
+        }
     }
 
     fn start(&self) -> Position {
@@ -217,6 +248,13 @@ impl Element for QuotedPart {
     fn end(&self) -> Position {
         self.parts.last().map(|p| p.end).unwrap_or_default()
     }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct QuotedValuePart {
+    pub(crate) kind: QuotedPartKind,
+    pub(crate) start: Position,
+    pub(crate) end: Position,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -250,6 +288,20 @@ impl QuotedPartKind {
             }
         }
     }
+
+    pub fn resolve(&self) -> String {
+        match self {
+            QuotedPartKind::Plain(plain) => plain.clone(),
+            QuotedPartKind::ImplicitSubstitution(implicit_subst) => {
+                implicit_subst.subst().to_string()
+            }
+            QuotedPartKind::NamedSubstitution(named_subst) => named_subst.clone(),
+            QuotedPartKind::Logic(logic) => logic.as_unimarkup(),
+            QuotedPartKind::EscapedNewline | QuotedPartKind::Newline => {
+                SymbolKind::Newline.as_str().to_string()
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -272,6 +324,25 @@ impl ValuePart {
             ValuePart::Float(val) => val.to_string(),
             ValuePart::Int(val) => val.to_string(),
             ValuePart::Bool(val) => val.to_string(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ValueSeparator {
+    Whitespace,
+    Comma,
+}
+
+impl ValueSeparator {
+    pub fn as_unimarkup(&self) -> String {
+        self.as_str().to_string()
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ValueSeparator::Whitespace => SymbolKind::Whitespace.as_str(),
+            ValueSeparator::Comma => SymbolKind::Comma.as_str(),
         }
     }
 }

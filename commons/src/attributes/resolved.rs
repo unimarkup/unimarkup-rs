@@ -4,7 +4,11 @@ use lightningcss::{
     traits::ParseWithOptions,
 };
 
-use super::{html::HtmlAttributeId, token::AttributeToken, um::UmAttributeId};
+use super::{
+    html::HtmlAttributeId,
+    token::{AttributeToken, ValueSeparator},
+    um::UmAttributeId,
+};
 
 /// Resolved attributes have replaced all logic elements by their respective return value.
 /// Resolved attributes still preserve the attribute order in the given content.
@@ -20,6 +24,7 @@ pub enum ResolvedAttribute<'tslice> {
     Single(ResolvedSingleAttribute<'tslice>),
     AtRule(ResolvedAtRule<'tslice>),
     Nested(ResolvedNestedAttribute<'tslice>),
+    Invalid,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -39,9 +44,7 @@ impl ResolvedNestedAttribute<'_> {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ResolvedAttributeSelectors {
-    selectors: String,
-}
+pub struct ResolvedAttributeSelectors(String);
 
 impl ResolvedAttributeSelectors {
     #[inline]
@@ -49,7 +52,21 @@ impl ResolvedAttributeSelectors {
         &'a self,
         options: ParserOptions<'_, 'a>,
     ) -> Result<SelectorList<'a>, ParseError<'_, ParserError<'_>>> {
-        SelectorList::<'a>::parse_string_with_options(&self.selectors, options)
+        SelectorList::<'a>::parse_string_with_options(&self, options)
+    }
+}
+
+impl From<String> for ResolvedAttributeSelectors {
+    fn from(value: String) -> Self {
+        ResolvedAttributeSelectors(value)
+    }
+}
+
+impl std::ops::Deref for ResolvedAttributeSelectors {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -103,15 +120,61 @@ pub struct ResolvedTokenLength {
 #[derive(Debug, PartialEq, Clone)]
 pub enum ResolvedFlatAttributeValue {
     /// A single (`'`) or double (`"`) quoted value (e.g. `prop: "some value"`)
-    Quoted(String, char),
-    /// A whitespace or comma separated value (e.g. `prop: "some" "value"`)
-    Array(Vec<ResolvedFlatAttributeValue>),
+    /// Note: The quote char is already part of the string.
+    Quoted(String),
     Float(f64),
     Int(isize),
     Bool(bool),
     /// A value that is not a bool, number, quoted string, or whitespace/comma separated.
     /// e.g. `prop: #ffffff`
     Other(String),
+    Empty,
+}
+
+impl std::ops::Add<ResolvedFlatAttributeValue> for ResolvedFlatAttributeValue {
+    type Output = ResolvedFlatAttributeValue;
+
+    fn add(self, rhs: ResolvedFlatAttributeValue) -> Self::Output {
+        debug_assert!(
+            matches!(
+                self,
+                ResolvedFlatAttributeValue::Other(_) | ResolvedFlatAttributeValue::Empty
+            ),
+            "Separator must have been pushed before, turning self into variant `Other`, or no value was set."
+        );
+
+        let mut s = self.to_string();
+        s.push_str(&rhs.to_string());
+
+        // Always "Other", because two values get combined
+        ResolvedFlatAttributeValue::Other(s)
+    }
+}
+
+impl std::ops::Add<&ValueSeparator> for ResolvedFlatAttributeValue {
+    type Output = ResolvedFlatAttributeValue;
+
+    fn add(self, rhs: &ValueSeparator) -> Self::Output {
+        let mut s = self.to_string();
+        s.push_str(rhs.as_str());
+
+        // Always "Other", because separator is added to value
+        ResolvedFlatAttributeValue::Other(s)
+    }
+}
+
+impl std::fmt::Display for ResolvedFlatAttributeValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            ResolvedFlatAttributeValue::Quoted(q) => q.clone(),
+            ResolvedFlatAttributeValue::Float(f) => f.to_string(),
+            ResolvedFlatAttributeValue::Int(i) => i.to_string(),
+            ResolvedFlatAttributeValue::Bool(b) => b.to_string(),
+            ResolvedFlatAttributeValue::Other(o) => o.clone(),
+            ResolvedFlatAttributeValue::Empty => String::default(),
+        };
+        write!(f, "{s}")
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

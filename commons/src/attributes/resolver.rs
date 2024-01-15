@@ -4,18 +4,18 @@ use lightningcss::properties::PropertyId;
 
 use crate::{
     lexer::{symbol::SymbolKind, token::TokenKind},
-    parsing::ParserError,
+    parsing::Element,
 };
 
 use super::{
     html::HtmlAttributeId,
     resolved::{
-        ResolvedAtRule, ResolvedAttribute, ResolvedAttributeIdent, ResolvedAttributeString,
-        ResolvedAttributes, ResolvedFlatAttribute, ResolvedFlatAttributeValue,
-        ResolvedNestedAttribute, ResolvedSingleAttribute,
+        ResolvedAtRule, ResolvedAttribute, ResolvedAttributeIdent, ResolvedAttributeSelectors,
+        ResolvedAttributeString, ResolvedAttributes, ResolvedFlatAttribute,
+        ResolvedFlatAttributeValue, ResolvedNestedAttribute, ResolvedSingleAttribute,
     },
     rules::AtRuleId,
-    token::{AttributeToken, AttributeTokenKind, Ident, QuotedPart, TokenPart, ValuePart},
+    token::{AttributeToken, AttributeTokenKind, IdentOrSelectorPart, QuotedPart, ValuePart},
     um::UmAttributeId,
 };
 
@@ -47,60 +47,103 @@ impl<'tslice> AttributeResolver<'tslice> {
         attrbs
     }
 
-    fn skip_fill_tokens(&mut self) {
+    fn next_kind(&mut self) -> Option<&'tslice AttributeTokenKind> {
         while let Some(kind) = self.tokens.first().map(|t| &t.kind) {
-            match kind {
-                AttributeTokenKind::Comment(_)
-                | AttributeTokenKind::Newline
-                | AttributeTokenKind::Whitespace => {
-                    self.tokens = &self.tokens[1..];
-                }
-                _ => {
-                    break;
-                }
+            self.tokens = &self.tokens[1..];
+
+            // Skip fill tokens
+            if !matches!(
+                kind,
+                AttributeTokenKind::Comment(_) | AttributeTokenKind::Newline
+            ) {
+                return Some(kind);
             }
         }
+
+        None
     }
 
-    fn next_kind(&mut self) -> Option<&'tslice AttributeTokenKind> {
-        let next_kind = self.tokens.first().map(|t| &t.kind)?;
-        self.tokens = &self.tokens[1..];
-        Some(next_kind)
+    fn peek_kind(&mut self) -> Option<&'tslice AttributeTokenKind> {
+        while let Some(kind) = self.tokens.first().map(|t| &t.kind) {
+            // Skip fill tokens
+            if !matches!(
+                kind,
+                AttributeTokenKind::Comment(_) | AttributeTokenKind::Newline
+            ) {
+                return Some(kind);
+            }
+
+            self.tokens = &self.tokens[1..];
+        }
+
+        None
     }
 
     pub fn resolve_next(
         &mut self,
         context: &AttributeResolverContext,
     ) -> Option<ResolvedAttribute<'tslice>> {
-        self.skip_fill_tokens();
-
         match &self.next_kind()? {
-            AttributeTokenKind::Ident(ident) => self.resolve_single(ident, context),
+            AttributeTokenKind::IdentOrSelectorPart(IdentOrSelectorPart::Plain(plain_part)) => {
+                let next = self.next_kind()?;
+                if next == &AttributeTokenKind::IdentMarker {
+                    self.resolve_single(plain_part, context)
+                } else {
+                    // must be selector, because unquoted ident cannot span spaces
+                    let mut selectors = next.as_unimarkup();
+                    let mut nested = false;
+                    while let Some(kind) = self.peek_kind() {
+                        if matches!(kind, AttributeTokenKind::Nested(_)) {
+                            nested = true;
+                            break;
+                        } else if kind == &AttributeTokenKind::Semicolon {
+                            nested = false;
+                            break;
+                        }
+
+                        let selector_part = self.next_kind()?.as_unimarkup();
+                        selectors.push_str(&selector_part);
+                    }
+
+                    if nested {
+                        self.resolve_nested(selectors.into(), context)
+                    } else {
+                        // TODO: set error for bad selector attribute
+                        Some(ResolvedAttribute::Invalid)
+                    }
+                }
+            }
+            AttributeTokenKind::IdentOrSelectorPart(IdentOrSelectorPart::Quoted(quoted_ident)) => {
+                // Quoted ident/selector only allowed for ident
+                if self.next_kind()?.clone() != AttributeTokenKind::IdentMarker {
+                    return None;
+                }
+
+                self.resolve_single(&quoted_ident.ident, context)
+            }
             AttributeTokenKind::AtRuleIdent(at_rule_ident) => {
                 self.resolve_at_rule(at_rule_ident, context)
             }
-            AttributeTokenKind::SelectorPart(selector_part) => {
-                self.resolve_nested(selector_part, context)
-            }
+
             _ => {
                 // TODO: set error log for invalid attribute semantics.
-                None
+                Some(ResolvedAttribute::Invalid)
             }
         }
     }
 
     fn resolve_ident<'i>(
         &self,
-        ident: &'i Ident,
+        ident: &'i str,
         context: &AttributeResolverContext,
     ) -> Option<ResolvedAttributeIdent<'i>> {
-        let um_ident = UmAttributeId::try_from(ident.as_str()).ok()?;
+        let um_ident = UmAttributeId::try_from(ident).ok()?;
 
         if matches!(um_ident, UmAttributeId::Custom(_)) && !context.um_only {
-            if let Ok(html_ident) = HtmlAttributeId::try_from(ident.as_str()) {
+            if let Ok(html_ident) = HtmlAttributeId::try_from(ident) {
                 Some(ResolvedAttributeIdent::Html(html_ident))
             } else {
-                let css_ident = PropertyId::from(ident.as_str());
+                let css_ident = PropertyId::from(ident);
                 Some(ResolvedAttributeIdent::Css(css_ident))
             }
         } else {
@@ -110,94 +153,45 @@ impl<'tslice> AttributeResolver<'tslice> {
 
     fn resolve_single(
         &mut self,
-        ident: &'tslice Ident,
+        ident: &'tslice str,
         context: &AttributeResolverContext,
     ) -> Option<ResolvedAttribute<'tslice>> {
         let resolved_ident = self.resolve_ident(ident, context)?;
 
-        self.skip_fill_tokens();
-
-        let value_resolver = self.get_kinds_until_semicolon()?;
-
-        match value_resolver.kind {
-            AttributeValueResolverKind::Empty => {
-                //TODO: set error for empty value
-                None
-            }
-            AttributeValueResolverKind::Single(single) => {
-                let value = get_flat_attrb_value(&single, context)?;
-                Some(ResolvedAttribute::Single(ResolvedSingleAttribute::Flat(
-                    ResolvedFlatAttribute {
-                        ident: resolved_ident,
-                        value,
-                        important: value_resolver.has_important,
-                    },
-                )))
-            }
-            AttributeValueResolverKind::Array(array) => {
-                let mut array_parts = Vec::new();
-                for part in array {
-                    array_parts.push(get_flat_attrb_value(&part, context)?);
-                }
-                Some(ResolvedAttribute::Single(ResolvedSingleAttribute::Flat(
-                    ResolvedFlatAttribute {
-                        ident: resolved_ident,
-                        value: ResolvedFlatAttributeValue::Array(array_parts),
-                        important: value_resolver.has_important,
-                    },
-                )))
-            }
-            AttributeValueResolverKind::Nested(nested) => todo!(),
-        }
-    }
-
-    fn get_kinds_until_semicolon(&mut self) -> Option<AttributeValueResolver> {
-        let mut value_resolver = AttributeValueResolver::new();
-        let mut must_be_nested = false;
+        let mut value = ResolvedFlatAttributeValue::Empty;
+        let mut important = false;
 
         while let Some(kind) = self.next_kind() {
             match kind {
-                AttributeTokenKind::Semicolon => break,
-                AttributeTokenKind::Comment(_) => {}
-                AttributeTokenKind::Newline | AttributeTokenKind::Whitespace => {
-                    value_resolver.push(&AttributeTokenKind::Whitespace);
+                AttributeTokenKind::FlatValue(v) => {
+                    value = value + value_to_flat_attrb(v, context);
                 }
-                AttributeTokenKind::Comma | AttributeTokenKind::ValuePart(ValuePart::Important) => {
-                    value_resolver.push(kind);
+                AttributeTokenKind::ValueSeparator(separator) => {
+                    value = value + separator;
                 }
-                AttributeTokenKind::Nested(_) => {
-                    if value_resolver.has_important {
-                        //TODO: set error that "!important" must be last proper value
-                        return None;
-                    }
-
-                    must_be_nested = true;
-                    value_resolver.push(kind);
+                AttributeTokenKind::Important => {
+                    important = true;
                 }
-                AttributeTokenKind::Ident(_)
-                | AttributeTokenKind::AtRuleIdent(_)
-                | AttributeTokenKind::AtRulePreludePart(_)
-                | AttributeTokenKind::SelectorPart(_) => {
-                    //TODO: set error for invalid token
+                AttributeTokenKind::Semicolon => {
+                    break;
+                }
+                _ => {
                     return None;
-                }
-                AttributeTokenKind::Logic(_) => {
-                    //TODO: handle logic
-                    return None;
-                }
-                AttributeTokenKind::QuotedPart(_) | AttributeTokenKind::ValuePart(_) => {
-                    if must_be_nested || value_resolver.has_important {
-                        // TODO: set error that only nested may follow on nested
-                        // set error that "!important" must be last proper value
-                        return None;
-                    }
-
-                    value_resolver.push(kind);
                 }
             }
         }
 
-        Some(value_resolver)
+        if let ResolvedFlatAttributeValue::Other(o) = value {
+            value = ResolvedFlatAttributeValue::Other(o.trim().to_string());
+        }
+
+        Some(ResolvedAttribute::Single(ResolvedSingleAttribute::Flat(
+            ResolvedFlatAttribute {
+                ident: resolved_ident,
+                value,
+                important,
+            },
+        )))
     }
 
     fn resolve_at_rule(
@@ -210,84 +204,48 @@ impl<'tslice> AttributeResolver<'tslice> {
 
     fn resolve_nested(
         &mut self,
-        selector: &'tslice TokenPart,
+        selectors: ResolvedAttributeSelectors,
         context: &AttributeResolverContext,
     ) -> Option<ResolvedAttribute<'tslice>> {
         todo!()
     }
 }
 
-fn get_flat_attrb_value(
-    kinds: &[&AttributeTokenKind],
-    context: &AttributeResolverContext,
-) -> Option<ResolvedFlatAttributeValue> {
-    if kinds.is_empty() {
-        return None;
-    }
-
-    if kinds.len() == 1 {
-        match kinds.first()? {
-            AttributeTokenKind::QuotedPart(quoted) => Some(ResolvedFlatAttributeValue::Quoted(
-                resolve_quoted(quoted, context),
-                quoted.quote,
-            )),
-            AttributeTokenKind::ValuePart(value) => match value {
-                ValuePart::Plain(val) => Some(ResolvedFlatAttributeValue::Other(val.clone())),
-                ValuePart::Float(val) => Some(ResolvedFlatAttributeValue::Float(*val)),
-                ValuePart::Int(val) => Some(ResolvedFlatAttributeValue::Int(*val)),
-                ValuePart::Bool(val) => Some(ResolvedFlatAttributeValue::Bool(*val)),
-                ValuePart::Important => {
-                    unreachable!("'!important' part not passed to flatten fn.");
-                }
-            },
-            _ => {
-                unreachable!("Only quoted and value parts are passed.")
-            }
-        }
-    } else {
-        let s = kinds.iter().fold(String::new(), |mut s, kind| match kind {
-            AttributeTokenKind::QuotedPart(quoted) => {
-                s.push_str(&format!(
-                    "{}{}{}",
-                    quoted.quote,
-                    resolve_quoted(quoted, context),
-                    quoted.quote
-                ));
-                s
-            }
-            AttributeTokenKind::ValuePart(value) => {
-                s.push_str(&value.as_unimarkup());
-                s
-            }
-            _ => {
-                unreachable!("Only quoted and value parts are passed.")
-            }
-        });
-
-        Some(ResolvedFlatAttributeValue::Other(s))
+fn value_to_flat_attrb(
+    value: &ValuePart,
+    _context: &AttributeResolverContext,
+) -> ResolvedFlatAttributeValue {
+    match value {
+        ValuePart::Plain(val) => ResolvedFlatAttributeValue::Other(val.clone()),
+        ValuePart::Float(val) => ResolvedFlatAttributeValue::Float(*val),
+        ValuePart::Int(val) => ResolvedFlatAttributeValue::Int(*val),
+        ValuePart::Bool(val) => ResolvedFlatAttributeValue::Bool(*val),
+        // TODO: use own variant for CssFn
+        ValuePart::CssFn(css_fn) => ResolvedFlatAttributeValue::Other(css_fn.as_unimarkup()),
+        ValuePart::Quoted(quoted) => ResolvedFlatAttributeValue::Quoted(quoted.resolve()),
     }
 }
 
-fn resolve_quoted(quoted: &QuotedPart, _context: &AttributeResolverContext) -> String {
-    let mut s = String::new();
+// fn resolve_quoted(quoted: &QuotedPart, _context: &AttributeResolverContext) -> String {
+//     let mut s = String::new();
 
-    for q in &quoted.parts {
-        match &q.kind {
-            super::token::QuotedPartKind::Plain(plain) => s.push_str(plain),
-            super::token::QuotedPartKind::ImplicitSubstitution(impl_subst) => {
-                s.push_str(impl_subst.subst())
-            }
-            super::token::QuotedPartKind::NamedSubstitution(_) => todo!(),
-            super::token::QuotedPartKind::Logic(_) => todo!(),
-            super::token::QuotedPartKind::EscapedNewline => {
-                s.push_str(SymbolKind::Newline.as_str())
-            }
-            super::token::QuotedPartKind::Newline => s.push_str(SymbolKind::Whitespace.as_str()),
-        }
-    }
+//     for q in &quoted.parts {
+//         match &q.kind {
+//             super::token::QuotedPartKind::Plain(plain) => s.push_str(plain),
+//             super::token::QuotedPartKind::ImplicitSubstitution(impl_subst) => {
+//                 s.push_str(impl_subst.subst())
+//             }
+//             super::token::QuotedPartKind::NamedSubstitution(_) => todo!(),
+//             super::token::QuotedPartKind::Logic(_) => todo!(),
+//             super::token::QuotedPartKind::EscapedNewline => {
+//                 s.push_str(SymbolKind::Newline.as_str())
+//             }
+//             super::token::QuotedPartKind::Newline => s.push_str(SymbolKind::Whitespace.as_str()),
+//         }
+//     }
 
-    s
-}
+//     s
+// }
 
 fn push_attrb<'tslice>(
     attrbs: &mut ResolvedAttributes<'tslice>,
@@ -303,6 +261,7 @@ fn push_attrb<'tslice>(
         ResolvedAttribute::Nested(nested) => {
             push_nested_attrb(attrbs, nested);
         }
+        ResolvedAttribute::Invalid => {}
     }
 }
 
@@ -369,81 +328,13 @@ fn push_nested_attrb<'tslice>(
     }
 }
 
-enum AttributeValueResolverKind<'tslice> {
-    Empty,
-    Single(Vec<&'tslice AttributeTokenKind>),
-    Array(Vec<Vec<&'tslice AttributeTokenKind>>),
-    Nested(Vec<&'tslice AttributeTokenKind>),
-}
-
-struct AttributeValueResolver<'tslice> {
-    kind: AttributeValueResolverKind<'tslice>,
-    has_important: bool,
-    prev_was_separator: bool,
-}
-
-impl<'tslice> AttributeValueResolver<'tslice> {
-    fn new() -> Self {
-        Self {
-            kind: AttributeValueResolverKind::Empty,
-            has_important: false,
-            prev_was_separator: false,
-        }
-    }
-
-    fn push(&mut self, kind: &'tslice AttributeTokenKind) {
-        let is_array_separator = matches!(
-            kind,
-            AttributeTokenKind::Comma | AttributeTokenKind::Whitespace
-        );
-        let is_important = matches!(kind, AttributeTokenKind::ValuePart(ValuePart::Important));
-        if is_important {
-            self.has_important = true;
-        }
-
-        if !is_array_separator && !is_important {
-            match &mut self.kind {
-                AttributeValueResolverKind::Empty => {
-                    if matches!(kind, AttributeTokenKind::Nested(_)) {
-                        self.kind = AttributeValueResolverKind::Nested(vec![kind])
-                    } else {
-                        self.kind = AttributeValueResolverKind::Single(vec![kind])
-                    }
-                }
-                AttributeValueResolverKind::Single(single) if self.prev_was_separator => {
-                    self.kind =
-                        AttributeValueResolverKind::Array(vec![std::mem::take(single), vec![kind]]);
-                }
-                AttributeValueResolverKind::Single(ref mut single) => {
-                    single.push(kind);
-                }
-                AttributeValueResolverKind::Array(ref mut array) => {
-                    if self.prev_was_separator {
-                        array.push(vec![]);
-                    }
-                    // safe to unwrap, because at least one value was pushed for "Array" kind
-                    array.last_mut().unwrap().push(kind);
-                }
-                AttributeValueResolverKind::Nested(ref mut nested) => {
-                    if !matches!(kind, AttributeTokenKind::Nested(_)) {
-                        panic!("Only nested attribute tokens allowed, once nested is encountered.");
-                    }
-                    nested.push(kind);
-                }
-            }
-        }
-
-        self.prev_was_separator = is_array_separator;
-    }
-}
-
 #[cfg(test)]
 mod test {
 
     use crate::{
         attributes::{
             resolver::{AttributeResolver, AttributeResolverContext},
-            token::{AttributeTokenKind, AttributeTokens, Ident, QuotedPartKind, TokenPart},
+            token::AttributeTokens,
             tokenize::{AttributeContext, AttributeTokenizer},
         },
         lexer::token::iterator::TokenIterator,
@@ -461,7 +352,8 @@ mod test {
 
     #[test]
     fn dummy_test() {
-        let attrb_tokens = attrb_tokens("{color: red; id: 'my-id'}").unwrap();
+        let attrb_tokens =
+            attrb_tokens("{color: red; disabled: false; class: first-class second-class}").unwrap();
 
         let resolver = AttributeResolver::new(&attrb_tokens.tokens);
         let resolved = resolver.resolve(&AttributeResolverContext::default());
