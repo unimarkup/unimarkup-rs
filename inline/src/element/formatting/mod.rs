@@ -114,14 +114,15 @@ pub(crate) fn parse_quote_format<'s, 'i>(
     // Only consuming token on open/close match, because closing token might be reserved for an outer open format.
     let end = if let Some(close_token) = parser.iter.peek() {
         if close_token.kind == open_token.kind {
-            parser
+            parser.iter.next();
+            let closing_quote = parser
                 .iter
                 .next()
-                .expect("Peeked before, so `next` must return Some.");
+                .expect("Ensured in main inline parser that there are two quotes."); // Consume both closing quotes
             implicit_end = false;
 
             //TODO: check for optional attributes here
-            close_token.end
+            closing_quote.end
         } else {
             close_token.start
         }

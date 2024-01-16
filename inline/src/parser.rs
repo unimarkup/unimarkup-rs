@@ -118,6 +118,7 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
                 // closing token is not consumed here => the element parser needs this info
                 if parser.iter.format_closes(kind) {
                     if kind == InlineTokenKind::DoubleQuote {
+                        parser.iter.peeking_next(|_| true); // to skip the first closing quote
                         let next_is_quote = parser
                             .iter
                             .peeking_next(|t| t.kind == InlineTokenKind::DoubleQuote)
@@ -126,13 +127,13 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
                             .iter
                             .peeking_next(|t| t.kind == InlineTokenKind::DoubleQuote)
                             .is_some();
+
+                        parser.iter.reset_peek(); // to set peek before first quote
+
                         if next_is_quote && !next_next_is_quote {
-                            // Consume first quote
-                            parser.iter.next();
                             format_closes = true;
                             break 'outer;
                         } else {
-                            parser.iter.reset_peek();
                             // Otherwhise, no quote element
                             None
                         }
