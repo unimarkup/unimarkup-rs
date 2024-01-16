@@ -1,5 +1,14 @@
 //! Defines the [`Html`] struct that is returned when rendering Unimarkup to HTML.
 
+use unimarkup_commons::attributes::{
+    resolved::{
+        ResolvedAttribute, ResolvedAttributeIdent, ResolvedAttributes, ResolvedFlatAttributeValue,
+        ResolvedSingleAttribute,
+    },
+    resolver::{AttributeResolver, AttributeResolverContext},
+    token::AttributeTokens,
+};
+
 use crate::render::OutputFormat;
 
 use self::tag::HtmlTag;
@@ -25,7 +34,95 @@ pub struct HtmlElement {
 }
 
 #[derive(Debug, Default)]
-pub struct HtmlAttributes(Vec<HtmlAttribute>);
+pub struct HtmlAttributes(Vec<HtmlAttribute>, Option<HtmlAttribute>);
+
+impl HtmlAttributes {
+    pub fn push_style(&mut self, value: &str) {
+        let new_styles = match &mut self.1 {
+            Some(styles) => styles.value.as_mut().map_or(value, |s| {
+                s.push_str(value);
+                s
+            }),
+            None => value,
+        };
+        self.1 = Some(HtmlAttribute {
+            name: "style".to_string(),
+            value: Some(new_styles.to_string()),
+        })
+    }
+}
+
+impl From<&AttributeTokens> for HtmlAttributes {
+    fn from(value: &AttributeTokens) -> Self {
+        let resolved =
+            AttributeResolver::new(&value.tokens).resolve(&AttributeResolverContext::default());
+        resolved.into()
+    }
+}
+
+const HTML_ATTRB_QUOTES: &str = "'";
+
+impl From<ResolvedAttributes<'_>> for HtmlAttributes {
+    fn from(value: ResolvedAttributes<'_>) -> Self {
+        let mut attrbs = Vec::new();
+
+        for html_attrb in value.html {
+            if let ResolvedAttribute::Single(ResolvedSingleAttribute::Flat(flat)) = html_attrb {
+                let ResolvedAttributeIdent::Html(ident) = flat.ident else {
+                    unreachable!("Idents in HTML attributes must be valid HTML idents.");
+                };
+                if let ResolvedFlatAttributeValue::Bool(true) = flat.value {
+                    attrbs.push(HtmlAttribute {
+                        name: ident.as_str().to_string(),
+                        value: None,
+                    })
+                } else {
+                    attrbs.push(HtmlAttribute {
+                        name: ident.as_str().to_string(),
+                        value: Some(
+                            flat.value
+                                .to_string()
+                                .replace(HTML_ATTRB_QUOTES, &format!("\\{HTML_ATTRB_QUOTES}")),
+                        ), // escape quote, because HTML attributes are wrapped in single quotes
+                    })
+                }
+            } else {
+                //TODO: set warn for unsupported attrb for now
+            }
+        }
+
+        let mut style_value = String::new();
+        for css_attrb in value.css {
+            if let ResolvedAttribute::Single(ResolvedSingleAttribute::Flat(flat)) = css_attrb {
+                let ResolvedAttributeIdent::Css(ident) = flat.ident else {
+                    unreachable!("Idents in CSS attributes must be valid CSS idents.");
+                };
+
+                style_value.push_str(&format!(
+                    "{}:{}{};",
+                    ident.name(), //TODO: add vendorprefix
+                    flat.value
+                        .to_string()
+                        .replace(HTML_ATTRB_QUOTES, &format!("\\{HTML_ATTRB_QUOTES}")),
+                    if flat.important { " !important" } else { "" }
+                ));
+            } else {
+                //TODO: set warn for unsupported attrb for now
+            }
+        }
+        let style = if !style_value.is_empty() {
+            Some(HtmlAttribute {
+                name: "style".to_string(),
+                value: Some(style_value),
+            })
+        } else {
+            None
+        };
+
+        HtmlAttributes(attrbs, style)
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct HtmlElements(Vec<HtmlElement>);
 
@@ -97,7 +194,7 @@ impl OutputFormat for Html {
             head: HtmlHead {
                 elements: HtmlElements(Vec::new()),
                 syntax_highlighting_used: false,
-                styles: HtmlAttributes(Vec::new()),
+                styles: HtmlAttributes(Vec::new(), None),
             },
             body: HtmlBody {
                 elements: HtmlElements(Vec::new()),
@@ -136,7 +233,7 @@ impl std::fmt::Display for HtmlElement {
 
         let mut element = format!("<{}", self.tag.as_str());
 
-        if !self.attributes.is_empty() {
+        if !self.attributes.is_empty() || self.attributes.1.is_some() {
             element.push_str(&format!("{}", self.attributes));
         }
 
@@ -223,7 +320,11 @@ impl From<HtmlElement> for HtmlBody {
 impl std::fmt::Display for HtmlAttribute {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.value {
-            Some(value) => write!(f, "{}='{}'", self.name, value),
+            Some(value) => write!(
+                f,
+                "{}={}{}{}",
+                self.name, HTML_ATTRB_QUOTES, value, HTML_ATTRB_QUOTES
+            ),
             None => write!(f, "{}", self.name),
         }
     }
@@ -231,7 +332,7 @@ impl std::fmt::Display for HtmlAttribute {
 
 impl From<Vec<HtmlAttribute>> for HtmlAttributes {
     fn from(value: Vec<HtmlAttribute>) -> Self {
-        HtmlAttributes(value)
+        HtmlAttributes(value, None)
     }
 }
 
@@ -242,6 +343,10 @@ impl std::fmt::Display for HtmlAttributes {
             // This way no unnecessary whitespace is left at the end of the open tag.
             write!(f, " {}", attrb)?;
         }
+        if let Some(style) = &self.1 {
+            write!(f, " {}", style)?;
+        }
+
         Ok(())
     }
 }

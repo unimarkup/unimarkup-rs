@@ -11,9 +11,9 @@ use crate::{
 
 use super::rules::AtRuleId;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AttributeTokens {
-    pub(crate) tokens: Vec<AttributeToken>,
+    pub tokens: Vec<AttributeToken>,
     pub(crate) implicit_closed: bool,
     pub(crate) start: Position,
     pub(crate) end: Position,
@@ -36,7 +36,7 @@ impl Element for AttributeTokens {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct AttributeToken {
     pub(crate) kind: AttributeTokenKind,
     pub(crate) start: Position,
@@ -57,7 +57,7 @@ impl Element for AttributeToken {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum AttributeTokenKind {
     /// Marks previous [`SelectorIdentPart`]s to be for an attribute ident that ends with `: `.
     /// The stored ident does **not** include the ending `: `.
@@ -174,7 +174,7 @@ impl AttributeTokenKind {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum IdentOrSelectorPart {
     Plain(String),
     /// A quoted part (e.g. `"value"` or `'value'`).
@@ -190,7 +190,7 @@ impl IdentOrSelectorPart {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct QuotedIdent {
     pub(crate) ident: String,
     pub(crate) quote: char,
@@ -203,7 +203,7 @@ impl QuotedIdent {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct QuotedPart {
     pub(crate) parts: Vec<QuotedValuePart>,
     pub(crate) quote: char,
@@ -250,14 +250,14 @@ impl Element for QuotedPart {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct QuotedValuePart {
     pub(crate) kind: QuotedPartKind,
     pub(crate) start: Position,
     pub(crate) end: Position,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum QuotedPartKind {
     /// Contains plain content.
     /// Including escaped graphemes and whitespaces.
@@ -328,7 +328,9 @@ impl ValuePart {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+impl Eq for ValuePart {}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ValueSeparator {
     Whitespace,
     Comma,
@@ -347,7 +349,7 @@ impl ValueSeparator {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CssFn {
     pub(crate) name: String,
     pub(crate) inner: Vec<AttributeToken>,
@@ -369,7 +371,7 @@ impl CssFn {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum EnclosedSymbolKind {
     Brace,
     Bracket,

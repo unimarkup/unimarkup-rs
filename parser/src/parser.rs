@@ -277,12 +277,13 @@ mod test {
     #[test]
     fn debugging_dummy() {
         let tokens = unimarkup_commons::lexer::token::lex_str(
-            "```
-Verbatim block
-
-
-Two blank lines before.
-```",
+            "```rust
+fn test {
+    i += 1;
+}
+```{
+    background-color: #555;
+}",
         );
         let parser = BlockParser {
             iter: TokenIterator::from(&*tokens),

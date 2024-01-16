@@ -94,9 +94,9 @@ impl ResolvedSingleAttribute<'_> {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ResolvedFlatAttribute<'tslice> {
-    pub(crate) ident: ResolvedAttributeIdent<'tslice>,
-    pub(crate) value: ResolvedFlatAttributeValue,
-    pub(crate) important: bool,
+    pub ident: ResolvedAttributeIdent<'tslice>,
+    pub value: ResolvedFlatAttributeValue,
+    pub important: bool,
 }
 
 #[derive(Debug, PartialEq, Clone)]

@@ -44,3 +44,25 @@ impl Unimarkup {
         self.render(HtmlRenderer::default())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use unimarkup_commons::config::Config;
+
+    use crate::Unimarkup;
+
+    #[test]
+    fn dummy_test() {
+        let content = "```rust
+fn test {
+    i += 1;
+}
+```{
+    background-color: #555;
+}";
+        let um = Unimarkup::parse(content, Config::default());
+        let html = um.render_html().unwrap();
+
+        dbg!(html.body.to_string());
+    }
+}

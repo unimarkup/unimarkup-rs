@@ -14,7 +14,7 @@ use crate::{
 pub struct LogicContext {}
 
 // TODO: setup AST
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LogicAst {
     inner: String,
     implicit_closed: bool,

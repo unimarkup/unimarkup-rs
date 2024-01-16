@@ -2,9 +2,12 @@
 
 use std::rc::Rc;
 
+use unimarkup_commons::attributes::token::AttributeTokens;
+use unimarkup_commons::attributes::tokenize::{AttributeContext, AttributeTokenizer};
 use unimarkup_commons::lexer::position::Position;
 use unimarkup_commons::lexer::token::iterator::EndMatcher;
 use unimarkup_commons::lexer::token::TokenKind;
+use unimarkup_commons::parsing::Parser;
 
 use crate::elements::BlockElement;
 use crate::{elements::blocks::Block, BlockParser};
@@ -19,7 +22,7 @@ pub struct VerbatimBlock {
     pub data_lang: Option<String>,
     /// Attributes of the verbatim block.
     // TODO: make attributes data structure
-    pub attributes: Option<String>,
+    pub attributes: Option<AttributeTokens>,
     /// Marks that this verbatim block was implicitly closed.
     pub implicit_closed: bool,
     /// The number of backticks this verbatim block was created with.
@@ -103,7 +106,9 @@ impl VerbatimBlock {
                 matcher.consumed_matches(&[
                     TokenKind::Newline,
                     TokenKind::Tick(tick_len),
-                    TokenKind::EnclosedBlockEnd, //TODO: add PossibleAttributes & Possible Decorators besides blanklines
+                    TokenKind::PossibleDecorator,
+                    TokenKind::PossibleAttributes,
+                    TokenKind::EnclosedBlockEnd,
                 ])
             })),
         );
@@ -117,6 +122,21 @@ impl VerbatimBlock {
 
         parser = content_parser.unfold();
         parser.context.flags = prev_context_flags;
+
+        let mut attrb_tokens = None;
+        let next_kind = parser.iter.peek_kind();
+        if next_kind == Some(TokenKind::OpenBrace) {
+            // scoped attribute parsing
+            let (attrb_iter, attrb_token_res) = AttributeTokenizer::new(
+                parser.iter.nest_scoped(None, None),
+                AttributeContext::default(),
+            )
+            .parse();
+            parser.iter = attrb_iter.iter;
+            attrb_tokens = attrb_token_res.ok();
+        } else if let Some(TokenKind::Plus(nr_plus)) = next_kind {
+            // scoped decorator parsing
+        }
 
         let prev = parser
             .iter
@@ -133,7 +153,7 @@ impl VerbatimBlock {
             Some(Block::VerbatimBlock(VerbatimBlock {
                 content: content.as_unimarkup(),
                 data_lang,
-                attributes: None,
+                attributes: attrb_tokens,
                 implicit_closed,
                 tick_len,
                 start: open_token.start,

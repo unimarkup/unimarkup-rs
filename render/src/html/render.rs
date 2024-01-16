@@ -72,7 +72,14 @@ impl Renderer<Html> for HtmlRenderer {
             }),
         );
 
-        Ok(Html::nested(HtmlTag::Pre, HtmlAttributes::default(), inner))
+        Ok(Html::nested(
+            HtmlTag::Pre,
+            verbatim
+                .attributes
+                .as_ref()
+                .map_or(HtmlAttributes::default(), |a| a.into()),
+            inner,
+        ))
     }
 
     fn render_bullet_list(
@@ -119,10 +126,13 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::Span,
-            attributes: HtmlAttributes(vec![HtmlAttribute {
-                name: "style".to_string(),
-                value: Some("white-space: pre-wrap;".to_string()),
-            }]),
+            attributes: HtmlAttributes(
+                vec![],
+                Some(HtmlAttribute {
+                    name: "style".to_string(),
+                    value: Some("white-space: pre-wrap;".to_string()),
+                }),
+            ),
             content: Some(String::from(TokenKind::Blankline)),
         }));
 
@@ -161,7 +171,11 @@ impl Renderer<Html> for HtmlRenderer {
             })
         }
 
-        Ok(Html::nested(HtmlTag::A, HtmlAttributes(attributes), inner))
+        Ok(Html::nested(
+            HtmlTag::A,
+            HtmlAttributes(attributes, None),
+            inner,
+        ))
     }
 
     fn render_bold(
@@ -195,10 +209,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(underline.inner(), context)?;
         let mut attributes = HtmlAttributes::default();
-        attributes.push(HtmlAttribute {
-            name: "style".to_string(),
-            value: Some("text-decoration: underline;".to_string()),
-        });
+        attributes.push_style("text-decoration: underline;");
 
         Ok(Html::nested(HtmlTag::Span, attributes, inner))
     }
@@ -230,10 +241,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(overline.inner(), context)?;
         let mut attributes = HtmlAttributes::default();
-        attributes.push(HtmlAttribute {
-            name: "style".to_string(),
-            value: Some("text-decoration: overline;".to_string()),
-        });
+        attributes.push_style("text-decoration: overline;");
 
         Ok(Html::nested(HtmlTag::Span, attributes, inner))
     }
@@ -245,10 +253,7 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let inner = self.render_nested_inline(strikethrough.inner(), context)?;
         let mut attributes = HtmlAttributes::default();
-        attributes.push(HtmlAttribute {
-            name: "style".to_string(),
-            value: Some("text-decoration: line-through;".to_string()),
-        });
+        attributes.push_style("text-decoration: line-through;");
 
         Ok(Html::nested(HtmlTag::Span, attributes, inner))
     }
@@ -369,10 +374,13 @@ impl Renderer<Html> for HtmlRenderer {
     ) -> Result<Html, crate::log_id::RenderError> {
         let html = Html::with_body(HtmlBody::from(HtmlElement {
             tag: HtmlTag::Span,
-            attributes: HtmlAttributes(vec![HtmlAttribute {
-                name: "style".to_string(),
-                value: Some("white-space: pre-wrap;".to_string()),
-            }]),
+            attributes: HtmlAttributes(
+                vec![],
+                Some(HtmlAttribute {
+                    name: "style".to_string(),
+                    value: Some("white-space: pre-wrap;".to_string()),
+                }),
+            ),
             content: Some(SymbolKind::Whitespace.as_str().to_string()),
         }));
 

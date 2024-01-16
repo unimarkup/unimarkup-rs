@@ -129,6 +129,35 @@ impl<'slice, 'input> EndMatcher for TokenIterator<'slice, 'input> {
                 self.peeking_take_while(|t| matches!(t.kind, TokenKind::Digit(_)))
                     .count()
                     > 0
+            } else if matches!(
+                kind,
+                &TokenKind::PossibleAttributes | &TokenKind::PossibleDecorator
+            ) {
+                // skip whitespace & newline, but reset if possible token wasn't reached
+                let possible_peek = self.peek_index();
+                let last_is_newline = self
+                    .peeking_take_while(|t| {
+                        matches!(t.kind, TokenKind::Whitespace | TokenKind::Newline)
+                    })
+                    .last()
+                    .map_or(false, |t| t.kind == TokenKind::Newline);
+                let possible_match = if kind == &TokenKind::PossibleAttributes {
+                    self.peek_kind() == Some(TokenKind::OpenBrace)
+                } else if let Some(TokenKind::Plus(nr_plus)) = self.peek_kind() {
+                    last_is_newline && nr_plus >= 3
+                } else {
+                    false
+                };
+
+                if possible_match {
+                    // matched possible token => parsing of it must be handled per element
+                    // tokens above are only peeked, because they are needed as start indicator in element parser
+                    break;
+                } else {
+                    // ignores possible token if it wasn't matched
+                    self.set_peek_index(possible_peek);
+                    true
+                }
             } else {
                 let next_token_opt = self.peeking_next(|t| matches_kind(t, kind));
 
