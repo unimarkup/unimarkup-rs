@@ -148,7 +148,9 @@ impl Renderer<Html> for HtmlRenderer {
 
         Ok(Html::nested(
             HtmlTag::Span,
-            HtmlAttributes::default(),
+            textbox
+                .attributes()
+                .map_or(HtmlAttributes::default(), |a| a.into()),
             inner,
         ))
     }

@@ -2,12 +2,19 @@
 
 use std::rc::Rc;
 
-use unimarkup_commons::lexer::{
-    position::Position,
-    token::{
-        iterator::{EndMatcher, PeekingNext},
-        TokenKind,
+use unimarkup_commons::{
+    attributes::{
+        token::AttributeTokens,
+        tokenize::{AttributeContext, AttributeTokenizer},
     },
+    lexer::{
+        position::Position,
+        token::{
+            iterator::{EndMatcher, PeekingNext},
+            TokenKind,
+        },
+    },
+    parsing::Parser,
 };
 
 use crate::{parser::InlineParser, tokenize::kind::InlineTokenKind};
@@ -24,7 +31,7 @@ pub struct TextBox {
     /// The content inside brackets.
     inner: Vec<Inline>,
     /// Optional attributes of the text box.
-    attributes: Option<Vec<Inline>>,
+    attributes: Option<AttributeTokens>,
     /// The start of this text box in the original content.
     start: Position,
     /// The end of this text box in the original content.
@@ -34,7 +41,7 @@ pub struct TextBox {
 impl TextBox {
     pub fn new(
         inner: Vec<Inline>,
-        attributes: Option<Vec<Inline>>,
+        attributes: Option<AttributeTokens>,
         start: Position,
         end: Position,
     ) -> Self {
@@ -51,7 +58,7 @@ impl TextBox {
         &self.inner
     }
 
-    pub fn attributes(&self) -> Option<&Vec<Inline>> {
+    pub fn attributes(&self) -> Option<&AttributeTokens> {
         self.attributes.as_ref()
     }
 }
@@ -108,8 +115,11 @@ pub(crate) fn parse<'slice, 'input>(
     let end_reached = scoped_parser.iter.end_reached();
     parser = scoped_parser.unfold(outer_open_formats);
 
+    let next_kind = parser.iter.peek_kind();
+    let mut attributes = None;
+
     // check for `()`
-    if end_reached && parser.iter.peek_kind() == Some(InlineTokenKind::OpenParenthesis) {
+    if end_reached && next_kind == Some(InlineTokenKind::OpenParenthesis) {
         parser
             .iter
             .next()
@@ -165,6 +175,14 @@ pub(crate) fn parse<'slice, 'input>(
                 .into(),
             ),
         );
+    } else if end_reached && next_kind == Some(InlineTokenKind::OpenBrace) {
+        // might be attributes
+        let (mut nested_parser, outer_open_formats) = parser.nest_scoped(None);
+        let (attrb_iter, attrb_token_res) =
+            AttributeTokenizer::new(nested_parser.iter.into(), AttributeContext::default()).parse();
+        nested_parser.iter = attrb_iter.iter.into();
+        parser = nested_parser.unfold(outer_open_formats);
+        attributes = attrb_token_res.ok();
     }
 
     (
@@ -172,7 +190,7 @@ pub(crate) fn parse<'slice, 'input>(
         Some(
             TextBox {
                 inner,
-                attributes: None,
+                attributes,
                 start: open_token.start,
                 end: crate::element::helper::implicit_end_using_prev(&prev_token),
             }
