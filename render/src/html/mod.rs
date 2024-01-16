@@ -54,8 +54,7 @@ impl HtmlAttributes {
 
 impl From<&AttributeTokens> for HtmlAttributes {
     fn from(value: &AttributeTokens) -> Self {
-        let resolved =
-            AttributeResolver::new(&value.tokens).resolve(&AttributeResolverContext::default());
+        let resolved = AttributeResolver::new(value).resolve(&AttributeResolverContext::default());
         resolved.into()
     }
 }
@@ -65,6 +64,13 @@ const HTML_ATTRB_QUOTES: &str = "'";
 impl From<ResolvedAttributes<'_>> for HtmlAttributes {
     fn from(value: ResolvedAttributes<'_>) -> Self {
         let mut attrbs = Vec::new();
+
+        if let Some(id) = value.id {
+            attrbs.push(HtmlAttribute {
+                name: "id".to_string(),
+                value: Some(id.to_string()),
+            })
+        }
 
         for html_attrb in value.html {
             if let ResolvedAttribute::Single(ResolvedSingleAttribute::Flat(flat)) = html_attrb {

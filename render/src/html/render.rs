@@ -38,10 +38,10 @@ impl Renderer<Html> for HtmlRenderer {
         let inner = self.render_inlines(&heading.content, context)?;
         let tag = HtmlTag::from(heading.level);
 
-        let attributes = HtmlAttributes::from(vec![HtmlAttribute {
-            name: "id".to_string(),
-            value: Some(heading.id.clone()),
-        }]);
+        let attributes = heading
+            .attributes
+            .as_ref()
+            .map_or(HtmlAttributes::default(), |a| a.into());
 
         Ok(Html::nested(tag, attributes, inner))
     }

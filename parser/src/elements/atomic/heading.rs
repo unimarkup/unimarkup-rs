@@ -3,8 +3,11 @@
 use std::rc::Rc;
 
 use strum_macros::*;
+use unimarkup_commons::attributes::token::AttributeTokens;
+use unimarkup_commons::attributes::tokenize::{AttributeContext, AttributeTokenizer};
 use unimarkup_commons::lexer::token::iterator::{EndMatcher, Itertools, PrefixMatcher};
 use unimarkup_commons::lexer::token::TokenKind;
+use unimarkup_commons::parsing::Parser;
 use unimarkup_inline::element::{Inline, InlineElement};
 use unimarkup_inline::parser;
 
@@ -119,7 +122,7 @@ pub struct Heading {
     pub content: Vec<Inline>,
 
     /// Attributes of the heading.
-    pub attributes: Option<String>,
+    pub attributes: Option<AttributeTokens>,
 
     /// The start of this block in the original content.
     pub start: Position,
@@ -191,29 +194,61 @@ impl Heading {
         parser.iter = iter;
         parser.context.update_from(inline_context);
 
-        if parsed_inlines.prefix_mismatch() {
-            return (parser, None);
-        }
+        let prefix_mismatch = parsed_inlines.prefix_mismatch();
+        let might_be_attribute_start = parser.iter.peek_kind() == Some(TokenKind::OpenBrace);
 
         let content = parsed_inlines.to_inlines();
-        let id = as_id(&content);
-
-        //TODO: implement optional attribute parsing here
-
         let heading_end = parser
             .iter
             .prev()
             .expect("At least space after hash must be in prev if inlines was empty")
             .end;
 
+        let attributes = {
+            if prefix_mismatch {
+                if might_be_attribute_start {
+                    let (attrb_iter, attrb_token_res) = AttributeTokenizer::new(
+                        parser.iter.nest_scoped(None, None),
+                        AttributeContext::default(),
+                    )
+                    .parse();
+                    parser.iter = attrb_iter.iter;
+                    let mut attrb = attrb_token_res.ok();
+                    if let Some(a) = attrb.as_mut() {
+                        if a.id.is_none() {
+                            a.id = Some(as_id(&content));
+                        }
+                    } else {
+                        return (parser, None);
+                    }
+                    attrb
+                } else {
+                    return (parser, None);
+                }
+            } else {
+                None
+            }
+        }
+        .or_else(|| {
+            let mut attrbs = AttributeTokens::default();
+            attrbs.id = Some(as_id(&content));
+            Some(attrbs)
+        });
+
         (
             parser,
             Some(Block::Heading(Heading {
-                id,
+                id: attributes
+                    .as_ref()
+                    .expect("Heading always as at least 'id' attribute.")
+                    .id
+                    .as_ref()
+                    .expect("Heading always has an 'id' attribute.")
+                    .clone(),
                 level: HeadingLevel::try_from(hashes_len)
                     .expect("Correct heading level ensured above."),
                 content,
-                attributes: None,
+                attributes,
                 start: hashes.start,
                 end: heading_end,
             })),

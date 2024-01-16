@@ -21,13 +21,20 @@ pub struct AttributeTokenizer<'slice, 'input> {
     pub iter: TokenIterator<'slice, 'input>,
     /// Context for attribute tokenization.
     pub context: AttributeContext,
+    /// The tokens for the `id` attribute found during tokenization.
+    /// They are extracted from the other attribute tokens to be accessible without resolving.
+    id: Option<String>,
 }
 
 impl<'slice, 'input> Parser<'slice, 'input, AttributeTokens, AttributeContext>
     for AttributeTokenizer<'slice, 'input>
 {
     fn new(iter: TokenIterator<'slice, 'input>, context: AttributeContext) -> Self {
-        Self { iter, context }
+        Self {
+            iter,
+            context,
+            id: None,
+        }
     }
 
     fn parse(mut self) -> (Self, Result<AttributeTokens, ParserError>) {
@@ -68,10 +75,12 @@ impl<'slice, 'input> Parser<'slice, 'input, AttributeTokens, AttributeContext>
         let impl_closed = self.parse_block(&mut attrb_tokens);
         if impl_closed {
             let end = attrb_tokens.last().map(|t| t.end).unwrap_or(open_token.end);
+            let id = std::mem::take(&mut self.id);
             (
                 self,
                 Ok(AttributeTokens {
                     tokens: attrb_tokens,
+                    id,
                     implicit_closed: true,
                     start: open_token.start,
                     end,
@@ -88,10 +97,12 @@ impl<'slice, 'input> Parser<'slice, 'input, AttributeTokens, AttributeContext>
                 "Explicitly closed attribute block has kind '{:?}' instead of 'CloseBrace'",
                 close_token.kind
             );
+            let id = std::mem::take(&mut self.id);
             (
                 self,
                 Ok(AttributeTokens {
                     tokens: attrb_tokens,
+                    id,
                     implicit_closed: false,
                     start: open_token.start,
                     end: close_token.end,
@@ -184,6 +195,7 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
         self.parse_comments(attrb_tokens); // To consume any amount of comments, spaces, newlines between IdentMarker and value
 
         match ident_part {
+            IdentSelectorKind::Id => self.parse_id(attrb_tokens),
             IdentSelectorKind::Ident => {
                 if self.iter.peek_kind() == Some(TokenKind::OpenBrace) {
                     self.parse_nested(attrb_tokens)
@@ -205,6 +217,115 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
 
     fn parse_array(&mut self, attrb_tokens: &mut Vec<AttributeToken>) {
         todo!()
+    }
+
+    fn parse_id(&mut self, attrb_tokens: &mut Vec<AttributeToken>) {
+        let mut ident = String::new();
+        let mut ident_pushed = false;
+
+        let Some(first_token) = self.iter.peek() else {
+            return;
+        };
+        let mut start = first_token.start;
+        let mut end = first_token.end;
+
+        while let Some(token) = self.iter.peek() {
+            match token.kind {
+                TokenKind::OpenBrace
+                | TokenKind::OpenBracket
+                | TokenKind::CloseBracket
+                | TokenKind::CloseParenthesis
+                | TokenKind::SingleQuote
+                | TokenKind::DoubleQuote
+                | TokenKind::Comma(_)
+                | TokenKind::Whitespace
+                | TokenKind::Blankline
+                | TokenKind::Newline
+                | TokenKind::EscapedNewline
+                | TokenKind::EscapedWhitespace => {
+                    // invalid ident tokens
+                    self.iter.next();
+
+                    if !ident.is_empty() && !ident_pushed {
+                        self.id = Some(ident.clone());
+                        ident_pushed = true;
+
+                        // TODO: make sure ident is valid
+                        attrb_tokens.push(AttributeToken {
+                            kind: AttributeTokenKind::FlatValue(ValuePart::Plain(std::mem::take(
+                                &mut ident,
+                            ))),
+                            start,
+                            end,
+                        });
+                    } else {
+                        start = token.end;
+                    }
+
+                    if token.kind == TokenKind::Newline {
+                        attrb_tokens.push(AttributeToken {
+                            kind: AttributeTokenKind::Newline,
+                            start: token.start,
+                            end: token.end,
+                        });
+                    } else if matches!(token.kind, TokenKind::Whitespace | TokenKind::Blankline) {
+                        // ignore spaces
+                    } else {
+                        attrb_tokens.push(AttributeToken {
+                            kind: AttributeTokenKind::Invalid(token.kind, token.to_string()),
+                            start: token.start,
+                            end: token.end,
+                        });
+                    }
+                }
+                TokenKind::CloseBrace => {
+                    break;
+                }
+                TokenKind::Semicolon(len) => {
+                    if len != Comment::keyword_len() {
+                        if !ident.is_empty() {
+                            let kind = if !ident_pushed {
+                                self.id = Some(ident.clone());
+
+                                AttributeTokenKind::FlatValue(ValuePart::Plain(std::mem::take(
+                                    &mut ident,
+                                )))
+                            } else {
+                                AttributeTokenKind::Invalid(TokenKind::Plain, ident.clone())
+                            };
+
+                            // TODO: make sure ident is valid
+                            attrb_tokens.push(AttributeToken { kind, start, end });
+                        }
+
+                        self.parse_semicolon(attrb_tokens, len);
+
+                        break;
+                    } else {
+                        self.parse_comments(attrb_tokens);
+                    }
+                }
+                _ => {
+                    ident.push_str(&token.to_string());
+                    self.iter.next();
+
+                    end = token.end;
+                }
+            }
+        }
+
+        if !ident.is_empty() {
+            let kind = if !ident_pushed {
+                self.id = Some(ident.clone());
+
+                AttributeTokenKind::FlatValue(ValuePart::Plain(std::mem::take(&mut ident)))
+            } else {
+                AttributeTokenKind::Invalid(TokenKind::Plain, ident)
+            };
+
+            // TODO: make sure ident is valid
+            attrb_tokens.push(AttributeToken { kind, start, end });
+        }
     }
 
     fn parse_single_value(&mut self, attrb_tokens: &mut Vec<AttributeToken>) {
@@ -531,6 +652,7 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                 attrb_tokens.push(AttributeToken {
                     kind: AttributeTokenKind::Nested(AttributeTokens {
                         tokens: inner_tokens,
+                        id: None,
                         implicit_closed: impl_closed,
                         start: inner_start,
                         end: inner_end,
@@ -543,6 +665,7 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                 attrb_tokens.push(AttributeToken {
                     kind: AttributeTokenKind::Nested(AttributeTokens {
                         tokens: vec![],
+                        id: None,
                         implicit_closed: true,
                         start: open_token.start,
                         end: open_token.end,
@@ -624,36 +747,46 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
             }
 
             match token.kind {
-                TokenKind::Colon(1) => {
+                TokenKind::Colon(1) if !ident_or_selector.is_empty() => {
                     self.iter.next();
 
-                    if self
-                        .iter
-                        .peeking_next(|t| {
-                            matches!(t.kind, TokenKind::Whitespace | TokenKind::Newline)
-                        })
-                        .is_some()
-                    {
+                    if let Some(ident_space) = self.iter.peeking_next(|t| {
+                        matches!(t.kind, TokenKind::Whitespace | TokenKind::Newline)
+                    }) {
                         self.iter.next();
 
-                        if !ident_or_selector.is_empty() {
-                            attrb_tokens.push(AttributeToken {
-                                kind: AttributeTokenKind::IdentOrSelectorPart(
-                                    super::token::IdentOrSelectorPart::Plain(std::mem::take(
-                                        &mut ident_or_selector,
-                                    )),
-                                ),
-                                start: start_pos.unwrap_or(token.start),
-                                end: token.start,
-                            });
-                        }
+                        let is_id = ident_or_selector.to_lowercase() == "id";
+
+                        attrb_tokens.push(AttributeToken {
+                            kind: AttributeTokenKind::IdentOrSelectorPart(
+                                super::token::IdentOrSelectorPart::Plain(std::mem::take(
+                                    &mut ident_or_selector,
+                                )),
+                            ),
+                            start: start_pos.unwrap_or(token.start),
+                            end: token.start,
+                        });
 
                         attrb_tokens.push(AttributeToken {
                             kind: AttributeTokenKind::IdentMarker,
                             start: token.start,
                             end: token.end,
                         });
-                        return IdentSelectorKind::Ident;
+
+                        // Newline pushed to regular attribute tokens, because newline info is needed for syntax highlighting
+                        if ident_space.kind == TokenKind::Newline {
+                            attrb_tokens.push(AttributeToken {
+                                kind: AttributeTokenKind::Newline,
+                                start: ident_space.start,
+                                end: ident_space.end,
+                            });
+                        }
+
+                        return if is_id {
+                            IdentSelectorKind::Id
+                        } else {
+                            IdentSelectorKind::Ident
+                        };
                     }
 
                     ident_or_selector.push(':');
@@ -688,6 +821,9 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
                 }
                 TokenKind::SingleQuote | TokenKind::DoubleQuote => {
                     attrb_tokens.push(self.parse_quote_ident());
+                }
+                TokenKind::Whitespace | TokenKind::Blankline => {
+                    self.iter.next();
                 }
                 _ => {
                     self.iter.next();
@@ -904,6 +1040,9 @@ impl<'slice, 'input> AttributeTokenizer<'slice, 'input> {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum IdentSelectorKind {
+    /// The `id` attribute.
+    Id,
+    /// Any ident except `id`.
     Ident,
     Selector,
     NoValue,
@@ -988,9 +1127,15 @@ mod test {
     }
 
     #[test]
-    fn single_html_id_attrb() {
-        let s = "{id: 'my-id';}";
+    fn id_attrb() {
+        let s = "{id: my-id;}";
         let tokens = attrb_tokens(s).unwrap();
+
+        assert_eq!(
+            tokens.id,
+            Some("my-id".to_string()),
+            "'id' attribute was not detected."
+        );
 
         assert_eq!(
             tokens.tokens.len(),
@@ -1007,15 +1152,10 @@ mod test {
         let AttributeTokenKind::FlatValue(value) = value_kind else {
             panic!()
         };
-        let ValuePart::Quoted(quoted_part) = value else {
+        let ValuePart::Plain(id) = value else {
             panic!()
         };
-        assert_eq!(quoted_part.quote, '\'', "Wrong quote char detected.");
-        assert_eq!(
-            quoted_part.parts[0].kind,
-            QuotedPartKind::Plain("my-id".to_string()),
-            "'my-id' not part of the parsed quoted value."
-        );
+        assert_eq!(id, "my-id", "Wrong ID parsed.");
 
         assert_eq!(
             tokens.tokens[3].kind,
@@ -1130,7 +1270,7 @@ mod test {
 
     #[test]
     fn two_html_attrbs() {
-        let s = "{id: 'my-id'; class: 'some-class other-class'}";
+        let s = "{data-conent: 'my-data'; class: 'some-class other-class'}";
         let tokens = attrb_tokens(s).unwrap();
 
         assert_eq!(
@@ -1140,8 +1280,10 @@ mod test {
         );
         assert_eq!(
             tokens.tokens[0].kind,
-            AttributeTokenKind::IdentOrSelectorPart(IdentOrSelectorPart::Plain("id".to_string())),
-            "'id' ident not correctly parsed."
+            AttributeTokenKind::IdentOrSelectorPart(IdentOrSelectorPart::Plain(
+                "data-conent".to_string()
+            )),
+            "'data-conent' ident not correctly parsed."
         );
 
         let value_kind = &tokens.tokens[2].kind;
@@ -1154,8 +1296,8 @@ mod test {
         assert_eq!(quoted_part.quote, '\'', "Wrong quote char detected.");
         assert_eq!(
             quoted_part.parts[0].kind,
-            QuotedPartKind::Plain("my-id".to_string()),
-            "'my-id' not part of the parsed quoted value."
+            QuotedPartKind::Plain("my-data".to_string()),
+            "'my-data' not part of the parsed quoted value."
         );
 
         assert_eq!(

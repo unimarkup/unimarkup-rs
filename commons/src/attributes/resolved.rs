@@ -14,7 +14,8 @@ use super::{
 /// Resolved attributes still preserve the attribute order in the given content.
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct ResolvedAttributes<'tslice> {
-    pub html: Vec<ResolvedAttribute<'tslice>>,
+    pub id: Option<&'tslice str>,
+    pub html: Vec<ResolvedAttribute<'tslice>>, //TODO: change these to hashmap to ensure idents appear only once
     pub css: Vec<ResolvedAttribute<'tslice>>,
     pub um: Vec<ResolvedAttribute<'tslice>>,
 }
@@ -52,7 +53,7 @@ impl ResolvedAttributeSelectors {
         &'a self,
         options: ParserOptions<'_, 'a>,
     ) -> Result<SelectorList<'a>, ParseError<'_, ParserError<'_>>> {
-        SelectorList::<'a>::parse_string_with_options(&self, options)
+        SelectorList::<'a>::parse_string_with_options(self, options)
     }
 }
 

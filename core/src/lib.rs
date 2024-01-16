@@ -53,11 +53,9 @@ mod test {
 
     #[test]
     fn dummy_test() {
-        let content = "```rust
-fn test {
-    i += 1;
-}
-```{
+        let content = "## heading
+{
+    id: test;
     background-color: #555;
 }";
         let um = Unimarkup::parse(content, Config::default());

@@ -11,9 +11,10 @@ use crate::{
 
 use super::rules::AtRuleId;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct AttributeTokens {
     pub tokens: Vec<AttributeToken>,
+    pub id: Option<String>,
     pub(crate) implicit_closed: bool,
     pub(crate) start: Position,
     pub(crate) end: Position,

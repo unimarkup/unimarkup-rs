@@ -15,7 +15,10 @@ use super::{
         ResolvedFlatAttributeValue, ResolvedNestedAttribute, ResolvedSingleAttribute,
     },
     rules::AtRuleId,
-    token::{AttributeToken, AttributeTokenKind, IdentOrSelectorPart, QuotedPart, ValuePart},
+    token::{
+        AttributeToken, AttributeTokenKind, AttributeTokens, IdentOrSelectorPart, QuotedPart,
+        ValuePart,
+    },
     um::UmAttributeId,
 };
 
@@ -26,15 +29,20 @@ pub struct AttributeResolverContext {
 
 pub struct AttributeResolver<'tslice> {
     tokens: &'tslice [AttributeToken],
+    id: Option<&'tslice str>,
 }
 
 impl<'tslice> AttributeResolver<'tslice> {
-    pub fn new(tokens: &'tslice [AttributeToken]) -> Self {
-        Self { tokens }
+    pub fn new(attrb_tokens: &'tslice AttributeTokens) -> Self {
+        Self {
+            tokens: &attrb_tokens.tokens,
+            id: attrb_tokens.id.as_deref(),
+        }
     }
 
     pub fn resolve(mut self, context: &AttributeResolverContext) -> ResolvedAttributes<'tslice> {
         let mut attrbs = ResolvedAttributes {
+            id: self.id,
             html: Vec::new(),
             css: Vec::new(),
             um: Vec::new(),
@@ -270,6 +278,11 @@ fn push_single_attrb<'tslice>(
     single: ResolvedSingleAttribute<'tslice>,
 ) {
     let v = match single.ident() {
+        super::resolved::ResolvedAttributeIdent::Html(HtmlAttributeId::Id) => {
+            // TODO: handle 'id' attribute properly
+            // Ignored here, because the id attribute is retrieved before resolving
+            return;
+        }
         super::resolved::ResolvedAttributeIdent::Html(_) => &mut attrbs.html,
         super::resolved::ResolvedAttributeIdent::Css(_) => &mut attrbs.css,
         super::resolved::ResolvedAttributeIdent::Um(_) => &mut attrbs.um,
@@ -291,6 +304,7 @@ fn push_nested_attrb<'tslice>(
     nested: ResolvedNestedAttribute<'tslice>,
 ) {
     let mut inner_attrbs = ResolvedAttributes {
+        id: None,
         html: Vec::new(),
         css: Vec::new(),
         um: Vec::new(),
@@ -355,7 +369,7 @@ mod test {
         let attrb_tokens =
             attrb_tokens("{color: red; disabled: false; class: first-class second-class}").unwrap();
 
-        let resolver = AttributeResolver::new(&attrb_tokens.tokens);
+        let resolver = AttributeResolver::new(&attrb_tokens);
         let resolved = resolver.resolve(&AttributeResolverContext::default());
         dbg!(resolved);
     }
