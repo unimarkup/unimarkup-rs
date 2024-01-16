@@ -123,6 +123,17 @@ impl VerbatimBlock {
         parser = content_parser.unfold();
         parser.context.flags = prev_context_flags;
 
+        // block end before attrb parsing for correct syntax highlighting
+        let prev = parser
+            .iter
+            .prev()
+            .expect("Must be some token, because at least start tokens came before.");
+        let block_end = if implicit_closed {
+            prev.end
+        } else {
+            prev.start // Start position, because previous was either blankline, attribute start, or decorator start
+        };
+
         let mut attrb_tokens = None;
         let next_kind = parser.iter.peek_kind();
         if next_kind == Some(TokenKind::OpenBrace) {
@@ -137,16 +148,6 @@ impl VerbatimBlock {
         } else if let Some(TokenKind::Plus(nr_plus)) = next_kind {
             // scoped decorator parsing
         }
-
-        let prev = parser
-            .iter
-            .prev()
-            .expect("Must be some token, because at least start tokens came before.");
-        let block_end = if implicit_closed {
-            prev.end
-        } else {
-            prev.start // Start position, because previous was either blankline, attribute start, or decorator start
-        };
 
         (
             parser,
