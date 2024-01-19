@@ -120,12 +120,10 @@ fn equals_blocks_output(input: &Vec<Block>, output: &Vec<Block>) -> bool {
 }
 
 fn equals_umi_output(input: &Document, output: &Document) -> bool {
-    /*
     assert_eq!(
         input.config, output.config,
         "Parsed UMI Config differs from original Config"
     );
-    */
 
     equals_blocks_output(&input.blocks, &output.blocks)
 }

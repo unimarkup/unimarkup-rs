@@ -110,9 +110,17 @@ impl Umi {
             String::from("attributes-") + self.lang.to_string().as_str(),
         );
 
-        // Row 1: Config
+        let mut hashmap: HashMap<String, String> = HashMap::new();
+        hashmap.insert(
+            String::from("input_path"),
+            self.config.input.to_str().unwrap_or_default().to_string(),
+        );
+        let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
+
+        // Row 1: Preamble + Input File
         sheet.set_value(1, 0, 0);
         sheet.set_value(1, 2, "Preamble");
+        sheet.set_value(1, 3, properties);
         sheet.set_value(
             1,
             5,
@@ -367,6 +375,20 @@ impl Umi {
             }
             index += 1;
         }
+
+        let hash_map_input: HashMap<String, String> = serde_json::from_str(
+            sheet
+                .cell(1, 3)
+                .unwrap_or_default()
+                .value
+                .as_str_opt()
+                .unwrap_or_default(),
+        )
+        .unwrap_or_default();
+
+        let input_path: PathBuf =
+            PathBuf::from(hash_map_input.get("input_path").unwrap_or(&String::new()));
+
         let config = Config {
             preamble: serde_yaml::from_str(
                 sheet
@@ -379,7 +401,7 @@ impl Umi {
             )
             .unwrap_or_default(),
             output: Output::default(),
-            input: PathBuf::default(),
+            input: input_path,
             merging: MergingConfig::default(),
         };
 
