@@ -312,16 +312,20 @@ impl Umi {
         }
     }
 
-    pub fn create_um(&mut self) -> Result<Document, ParserError> {
-        self.elements.clear();
-        debug_assert!(!self.ods.is_empty());
+    pub fn create_um(um_content: &str, config: &mut Config) -> Result<Document, ParserError> {
+        let mut umi = Umi::with_um(
+            vec![],
+            config.clone(),
+            config.preamble.i18n.lang.to_string().to_owned(),
+        );
+        umi.ods = um_content.into();
 
-        let wb: WorkBook = read_ods_buf(&self.ods).unwrap_or_default();
+        let wb: WorkBook = read_ods_buf(&umi.ods).unwrap_or_default();
         let sheet = wb.sheet(0);
         let rows = sheet.used_grid_size().0;
 
         for row_index in 2..rows {
-            self.elements.push(UmiRow::new(
+            umi.elements.push(UmiRow::new(
                 sheet
                     .cell(row_index, 0)
                     .unwrap_or_default()
@@ -369,9 +373,9 @@ impl Umi {
         let mut um: Vec<Block> = vec![];
 
         let mut index = 0;
-        while index < self.elements.len() {
-            if self.elements[index].depth == 0 {
-                um.push(self.read_row(index)?);
+        while index < umi.elements.len() {
+            if umi.elements[index].depth == 0 {
+                um.push(umi.read_row(index)?);
             }
             index += 1;
         }

@@ -4,6 +4,7 @@ use unimarkup_core::{
     commons::config::Config,
     inline::element::{Inline, InlineElement},
     parser::{document::Document, elements::blocks::Block},
+    render::umi::Umi,
     Unimarkup,
 };
 
@@ -141,7 +142,9 @@ fn umi_supported() {
     let mut umi = um.render_umi().unwrap();
     let workbook = umi.create_workbook();
 
-    let looped_doc = &workbook.create_um().map_err(|_| panic!()).unwrap();
+    let looped_doc = &Umi::create_um(workbook.to_string().as_str(), &mut workbook.config)
+        .map_err(|_| panic!())
+        .unwrap();
     let input = um.get_document();
 
     assert!(
