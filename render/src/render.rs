@@ -34,7 +34,7 @@ use unimarkup_parser::{
 use crate::log_id::{GeneralWarning, RenderError};
 
 pub struct Context<'a> {
-    doc: &'a Document,
+    pub doc: &'a Document,
     rendered_citations: Vec<String>,
     pub footnotes: String,
     pub bibliography: String,
@@ -75,21 +75,6 @@ impl<'a> Context<'a> {
         match CiteprocWrapper::new() {
             Ok(mut citeproc) => {
                 let for_pagedjs = matches!(format, OutputFormatKind::Html);
-                let style = doc
-                    .config
-                    .preamble
-                    .cite
-                    .style
-                    .clone()
-                    .unwrap_or(PathBuf::from(String::from("ieee")));
-                let doc_locale = doc
-                    .config
-                    .preamble
-                    .i18n
-                    .lang
-                    .clone()
-                    .unwrap_or(locale!("en-US"));
-                let citation_locales = doc.config.preamble.cite.citation_locales.clone();
                 let citation_ids = doc
                     .citations
                     .clone()
@@ -106,10 +91,7 @@ impl<'a> Context<'a> {
                     .collect::<Value>();
                 rendered_citations = citeproc
                     .get_citation_strings(
-                        csl_data.clone(),
-                        doc_locale,
-                        citation_locales,
-                        style,
+                        doc,
                         &[citation_ids],
                         for_pagedjs,
                     )

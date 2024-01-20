@@ -9,7 +9,8 @@ use crate::csl_json::csl_types::{CslData, CslItem};
 use crate::html::citeproc::csl_files::{get_locale_string, get_style_string};
 use crate::log_id::{CiteError, GeneralWarning};
 use rustyscript::{import, json_args, serde_json, ModuleWrapper};
-use unimarkup_commons::config::icu_locid::Locale;
+use unimarkup_commons::config::icu_locid::{Locale, locale};
+use unimarkup_parser::document::Document;
 
 pub struct CiteprocWrapper {
     module: ModuleWrapper,
@@ -31,18 +32,24 @@ impl CiteprocWrapper {
         }
     }
 
-    // returns the citation strings to be placed inline in the same order as the citation_ids
-    // the CitationItems have to have the same order that they should appear in the output, because this considers
-    // disambiguation and short forms of citations if the same entry was cited before
-    pub fn get_citation_strings(
-        &mut self,
-        csl_data: CslData,
-        doc_locale: Locale,
-        citation_locales: HashMap<Locale, PathBuf>,
-        style_id: PathBuf,
-        citation_id_vectors: &[serde_json::Value],
-        for_pagedjs: bool,
-    ) -> Result<Vec<String>, CiteError> {
+    pub fn init_processor(&mut self, doc: &Document, for_pagedjs: bool) -> Result<(), CiteError> {
+        let csl_data = get_csl_data(&doc.config.preamble.cite.references);
+        let style_id = doc
+            .config
+            .preamble
+            .cite
+            .style
+            .clone()
+            .unwrap_or(PathBuf::from(String::from("ieee")));
+        let doc_locale = doc
+            .config
+            .preamble
+            .i18n
+            .lang
+            .clone()
+            .unwrap_or(locale!("en-US"));
+        let citation_locales = doc.config.preamble.cite.citation_locales.clone();
+
         let citation_text = serde_json::ser::to_string(&csl_data).unwrap();
         let locale = get_locale_string(doc_locale, citation_locales);
         let style = get_style_string(style_id);
@@ -52,11 +59,33 @@ impl CiteprocWrapper {
                 "initProcessor",
                 json_args!(citation_text, locale, style, for_pagedjs),
             )
-            .map_err(|_| CiteError::ProcessorInitializationError)?;
+            .map_err(|_| CiteError::ProcessorInitializationError)
+    }
 
-        self.module
-            .call("getCitationStrings", citation_id_vectors)
-            .map_err(|_| CiteError::CitationError)
+    // returns the citation strings to be placed inline in the same order as the citation_ids
+    // the CitationItems have to have the same order that they should appear in the output, because this considers
+    // disambiguation and short forms of citations if the same entry was cited before
+    pub fn get_citation_strings(
+        &mut self,
+        doc: &Document,
+        citation_id_vectors: &[serde_json::Value],
+        for_pagedjs: bool,
+    ) -> Result<Vec<String>, CiteError> {
+        match self.init_processor(doc, for_pagedjs) {
+            Ok(_) =>
+                self.module
+                    .call("getCitationStrings", citation_id_vectors)
+                    .map_err(|_| CiteError::CitationError),
+            Err(e) => Err(e)
+        }
+    }
+
+    pub fn get_author_only(&mut self, doc: &Document, cite_id: String) -> Result<String, CiteError> {
+        match self.init_processor(doc, false) {
+            Ok(_) => self.module.call("getAuthorOnly", json_args!(cite_id))
+                .map_err(|_| CiteError::CitationError),
+            Err(e) => Err(e)
+        }
     }
 
     pub fn get_footnotes(&mut self) -> Result<String, CiteError> {

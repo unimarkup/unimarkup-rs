@@ -145,9 +145,7 @@ pub(crate) fn parse_distinct_reference<'s, 'i>(
 
     entries.push(parsed_token_strings.join(""));
     if entries.len() < 2 {
-        entries.push("author".to_string());
-        entries.push("0".to_string());
-        entries.push("family".to_string());
+        entries.push("authors".to_string());
     }
     let id = entries[0].clone();
     entries.remove(0);
