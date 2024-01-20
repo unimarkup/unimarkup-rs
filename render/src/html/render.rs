@@ -1,3 +1,4 @@
+use crate::html::citeproc::CiteprocWrapper;
 use crate::log_id::RenderError;
 use serde_json::Value;
 use unimarkup_commons::lexer::{span::Span, symbol::SymbolKind, token::TokenKind};
@@ -12,7 +13,6 @@ use unimarkup_inline::element::{
     InlineElement,
 };
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
-use crate::html::citeproc::CiteprocWrapper;
 
 use crate::render::{Context, OutputFormat, Renderer};
 
@@ -204,19 +204,13 @@ impl Renderer<Html> for HtmlRenderer {
         let content;
         if let Some(item_value) = selected_item {
             let mut result_value = item_value.clone();
-            if distinct_reference.fields().len() == 1 && distinct_reference.fields()[0] == "authors" {
+            if distinct_reference.fields().len() == 1 && distinct_reference.fields()[0] == "authors"
+            {
                 content = match CiteprocWrapper::new() {
-                    Ok(mut citeproc) => {
-                        citeproc
-                            .get_author_only(
-                                context.doc,
-                                distinct_reference.id().to_string()
-                            )
-                            .unwrap_or("########### CITATION ERROR ###########".to_string())
-                    }
-                    Err(_) => {
-                        "########### CITATION ERROR ###########".to_string()
-                    }
+                    Ok(mut citeproc) => citeproc
+                        .get_author_only(context.doc, distinct_reference.id().to_string())
+                        .unwrap_or("########### CITATION ERROR ###########".to_string()),
+                    Err(_) => "########### CITATION ERROR ###########".to_string(),
                 }
             } else {
                 for field in distinct_reference.fields().clone() {
@@ -232,7 +226,7 @@ impl Renderer<Html> for HtmlRenderer {
                     if content_as_string.ends_with(".0") {
                         match content_as_string[..content_as_string.len() - 2].parse::<usize>() {
                             Ok(n) => n.to_string(),
-                            Err(_) => content_as_string
+                            Err(_) => content_as_string,
                         }
                     } else if content_as_string == "null" {
                         "########### CITATION ERROR ###########".to_string()

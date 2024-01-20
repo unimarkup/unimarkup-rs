@@ -4,7 +4,6 @@ use crate::csl_json::csl_types::CslData;
 use crate::html::citeproc::{get_csl_data, CiteprocWrapper};
 use logid::log;
 use serde_json::Value;
-use std::path::PathBuf;
 use unimarkup_commons::config::output::OutputFormatKind;
 use unimarkup_commons::config::Config;
 use unimarkup_commons::{
@@ -90,11 +89,7 @@ impl<'a> Context<'a> {
                     })
                     .collect::<Value>();
                 rendered_citations = citeproc
-                    .get_citation_strings(
-                        doc,
-                        &[citation_ids],
-                        for_pagedjs,
-                    )
+                    .get_citation_strings(doc, &[citation_ids], for_pagedjs)
                     .unwrap_or_else(|e| {
                         log!(e);
                         vec![
