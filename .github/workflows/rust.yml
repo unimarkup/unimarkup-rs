@@ -19,9 +19,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: caching
-        uses: Swatinem/rust-cache@v2
-        if: matrix.os == 'ubuntu-latest'
       - name: Build unimarkup
         run: cargo build
 
@@ -32,6 +29,7 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
       - name: Run cargo fmt
         run: cargo fmt -- --check
 
@@ -42,6 +40,7 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
       - name: Run linter
         run: cargo clippy -- -D warnings
   
@@ -52,5 +51,6 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
       - name: Run tests
         run: cargo test --verbose
