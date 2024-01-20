@@ -30,6 +30,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "build-files"
       - name: Run cargo fmt
         run: cargo fmt -- --check
 
@@ -41,6 +43,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "build-files"
       - name: Run linter
         run: cargo clippy -- -D warnings
   
@@ -52,5 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "build-files"
       - name: Run tests
         run: cargo test --verbose
