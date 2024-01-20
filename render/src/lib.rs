@@ -5,5 +5,6 @@
 
 pub mod html;
 pub mod log_id;
+pub mod pdf;
 pub mod render;
 pub mod umi;

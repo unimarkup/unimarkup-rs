@@ -60,6 +60,12 @@ pub trait OutputFormat: Default {
 pub trait Renderer<T: OutputFormat> {
     // Note: Default implementation with `Err(RenderError::Unimplemented)` prevents breaking changes when adding new functions to this trait.
 
+    /// Returns the [`OutputFormat`] for the [`Renderer`]. <br>
+    /// May be used to set custom modifications in the output format
+    fn get_target(&mut self) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
     //--------------------------------- BLOCKS ---------------------------------
 
     /// Render a Unimarkup [`Paragraph`] to the output format `T`.
@@ -260,7 +266,7 @@ pub trait Renderer<T: OutputFormat> {
 
     /// Render Unimarkup [`Block`s](Block) to the output format `T`.
     fn render_blocks(&mut self, blocks: &[Block], context: &Context) -> Result<T, RenderError> {
-        let mut t = T::default();
+        let mut t = self.get_target()?;
 
         for block in blocks {
             let rendered_block = match self.render_block(block, context) {
