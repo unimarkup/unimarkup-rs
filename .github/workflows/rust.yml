@@ -19,6 +19,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: cache
+        uses: Swatinem/rust-cache@v2
+        if: matrix.os == 'ubuntu_latest'
+        with:
+          shared-key: "build-files"
       - name: Build unimarkup
         run: cargo build
 
@@ -29,16 +34,13 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "build-files"
       - name: Run cargo fmt
         run: cargo fmt -- --check
 
   lint:
     name: Run Linter (clippy)
     runs-on: ubuntu-latest
-    needs: format
+    needs: [format, build]
     
     steps:
       - uses: actions/checkout@v4
