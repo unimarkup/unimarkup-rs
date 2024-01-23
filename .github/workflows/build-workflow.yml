@@ -19,7 +19,7 @@ jobs:
     name: Build project
     strategy:
       matrix:
-        os: ${{ fromJson(inputs.os) }}
+        os: ${{ fromJSON(inputs.os) }}
     runs-on: ${{ matrix.os }}
 
     steps:
