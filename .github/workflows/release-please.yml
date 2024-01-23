@@ -8,7 +8,7 @@ name: Release Please
 jobs:
   release-build:
     name: Build unimarkup release
-    uses: ./.github./workflows/build-workflow.yml
+    uses: ./.github/workflows/build-workflow.yml
     with:
       release: true
       upload-artifacts: true
