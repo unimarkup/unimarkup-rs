@@ -215,7 +215,8 @@ impl<'tslice> AttributeResolver<'tslice> {
         selectors: ResolvedAttributeSelectors,
         context: &AttributeResolverContext,
     ) -> Option<ResolvedAttribute<'tslice>> {
-        todo!()
+        // TODO: resolve nested attributes
+        None
     }
 }
 
