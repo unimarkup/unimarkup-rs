@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::render::OutputFormat;
 
-use crate::log_id::ParserError;
+use crate::log_id::UmiParserError;
 use spreadsheet_ods::{
     read_ods_buf, write_ods_buf_uncompressed, Sheet, Value, ValueType, WorkBook,
 };
@@ -162,7 +162,7 @@ impl Umi {
         }
     }
 
-    fn read_row(&mut self, line: usize) -> Result<Block, ParserError> {
+    fn read_row(&mut self, line: usize) -> Result<Block, UmiParserError> {
         let mut current_line = self.elements[line].clone();
         let properties: HashMap<String, String> =
             serde_json::from_str(&current_line.properties).unwrap_or_default();
@@ -173,21 +173,21 @@ impl Umi {
                     level: unimarkup_parser::elements::atomic::HeadingLevel::try_from(
                         properties
                             .get("level")
-                            .ok_or(ParserError::MissingProperty((
+                            .ok_or(UmiParserError::MissingProperty((
                                 "level".into(),
                                 current_line.position,
                             )))?
                             .as_str(),
                     )
                     .ok()
-                    .ok_or(ParserError::InvalidPropertyValue((
+                    .ok_or(UmiParserError::InvalidPropertyValue((
                         "level".into(),
                         current_line.position,
                     )))?,
                     content: self.read_inlines(current_line.content.clone()),
                     attributes: Some(current_line.attributes).filter(|s| !s.is_empty()),
-                    start: Position::new(1, 1),
-                    end: Position::new(1, 1),
+                    start: Position::new(1, 1), // Fallback in case content has been changed manually in .umi
+                    end: Position::new(1, 1), // Fallback in case content has been changed manually in .umi
                 };
                 Ok(Block::Heading(heading))
             }
@@ -199,12 +199,12 @@ impl Umi {
             }
             "VerbatimBlock" => {
                 let verbatim = VerbatimBlock {
-                    content: current_line.content.clone(),
+                    content: current_line.content.clone(), // TODO: use inline parser, but only allow 'logic' and plain text
                     data_lang: properties.get("data_lang").cloned(),
                     attributes: Some(current_line.attributes).filter(|s| !s.is_empty()),
                     implicit_closed: properties
                         .get("implicit_closed")
-                        .ok_or(ParserError::MissingProperty((
+                        .ok_or(UmiParserError::MissingProperty((
                             "implicit_closed".into(),
                             current_line.position,
                         )))?
@@ -212,22 +212,22 @@ impl Umi {
                         .unwrap_or_default(),
                     tick_len: properties
                         .get("tick_len")
-                        .ok_or(ParserError::MissingProperty((
+                        .ok_or(UmiParserError::MissingProperty((
                             "tick_len".into(),
                             current_line.position,
                         )))?
                         .parse()
                         .unwrap_or_default(),
-                    start: Position::new(1, 1),
-                    end: Position::new(1, 1),
+                    start: Position::new(1, 1), // Fallback in case content has been changed manually in .umi
+                    end: Position::new(1, 1), // Fallback in case content has been changed manually in .umi
                 };
                 Ok(Block::VerbatimBlock(verbatim))
             }
             "BulletList" => {
                 let mut bullet_list = BulletList {
                     entries: vec![],
-                    start: Position::new(1, 1),
-                    end: Position::new(1, 1),
+                    start: Position::new(1, 1), // Fallback in case content has been changed manually in .umi
+                    end: Position::new(1, 1), // Fallback in case content has been changed manually in .umi
                 };
 
                 let bullet_list_depth = current_line.depth;
@@ -246,11 +246,10 @@ impl Umi {
                     }
 
                     current_line_index += 1;
-                    let fetched = self.fetch_next_line(current_line_index);
-                    if fetched.is_none() {
+                    let Some(fetched) = self.fetch_next_line(current_line_index) else {
                         break;
-                    }
-                    current_line = fetched.unwrap_or_default();
+                    };
+                    current_line = fetched;
                 }
 
                 Ok(Block::BulletList(bullet_list))
@@ -260,7 +259,7 @@ impl Umi {
                     keyword: TokenKind::from(SymbolKind::from(
                         properties
                             .get("keyword")
-                            .ok_or(ParserError::MissingProperty((
+                            .ok_or(UmiParserError::MissingProperty((
                                 "keyword".into(),
                                 current_line.position,
                             )))?
@@ -268,22 +267,14 @@ impl Umi {
                     ))
                     .try_into()
                     .ok()
-                    .ok_or(ParserError::InvalidPropertyValue((
+                    .ok_or(UmiParserError::InvalidPropertyValue((
                         "keyword".into(),
                         current_line.position,
                     )))?,
-                    heading: self.read_inlines(
-                        properties
-                            .get("heading")
-                            .ok_or(ParserError::MissingProperty((
-                                "heading".into(),
-                                current_line.position,
-                            )))?
-                            .to_string(),
-                    ),
+                    heading: self.read_inlines(current_line.content.clone()),
                     body: vec![],
-                    start: Position::new(1, 1),
-                    end: Position::new(1, 1),
+                    start: Position::new(1, 1), // Fallback in case content has been changed manually in .umi
+                    end: Position::new(1, 1), // Fallback in case content has been changed manually in .umi
                 };
 
                 let bullet_list_entry_depth = current_line.depth;
@@ -308,11 +299,11 @@ impl Umi {
 
                 Ok(Block::BulletListEntry(bullet_list_entry))
             }
-            &_ => Err(ParserError::UnknownKind(current_line.position)),
+            &_ => Err(UmiParserError::UnknownKind(current_line.position)),
         }
     }
 
-    pub fn create_um(um_content: &str, config: &mut Config) -> Result<Document, ParserError> {
+    pub fn create_um(um_content: &str, config: &mut Config) -> Result<Document, UmiParserError> {
         let mut umi = Umi::with_um(
             vec![],
             config.clone(),
@@ -320,18 +311,23 @@ impl Umi {
         );
         umi.ods = um_content.into();
 
+        //let mut language_content_index = 5;
+        //let mut language_attributes_index = 5;
+
         let wb: WorkBook = read_ods_buf(&umi.ods).unwrap_or_default();
         let sheet = wb.sheet(0);
         let rows = sheet.used_grid_size().0;
 
         for row_index in 2..rows {
             umi.elements.push(UmiRow::new(
+                // position
                 sheet
                     .cell(row_index, 0)
                     .unwrap_or_default()
                     .value
                     .as_u8_opt()
                     .unwrap_or(0),
+                // id
                 sheet
                     .cell(row_index, 1)
                     .unwrap_or_default()
@@ -339,6 +335,7 @@ impl Umi {
                     .as_str_opt()
                     .unwrap_or_default()
                     .to_string(),
+                // kind
                 sheet
                     .cell(row_index, 2)
                     .unwrap_or_default()
@@ -346,6 +343,7 @@ impl Umi {
                     .as_str_opt()
                     .unwrap_or_default()
                     .to_string(),
+                // properties
                 sheet
                     .cell(row_index, 3)
                     .unwrap_or_default()
@@ -353,13 +351,16 @@ impl Umi {
                     .as_str_opt()
                     .unwrap_or_default()
                     .to_string(),
+                // depth
                 sheet
                     .cell(row_index, 4)
                     .unwrap_or_default()
                     .value
                     .as_u8_opt()
                     .unwrap_or(0),
+                // content
                 unpack_content_safe(sheet.cell(row_index, 5).unwrap_or_default().value),
+                // attributes
                 sheet
                     .cell(row_index, 6)
                     .unwrap_or_default()
@@ -376,6 +377,8 @@ impl Umi {
         while index < umi.elements.len() {
             if umi.elements[index].depth == 0 {
                 um.push(umi.read_row(index)?);
+            } else {
+                // TODO Warn if a proper parent element is missing
             }
             index += 1;
         }

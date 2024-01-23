@@ -172,13 +172,6 @@ impl Renderer<Umi> for UmiRenderer {
             String::from("keyword"),
             bullet_list_entry.keyword.as_str().to_string(),
         );
-        hashmap.insert(
-            String::from("heading"),
-            self.render_inlines(&bullet_list_entry.heading, context)?
-                .elements[0]
-                .content
-                .clone(),
-        );
         let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
         let mut entry = Umi::with_um(
             vec![UmiRow::new(

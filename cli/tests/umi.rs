@@ -1,3 +1,4 @@
+use std::iter::zip;
 use std::path::PathBuf;
 
 use unimarkup_core::{
@@ -21,14 +22,12 @@ fn equals_inlines_output(input: &Vec<Inline>, output: &Vec<Inline>) -> bool {
         "Parsed Inlines does not have the same number of elements"
     );
 
-    let mut i = 0;
-    while i < output.len() {
+    for (in_elem, out_elem) in zip(input.iter(), output.iter()) {
         assert_eq!(
-            input[i].as_unimarkup(),
-            output[i].as_unimarkup(),
+            in_elem.as_unimarkup(),
+            out_elem.as_unimarkup(),
             "Inline contains wrong content"
-        );
-        i += 1;
+        )
     }
     true
 }
@@ -40,15 +39,14 @@ fn equals_blocks_output(input: &Vec<Block>, output: &Vec<Block>) -> bool {
         "Parsed Blocks does not have the same length as the input"
     );
 
-    let mut i = 0;
-    while i < input.len() {
+    for (in_elem, out_elem) in zip(input.iter(), output.iter()) {
         assert_eq!(
-            input[i].variant_str(),
-            output[i].variant_str(),
+            in_elem.variant_str(),
+            out_elem.variant_str(),
             "Blocks did not match up at Index"
         );
-        let block_in = input[i].clone();
-        let block_out = output[i].clone();
+        let block_in = in_elem.clone();
+        let block_out = out_elem.clone();
         match (block_in, block_out) {
             (Block::Heading(block_in), Block::Heading(block_out)) => {
                 assert_eq!(block_in.id, block_out.id, "Heading ids do not match!");
@@ -94,27 +92,18 @@ fn equals_blocks_output(input: &Vec<Block>, output: &Vec<Block>) -> bool {
                     "Bullet List entry count does not match"
                 );
 
-                let mut j = 0;
-                while j < block_in.entries.len() {
+                for (in_entry, out_entry) in zip(block_in.entries.iter(), block_out.entries.iter())
+                {
                     assert_eq!(
-                        block_in.entries[j].keyword, block_out.entries[j].keyword,
+                        in_entry.keyword, out_entry.keyword,
                         "Bullet List Entry Keyword does not match"
                     );
-                    assert!(equals_inlines_output(
-                        &block_in.entries[j].heading,
-                        &block_out.entries[j].heading
-                    ));
-                    assert!(equals_blocks_output(
-                        &block_in.entries[j].body,
-                        &block_out.entries[j].body
-                    ));
-                    j += 1;
+                    assert!(equals_inlines_output(&in_entry.heading, &out_entry.heading));
+                    assert!(equals_blocks_output(&in_entry.body, &out_entry.body));
                 }
             }
             _ => return false,
         }
-
-        i += 1;
     }
 
     true
@@ -142,9 +131,7 @@ fn umi_supported() {
     let mut umi = um.render_umi().unwrap();
     let workbook = umi.create_workbook();
 
-    let looped_doc = &Umi::create_um(workbook.to_string().as_str(), &mut workbook.config)
-        .map_err(|_| panic!())
-        .unwrap();
+    let looped_doc = &Umi::create_um(workbook.to_string().as_str(), &mut workbook.config).unwrap();
     let input = um.get_document();
 
     assert!(

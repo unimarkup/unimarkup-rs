@@ -11,8 +11,8 @@ pub enum RenderError {
 }
 
 #[derive(Debug, Clone, ErrLogId, Error, PartialEq, Eq)]
-pub enum ParserError {
-    #[error("The UMI Parser failed to parse the kind at Position {}.", .0)]
+pub enum UmiParserError {
+    #[error("The UMI Parser failed to parse the Element Kind at Position {}.", .0)]
     UnknownKind(u8),
 
     #[error("The UMI Parser failed to parse Property {} from Element at Position {}.", (.0).0, (.0).1)]
@@ -21,6 +21,9 @@ pub enum ParserError {
     #[error("The UMI Parser failed to parse Property Value {} from Element at Position {}.", (.0).0, (.0).1)]
     InvalidPropertyValue((String, u8)),
 
-    #[error("The UMI Parser failed to parse the corresponding document.")]
+    #[error("The UMI Parser failed to parse the corresponding Document.")]
     NoUnimarkupDetected,
+
+    #[error("The UMI Parser failed to parse the Element at Position {}, because it has not Parent Element wwith Depth 0.", .0)]
+    MissingParentElement(u8),
 }
