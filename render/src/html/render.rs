@@ -206,7 +206,12 @@ impl Renderer<Html> for HtmlRenderer {
             let mut result_value = item_value.clone();
             if distinct_reference.fields().len() == 1 && distinct_reference.fields()[0] == "authors"
             {
-                content = match CiteprocWrapper::new() {
+                let citeproc_wrapper = if cfg!(test) {
+                    CiteprocWrapper::new_with_path("./src/html/citeproc/js/citeproc_adapter.js")
+                } else {
+                    CiteprocWrapper::new()
+                };
+                content = match citeproc_wrapper {
                     Ok(mut citeproc) => citeproc
                         .get_author_only(context.doc, distinct_reference.id().to_string())
                         .unwrap_or("########### CITATION ERROR ###########".to_string()),
@@ -523,5 +528,247 @@ impl Renderer<Html> for HtmlRenderer {
         }));
 
         Ok(html)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::html::citeproc::get_csl_data;
+    use crate::html::render::HtmlRenderer;
+    use crate::render::{Context, Renderer};
+    use std::collections::{HashMap, HashSet};
+    use std::path::PathBuf;
+    use std::str::FromStr;
+    use unimarkup_commons::config::icu_locid::locale;
+    use unimarkup_commons::config::preamble::{Citedata, I18n, Preamble};
+    use unimarkup_commons::config::Config;
+    use unimarkup_inline::element::substitution::DistinctReference;
+    use unimarkup_parser::document::Document;
+
+    fn get_test_context(doc: &Document) -> Context {
+        let mut citation_paths: HashSet<PathBuf> = HashSet::new();
+        citation_paths.insert(
+            PathBuf::from_str("./src/html/citeproc/test_files/citation_items.csl").unwrap(),
+        );
+        Context {
+            doc,
+            rendered_citations: vec![],
+            footnotes: "".to_string(),
+            bibliography: "".to_string(),
+            csl_data: get_csl_data(&citation_paths),
+        }
+    }
+
+    #[test]
+    fn test_render_distinct_reference_authors() {
+        let mut citation_locales = HashMap::new();
+        citation_locales.insert(
+            locale!("de-DE"),
+            PathBuf::from_str("./csl_locales/locales-de-DE.xml").unwrap(),
+        );
+        let doc = Document {
+            blocks: vec![],
+            config: Config {
+                preamble: Preamble {
+                    metadata: Default::default(),
+                    cite: Citedata {
+                        style: Some(PathBuf::from_str("chicago-fullnote-bibliography").unwrap()),
+                        references: HashSet::from_iter(
+                            vec![PathBuf::from_str(
+                                "./src/html/citeproc/test_files/citation_items.csl",
+                            )
+                            .unwrap()]
+                            .iter()
+                            .cloned(),
+                        ),
+                        citation_locales,
+                        csl_locales: vec![],
+                    },
+                    render: Default::default(),
+                    i18n: I18n {
+                        lang: Some(locale!("de-DE")),
+                        output_langs: Default::default(),
+                    },
+                },
+                output: Default::default(),
+                merging: Default::default(),
+                input: Default::default(),
+            },
+            citations: vec![],
+            macros: vec![],
+            variables: vec![],
+            metadata: vec![],
+            resources: vec![],
+        };
+        let context = get_test_context(&doc);
+        let distinct_reference = DistinctReference::new(
+            "id-1".to_string(),
+            vec!["authors".to_string()],
+            Default::default(),
+            Default::default(),
+        );
+        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let actual = under_test.render_distinct_reference(&distinct_reference, &context);
+
+        assert!(actual.is_ok());
+        let actual_unwrapped = actual.unwrap();
+        let content_option = actual_unwrapped.body.elements.0[0].content.clone();
+        assert!(content_option.is_some());
+        let content_unwrapped = content_option.unwrap();
+        assert_eq!(content_unwrapped, "A1 Cook");
+    }
+
+    #[test]
+    fn test_render_distinct_reference_with_one_field() {
+        let doc = Document {
+            blocks: vec![],
+            config: Default::default(),
+            citations: vec![],
+            macros: vec![],
+            variables: vec![],
+            metadata: vec![],
+            resources: vec![],
+        };
+        let context = get_test_context(&doc);
+        let distinct_reference = DistinctReference::new(
+            "id-1".to_string(),
+            vec!["title".to_string()],
+            Default::default(),
+            Default::default(),
+        );
+        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let actual = under_test.render_distinct_reference(&distinct_reference, &context);
+
+        assert!(actual.is_ok());
+        let actual_unwrapped = actual.unwrap();
+        let content_option = actual_unwrapped.body.elements.0[0].content.clone();
+        assert!(content_option.is_some());
+        let content_unwrapped = content_option.unwrap();
+        assert_eq!(content_unwrapped, "Some Notes on Gertrude Stein and Deixis");
+    }
+
+    #[test]
+    fn test_render_distinct_reference_with_multiple_fields() {
+        let doc = Document {
+            blocks: vec![],
+            config: Default::default(),
+            citations: vec![],
+            macros: vec![],
+            variables: vec![],
+            metadata: vec![],
+            resources: vec![],
+        };
+        let context = get_test_context(&doc);
+        let distinct_reference = DistinctReference::new(
+            "id-1".to_string(),
+            vec!["author".to_string(), "0".to_string(), "family".to_string()],
+            Default::default(),
+            Default::default(),
+        );
+        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let actual = under_test.render_distinct_reference(&distinct_reference, &context);
+
+        assert!(actual.is_ok());
+        let actual_unwrapped = actual.unwrap();
+        let content_option = actual_unwrapped.body.elements.0[0].content.clone();
+        assert!(content_option.is_some());
+        let content_unwrapped = content_option.unwrap();
+        assert_eq!(content_unwrapped, "Cook");
+    }
+
+    #[test]
+    fn test_render_distinct_reference_id_not_found() {
+        let doc = Document {
+            blocks: vec![],
+            config: Default::default(),
+            citations: vec![],
+            macros: vec![],
+            variables: vec![],
+            metadata: vec![],
+            resources: vec![],
+        };
+        let context = get_test_context(&doc);
+        let distinct_reference = DistinctReference::new(
+            "id-xy".to_string(),
+            vec!["author".to_string(), "0".to_string(), "family".to_string()],
+            Default::default(),
+            Default::default(),
+        );
+        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let actual = under_test.render_distinct_reference(&distinct_reference, &context);
+
+        assert!(actual.is_ok());
+        let actual_unwrapped = actual.unwrap();
+        let content_option = actual_unwrapped.body.elements.0[0].content.clone();
+        assert!(content_option.is_some());
+        let content_unwrapped = content_option.unwrap();
+        assert_eq!(content_unwrapped, "########### CITATION ERROR ###########");
+    }
+
+    #[test]
+    fn test_render_distinct_reference_field_not_found() {
+        let doc = Document {
+            blocks: vec![],
+            config: Default::default(),
+            citations: vec![],
+            macros: vec![],
+            variables: vec![],
+            metadata: vec![],
+            resources: vec![],
+        };
+        let context = get_test_context(&doc);
+        let distinct_reference = DistinctReference::new(
+            "id-1".to_string(),
+            vec![
+                "unknown_field".to_string(),
+                "0".to_string(),
+                "family".to_string(),
+            ],
+            Default::default(),
+            Default::default(),
+        );
+        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let actual = under_test.render_distinct_reference(&distinct_reference, &context);
+
+        assert!(actual.is_ok());
+        let actual_unwrapped = actual.unwrap();
+        let content_option = actual_unwrapped.body.elements.0[0].content.clone();
+        assert!(content_option.is_some());
+        let content_unwrapped = content_option.unwrap();
+        assert_eq!(content_unwrapped, "########### CITATION ERROR ###########");
+    }
+
+    #[test]
+    fn render_distinct_reference_number() {
+        let doc = Document {
+            blocks: vec![],
+            config: Default::default(),
+            citations: vec![],
+            macros: vec![],
+            variables: vec![],
+            metadata: vec![],
+            resources: vec![],
+        };
+        let context = get_test_context(&doc);
+        let distinct_reference = DistinctReference::new(
+            "id-1".to_string(),
+            vec![
+                "issued".to_string(),
+                "date-parts".to_string(),
+                "0".to_string(),
+                "0".to_string(),
+            ],
+            Default::default(),
+            Default::default(),
+        );
+        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let actual = under_test.render_distinct_reference(&distinct_reference, &context);
+
+        assert!(actual.is_ok());
+        let actual_unwrapped = actual.unwrap();
+        let content_option = actual_unwrapped.body.elements.0[0].content.clone();
+        assert!(content_option.is_some());
+        let content_unwrapped = content_option.unwrap();
+        assert_eq!(content_unwrapped, "1997");
     }
 }

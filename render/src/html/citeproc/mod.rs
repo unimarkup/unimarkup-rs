@@ -24,7 +24,6 @@ impl CiteprocWrapper {
         }
     }
 
-    #[cfg(test)]
     pub fn new_with_path(path: &str) -> Result<CiteprocWrapper, CiteError> {
         match import(path) {
             Ok(module) => Ok(CiteprocWrapper { module }),
@@ -142,8 +141,8 @@ pub fn get_csl_data(references: &HashSet<PathBuf>) -> CslData {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use super::*;
+    use std::collections::HashMap;
     use std::str::FromStr;
     use unimarkup_commons::config::icu_locid::{locale, Locale};
     use unimarkup_commons::config::preamble::{Citedata, I18n, Preamble};

@@ -34,7 +34,7 @@ use crate::log_id::{GeneralWarning, RenderError};
 
 pub struct Context<'a> {
     pub doc: &'a Document,
-    rendered_citations: Vec<String>,
+    pub(crate) rendered_citations: Vec<String>,
     pub footnotes: String,
     pub bibliography: String,
     pub csl_data: CslData,
