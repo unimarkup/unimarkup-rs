@@ -12,7 +12,7 @@ env:
 jobs:
   build:
     name: Build unimarkup
-    uses: ./.github./workflows/build-workflow.yml
+    uses: ./.github/workflows/build-workflow.yml
     with:
       os: "[ubuntu-latest${{ github.ref == 'refs/heads/main'  ', windows-latest, macos-latest' || ''}}]"
       enable-caching: true
