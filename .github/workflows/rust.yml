@@ -11,22 +11,11 @@ env:
 
 jobs:
   build:
-    name: Build project
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: cache
-        uses: Swatinem/rust-cache@v2
-        if: matrix.os == 'ubuntu-latest'
-        with:
-          shared-key: "build-files"
-      - name: Build unimarkup
-        run: cargo build
-
+    name: Build unimarkup
+    uses: ./.github./workflows/build-workflow.yml
+    with:
+      os: "[ubuntu-latest${{ github.ref == 'refs/heads/main'  ', windows-latest, macos-latest' || ''}}]"
+      enable-caching: true
 
   format:
     name: Check Formatting
@@ -40,7 +29,7 @@ jobs:
   lint:
     name: Run Linter (clippy)
     runs-on: ubuntu-latest
-    needs: [format, build]
+    needs: [ format, build ]
     
     steps:
       - uses: actions/checkout@v4

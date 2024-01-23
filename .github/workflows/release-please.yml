@@ -7,21 +7,11 @@ name: Release Please
 
 jobs:
   release-build:
-    name: Build project
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build unimarkup
-        run: cargo build --release
-      - name: upload archive
-        uses: actions/upload-artifact@v3
-        with:
-          name: unimarkup-${{matrix.os}}
-          path: ./target/release/unimarkup${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+    name: Build unimarkup release
+    uses: ./.github./workflows/build-workflow.yml
+    with:
+      release: true
+      upload-artifacts: true
 
   release-please:
     runs-on: ubuntu-latest
