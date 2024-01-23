@@ -3,7 +3,7 @@ on:
     inputs:
       os:
         type: string
-        default: "[ubuntu-latest, windows-latest, macos-latest]"
+        default: "['ubuntu-latest', 'windows-latest', 'macos-latest']"
       release:
         type: boolean
         default: false

@@ -11,10 +11,10 @@ env:
 
 jobs:
   build:
-    name: Build unimarkup
+    name: Build unimarkup on all systems
     uses: ./.github/workflows/build-workflow.yml
     with:
-      os: "[ubuntu-latest${{ github.ref == 'refs/heads/main' && ', windows-latest, macos-latest' || ''}}]"
+      os: ${{ github.ref == 'refs/heads/main' && "['ubuntu-latest', 'windows-latest', 'macos-latest']" || "['ubuntu-latest']"}}
       enable-caching: true
 
   format:
