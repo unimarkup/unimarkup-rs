@@ -7,8 +7,7 @@ use crate::log_id::UmiParserError;
 use spreadsheet_ods::{
     read_ods_buf, write_ods_buf_uncompressed, Sheet, Value, ValueType, WorkBook,
 };
-use unimarkup_commons::config::output::Output;
-use unimarkup_commons::config::{Config, MergingConfig};
+use unimarkup_commons::config::Config;
 use unimarkup_commons::lexer::{
     position::Position,
     symbol::SymbolKind,
@@ -35,6 +34,37 @@ fn unpack_content_safe(value: Value) -> String {
         value.as_str_or("").into()
     } else {
         value.as_cow_str_or("").into()
+    }
+}
+
+fn retrieve_localised_content(sheet: &Sheet, row_index: u32, col_index: u32) -> String {
+    let content_localised =
+        unpack_content_safe(sheet.cell(row_index, col_index).unwrap_or_default().value);
+    if content_localised.is_empty() {
+        unpack_content_safe(sheet.cell(row_index, 5).unwrap_or_default().value)
+    } else {
+        content_localised
+    }
+}
+
+fn retrieve_localised_attributes(sheet: &Sheet, row_index: u32, col_index: u32) -> String {
+    let attributes_localised = sheet
+        .cell(row_index, col_index)
+        .unwrap_or_default()
+        .value
+        .as_str_opt()
+        .unwrap_or_default()
+        .to_string();
+    if attributes_localised.is_empty() {
+        sheet
+            .cell(row_index, 6)
+            .unwrap_or_default()
+            .value
+            .as_str_opt()
+            .unwrap_or_default()
+            .to_string()
+    } else {
+        attributes_localised
     }
 }
 
@@ -311,12 +341,58 @@ impl Umi {
         );
         umi.ods = um_content.into();
 
-        //let mut language_content_index = 5;
-        //let mut language_attributes_index = 5;
-
         let wb: WorkBook = read_ods_buf(&umi.ods).unwrap_or_default();
         let sheet = wb.sheet(0);
         let rows = sheet.used_grid_size().0;
+
+        // Load Stored Config Values from Sheet
+        let hash_map_input: HashMap<String, String> = serde_json::from_str(
+            sheet
+                .cell(1, 3)
+                .unwrap_or_default()
+                .value
+                .as_str_opt()
+                .unwrap_or_default(),
+        )
+        .unwrap_or_default();
+        let input_path: PathBuf =
+            PathBuf::from(hash_map_input.get("input_path").unwrap_or(&String::new()));
+
+        umi.config.preamble = serde_yaml::from_str(
+            sheet
+                .cell(1, 4)
+                .unwrap_or_default()
+                .value
+                .as_cow_str_or("")
+                .to_string()
+                .as_str(),
+        )
+        .unwrap_or_default();
+        umi.config.input = input_path;
+
+        // Determine the correct column for parsing Locale Content and Attributes
+        let mut index = 5;
+        let mut localised_content_index = 0;
+        let mut localised_attributes_index = 0;
+        loop {
+            let next = sheet
+                .cell(0, index)
+                .unwrap_or_default()
+                .value
+                .as_str_opt()
+                .unwrap_or_default()
+                .to_string();
+            if next.is_empty() {
+                break;
+            }
+            if next == (String::from("content-") + umi.lang.as_str()) {
+                localised_content_index = index;
+            }
+            if next == (String::from("attributes-") + umi.lang.as_str()) {
+                localised_attributes_index = index;
+            }
+            index += 1;
+        }
 
         for row_index in 2..rows {
             umi.elements.push(UmiRow::new(
@@ -359,15 +435,9 @@ impl Umi {
                     .as_u8_opt()
                     .unwrap_or(0),
                 // content
-                unpack_content_safe(sheet.cell(row_index, 5).unwrap_or_default().value),
+                retrieve_localised_content(sheet, row_index, localised_content_index),
                 // attributes
-                sheet
-                    .cell(row_index, 6)
-                    .unwrap_or_default()
-                    .value
-                    .as_str_opt()
-                    .unwrap_or_default()
-                    .to_string(),
+                retrieve_localised_attributes(sheet, row_index, localised_attributes_index),
             ))
         }
 
@@ -383,38 +453,9 @@ impl Umi {
             index += 1;
         }
 
-        let hash_map_input: HashMap<String, String> = serde_json::from_str(
-            sheet
-                .cell(1, 3)
-                .unwrap_or_default()
-                .value
-                .as_str_opt()
-                .unwrap_or_default(),
-        )
-        .unwrap_or_default();
-
-        let input_path: PathBuf =
-            PathBuf::from(hash_map_input.get("input_path").unwrap_or(&String::new()));
-
-        let config = Config {
-            preamble: serde_yaml::from_str(
-                sheet
-                    .cell(1, 4)
-                    .unwrap_or_default()
-                    .value
-                    .as_cow_str_or("")
-                    .to_string()
-                    .as_str(),
-            )
-            .unwrap_or_default(),
-            output: Output::default(),
-            input: input_path,
-            merging: MergingConfig::default(),
-        };
-
         Ok(Document {
             blocks: um,
-            config,
+            config: umi.config.clone(),
             macros: vec![],
             variables: vec![],
             metadata: vec![],
