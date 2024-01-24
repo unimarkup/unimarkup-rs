@@ -37,11 +37,14 @@ fn unpack_content_safe(value: Value) -> String {
     }
 }
 
+const DEFAULT_CONTENT_COLUMN: u32 = 5;
+const DEFAULT_ATTRIBUTES_COLUMN: u32 = 6;
+
 fn retrieve_localised_content(sheet: &Sheet, row_index: u32, col_index: u32) -> String {
     let content_localised =
         unpack_content_safe(sheet.cell(row_index, col_index).unwrap_or_default().value);
     if content_localised.is_empty() {
-        unpack_content_safe(sheet.cell(row_index, 5).unwrap_or_default().value)
+        unpack_content_safe(sheet.cell(row_index, DEFAULT_CONTENT_COLUMN).unwrap_or_default().value)
     } else {
         content_localised
     }
@@ -57,7 +60,7 @@ fn retrieve_localised_attributes(sheet: &Sheet, row_index: u32, col_index: u32) 
         .to_string();
     if attributes_localised.is_empty() {
         sheet
-            .cell(row_index, 6)
+            .cell(row_index, DEFAULT_ATTRIBUTES_COLUMN)
             .unwrap_or_default()
             .value
             .as_str_opt()
@@ -382,7 +385,7 @@ impl Umi {
                 .as_str_opt()
                 .unwrap_or_default()
                 .to_string();
-            if next.is_empty() {
+            if (localised_content_index != 0 && localised_attributes_index != 0) || next.is_empty() {
                 break;
             }
             if next == (String::from("content-") + umi.lang.as_str()) {
