@@ -394,10 +394,10 @@ impl Umi {
             {
                 break;
             }
-            if next.to_lowercase() == (String::from("content-") + umi.lang.as_str()) {
+            if next == (String::from("content-") + umi.lang.as_str()) {
                 localised_content_index = index;
             }
-            if next.to_lowercase() == (String::from("attributes-") + umi.lang.as_str()) {
+            if next == (String::from("attributes-") + umi.lang.as_str()) {
                 localised_attributes_index = index;
             }
             index += 1;
