@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+
 pub use unimarkup_commons as commons;
 pub use unimarkup_inline as inline;
 pub use unimarkup_parser as parser;
@@ -26,8 +28,13 @@ impl Unimarkup {
     /// * `um_content` - String containing Unimarkup elements.
     /// * `config` - Unimarkup configuration to be used on top of preambles.
     pub fn parse(um_content: &str, mut config: Config) -> Self {
-        Unimarkup {
-            doc: parser::parse_unimarkup(um_content, &mut config),
+        match config.input.extension().and_then(OsStr::to_str) {
+            Some("umi") => Unimarkup {
+                doc: Umi::create_um(um_content, &mut config).unwrap(),
+            },
+            _ => Unimarkup {
+                doc: parser::parse_unimarkup(um_content, &mut config),
+            },
         }
     }
 

@@ -11,12 +11,9 @@ macro_rules! scoped_parser {
         pub(crate) fn $fn_name<'slice, 'input>(
             mut parser: InlineParser<'slice, 'input>,
         ) -> (InlineParser<'slice, 'input>, Option<Inline>) {
-            let open_token_opt = parser.iter.peeking_next(|_| true);
-            if open_token_opt.is_none() {
+            let Some(open_token) = parser.iter.peeking_next(|_| true) else {
                 return (parser, None);
-            }
-
-            let open_token = open_token_opt.expect("Checked above to be not None.");
+            };
 
             // No need to check for correct opening format, because parser is only assigned for valid opening tokens.
             if parser.iter.peek_kind().map_or(true, |t| t.is_space()) {
@@ -33,6 +30,7 @@ macro_rules! scoped_parser {
                     !matcher.prev_is_space()
                         && matcher.consumed_matches(&[InlineTokenKind::$kind.into()])
                 })));
+
             scoped_parser.context.flags.allow_implicits = false;
             scoped_parser.context.flags.keep_whitespaces = true;
             scoped_parser.context.flags.logic_only = true;

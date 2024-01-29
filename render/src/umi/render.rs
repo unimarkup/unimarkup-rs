@@ -45,15 +45,16 @@ impl Renderer<Umi> for UmiRenderer {
         let content = self.render_inlines(&paragraph.content, context)?;
 
         let hashmap: HashMap<String, String> = HashMap::new();
-        let attributes = serde_json::to_string(&hashmap).unwrap();
+        let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
 
         let paragraph = UmiRow::new(
             self.pos,
             String::new(),
             String::from(Block::Paragraph(paragraph.to_owned()).variant_str()),
+            properties,
             self.depth,
             content.elements[0].content.clone(),
-            attributes,
+            String::new(),
         );
         self.pos += 1;
 
@@ -74,32 +75,21 @@ impl Renderer<Umi> for UmiRenderer {
             String::from("data_lang"),
             verbatim.data_lang.clone().unwrap_or_default(),
         );
-        hashmap.insert(
-            String::from("attributes"),
-            verbatim.attributes.clone().unwrap_or_default(),
-        );
         hashmap.insert(String::from("tick_len"), verbatim.tick_len.to_string());
         hashmap.insert(
             String::from("implicit_closed"),
             verbatim.implicit_closed.to_string(),
         );
-        hashmap.insert(
-            String::from("start"),
-            serde_json::to_string(&verbatim.start).unwrap(),
-        );
-        hashmap.insert(
-            String::from("end"),
-            serde_json::to_string(&verbatim.end).unwrap(),
-        );
-        let attributes = serde_json::to_string(&hashmap).unwrap();
+        let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
 
         let verbatim = UmiRow::new(
             self.pos,
             String::new(),
             String::from("VerbatimBlock"),
+            properties,
             self.depth,
             verbatim.content.clone(),
-            attributes,
+            verbatim.attributes.clone().unwrap_or_default(),
         );
         self.pos += 1;
 
@@ -116,20 +106,8 @@ impl Renderer<Umi> for UmiRenderer {
         context: &Context,
     ) -> Result<Umi, crate::log_id::RenderError> {
         let mut hashmap: HashMap<String, String> = HashMap::new();
-        hashmap.insert(
-            String::from("attributes"),
-            heading.attributes.clone().unwrap_or_default(),
-        );
         hashmap.insert(String::from("level"), heading.level.as_str().to_string());
-        hashmap.insert(
-            String::from("start"),
-            serde_json::to_string(&heading.start).unwrap(),
-        );
-        hashmap.insert(
-            String::from("end"),
-            serde_json::to_string(&heading.end).unwrap(),
-        );
-        let attributes = serde_json::to_string(&hashmap).unwrap();
+        let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
 
         let content = self.render_inlines(&heading.content, context)?;
 
@@ -137,9 +115,10 @@ impl Renderer<Umi> for UmiRenderer {
             self.pos,
             heading.id.clone(),
             String::from("Heading"),
+            properties,
             self.depth,
             content.elements[0].content.clone(),
-            attributes,
+            heading.attributes.clone().unwrap_or_default(),
         );
         self.pos += 1;
 
@@ -155,24 +134,17 @@ impl Renderer<Umi> for UmiRenderer {
         bullet_list: &unimarkup_parser::elements::indents::BulletList,
         context: &Context,
     ) -> Result<Umi, crate::log_id::RenderError> {
-        let mut hashmap: HashMap<String, String> = HashMap::new();
-        hashmap.insert(
-            String::from("start"),
-            serde_json::to_string(&bullet_list.start).unwrap(),
-        );
-        hashmap.insert(
-            String::from("end"),
-            serde_json::to_string(&bullet_list.end).unwrap(),
-        );
-        let attributes = serde_json::to_string(&hashmap).unwrap();
+        let hashmap: HashMap<String, String> = HashMap::new();
+        let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
 
         let bullet_list_heading = UmiRow::new(
             self.pos,
             String::new(),
             String::from("BulletList"),
+            properties,
             self.depth,
             String::new(),
-            attributes,
+            String::new(),
         );
         self.pos += 1;
 
@@ -201,22 +173,7 @@ impl Renderer<Umi> for UmiRenderer {
             String::from("keyword"),
             bullet_list_entry.keyword.as_str().to_string(),
         );
-        hashmap.insert(
-            String::from("heading"),
-            self.render_inlines(&bullet_list_entry.heading, context)
-                .unwrap()
-                .elements[0]
-                .content
-                .clone(),
-        );
-        hashmap.insert(
-            String::from("start"),
-            serde_json::to_string(&bullet_list_entry.start).unwrap(),
-        );
-        hashmap.insert(
-            String::from("end"),
-            serde_json::to_string(&bullet_list_entry.end).unwrap(),
-        );
+        let properties = serde_json::to_string(&hashmap).unwrap_or(String::from("{}"));
         let mut entry = Umi::with_um(
             vec![UmiRow::new(
                 self.pos,
@@ -224,13 +181,13 @@ impl Renderer<Umi> for UmiRenderer {
                 Block::BulletListEntry(bullet_list_entry.to_owned())
                     .variant_str()
                     .to_string(),
+                properties,
                 self.depth,
-                self.render_inlines(&bullet_list_entry.heading, context)
-                    .unwrap()
+                self.render_inlines(&bullet_list_entry.heading, context)?
                     .elements[0]
                     .content
                     .clone(),
-                serde_json::to_string(&hashmap).unwrap(),
+                String::new(),
             )],
             context.get_config().clone(),
             context.get_lang().to_string(),
@@ -263,6 +220,7 @@ impl Renderer<Umi> for UmiRenderer {
                 self.pos,
                 String::new(),
                 String::from("Inline"),
+                String::new(),
                 self.depth,
                 res,
                 String::new(),

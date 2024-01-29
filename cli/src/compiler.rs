@@ -1,6 +1,7 @@
 //! Entry module for unimarkup-rs.
 
 use std::{
+    ffi::OsStr,
     fs,
     path::{Path, PathBuf},
 };
@@ -24,13 +25,16 @@ use crate::log_id::{GeneralError, GeneralInfo};
 ///
 /// Returns a [`GeneralError`] if error occurs during compilation.
 pub fn compile(config: Config) -> Result<(), GeneralError> {
-    let source = fs::read_to_string(&config.input).map_err(|error| {
-        pipe!(
-            GeneralError::FileRead,
-            format!("Could not read file: '{:?}'", &config.input),
-            add: AddonKind::Info(format!("Cause: {}", error))
-        )
-    })?;
+    let source: String = match config.input.extension().and_then(OsStr::to_str) {
+        Some("umi") => unsafe { String::from_utf8_unchecked(fs::read(&config.input).unwrap()) },
+        _ => fs::read_to_string(&config.input).map_err(|error| {
+            pipe!(
+                GeneralError::FileRead,
+                format!("Could not read file: '{:?}'", &config.input),
+                add: AddonKind::Info(format!("Cause: {}", error))
+            )
+        })?,
+    };
 
     let out_path = {
         if let Some(ref out_file) = config.output.file {

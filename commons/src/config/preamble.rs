@@ -54,6 +54,7 @@ pub struct I18n {
 
     #[arg(long, value_parser = parse_to_hashset::<Locale>, required = false, default_value = "")]
     #[serde(with = "locale::serde::multiple", default)]
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
     pub output_langs: HashSet<Locale>,
 }
 
@@ -72,9 +73,11 @@ impl ConfigFns for I18n {
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderConfig {
     #[arg(long = "ignore-file", value_parser = parse_ignore_file, required = false, default_value = "")]
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(default)]
     pub ignore: HashSet<String>,
     #[arg(long, value_parser = parse_parameter, required = false, default_value = "")]
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
     #[serde(default)]
     pub parameter: HashMap<String, String>,
     #[arg(long)]
@@ -103,8 +106,11 @@ impl ConfigFns for RenderConfig {
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Citedata {
     #[arg(long = "citation-style")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub style: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(default)]
     pub references: HashSet<PathBuf>,
 }
@@ -141,15 +147,23 @@ impl ConfigFns for Citedata {
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Metadata {
     #[arg(long)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub title: Option<String>,
     #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(default)]
     pub authors: HashSet<String>,
     #[arg(long)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub description: Option<String>,
     #[arg(long)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub base: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
     #[serde(default)]
     pub fonts: HashSet<PathBuf>,
 }
