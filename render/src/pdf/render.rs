@@ -7,6 +7,33 @@ use tempfile::Builder;
 use crate::log_id::RenderError;
 use crate::log_id::RenderError::UnexpectedPdfError;
 
+/// Returns PrintToPdfOptions following the recommended settings of:
+/// https://pagedjs.org/documentation/2-getting-started-with-paged.js/#using-paged.js-as-a-polyfill-in-web-browsers
+fn create_pdf_options() -> Option<PrintToPdfOptions> {
+    Some(PrintToPdfOptions {
+        margin_top: Some(0f64),
+        margin_bottom: Some(0f64),
+        margin_left: Some(0f64),
+        margin_right: Some(0f64),
+        header_template: None,
+        footer_template: None,
+        print_background: Some(false),
+        ..PrintToPdfOptions::default()
+    })
+}
+
+/// Renders the given html-string to a pdf represent as bytes.
+/// It first writes the html-string to a temp-directory, because chrome needs a file to load as webpage.
+/// Then it prints the rendered html as pdf. The result is returned and not written to disc.
+///
+/// # Arguments
+/// * `html` - The rendered html as string
+///
+/// # Returns
+/// The rendered PDF as bytes.
+///
+/// # Errors
+/// * `UnexpectedPdfError` - in case something goes wrong with the underlying headless-chrome framework.
 pub fn render_pdf(html: &str) -> Result<Vec<u8>, RenderError> {
     let mut temp_html_file = Builder::new()
         .suffix(".html")
@@ -34,7 +61,7 @@ pub fn render_pdf(html: &str) -> Result<Vec<u8>, RenderError> {
         .map_err(|err| UnexpectedPdfError(err.to_string()))?
         .wait_until_navigated()
         .map_err(|err| UnexpectedPdfError(err.to_string()))?
-        .print_to_pdf(Some(PrintToPdfOptions::default()))
+        .print_to_pdf(create_pdf_options())
         .map_err(|err| UnexpectedPdfError(err.to_string()))?;
 
     Ok(pdf_bytes)
