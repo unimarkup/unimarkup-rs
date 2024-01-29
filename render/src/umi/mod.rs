@@ -379,7 +379,7 @@ impl Umi {
         umi.config.input = input_path;
 
         // Determine the correct column for parsing Locale Content and Attributes
-        let mut index = 5;
+        let mut index = DEFAULT_CONTENT_COLUMN;
         let mut localised_content_index = 0;
         let mut localised_attributes_index = 0;
         loop {
