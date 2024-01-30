@@ -5,12 +5,10 @@ use std::{
 
 use clap::Args;
 use icu_locid::Locale;
-use logid::err;
+use logid::{err, log};
 use serde::{Deserialize, Serialize};
 
-use super::{
-    locale, log_id::ConfigErr, parse_locale_path_buf, parse_to_hashset, ConfigFns, ReplaceIfNone,
-};
+use super::{locale, log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone};
 
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Preamble {
@@ -121,6 +119,30 @@ pub struct Citedata {
     #[arg(long = "csl-locale", value_parser = parse_locale_path_buf, required = false, default_value = "")]
     #[serde(skip)]
     pub csl_locales: Vec<(Locale, PathBuf)>,
+}
+
+fn parse_locale_path_buf(s: &str) -> Result<(Locale, PathBuf), clap::Error> {
+    if s.is_empty() {
+        return Ok((locale!("en"), PathBuf::default()));
+    }
+    let pos = s.find('=').ok_or_else(|| {
+        clap::Error::raw(
+            clap::error::ErrorKind::InvalidValue,
+            format!("invalid KEY=value: no `=` found in `{s}`"),
+        )
+    })?;
+    let mut locale = locale!("en");
+    match s[..pos].parse::<Locale>() {
+        Ok(l) => locale = l,
+        Err(e) => {
+            log!(
+                ConfigErr::InvalidFile,
+                format!("Parsing the locale failed with error: '{:?}'", e)
+            );
+        }
+    };
+    let path_buf: PathBuf = s[pos + 1..].parse().unwrap();
+    Ok((locale, path_buf))
 }
 
 impl ConfigFns for Citedata {
