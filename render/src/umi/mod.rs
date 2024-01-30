@@ -371,6 +371,7 @@ impl Umi {
                 .preamble
                 .i18n
                 .lang
+                .clone()
                 .unwrap_or(locale!("en"))
                 .to_string()
                 .to_owned(),

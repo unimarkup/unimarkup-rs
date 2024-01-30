@@ -32,7 +32,7 @@ impl Unimarkup {
                 doc: Umi::create_um(um_content, &mut config).unwrap(),
             },
             _ => Unimarkup {
-                doc: parser::parse_unimarkup(um_content, &mut config),
+                doc: parser::parse_unimarkup(um_content, config),
             },
         }
     }
