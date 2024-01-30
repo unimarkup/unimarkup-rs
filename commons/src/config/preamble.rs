@@ -152,9 +152,8 @@ impl ConfigFns for Citedata {
         for (locale, pathbuf) in self.csl_locales.clone() {
             self.citation_locales.insert(locale, pathbuf);
         }
-        for locale_path_buf in other.csl_locales.clone() {
-            self.citation_locales
-                .insert(locale_path_buf.0, locale_path_buf.1);
+        for (locale, pathbuf) in other.csl_locales.clone() {
+            self.citation_locales.insert(locale, pathbuf);
         }
         self.citation_locales.extend(other.citation_locales);
     }
