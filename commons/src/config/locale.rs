@@ -86,8 +86,6 @@ pub mod serde {
                             );
                         }
                     }
-                    let locale = value.parse::<Locale>().map_err(serde::de::Error::custom)?;
-                    set.insert(locale);
                 }
                 Ok(set)
             }
