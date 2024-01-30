@@ -190,49 +190,54 @@ impl Renderer<Html> for HtmlRenderer {
         &mut self,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let mut elements: Vec<HtmlElement> = vec![];
-        let bibliography_string = if context.get_lang().id.language
-            == unimarkup_commons::config::icu_locid::subtags::language!("de")
-        {
-            "Literaturverzeichnis"
-        } else {
-            "Bibliography"
-        };
-        elements.push(HtmlElement {
-            tag: HtmlTag::H1,
-            attributes: HtmlAttributes::default(),
-            content: Some(bibliography_string.to_string()),
-        });
-        elements.push(HtmlElement {
-            tag: HtmlTag::PlainContent,
-            attributes: HtmlAttributes::default(),
-            content: Some(context.bibliography.clone()),
-        });
-        let body = HtmlBody::from(elements);
-        let html = Html::with_body(body);
-        Ok(html)
+        match &context.bibliography {
+            Some(bibliography) => {
+                let mut elements: Vec<HtmlElement> = vec![];
+                let bibliography_string = if context.get_lang().id.language
+                    == unimarkup_commons::config::icu_locid::subtags::language!("de")
+                {
+                    "Literaturverzeichnis"
+                } else {
+                    "Bibliography"
+                };
+                elements.push(HtmlElement {
+                    tag: HtmlTag::H1,
+                    attributes: HtmlAttributes::default(),
+                    content: Some(bibliography_string.to_string()),
+                });
+                elements.push(HtmlElement {
+                    tag: HtmlTag::PlainContent,
+                    attributes: HtmlAttributes::default(),
+                    content: Some(bibliography.clone()),
+                });
+                let body = HtmlBody::from(elements);
+                let html = Html::with_body(body);
+                Ok(html)
+            }
+            None => Ok(Html::default()),
+        }
     }
 
     fn render_footnotes(&mut self, context: &Context) -> Result<Html, RenderError> {
-        let footnotes = context.footnotes.clone();
-        if !footnotes.is_empty() {
-            let elements: Vec<HtmlElement> = vec![
-                HtmlElement {
-                    tag: HtmlTag::PlainContent,
-                    attributes: HtmlAttributes::default(),
-                    content: Some("<hr style=\"width: 25%; margin-left: 0\">".to_string()),
-                },
-                HtmlElement {
-                    tag: HtmlTag::PlainContent,
-                    attributes: HtmlAttributes::default(),
-                    content: Some(footnotes),
-                },
-            ];
-            let body = HtmlBody::from(elements);
-            let html = Html::with_body(body);
-            Ok(html)
-        } else {
-            Ok(Html::default())
+        match &context.footnotes {
+            Some(footnotes) => {
+                let elements: Vec<HtmlElement> = vec![
+                    HtmlElement {
+                        tag: HtmlTag::PlainContent,
+                        attributes: HtmlAttributes::default(),
+                        content: Some("<hr style=\"width: 25%; margin-left: 0\">".to_string()),
+                    },
+                    HtmlElement {
+                        tag: HtmlTag::PlainContent,
+                        attributes: HtmlAttributes::default(),
+                        content: Some(footnotes.clone()),
+                    },
+                ];
+                let body = HtmlBody::from(elements);
+                let html = Html::with_body(body);
+                Ok(html)
+            }
+            None => Ok(Html::default()),
         }
     }
 

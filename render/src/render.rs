@@ -34,8 +34,8 @@ use crate::log_id::{GeneralWarning, RenderError};
 pub struct Context<'a> {
     doc: &'a Document,
     rendered_citations: Vec<String>,
-    pub footnotes: String,
-    pub bibliography: String,
+    pub footnotes: Option<String>,
+    pub bibliography: Option<String>,
 }
 
 impl<'a> Context<'a> {
@@ -59,13 +59,13 @@ impl<'a> Context<'a> {
             return Context {
                 doc,
                 rendered_citations: vec![],
-                footnotes: "".to_string(),
-                bibliography: "".to_string(),
+                footnotes: None,
+                bibliography: None,
             };
         }
         let rendered_citations: Vec<String>;
-        let footnotes: String;
-        let bibliography: String;
+        let footnotes: Option<String>;
+        let bibliography: Option<String>;
 
         match CiteprocWrapper::new() {
             Ok(mut citeproc) => {
@@ -117,27 +117,15 @@ impl<'a> Context<'a> {
                         ]
                     }
                 };
-                footnotes = match citeproc.get_footnotes() {
-                    Ok(footnotes) => footnotes,
-                    Err(e) => {
-                        log!(e);
-                        "########### CITATION ERROR ###########".to_string()
-                    }
-                };
-                bibliography = match citeproc.get_bibliography() {
-                    Ok(bibliography) => bibliography,
-                    Err(e) => {
-                        log!(e);
-                        "########### CITATION ERROR ###########".to_string()
-                    }
-                };
+                footnotes = citeproc.get_footnotes().ok();
+                bibliography = citeproc.get_bibliography().ok();
             }
             Err(e) => {
                 log!(e);
                 rendered_citations =
                     vec!["########### CITATION ERROR ###########".to_string(); doc.citations.len()];
-                footnotes = "########### CITATION ERROR ###########".to_string();
-                bibliography = "########### CITATION ERROR ###########".to_string();
+                footnotes = None;
+                bibliography = None;
             }
         }
 
@@ -164,12 +152,9 @@ pub fn render<T: OutputFormat>(
 
     t.append(renderer.render_blocks(&doc.blocks, &context)?)?;
 
-    if !context.footnotes.is_empty() {
-        t.append(renderer.render_footnotes(&context)?)?;
-    }
-    if !context.bibliography.is_empty() {
-        t.append(renderer.render_bibliography(&context)?)?;
-    }
+    // TODO: replace once logic is implemented
+    t.append(renderer.render_footnotes(&context)?)?;
+    t.append(renderer.render_bibliography(&context)?)?;
 
     Ok(t)
 }
