@@ -7,7 +7,7 @@ use unimarkup_inline::element::{
         Underline, Verbatim,
     },
     textbox::{citation::Citation, hyperlink::Hyperlink, TextBox},
-    InlineElement,
+    Inline, InlineElement,
 };
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
 
@@ -366,16 +366,28 @@ impl Renderer<Html> for HtmlRenderer {
     fn render_inline_math(
         &mut self,
         math: &Math,
-        context: &Context,
+        _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        // TODO: use proper math rendering once supported
-        let inner = self.render_nested_inline(math.inner(), context)?;
+        // TODO: resolve logic inlines before parsing math.
+        let content_str: String = math
+            .inner()
+            .iter()
+            .filter_map(|i| match i {
+                Inline::Plain(p) => Some(p.content().clone()),
+                _ => None,
+            })
+            .collect();
 
-        Ok(Html::nested(
-            HtmlTag::Span,
-            HtmlAttributes::default(),
-            inner,
-        ))
+        let math = mathemascii::render_mathml(mathemascii::parse(&content_str));
+
+        Ok(Html::with_body(HtmlBody {
+            elements: vec![HtmlElement {
+                tag: HtmlTag::PlainContent,
+                attributes: HtmlAttributes::default(),
+                content: Some(math),
+            }]
+            .into(),
+        }))
     }
 
     fn render_plain(
