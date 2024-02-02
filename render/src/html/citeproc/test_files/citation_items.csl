@@ -1,0 +1,65 @@
+{
+    "items": [
+        {
+            "id": "id-1",
+            "type": "article-journal",
+            "title": "Some Notes on Gertrude Stein and Deixis",
+             "container-title": "Arizona Quarterly: A Journal of American Literature, Culture, and Theory",
+             "page": "91-102",
+             "volume": "53",
+             "issue": "1",
+             "URL": "https://muse-jhu-edu.pitt.idm.oclc.org/article/445403/pdf",
+             "DOI": "10.1353/arq.1997.0020",
+              "author": [
+               {
+                    "family": "Cook",
+                    "given": "A1"
+               }
+               ],
+               "issued": {
+                    "date-parts": [
+                        [
+                            1997
+                        ]
+                    ]
+               }
+        },
+        {
+            "id": "id-2",
+            "type": "article-journal",
+            "title": "Semantic Satiation and Cognitive Dynamics",
+            "container-title": "The Journal of Special Education",
+            "page": "35-44",
+            "volume": "2",
+            "issue": "1",
+            "URL": "http://journals.sagepub.com/doi/10.1177/002246696700200103",
+            "DOI": "10.1177/002246696700200103",
+            "journalAbbreviation": "J Spec Educ",
+            "language": "en",
+            "author": [
+                {
+                    "family": "Cook",
+                    "given": "A2"
+                }
+            ],
+            "issued": {
+                "date-parts": [
+                    [
+                        "1997",
+                        10,
+                        1
+                    ]
+                ]
+            },
+            "accessed": {
+                "date-parts": [
+                    [
+                        2018,
+                        2,
+                        8
+                    ]
+                ]
+            }
+        }
+    ]
+}

@@ -233,4 +233,55 @@ impl Renderer<Umi> for UmiRenderer {
     fn get_target(&mut self) -> Result<Umi, RenderError> {
         Ok(Umi::default())
     }
+
+    fn render_bibliography(
+        &mut self,
+        context: &Context,
+    ) -> Result<Umi, crate::log_id::RenderError> {
+        if context.bibliography.is_some() {
+            let entry = UmiRow::new(
+                self.pos,
+                String::new(),
+                "Bibliography".to_string(),
+                String::new(),
+                self.depth,
+                "{$um.bibliography}".to_string(),
+                String::new(),
+            );
+
+            self.pos += 1;
+
+            self.proceed(Umi::with_um(
+                vec![entry],
+                context.get_config().clone(),
+                context.get_lang().to_string(),
+            ))
+        } else {
+            Ok(Umi::default())
+        }
+    }
+
+    fn render_footnotes(&mut self, context: &Context) -> Result<Umi, crate::log_id::RenderError> {
+        if context.footnotes.is_some() {
+            let entry = UmiRow::new(
+                self.pos,
+                String::new(),
+                "Footnotes".to_string(),
+                String::new(),
+                self.depth,
+                "{$um.footnotes}".to_string(),
+                String::new(),
+            );
+
+            self.pos += 1;
+
+            self.proceed(Umi::with_um(
+                vec![entry],
+                context.get_config().clone(),
+                context.get_lang().to_string(),
+            ))
+        } else {
+            Ok(Umi::default())
+        }
+    }
 }

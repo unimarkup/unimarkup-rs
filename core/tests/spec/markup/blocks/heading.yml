@@ -23,3 +23,12 @@ tests:
 
     html: |
       <h2 id='heading-**with**-inlines.'>Heading <strong>with</strong> inlines.</h2>
+
+  - name: heading-lvl3-with-inlines
+
+    input: |
+      ### Heading **with** inlines.
+
+    html: |
+      <h3 id='heading-**with**-inlines.'>Heading <strong>with</strong> inlines.</h3>
+

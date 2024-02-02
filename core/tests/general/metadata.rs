@@ -12,7 +12,7 @@ pub fn create_metadata_from_memory() {
     let metadata = Metadata {
         file: Path::new(testfile).to_path_buf(),
         contenthash: security::get_contenthash(content),
-        preamble: String::new(),
+        preamble: None,
         kind: MetadataKind::Root,
         namespace: ".".to_string(),
     };

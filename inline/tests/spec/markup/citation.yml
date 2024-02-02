@@ -1,0 +1,13 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: citation
+description: Contains tests for the citation element.
+
+tests:
+  - name: simple-citation
+    description: |
+      Parse a simple citation.
+
+    input: |
+      [&&cite-id]
