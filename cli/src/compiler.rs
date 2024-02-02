@@ -7,6 +7,7 @@ use std::{
 };
 
 use logid::{log, logging::event_entry::AddonKind, pipe};
+
 use unimarkup_core::{
     commons::config::{output::OutputFormatKind, Config},
     Unimarkup,
@@ -50,11 +51,19 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
     for format in um.get_formats() {
         match format {
             OutputFormatKind::Html => write_file(
-                &um.render_html()
+                &um.render_html(false)
                     .map_err(|_| GeneralError::Render)?
                     .to_string(),
                 &out_path,
-                OutputFormatKind::Html.extension(),
+                format.extension(),
+            )?,
+            OutputFormatKind::Pdf => write_raw_file(
+                &um.render_pdf().map_err(|err| {
+                    log!(err);
+                    GeneralError::Render
+                })?,
+                &out_path,
+                format.extension(),
             )?,
             OutputFormatKind::Umi => write_file(
                 &um.render_umi()
@@ -70,8 +79,8 @@ pub fn compile(config: Config) -> Result<(), GeneralError> {
     Ok(())
 }
 
-fn write_file(
-    content: &str,
+fn write_raw_file(
+    content: &[u8],
     out_path: impl AsRef<Path>,
     extension: &str,
 ) -> Result<(), GeneralError> {
@@ -90,4 +99,12 @@ fn write_file(
             add: AddonKind::Info(format!("Cause: {}", error))
         )
     })
+}
+
+fn write_file(
+    content: &str,
+    out_path: impl AsRef<Path>,
+    extension: &str,
+) -> Result<(), GeneralError> {
+    write_raw_file(content.as_bytes(), out_path, extension)
 }

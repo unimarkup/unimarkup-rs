@@ -1,6 +1,7 @@
 use unimarkup_inline::element::InlineElement;
 use unimarkup_parser::elements::blocks::Block;
 
+use crate::log_id::RenderError;
 use crate::render::{Context, OutputFormat, Renderer};
 use std::collections::HashMap;
 
@@ -227,6 +228,10 @@ impl Renderer<Umi> for UmiRenderer {
             context.get_config().clone(),
             context.get_lang().to_string(),
         ))
+    }
+
+    fn get_target(&mut self) -> Result<Umi, RenderError> {
+        Ok(Umi::default())
     }
 
     fn render_bibliography(

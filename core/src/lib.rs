@@ -4,6 +4,7 @@ pub use unimarkup_commons as commons;
 pub use unimarkup_inline as inline;
 pub use unimarkup_parser as parser;
 pub use unimarkup_render as render;
+use unimarkup_render::pdf::render::render_pdf;
 
 use crate::commons::config::output::OutputFormatKind;
 use crate::commons::config::Config;
@@ -53,11 +54,15 @@ impl Unimarkup {
         unimarkup_render::render::render(&self.doc, format, renderer)
     }
 
-    pub fn render_html(&self) -> Result<Html, RenderError> {
-        self.render(OutputFormatKind::Html, HtmlRenderer::default())
+    pub fn render_html(&self, use_paged_js: bool) -> Result<Html, RenderError> {
+        self.render(OutputFormatKind::Html, HtmlRenderer::new(use_paged_js))
     }
 
     pub fn render_umi(&self) -> Result<Umi, RenderError> {
         self.render(OutputFormatKind::Umi, UmiRenderer::default())
+    }
+
+    pub fn render_pdf(&self) -> Result<Vec<u8>, RenderError> {
+        render_pdf(&self.render_html(true)?.to_string())
     }
 }

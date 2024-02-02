@@ -19,10 +19,28 @@ use super::{
 
 #[derive(Debug, Default)]
 pub struct HtmlRenderer {
+    use_paged_js: bool,
     citation_index: usize,
 }
 
+impl HtmlRenderer {
+    pub fn new(use_paged_js: bool) -> Self {
+        HtmlRenderer {
+            use_paged_js,
+            citation_index: 0,
+        }
+    }
+}
+
 impl Renderer<Html> for HtmlRenderer {
+    fn get_target(&mut self) -> Result<Html, crate::log_id::RenderError> {
+        let html = Html::with_head(HtmlHead {
+            paged_js_used: self.use_paged_js,
+            ..HtmlHead::default()
+        });
+        Ok(html)
+    }
+
     fn render_paragraph(
         &mut self,
         paragraph: &unimarkup_parser::elements::atomic::Paragraph,

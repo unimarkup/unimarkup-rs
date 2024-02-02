@@ -8,6 +8,9 @@ pub enum RenderError {
 
     #[error("Output format `append()` failed. See log: '{}: {}'", .0.event_id, .0.entry_id)]
     BadAppend(FinalizedEvent<LogId>),
+
+    #[error("Unexpected error during pdf render: {}", .0)]
+    UnexpectedPdfError(String),
 }
 
 #[derive(Debug, Clone, WarnLogId)]
