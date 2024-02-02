@@ -107,6 +107,16 @@ fn inner_snapshot(inline: &Inline) -> String {
         Inline::Math(inline) => Snapshot::snap(inline),
         Inline::TextBox(inline) => Snapshot::snap(inline.inner()),
         Inline::Hyperlink(inline) => Snapshot::snap(inline.inner()),
+        Inline::Citation(inline) => {
+            inline
+                .entries()
+                .iter()
+                .enumerate()
+                .fold(String::default(), |mut s, (i, citation)| {
+                    s.push_str(&format!("id-{}='{}'", i, citation.as_unimarkup()));
+                    s
+                })
+        }
         Inline::Verbatim(inline) => Snapshot::snap(inline),
         Inline::Newline(inline) => Snapshot::snap(inline.as_str()),
         Inline::ImplicitNewline(inline) => Snapshot::snap(inline.as_str()),

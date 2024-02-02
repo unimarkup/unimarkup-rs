@@ -12,7 +12,7 @@ use self::{
         Underline, Verbatim,
     },
     substitution::{named::NamedSubstitution, DirectUri, ImplicitSubstitution},
-    textbox::{hyperlink::Hyperlink, TextBox},
+    textbox::{citation::Citation, hyperlink::Hyperlink, TextBox},
 };
 
 mod helper;
@@ -92,6 +92,9 @@ pub enum Inline {
     /// Hyperlink element `[link text](url)`.
     Hyperlink(Hyperlink),
 
+    /// Citation element `[&&cite-id]`
+    Citation(Citation),
+
     /// Named substitution ( i.e. `::heart::`).
     NamedSubstitution(NamedSubstitution),
 
@@ -143,6 +146,7 @@ impl Inline {
             Inline::Math(_) => "Math",
             Inline::TextBox(_) => "TextBox",
             Inline::Hyperlink(_) => "Hyperlink",
+            Inline::Citation(_) => "Citation",
             Inline::Verbatim(_) => "Verbatim",
             Inline::Newline(_) => "Newline",
             Inline::ImplicitNewline(_) => "ImplicitNewline",
@@ -172,6 +176,7 @@ impl InlineElement for Inline {
             Inline::Math(inline) => inline.as_unimarkup(),
             Inline::TextBox(inline) => inline.as_unimarkup(),
             Inline::Hyperlink(inline) => inline.as_unimarkup(),
+            Inline::Citation(inline) => inline.as_unimarkup(),
             Inline::Verbatim(inline) => inline.as_unimarkup(),
             Inline::Newline(inline) => inline.as_unimarkup(),
             Inline::ImplicitNewline(inline) => inline.as_unimarkup(),
@@ -200,6 +205,7 @@ impl InlineElement for Inline {
             Inline::Math(inline) => inline.start(),
             Inline::TextBox(inline) => inline.start(),
             Inline::Hyperlink(inline) => inline.start(),
+            Inline::Citation(inline) => inline.start(),
             Inline::Verbatim(inline) => inline.start(),
             Inline::Newline(inline) => inline.start(),
             Inline::ImplicitNewline(inline) => inline.start(),
@@ -228,6 +234,7 @@ impl InlineElement for Inline {
             Inline::Math(inline) => inline.end(),
             Inline::TextBox(inline) => inline.end(),
             Inline::Hyperlink(inline) => inline.end(),
+            Inline::Citation(inline) => inline.end(),
             Inline::Verbatim(inline) => inline.end(),
             Inline::Newline(inline) => inline.end(),
             Inline::ImplicitNewline(inline) => inline.end(),

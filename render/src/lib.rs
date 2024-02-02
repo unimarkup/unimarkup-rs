@@ -3,6 +3,7 @@
 //!
 //! It also provides syntax highlighting functionality.
 
+mod csl_json;
 pub mod html;
 pub mod log_id;
 pub mod render;

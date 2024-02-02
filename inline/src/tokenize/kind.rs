@@ -44,6 +44,15 @@ pub enum InlineTokenKind {
     /// Math delimiter token (`$`).
     Math,
 
+    /// Single dot token (`.`)
+    Dot,
+
+    /// Citation delimiter token (`&&`)
+    Cite,
+
+    /// Single comma token (`,`)
+    Comma,
+
     /// Open parenthesis token (`(`).
     OpenParenthesis,
 
@@ -122,6 +131,9 @@ impl InlineTokenKind {
             InlineTokenKind::Verbatim => "`",
             InlineTokenKind::Quote => "\"\"",
             InlineTokenKind::Math => "$$",
+            InlineTokenKind::Dot => ".",
+            InlineTokenKind::Cite => "&&",
+            InlineTokenKind::Comma => ",",
             InlineTokenKind::OpenParenthesis => "(",
             InlineTokenKind::CloseParenthesis => ")",
             InlineTokenKind::OpenBracket => "[",
@@ -250,6 +262,9 @@ pub const NAMED_SUBSTITUTION_KEYWORD_LEN: usize = 2;
 pub const SUPERSCRIPT_KEYWORD_LEN: usize = 1;
 pub const VERBATIM_KEYWORD_LEN: usize = 1;
 pub const OVERLINE_KEYWORD_LEN: usize = 1;
+pub const DOT_KEYWORD_LEN: usize = 1;
+pub const CITE_KEYWORD_LEN: usize = 2;
+pub const COMMA_KEYWORD_LEN: usize = 1;
 
 impl From<TokenKind> for InlineTokenKind {
     fn from(value: TokenKind) -> Self {
@@ -335,6 +350,27 @@ impl From<TokenKind> for InlineTokenKind {
                     InlineTokenKind::Plain
                 }
             }
+            TokenKind::Dot(len) => {
+                if len == DOT_KEYWORD_LEN {
+                    InlineTokenKind::Dot
+                } else {
+                    InlineTokenKind::Plain
+                }
+            }
+            TokenKind::Ampersand(len) => {
+                if len == CITE_KEYWORD_LEN {
+                    InlineTokenKind::Cite
+                } else {
+                    InlineTokenKind::Plain
+                }
+            }
+            TokenKind::Comma(len) => {
+                if len == COMMA_KEYWORD_LEN {
+                    InlineTokenKind::Comma
+                } else {
+                    InlineTokenKind::Plain
+                }
+            }
 
             TokenKind::OpenParenthesis => InlineTokenKind::OpenParenthesis,
             TokenKind::CloseParenthesis => InlineTokenKind::CloseParenthesis,
@@ -359,7 +395,6 @@ impl From<TokenKind> for InlineTokenKind {
             TokenKind::PossibleAttributes => InlineTokenKind::PossibleAttributes,
 
             TokenKind::Plain
-            | TokenKind::Dot(_)
             | TokenKind::Hash(_)
             | TokenKind::Minus(_)
             | TokenKind::Plus(_)
@@ -388,6 +423,9 @@ impl From<InlineTokenKind> for TokenKind {
             InlineTokenKind::Verbatim => TokenKind::Tick(VERBATIM_KEYWORD_LEN),
             InlineTokenKind::Quote => TokenKind::Quote(QUOTE_KEYWORD_LEN),
             InlineTokenKind::Math => TokenKind::Dollar(MATH_KEYWORD_LEN),
+            InlineTokenKind::Dot => TokenKind::Dot(DOT_KEYWORD_LEN),
+            InlineTokenKind::Cite => TokenKind::Ampersand(CITE_KEYWORD_LEN),
+            InlineTokenKind::Comma => TokenKind::Comma(COMMA_KEYWORD_LEN),
             InlineTokenKind::OpenParenthesis => TokenKind::OpenParenthesis,
             InlineTokenKind::CloseParenthesis => TokenKind::CloseParenthesis,
             InlineTokenKind::OpenBracket => TokenKind::OpenBracket,

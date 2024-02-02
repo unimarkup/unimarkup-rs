@@ -4,6 +4,7 @@ use crate::render::OutputFormat;
 
 use self::tag::HtmlTag;
 
+pub(crate) mod citeproc;
 pub mod highlight;
 pub mod render;
 pub mod tag;
@@ -26,6 +27,7 @@ pub struct HtmlElement {
 
 #[derive(Debug, Default)]
 pub struct HtmlAttributes(Vec<HtmlAttribute>);
+
 #[derive(Debug, Default)]
 pub struct HtmlElements(Vec<HtmlElement>);
 

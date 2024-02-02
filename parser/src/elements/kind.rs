@@ -89,6 +89,8 @@ impl From<TokenKind> for PossibleBlockStart {
             | TokenKind::Dollar(_)
             | TokenKind::Colon(_)
             | TokenKind::Dot(_)
+            | TokenKind::Ampersand(_)
+            | TokenKind::Comma(_)
             | TokenKind::OpenParenthesis
             | TokenKind::CloseParenthesis
             | TokenKind::OpenBracket

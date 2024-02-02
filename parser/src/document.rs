@@ -10,6 +10,10 @@ pub struct Document {
     pub blocks: Blocks,
     /// Configuration used to create this Unimarkup document
     pub config: Config,
+    /// Citations used in the Unimarkup content.
+    /// The citations are added in document flow.
+    /// Every citation may contain one or more citation entry IDs.
+    pub citations: Vec<Vec<String>>,
 
     // Below fields not yet used!
     /// Field containing all macros defined in this Unimarkup document

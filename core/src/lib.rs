@@ -32,7 +32,7 @@ impl Unimarkup {
                 doc: Umi::create_um(um_content, &mut config).unwrap(),
             },
             _ => Unimarkup {
-                doc: parser::parse_unimarkup(um_content, &mut config),
+                doc: parser::parse_unimarkup(um_content, config),
             },
         }
     }
@@ -45,15 +45,19 @@ impl Unimarkup {
         self.doc.output_formats()
     }
 
-    pub fn render<T: OutputFormat>(&self, renderer: impl Renderer<T>) -> Result<T, RenderError> {
-        unimarkup_render::render::render(&self.doc, renderer)
+    pub fn render<T: OutputFormat>(
+        &self,
+        format: OutputFormatKind,
+        renderer: impl Renderer<T>,
+    ) -> Result<T, RenderError> {
+        unimarkup_render::render::render(&self.doc, format, renderer)
     }
 
     pub fn render_html(&self) -> Result<Html, RenderError> {
-        self.render(HtmlRenderer::default())
+        self.render(OutputFormatKind::Html, HtmlRenderer::default())
     }
 
     pub fn render_umi(&self) -> Result<Umi, RenderError> {
-        self.render(UmiRenderer::default())
+        self.render(OutputFormatKind::Umi, UmiRenderer::default())
     }
 }

@@ -1,0 +1,11 @@
+---
+source: core/tests/runner/mod.rs
+info: "Test 'heading-lvl3-with-inlines' from: markup\\blocks\\heading.yml"
+---
+Heading-level-3(Heading **with** inlines.)
+---
+With input:
+
+### Heading **with** inlines.
+
+

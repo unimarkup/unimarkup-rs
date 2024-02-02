@@ -7,12 +7,14 @@ use crate::log_id::UmiParserError;
 use spreadsheet_ods::{
     read_ods_buf, write_ods_buf_uncompressed, Sheet, Value, ValueType, WorkBook,
 };
+use unimarkup_commons::config::icu_locid::locale;
 use unimarkup_commons::config::Config;
+use unimarkup_commons::lexer::position::Position;
 use unimarkup_commons::lexer::{
-    position::Position,
     symbol::SymbolKind,
     token::{iterator::TokenIterator, lex_str, TokenKind},
 };
+use unimarkup_inline::element::base::Plain;
 use unimarkup_inline::{
     element::Inline,
     parser::{parse_inlines, InlineContext},
@@ -337,6 +339,26 @@ impl Umi {
 
                 Ok(Block::BulletListEntry(bullet_list_entry))
             }
+            "Bibliography" => {
+                let paragraph = Paragraph {
+                    content: vec![Inline::Plain(Plain::new(
+                        "{$um.bibliography}".to_string(),
+                        Position::default(),
+                        Position::default(),
+                    ))],
+                };
+                Ok(Block::Paragraph(paragraph))
+            }
+            "Footnotes" => {
+                let paragraph = Paragraph {
+                    content: vec![Inline::Plain(Plain::new(
+                        "{$um.footnotes}".to_string(),
+                        Position::default(),
+                        Position::default(),
+                    ))],
+                };
+                Ok(Block::Paragraph(paragraph))
+            }
             &_ => Err(UmiParserError::UnknownKind(current_line.position)),
         }
     }
@@ -345,7 +367,14 @@ impl Umi {
         let mut umi = Umi::with_um(
             vec![],
             config.clone(),
-            config.preamble.i18n.lang.to_string().to_owned(),
+            config
+                .preamble
+                .i18n
+                .lang
+                .clone()
+                .unwrap_or(locale!("en"))
+                .to_string()
+                .to_owned(),
         );
         umi.ods = um_content.into();
 
@@ -469,6 +498,7 @@ impl Umi {
             variables: vec![],
             metadata: vec![],
             resources: vec![],
+            citations: vec![],
         })
     }
 }

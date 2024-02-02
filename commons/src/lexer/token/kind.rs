@@ -22,6 +22,8 @@ pub enum TokenKind {
     Dollar(usize),
     Colon(usize),
     Dot(usize),
+    Ampersand(usize),
+    Comma(usize),
 
     // parenthesis
     OpenParenthesis,
@@ -138,6 +140,8 @@ impl From<TokenKind> for String {
             TokenKind::Dollar(len) => SymbolKind::Dollar.as_str().repeat(len),
             TokenKind::Colon(len) => SymbolKind::Colon.as_str().repeat(len),
             TokenKind::Dot(len) => SymbolKind::Dot.as_str().repeat(len),
+            TokenKind::Ampersand(len) => SymbolKind::Ampersand.as_str().repeat(len),
+            TokenKind::Comma(len) => SymbolKind::Comma.as_str().repeat(len),
             TokenKind::OpenParenthesis => {
                 let mut s = String::with_capacity(SymbolKind::OpenParenthesis.as_str().len());
                 s.push_str(SymbolKind::OpenParenthesis.as_str());
@@ -227,6 +231,8 @@ impl From<SymbolKind> for TokenKind {
             SymbolKind::Dollar => TokenKind::Dollar(1),
             SymbolKind::Colon => TokenKind::Colon(1),
             SymbolKind::Dot => TokenKind::Colon(1),
+            SymbolKind::Ampersand => TokenKind::Ampersand(1),
+            SymbolKind::Comma => TokenKind::Comma(1),
             SymbolKind::OpenParenthesis => TokenKind::OpenParenthesis,
             SymbolKind::CloseParenthesis => TokenKind::CloseParenthesis,
             SymbolKind::OpenBracket => TokenKind::OpenBracket,
@@ -262,6 +268,8 @@ impl From<(SymbolKind, usize)> for TokenKind {
             SymbolKind::Dollar => TokenKind::Dollar(len),
             SymbolKind::Colon => TokenKind::Colon(len),
             SymbolKind::Dot => TokenKind::Dot(len),
+            SymbolKind::Ampersand => TokenKind::Ampersand(len),
+            SymbolKind::Comma => TokenKind::Comma(len),
             SymbolKind::OpenParenthesis => TokenKind::OpenParenthesis,
             SymbolKind::CloseParenthesis => TokenKind::CloseParenthesis,
             SymbolKind::OpenBracket => TokenKind::OpenBracket,

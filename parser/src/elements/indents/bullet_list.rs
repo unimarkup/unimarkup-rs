@@ -276,7 +276,7 @@ impl BulletListEntry {
         entry_heading_parser.context.update_from(inline_context);
         let entry_heading = parsed_inlines.to_inlines();
 
-        parser = entry_heading_parser.unfold();
+        parser = entry_heading_parser.into_inner();
 
         // List entries without content are invalid
         if entry_heading.is_empty() {
@@ -301,7 +301,7 @@ impl BulletListEntry {
             );
             let (updated_parser, blocks) = BlockParser::parse(entry_body_parser);
             //TODO: checkpoint and rollback in block parser if prefix match failed
-            parser = updated_parser.unfold();
+            parser = updated_parser.into_inner();
 
             if !blocks.is_empty() {
                 let end = blocks.last().expect("At least one block must exist.").end();

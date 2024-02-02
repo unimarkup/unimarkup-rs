@@ -1,0 +1,184 @@
+{
+    "items": [
+        {
+            "id": "id-3",
+            "type": "article-journal",
+            "title": "Introduction to WordNet: An On-line Lexical Database <sup>*</sup>",
+            "container-title": "International Journal of Lexicography",
+            "page": "235-244",
+            "volume": "3",
+            "issue": "4",
+            "URL": "http://wordnetcode.princeton.edu/5papers.pdf",
+            "DOI": "10.1093/ijl/3.4.235",
+            "shortTitle": "Introduction to WordNet",
+            "language": "en",
+            "author": [
+                {
+                    "family": "Miller",
+                    "given": "George A."
+                },
+                {
+                    "family": "Beckwith",
+                    "given": "Richard"
+                },
+                {
+                    "family": "Fellbaum",
+                    "given": "Christiane"
+                },
+                {
+                    "family": "Gross",
+                    "given": "Derek"
+                },
+                {
+                    "family": "Miller",
+                    "given": "Katherine J."
+                }
+            ],
+            "issued": {
+                "date-parts": [
+                    [
+                        1990
+                    ]
+                ]
+            },
+            "accessed": {
+                "date-parts": [
+                    [
+                        2018,
+                        4,
+                        12
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "id-4",
+            "type": "article-journal",
+            "title": "A COMPREHENSIVE ANALYSIS OF USING WORDNET, PART-OF-SPEECH TAGGING, AND WORD SENSE DISAMBIGUATION IN TEXT CATEGORIZATION",
+            "page": "94",
+            "URL": "https://www.cmpe.boun.edu.tr/~gungort/theses/A%20Comprehensive%20Analysis%20of%20Using%20Wordnet,%20Part-of-speech%20Tagging,%20and%20Word%20Sense%20Disambiguation%20in%20Text%20Categorization.pdf",
+            "language": "en",
+            "author": [
+                {
+                    "family": "Celik",
+                    "given": "Kerem"
+                }
+            ]
+        },
+        {
+            "id": "id-5",
+            "type": "article-journal",
+            "title": "<Emphasis Type=\"Bold\">Jesse Norman, ed., </Emphasis><Emphasis Type=\"BoldItalic\">Edmund Burke: Reflections on the Revolution in France and Other Writings</Emphasis>",
+            "container-title": "Society",
+            "page": "377-382",
+            "volume": "54",
+            "issue": "4",
+            "URL": "http://link.springer.com/article/10.1007/s12115-017-0159-0",
+            "DOI": "10.1007/s12115-017-0159-0",
+            "shortTitle": "<Emphasis Type=\"Bold\">Jesse Norman, ed., </Emphasis><Emphasis Type=\"BoldItalic\">Edmund Burke",
+            "journalAbbreviation": "Soc",
+            "language": "en",
+            "author": [
+                {
+                    "family": "Weiner",
+                    "given": "G."
+                }
+            ],
+            "issued": {
+                "date-parts": [
+                    [
+                        2017,
+                        8,
+                        1
+                    ]
+                ]
+            },
+            "accessed": {
+                "date-parts": [
+                    [
+                        2018,
+                        4,
+                        23
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "id-6",
+            "type": "article-journal",
+            "title": "Truth and Fiction in Tim O'Brien's \"If I Die in a Combat Zone\" and \"The Things They Carried\"",
+            "container-title": "College Literature",
+            "page": "1-18",
+            "volume": "29",
+            "issue": "2",
+            "URL": "http://www.jstor.org/stable/25112634",
+            "author": [
+                {
+                    "family": "Wesley",
+                    "given": "Marilyn"
+                }
+            ],
+            "issued": {
+                "date-parts": [
+                    [
+                        2002
+                    ]
+                ]
+            },
+            "accessed": {
+                "date-parts": [
+                    [
+                        2018,
+                        4,
+                        17
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "id-7",
+            "type": "article-journal",
+            "title": "Truth and Fiction in Tim O'Brien's \"If I Die in a Combat Zone\" and \"The Things They Carried\"",
+            "container-title": "College Literature",
+            "page": "1-18",
+            "volume": "29",
+            "issue": "2",
+            "URL": "http://www.jstor.org/stable/25112634",
+            "author": [
+                {
+                    "family": "Wesley",
+                    "given": "Marilyn"
+                }
+            ],
+            "issued": {
+                "date-parts": [
+                    [
+                        2002
+                    ]
+                ]
+            },
+            "accessed": {
+                "date-parts": [
+                    [
+                        2018,
+                        4,
+                        17
+                    ]
+                ]
+            }
+        },
+        {
+            "id": "id-8",
+            "type": "article-journal",
+            "title": "Simulacra and Simulations",
+            "page": "22",
+            "language": "en",
+            "author": [
+                {
+                    "family": "Baudrillard",
+                    "given": "Jean"
+                }
+            ]
+        }
+    ]
+}
