@@ -10,7 +10,7 @@ use unimarkup_inline::element::{
         Underline, Verbatim,
     },
     textbox::{citation::Citation, hyperlink::Hyperlink, TextBox},
-    InlineElement,
+    Inline, InlineElement,
 };
 use unimarkup_parser::elements::indents::{BulletList, BulletListEntry};
 
@@ -22,10 +22,28 @@ use super::{
 
 #[derive(Debug, Default)]
 pub struct HtmlRenderer {
+    use_paged_js: bool,
     citation_index: usize,
 }
 
+impl HtmlRenderer {
+    pub fn new(use_paged_js: bool) -> Self {
+        HtmlRenderer {
+            use_paged_js,
+            citation_index: 0,
+        }
+    }
+}
+
 impl Renderer<Html> for HtmlRenderer {
+    fn get_target(&mut self) -> Result<Html, crate::log_id::RenderError> {
+        let html = Html::with_head(HtmlHead {
+            paged_js_used: self.use_paged_js,
+            ..HtmlHead::default()
+        });
+        Ok(html)
+    }
+
     fn render_paragraph(
         &mut self,
         paragraph: &unimarkup_parser::elements::atomic::Paragraph,
@@ -255,49 +273,54 @@ impl Renderer<Html> for HtmlRenderer {
         &mut self,
         context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        let mut elements: Vec<HtmlElement> = vec![];
-        let bibliography_string = if context.get_lang().id.language
-            == unimarkup_commons::config::icu_locid::subtags::language!("de")
-        {
-            "Literaturverzeichnis"
-        } else {
-            "Bibliography"
-        };
-        elements.push(HtmlElement {
-            tag: HtmlTag::H1,
-            attributes: HtmlAttributes::default(),
-            content: Some(bibliography_string.to_string()),
-        });
-        elements.push(HtmlElement {
-            tag: HtmlTag::PlainContent,
-            attributes: HtmlAttributes::default(),
-            content: Some(context.bibliography.clone()),
-        });
-        let body = HtmlBody::from(elements);
-        let html = Html::with_body(body);
-        Ok(html)
+        match &context.bibliography {
+            Some(bibliography) => {
+                let mut elements: Vec<HtmlElement> = vec![];
+                let bibliography_string = if context.get_lang().id.language
+                    == unimarkup_commons::config::icu_locid::subtags::language!("de")
+                {
+                    "Literaturverzeichnis"
+                } else {
+                    "Bibliography"
+                };
+                elements.push(HtmlElement {
+                    tag: HtmlTag::H1,
+                    attributes: HtmlAttributes::default(),
+                    content: Some(bibliography_string.to_string()),
+                });
+                elements.push(HtmlElement {
+                    tag: HtmlTag::PlainContent,
+                    attributes: HtmlAttributes::default(),
+                    content: Some(bibliography.clone()),
+                });
+                let body = HtmlBody::from(elements);
+                let html = Html::with_body(body);
+                Ok(html)
+            }
+            None => Ok(Html::default()),
+        }
     }
 
     fn render_footnotes(&mut self, context: &Context) -> Result<Html, RenderError> {
-        let footnotes = context.footnotes.clone();
-        if !footnotes.is_empty() {
-            let elements: Vec<HtmlElement> = vec![
-                HtmlElement {
-                    tag: HtmlTag::PlainContent,
-                    attributes: HtmlAttributes::default(),
-                    content: Some("<hr style=\"width: 25%; margin-left: 0\">".to_string()),
-                },
-                HtmlElement {
-                    tag: HtmlTag::PlainContent,
-                    attributes: HtmlAttributes::default(),
-                    content: Some(footnotes),
-                },
-            ];
-            let body = HtmlBody::from(elements);
-            let html = Html::with_body(body);
-            Ok(html)
-        } else {
-            Ok(Html::default())
+        match &context.footnotes {
+            Some(footnotes) => {
+                let elements: Vec<HtmlElement> = vec![
+                    HtmlElement {
+                        tag: HtmlTag::PlainContent,
+                        attributes: HtmlAttributes::default(),
+                        content: Some("<hr style=\"width: 25%; margin-left: 0\">".to_string()),
+                    },
+                    HtmlElement {
+                        tag: HtmlTag::PlainContent,
+                        attributes: HtmlAttributes::default(),
+                        content: Some(footnotes.clone()),
+                    },
+                ];
+                let body = HtmlBody::from(elements);
+                let html = Html::with_body(body);
+                Ok(html)
+            }
+            None => Ok(Html::default()),
         }
     }
 
@@ -431,16 +454,28 @@ impl Renderer<Html> for HtmlRenderer {
     fn render_inline_math(
         &mut self,
         math: &Math,
-        context: &Context,
+        _context: &Context,
     ) -> Result<Html, crate::log_id::RenderError> {
-        // TODO: use proper math rendering once supported
-        let inner = self.render_nested_inline(math.inner(), context)?;
+        // TODO: resolve logic inlines before parsing math.
+        let content_str: String = math
+            .inner()
+            .iter()
+            .filter_map(|i| match i {
+                Inline::Plain(p) => Some(p.content().clone()),
+                _ => None,
+            })
+            .collect();
 
-        Ok(Html::nested(
-            HtmlTag::Span,
-            HtmlAttributes::default(),
-            inner,
-        ))
+        let math = mathemascii::render_mathml(mathemascii::parse(&content_str));
+
+        Ok(Html::with_body(HtmlBody {
+            elements: vec![HtmlElement {
+                tag: HtmlTag::PlainContent,
+                attributes: HtmlAttributes::default(),
+                content: Some(math),
+            }]
+            .into(),
+        }))
     }
 
     fn render_plain(
@@ -553,8 +588,8 @@ mod tests {
         Context {
             doc,
             rendered_citations: vec![],
-            footnotes: "".to_string(),
-            bibliography: "".to_string(),
+            footnotes: None,
+            bibliography: None,
             csl_data: get_csl_data(&citation_paths),
         }
     }
@@ -574,7 +609,7 @@ mod tests {
                     cite: Citedata {
                         style: Some(PathBuf::from_str("chicago-fullnote-bibliography").unwrap()),
                         references: HashSet::from_iter(
-                            vec![PathBuf::from_str(
+                            [PathBuf::from_str(
                                 "./src/html/citeproc/test_files/citation_items.csl",
                             )
                             .unwrap()]
@@ -607,7 +642,10 @@ mod tests {
             Default::default(),
             Default::default(),
         );
-        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let mut under_test = HtmlRenderer {
+            use_paged_js: false,
+            citation_index: 0,
+        };
         let actual = under_test.render_distinct_reference(&distinct_reference, &context);
 
         assert!(actual.is_ok());
@@ -636,7 +674,10 @@ mod tests {
             Default::default(),
             Default::default(),
         );
-        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let mut under_test = HtmlRenderer {
+            use_paged_js: false,
+            citation_index: 0,
+        };
         let actual = under_test.render_distinct_reference(&distinct_reference, &context);
 
         assert!(actual.is_ok());
@@ -665,7 +706,10 @@ mod tests {
             Default::default(),
             Default::default(),
         );
-        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let mut under_test = HtmlRenderer {
+            use_paged_js: false,
+            citation_index: 0,
+        };
         let actual = under_test.render_distinct_reference(&distinct_reference, &context);
 
         assert!(actual.is_ok());
@@ -694,7 +738,10 @@ mod tests {
             Default::default(),
             Default::default(),
         );
-        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let mut under_test = HtmlRenderer {
+            use_paged_js: false,
+            citation_index: 0,
+        };
         let actual = under_test.render_distinct_reference(&distinct_reference, &context);
 
         assert!(actual.is_ok());
@@ -727,7 +774,10 @@ mod tests {
             Default::default(),
             Default::default(),
         );
-        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let mut under_test = HtmlRenderer {
+            use_paged_js: false,
+            citation_index: 0,
+        };
         let actual = under_test.render_distinct_reference(&distinct_reference, &context);
 
         assert!(actual.is_ok());
@@ -761,7 +811,10 @@ mod tests {
             Default::default(),
             Default::default(),
         );
-        let mut under_test = HtmlRenderer { citation_index: 0 };
+        let mut under_test = HtmlRenderer {
+            use_paged_js: false,
+            citation_index: 0,
+        };
         let actual = under_test.render_distinct_reference(&distinct_reference, &context);
 
         assert!(actual.is_ok());

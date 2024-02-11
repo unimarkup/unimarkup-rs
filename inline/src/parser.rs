@@ -131,8 +131,10 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
 
             if let Some(parser_fn) = parser_fn_opt {
                 let checkpoint = parser.iter.checkpoint();
+
                 let (updated_parser, inline_opt) = parser_fn(parser);
                 parser = updated_parser;
+
                 match inline_opt {
                     Some(inline) => {
                         inlines.push(inline);

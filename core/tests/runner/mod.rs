@@ -57,7 +57,7 @@ fn run_spec_test(case: test_runner::test_file::TestCase) {
             let input = test.input.trim_end();
             let um = Unimarkup::parse(input, cfg);
             test_file::TestOutputs {
-                html: Some(um.render_html().unwrap().to_string()),
+                html: Some(um.render_html(false).unwrap().to_string()),
                 um: Some(test.input.clone()),
             }
         },

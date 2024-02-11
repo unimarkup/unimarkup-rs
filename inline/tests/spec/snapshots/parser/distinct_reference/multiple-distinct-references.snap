@@ -1,0 +1,29 @@
+---
+source: inline/tests/parser/mod.rs
+info: "Test 'multiple-distinct-references' from 'markup\\distinct_reference.yml'"
+---
+Plain @ (1:1)->(1:32) (
+    Text with a distinct reference 
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+)
+DistinctReference @ (1:32)->(1:46) (
+    id-1.title
+)
+Plain @ (1:46)->(1:63) (
+     and another one 
+    ^^^^^^^^^^^^^^^^^
+)
+DistinctReference @ (1:63)->(1:78) (
+    id-2.issued
+)
+Plain @ (1:78)->(1:79) (
+    .
+    ^
+)
+
+---
+With input:
+
+Text with a distinct reference &&id-1.title&& and another one &&id-2.issued&&.
+
+

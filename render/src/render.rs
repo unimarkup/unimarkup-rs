@@ -35,8 +35,8 @@ use crate::log_id::{GeneralWarning, RenderError};
 pub struct Context<'a> {
     pub doc: &'a Document,
     pub(crate) rendered_citations: Vec<String>,
-    pub footnotes: String,
-    pub bibliography: String,
+    pub footnotes: Option<String>,
+    pub bibliography: Option<String>,
     pub csl_data: CslData,
 }
 
@@ -58,18 +58,18 @@ impl<'a> Context<'a> {
 
     fn new(doc: &'a Document, format: OutputFormatKind) -> Self {
         let csl_data = get_csl_data(&doc.config.preamble.cite.references);
-        if doc.citations.is_empty() && csl_data.items.is_empty() {
+        if doc.citations.is_empty() {
             return Context {
                 doc,
                 rendered_citations: vec![],
-                footnotes: "".to_string(),
-                bibliography: "".to_string(),
+                footnotes: None,
+                bibliography: None,
                 csl_data,
             };
         }
         let rendered_citations: Vec<String>;
-        let footnotes: String;
-        let bibliography: String;
+        let footnotes: Option<String>;
+        let bibliography: Option<String>;
 
         match CiteprocWrapper::new() {
             Ok(mut citeproc) => {
@@ -78,40 +78,37 @@ impl<'a> Context<'a> {
                     .citations
                     .clone()
                     .into_iter()
-                    .map(|c| {
-                        serde_json::to_value::<Vec<String>>(c).unwrap_or_else(|e| {
+                    .map(|c| match serde_json::to_value::<Vec<String>>(c) {
+                        Ok(citation_ids) => citation_ids,
+                        Err(e) => {
                             log!(
                                 GeneralWarning::JSONSerialization,
                                 format!("JSON serialization failed with error: '{:?}'", e)
                             );
                             serde_json::to_value::<Vec<String>>(vec![]).unwrap()
-                        })
+                        }
                     })
                     .collect::<Value>();
-                rendered_citations = citeproc
-                    .get_citation_strings(doc, &[citation_ids], for_pagedjs)
-                    .unwrap_or_else(|e| {
-                        log!(e);
-                        vec![
-                            "########### CITATION ERROR ###########".to_string();
-                            doc.citations.len()
-                        ]
-                    });
-                footnotes = citeproc.get_footnotes().unwrap_or_else(|e| {
-                    log!(e);
-                    "########### CITATION ERROR ###########".to_string()
-                });
-                bibliography = citeproc.get_bibliography().unwrap_or_else(|e| {
-                    log!(e);
-                    "########### CITATION ERROR ###########".to_string()
-                });
+                rendered_citations =
+                    match citeproc.get_citation_strings(doc, &[citation_ids], for_pagedjs) {
+                        Ok(rendered_citations) => rendered_citations,
+                        Err(e) => {
+                            log!(e);
+                            vec![
+                                "########### CITATION ERROR ###########".to_string();
+                                doc.citations.len()
+                            ]
+                        }
+                    };
+                footnotes = citeproc.get_footnotes().ok();
+                bibliography = citeproc.get_bibliography().ok();
             }
             Err(e) => {
                 log!(e);
                 rendered_citations =
                     vec!["########### CITATION ERROR ###########".to_string(); doc.citations.len()];
-                footnotes = "########### CITATION ERROR ###########".to_string();
-                bibliography = "########### CITATION ERROR ###########".to_string();
+                footnotes = None;
+                bibliography = None;
             }
         }
 
@@ -139,12 +136,9 @@ pub fn render<T: OutputFormat>(
 
     t.append(renderer.render_blocks(&doc.blocks, &context)?)?;
 
-    if !context.footnotes.is_empty() {
-        t.append(renderer.render_footnotes(&context)?)?;
-    }
-    if !context.bibliography.is_empty() {
-        t.append(renderer.render_bibliography(&context)?)?;
-    }
+    // TODO: replace once logic is implemented
+    t.append(renderer.render_footnotes(&context)?)?;
+    t.append(renderer.render_bibliography(&context)?)?;
 
     Ok(t)
 }
@@ -158,6 +152,12 @@ pub trait OutputFormat: Default {
 /// The [`Renderer`] trait allows to create custom output formats for a Unimarkup [`unimarkup_parser::document::Document`].
 pub trait Renderer<T: OutputFormat> {
     // Note: Default implementation with `Err(RenderError::Unimplemented)` prevents breaking changes when adding new functions to this trait.
+
+    /// Returns the [`OutputFormat`] for the [`Renderer`]. <br>
+    /// May be used to set custom modifications in the output format
+    fn get_target(&mut self) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
 
     //--------------------------------- BLOCKS ---------------------------------
 
@@ -383,7 +383,7 @@ pub trait Renderer<T: OutputFormat> {
 
     /// Render Unimarkup [`Block`s](Block) to the output format `T`.
     fn render_blocks(&mut self, blocks: &[Block], context: &Context) -> Result<T, RenderError> {
-        let mut t = T::default();
+        let mut t = self.get_target()?;
 
         for block in blocks {
             let rendered_block = match self.render_block(block, context) {

@@ -1,15 +1,13 @@
-use std::error::Error;
-use std::str::FromStr;
 use std::{collections::HashSet, path::PathBuf};
 
 use clap::{Args, Parser};
-use logid::{err, log};
+use logid::err;
 use serde::{Deserialize, Serialize};
 
 use self::{log_id::ConfigErr, output::Output, preamble::Preamble};
 
 pub use icu_locid;
-use icu_locid::{locale, Locale};
+use icu_locid::locale;
 
 pub mod locale;
 pub mod log_id;
@@ -116,29 +114,6 @@ where
         )
     });
     Ok(HashSet::from_iter(entries?))
-}
-
-fn parse_locale_path_buf(
-    s: &str,
-) -> Result<(Locale, PathBuf), Box<dyn Error + Send + Sync + 'static>> {
-    if s.is_empty() {
-        return Ok((locale!("en"), PathBuf::from_str("invalid path").unwrap()));
-    }
-    let pos = s
-        .find('=')
-        .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
-    let mut locale = locale!("en");
-    match s[..pos].parse::<Locale>() {
-        Ok(l) => locale = l,
-        Err(e) => {
-            log!(
-                ConfigErr::InvalidFile,
-                format!("Parsing the locale failed with error: '{:?}'", e)
-            );
-        }
-    };
-    let path_buf: PathBuf = s[pos + 1..].parse().unwrap();
-    Ok((locale, path_buf))
 }
 
 // Define extension trait
