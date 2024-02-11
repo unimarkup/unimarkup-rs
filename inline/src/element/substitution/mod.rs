@@ -102,7 +102,7 @@ impl DistinctReference {
 
 impl InlineElement for DistinctReference {
     fn as_unimarkup(&self) -> String {
-        format!("{}.{}", self.id.clone(), self.fields.clone().join(""))
+        format!("{}.{}", self.id.clone(), self.fields.clone().join("."))
     }
 
     fn start(&self) -> unimarkup_commons::lexer::position::Position {
@@ -143,7 +143,11 @@ pub(crate) fn parse_distinct_reference<'s, 'i>(
         }
     }
 
-    entries.push(parsed_token_strings.join(""));
+    let parsed_str = parsed_token_strings.join("");
+    if !parsed_str.is_empty() {
+        entries.push(parsed_str);
+    }
+
     if entries.len() < 2 {
         entries.push("authors".to_string());
     }
