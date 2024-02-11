@@ -2,7 +2,6 @@
 
 use unimarkup_commons::lexer::token::iterator::{IteratorEndFn, IteratorPrefixFn, TokenIterator};
 
-use crate::InlineTokenKind::Cite;
 use crate::{
     element::{formatting::OpenFormatMap, Inline},
     tokenize::{iterator::InlineTokenIterator, kind::InlineTokenKind},
@@ -108,9 +107,8 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
                 break 'outer;
             }
 
-            let parser_fn_opt = if kind == Cite {
-                get_distinct_reference_parser()
-            } else if (!parser.context.flags.logic_only && kind.is_scoped_format_keyword())
+            let parser_fn_opt = if (!parser.context.flags.logic_only
+                && kind.is_scoped_format_keyword())
                 || kind.is_open_parenthesis()
             {
                 get_scoped_parser(kind, parser.context.flags.logic_only)
@@ -222,12 +220,11 @@ fn get_scoped_parser(kind: InlineTokenKind, logic_only: bool) -> Option<InlinePa
             Some(crate::element::formatting::scoped::parse_math)
         }
         InlineTokenKind::OpenBracket if !logic_only => Some(crate::element::textbox::parse),
+        InlineTokenKind::Cite if !logic_only => {
+            Some(crate::element::substitution::parse_distinct_reference)
+        }
         _ => None,
     }
-}
-
-fn get_distinct_reference_parser() -> Option<InlineParserFn> {
-    Some(crate::element::substitution::parse_distinct_reference)
 }
 
 #[cfg(test)]
