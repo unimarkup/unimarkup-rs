@@ -1,0 +1,34 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: distinct_reference
+description: Test lexing and parsing of text with distinct reference inline formatting.
+
+tests:
+  - name: distinct-reference-without-fields
+    description: |
+      Distinct reference where the field "authors" should be added.
+
+    input: |
+      Text with distinct reference &&id-1&& without fields.
+
+  - name: distinct-reference-with-one-field
+    description: |
+      Distinct reference with one field.
+
+    input: |
+      Text with distinct reference &&id-1.title&& with field title.
+
+  - name: distinct-reference-with-multiple-fields
+    description: |
+      Distinct reference with multiple fields.
+
+    input: |
+      Text with distinct reference &&id-1.author.0.family&& with fields author, 0 and family.
+
+  - name: multiple-distinct-references
+    description: |
+      Two distinct references
+
+    input: |
+      Text with a distinct reference &&id-1.title&& and another one &&id-2.issued&&.

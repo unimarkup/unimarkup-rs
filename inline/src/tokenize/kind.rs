@@ -243,7 +243,10 @@ impl InlineTokenKind {
     pub fn is_scoped_format_keyword(&self) -> bool {
         matches!(
             self,
-            InlineTokenKind::Verbatim | InlineTokenKind::Math | InlineTokenKind::NamedSubstitution
+            InlineTokenKind::Verbatim
+                | InlineTokenKind::Math
+                | InlineTokenKind::NamedSubstitution
+                | InlineTokenKind::Cite
         )
     }
 }

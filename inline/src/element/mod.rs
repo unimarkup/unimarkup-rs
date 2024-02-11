@@ -1,5 +1,6 @@
 //! Contains all Unimarkup [`Inline`] elements.
 
+use crate::element::substitution::DistinctReference;
 use unimarkup_commons::{
     lexer::{position::Position, span::Span},
     parsing::Element,
@@ -65,7 +66,7 @@ pub enum Inline {
     /// Underlined content.
     Underline(Underline),
 
-    /// Content in a subscript.   
+    /// Content in a subscript.
     Subscript(Subscript),
 
     /// Content in a superscript.
@@ -125,6 +126,9 @@ pub enum Inline {
 
     /// Direct URI
     DirectUri(DirectUri),
+
+    /// Distinct reference
+    DistinctReference(DistinctReference),
 }
 
 impl Inline {
@@ -157,6 +161,7 @@ impl Inline {
             Inline::DirectUri(_) => "DirectUri",
             Inline::NamedSubstitution(_) => "NamedSubstitution",
             Inline::ImplicitSubstitution(_) => "ImplicitSubstitution",
+            Inline::DistinctReference(_) => "DistinctReference",
         }
     }
 }
@@ -186,6 +191,7 @@ impl InlineElement for Inline {
             Inline::EscapedPlain(inline) => inline.as_unimarkup(),
             Inline::DirectUri(inline) => inline.as_unimarkup(),
             Inline::ImplicitSubstitution(inline) => inline.as_unimarkup(),
+            Inline::DistinctReference(inline) => inline.as_unimarkup(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }
@@ -215,6 +221,7 @@ impl InlineElement for Inline {
             Inline::EscapedPlain(inline) => inline.start(),
             Inline::DirectUri(inline) => inline.start(),
             Inline::ImplicitSubstitution(inline) => inline.start(),
+            Inline::DistinctReference(inline) => inline.start(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }
@@ -244,6 +251,7 @@ impl InlineElement for Inline {
             Inline::EscapedPlain(inline) => inline.end(),
             Inline::DirectUri(inline) => inline.end(),
             Inline::ImplicitSubstitution(inline) => inline.end(),
+            Inline::DistinctReference(inline) => inline.end(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }

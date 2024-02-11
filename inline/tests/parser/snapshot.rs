@@ -128,6 +128,7 @@ fn inner_snapshot(inline: &Inline) -> String {
 
         Inline::NamedSubstitution(_) => todo!(),
         Inline::ImplicitSubstitution(impl_subst) => impl_subst.subst().to_string(),
+        Inline::DistinctReference(inline) => inline.as_unimarkup(),
     }
 }
 

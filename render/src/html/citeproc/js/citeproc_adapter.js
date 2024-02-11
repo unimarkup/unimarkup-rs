@@ -182,6 +182,20 @@ export function getCitationStrings(citationIds) {
     return citationResults;
 }
 
+export function getAuthorOnly(citeId) {
+    const citation = {
+        properties: {
+            noteIndex: 0
+        },
+        citationItems: [{
+            id: citeId,
+            "author-only": true
+        }],
+        citationID: citeId
+    };
+    return citeproc.processCitationCluster(citation, citationsPre, citationsPost)[1][0][1];
+}
+
 export function hasFootnotes() {
     return footnoteResults.length > 0;
 }

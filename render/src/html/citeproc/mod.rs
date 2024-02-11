@@ -1,7 +1,7 @@
 mod csl_files;
 
 use logid::log;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 
@@ -9,7 +9,8 @@ use crate::csl_json::csl_types::{CslData, CslItem};
 use crate::html::citeproc::csl_files::{get_locale_string, get_style_string};
 use crate::log_id::{CiteError, GeneralWarning};
 use rustyscript::{import, json_args, serde_json, ModuleWrapper};
-use unimarkup_commons::config::icu_locid::Locale;
+use unimarkup_commons::config::icu_locid::locale;
+use unimarkup_parser::document::Document;
 
 pub struct CiteprocWrapper {
     module: ModuleWrapper,
@@ -23,7 +24,6 @@ impl CiteprocWrapper {
         }
     }
 
-    #[cfg(test)]
     pub fn new_with_path(path: &str) -> Result<CiteprocWrapper, CiteError> {
         match import(path) {
             Ok(module) => Ok(CiteprocWrapper { module }),
@@ -31,19 +31,25 @@ impl CiteprocWrapper {
         }
     }
 
-    // returns the citation strings to be placed inline in the same order as the citation_ids
-    // the CitationItems have to have the same order that they should appear in the output, because this considers
-    // disambiguation and short forms of citations if the same entry was cited before
-    pub fn get_citation_strings(
-        &mut self,
-        citation_paths: &HashSet<PathBuf>,
-        doc_locale: Locale,
-        citation_locales: HashMap<Locale, PathBuf>,
-        style_id: PathBuf,
-        citation_id_vectors: &[serde_json::Value],
-        for_pagedjs: bool,
-    ) -> Result<Vec<String>, CiteError> {
-        let citation_text = get_csl_string(citation_paths);
+    pub fn init_processor(&mut self, doc: &Document, for_pagedjs: bool) -> Result<(), CiteError> {
+        let csl_data = get_csl_data(&doc.config.preamble.cite.references);
+        let style_id = doc
+            .config
+            .preamble
+            .cite
+            .style
+            .clone()
+            .unwrap_or(PathBuf::from(String::from("ieee")));
+        let doc_locale = doc
+            .config
+            .preamble
+            .i18n
+            .lang
+            .clone()
+            .unwrap_or(locale!("en-US"));
+        let citation_locales = doc.config.preamble.cite.citation_locales.clone();
+
+        let citation_text = serde_json::ser::to_string(&csl_data).unwrap();
         let locale = get_locale_string(doc_locale, citation_locales);
         let style = get_style_string(style_id);
 
@@ -52,11 +58,39 @@ impl CiteprocWrapper {
                 "initProcessor",
                 json_args!(citation_text, locale, style, for_pagedjs),
             )
-            .map_err(|_| CiteError::ProcessorInitializationError)?;
+            .map_err(|_| CiteError::ProcessorInitializationError)
+    }
 
-        self.module
-            .call("getCitationStrings", citation_id_vectors)
-            .map_err(|_| CiteError::CitationError)
+    // returns the citation strings to be placed inline in the same order as the citation_ids
+    // the CitationItems have to have the same order that they should appear in the output, because this considers
+    // disambiguation and short forms of citations if the same entry was cited before
+    pub fn get_citation_strings(
+        &mut self,
+        doc: &Document,
+        citation_id_vectors: &[serde_json::Value],
+        for_pagedjs: bool,
+    ) -> Result<Vec<String>, CiteError> {
+        match self.init_processor(doc, for_pagedjs) {
+            Ok(_) => self
+                .module
+                .call("getCitationStrings", citation_id_vectors)
+                .map_err(|_| CiteError::CitationError),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub fn get_author_only(
+        &mut self,
+        doc: &Document,
+        cite_id: String,
+    ) -> Result<String, CiteError> {
+        match self.init_processor(doc, false) {
+            Ok(_) => self
+                .module
+                .call("getAuthorOnly", json_args!(cite_id))
+                .map_err(|_| CiteError::CitationError),
+            Err(e) => Err(e),
+        }
     }
 
     pub fn get_footnotes(&mut self) -> Result<String, CiteError> {
@@ -80,7 +114,7 @@ impl CiteprocWrapper {
     }
 }
 
-fn get_csl_string(references: &HashSet<PathBuf>) -> String {
+pub fn get_csl_data(references: &HashSet<PathBuf>) -> CslData {
     let mut citation_items: Vec<CslItem> = vec![];
     for reference in references {
         if let Ok(citation_string) = fs::read_to_string(reference.clone().into_os_string()) {
@@ -100,17 +134,54 @@ fn get_csl_string(references: &HashSet<PathBuf>) -> String {
             );
         }
     }
-    let csl_data = CslData {
+    CslData {
         items: citation_items,
-    };
-    serde_json::ser::to_string_pretty(&csl_data).unwrap()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
     use std::str::FromStr;
-    use unimarkup_commons::config::icu_locid::locale;
+    use unimarkup_commons::config::icu_locid::{locale, Locale};
+    use unimarkup_commons::config::preamble::{Citedata, I18n, Preamble};
+    use unimarkup_commons::config::Config;
+
+    fn test_document(
+        citation_paths: HashSet<PathBuf>,
+        doc_locale: Locale,
+        citation_locales: HashMap<Locale, PathBuf>,
+        style_id: PathBuf,
+    ) -> Document {
+        Document {
+            blocks: vec![],
+            config: Config {
+                preamble: Preamble {
+                    metadata: Default::default(),
+                    cite: Citedata {
+                        style: Some(style_id),
+                        references: citation_paths,
+                        citation_locales,
+                        csl_locales: vec![],
+                    },
+                    render: Default::default(),
+                    i18n: I18n {
+                        lang: Some(doc_locale),
+                        output_langs: Default::default(),
+                    },
+                },
+                output: Default::default(),
+                merging: Default::default(),
+                input: Default::default(),
+            },
+            citations: vec![],
+            macros: vec![],
+            variables: vec![],
+            metadata: vec![],
+            resources: vec![],
+        }
+    }
 
     #[test]
     fn test_no_footnotes() {
@@ -129,14 +200,8 @@ mod tests {
         let style_id = PathBuf::from_str("./csl_styles/apa.csl").unwrap();
         let serde_result = serde_json::to_value(vec![vec!["id-1"], vec!["id-1", "id-2"]]).unwrap();
         let for_pagedjs = false;
-        let actual_citations = under_test.get_citation_strings(
-            &citation_paths,
-            doc_locale,
-            citation_locales,
-            style_id,
-            &[serde_result],
-            for_pagedjs,
-        );
+        let doc = test_document(citation_paths, doc_locale, citation_locales, style_id);
+        let actual_citations = under_test.get_citation_strings(&doc, &[serde_result], for_pagedjs);
 
         assert!(actual_citations.is_ok(), "A cite error occurred");
         let unwrapped_actual = actual_citations.unwrap();
@@ -171,14 +236,8 @@ mod tests {
         let style_id = PathBuf::from_str("./csl_styles/chicago-fullnote-bibliography.csl").unwrap();
         let serde_result = serde_json::to_value(vec![vec!["id-1"], vec!["id-1", "id-2"]]).unwrap();
         let for_pagedjs = false;
-        let actual_citations = under_test.get_citation_strings(
-            &citation_paths,
-            doc_locale,
-            citation_locales,
-            style_id,
-            &[serde_result],
-            for_pagedjs,
-        );
+        let doc = test_document(citation_paths, doc_locale, citation_locales, style_id);
+        let actual_citations = under_test.get_citation_strings(&doc, &[serde_result], for_pagedjs);
 
         assert!(actual_citations.is_ok(), "A cite error occurred");
         let unwrapped_actual = actual_citations.unwrap();
@@ -212,14 +271,8 @@ mod tests {
         let style_id = PathBuf::from_str("./csl_styles/chicago-fullnote-bibliography.csl").unwrap();
         let serde_result = serde_json::to_value(vec![vec!["id-1"], vec!["id-1", "id-2"]]).unwrap();
         let for_pagedjs = true;
-        let actual_citations = under_test.get_citation_strings(
-            &citation_paths,
-            doc_locale,
-            citation_locales,
-            style_id,
-            &[serde_result],
-            for_pagedjs,
-        );
+        let doc = test_document(citation_paths, doc_locale, citation_locales, style_id);
+        let actual_citations = under_test.get_citation_strings(&doc, &[serde_result], for_pagedjs);
 
         assert!(actual_citations.is_ok(), "A cite error occurred");
         let unwrapped_actual = actual_citations.unwrap();
@@ -244,8 +297,7 @@ mod tests {
         paths.insert(
             PathBuf::from_str("./src/html/citeproc/test_files/citation_items2.csl").unwrap(),
         );
-        let actual_string = get_csl_string(&paths);
-        let actual_object: CslData = serde_json::from_str(&actual_string).unwrap();
+        let actual_object: CslData = get_csl_data(&paths);
 
         assert_eq!(actual_object.items.len(), 8);
     }

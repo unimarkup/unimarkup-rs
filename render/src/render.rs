@@ -1,15 +1,16 @@
 //! Contains the [`Render`] trait definition.
 
-use crate::html::citeproc::CiteprocWrapper;
+use crate::csl_json::csl_types::CslData;
+use crate::html::citeproc::{get_csl_data, CiteprocWrapper};
 use logid::log;
 use serde_json::Value;
-use std::path::PathBuf;
 use unimarkup_commons::config::output::OutputFormatKind;
 use unimarkup_commons::config::Config;
 use unimarkup_commons::{
     config::icu_locid::{locale, Locale},
     lexer::span::Span,
 };
+use unimarkup_inline::element::substitution::DistinctReference;
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
@@ -32,10 +33,11 @@ use unimarkup_parser::{
 use crate::log_id::{GeneralWarning, RenderError};
 
 pub struct Context<'a> {
-    doc: &'a Document,
-    rendered_citations: Vec<String>,
+    pub doc: &'a Document,
+    pub(crate) rendered_citations: Vec<String>,
     pub footnotes: Option<String>,
     pub bibliography: Option<String>,
+    pub csl_data: CslData,
 }
 
 impl<'a> Context<'a> {
@@ -55,12 +57,14 @@ impl<'a> Context<'a> {
     }
 
     fn new(doc: &'a Document, format: OutputFormatKind) -> Self {
+        let csl_data = get_csl_data(&doc.config.preamble.cite.references);
         if doc.citations.is_empty() {
             return Context {
                 doc,
                 rendered_citations: vec![],
                 footnotes: None,
                 bibliography: None,
+                csl_data,
             };
         }
         let rendered_citations: Vec<String>;
@@ -70,21 +74,6 @@ impl<'a> Context<'a> {
         match CiteprocWrapper::new() {
             Ok(mut citeproc) => {
                 let for_pagedjs = matches!(format, OutputFormatKind::Html);
-                let style = doc
-                    .config
-                    .preamble
-                    .cite
-                    .style
-                    .clone()
-                    .unwrap_or(PathBuf::from(String::from("ieee")));
-                let doc_locale = doc
-                    .config
-                    .preamble
-                    .i18n
-                    .lang
-                    .clone()
-                    .unwrap_or(locale!("en-US"));
-                let citation_locales = doc.config.preamble.cite.citation_locales.clone();
                 let citation_ids = doc
                     .citations
                     .clone()
@@ -100,23 +89,17 @@ impl<'a> Context<'a> {
                         }
                     })
                     .collect::<Value>();
-                rendered_citations = match citeproc.get_citation_strings(
-                    &doc.config.preamble.cite.references,
-                    doc_locale,
-                    citation_locales,
-                    style,
-                    &[citation_ids],
-                    for_pagedjs,
-                ) {
-                    Ok(rendered_citations) => rendered_citations,
-                    Err(e) => {
-                        log!(e);
-                        vec![
-                            "########### CITATION ERROR ###########".to_string();
-                            doc.citations.len()
-                        ]
-                    }
-                };
+                rendered_citations =
+                    match citeproc.get_citation_strings(doc, &[citation_ids], for_pagedjs) {
+                        Ok(rendered_citations) => rendered_citations,
+                        Err(e) => {
+                            log!(e);
+                            vec![
+                                "########### CITATION ERROR ###########".to_string();
+                                doc.citations.len()
+                            ]
+                        }
+                    };
                 footnotes = citeproc.get_footnotes().ok();
                 bibliography = citeproc.get_bibliography().ok();
             }
@@ -134,6 +117,7 @@ impl<'a> Context<'a> {
             rendered_citations,
             footnotes,
             bibliography,
+            csl_data: csl_data.clone(),
         }
     }
 
@@ -245,6 +229,14 @@ pub trait Renderer<T: OutputFormat> {
     fn render_citation(
         &mut self,
         _citation: &Citation,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    fn render_distinct_reference(
+        &mut self,
+        _distinct_reference: &DistinctReference,
         _context: &Context,
     ) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
@@ -491,6 +483,9 @@ pub trait Renderer<T: OutputFormat> {
             Inline::Hyperlink(hyperlink) => self.render_hyperlink(hyperlink, context),
             Inline::Citation(citation) => self.render_citation(citation, context),
 
+            Inline::DistinctReference(distinct_reference) => {
+                self.render_distinct_reference(distinct_reference, context)
+            }
             Inline::NamedSubstitution(_) => todo!(),
             Inline::ImplicitSubstitution(_) => todo!(),
             Inline::DirectUri(_) => todo!(),

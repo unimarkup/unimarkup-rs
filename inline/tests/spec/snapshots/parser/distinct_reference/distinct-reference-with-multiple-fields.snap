@@ -1,0 +1,22 @@
+---
+source: inline/tests/parser/mod.rs
+info: "Test 'distinct-reference-with-multiple-fields' from 'markup\\distinct_reference.yml'"
+---
+Plain @ (1:1)->(1:30) (
+    Text with distinct reference 
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+)
+DistinctReference @ (1:30)->(1:54) (
+    id-1.author.0.family
+)
+Plain @ (1:54)->(1:88) (
+     with fields author, 0 and family.
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+)
+
+---
+With input:
+
+Text with distinct reference &&id-1.author.0.family&& with fields author, 0 and family.
+
+
