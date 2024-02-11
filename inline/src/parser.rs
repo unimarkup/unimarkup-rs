@@ -34,7 +34,7 @@ pub fn parse_inlines<'slice, 'input>(
         end_reached: updated_parser.iter.end_reached(),
         prefix_mismatch: updated_parser.iter.prefix_mismatch(),
     };
-    inline_parser = updated_parser.unfold(OpenFormatMap::default());
+    inline_parser = updated_parser.unfold_scoped(OpenFormatMap::default());
 
     (
         inline_parser.iter.into(),
@@ -73,6 +73,7 @@ impl ParsedInlines {
 #[derive(Debug, Default, Clone)]
 pub struct InlineContext {
     pub flags: InlineContextFlags,
+    pub citations: Vec<Vec<String>>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -152,8 +153,10 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
 
             if let Some(parser_fn) = parser_fn_opt {
                 let checkpoint = parser.iter.checkpoint();
+
                 let (updated_parser, inline_opt) = parser_fn(parser);
                 parser = updated_parser;
+
                 match inline_opt {
                     Some(inline) => {
                         inlines.push(inline);
@@ -197,8 +200,18 @@ impl<'slice, 'input> InlineParser<'slice, 'input> {
 
     /// Returns the parent parser if this parser is nested.
     /// Overrides the internal [`OpenFormatMap`] with the given one.
-    pub fn unfold(mut self, outer_open_formats: OpenFormatMap) -> Self {
-        self.iter = self.iter.unfold(outer_open_formats);
+    pub fn unfold_scoped(mut self, outer_open_formats: OpenFormatMap) -> Self {
+        self.iter = self.iter.unfold_scoped(outer_open_formats);
+        self
+    }
+
+    pub fn nest(mut self, end_match: Option<IteratorEndFn>) -> Self {
+        self.iter = self.iter.nest(end_match);
+        self
+    }
+
+    pub fn into_inner(mut self) -> Self {
+        self.iter = self.iter.into_inner();
         self
     }
 }
@@ -231,6 +244,9 @@ fn get_scoped_parser(kind: InlineTokenKind, logic_only: bool) -> Option<InlinePa
             Some(crate::element::formatting::scoped::parse_math)
         }
         InlineTokenKind::OpenBracket if !logic_only => Some(crate::element::textbox::parse),
+        InlineTokenKind::Cite if !logic_only => {
+            Some(crate::element::substitution::parse_distinct_reference)
+        }
         _ => None,
     }
 }

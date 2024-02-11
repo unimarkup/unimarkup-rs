@@ -11,6 +11,107 @@ pub mod iterator;
 pub const TERMINAL_PUNCTUATION: CodePointSetDataBorrowed<'static> =
     icu_properties::sets::terminal_punctuation();
 
+// /// Possible kinds of Symbol found in Unimarkup document.
+// #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+// pub enum SymbolKind {
+//     /// Regular text with no semantic meaning
+//     #[default]
+//     Plain,
+//     /// Unicode terminal punctuation
+//     TerminalPunctuation,
+//     /// Any non-linebreaking whitespace
+//     Whitespace,
+//     /// A line break literal (for example `\n` or '\r\n')
+//     Newline,
+//     /// End of Unimarkup document
+//     Eoi,
+//     /// The backslash (`\`) is used for escaping other symbols.
+//     Backslash,
+//     /// Hash symbol (#) used for headings
+//     Hash,
+//     /// The star (`*`) literal is used for various elements.
+//     Star,
+//     /// The minus (`-`) literal is used for various elements.
+//     Minus,
+//     /// The plus (`+`) literal is used for various elements.
+//     Plus,
+//     /// The underline (`_`) literal is used for underline and/or subscript formatting.
+//     Underline,
+//     /// The caret (`^`) literal is used for superscript formatting.
+//     Caret,
+//     /// The tick (`` ` ``) literal is used for verbatim blocks and formatting.
+//     Tick,
+//     /// The overline (`‾`) literal is used for overline formatting.
+//     Overline,
+//     /// The pipe (`|`) literal is used for highlight formatting.
+//     Pipe,
+//     /// The tilde (`~`) literal is used for strikethrough formatting.
+//     Tilde,
+//     /// The quote (`"`) literal is used for quotation formatting.
+//     Quote,
+//     /// The dollar (`$`) literal is used for math mode formatting.
+//     Dollar,
+//     /// A colon literal (`:`) is used as marker (e.g. for alias substitutions `::heart::`).
+//     Colon,
+//     /// A dot literal (`.`).
+//     Dot,
+//     /// An ampersand literal (`&`)
+//     Ampersand,
+//     /// A comma literal (`,`)
+//     Comma,
+//     /// The open parentheses (`(`) literal is used for additional data to text group elements (e.g.
+//     /// image insert).
+//     OpenParenthesis,
+//     /// The close parentheses (`)`) literal is used to close the additional data to text group.
+//     CloseParenthesis,
+//     /// The open bracket (`[`) literal is used for text group elements.
+//     OpenBracket,
+//     /// The close bracket (`]`) literal is used for text group elements.
+//     CloseBracket,
+//     /// The open brace (`{`) literal is used for inline attributes.
+//     OpenBrace,
+//     /// The close brace (`}`) literal is used for inline attributes.
+//     CloseBrace,
+// }
+
+// impl SymbolKind {
+//     pub fn is_not_keyword(&self) -> bool {
+//         matches!(
+//             self,
+//             SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Plain | SymbolKind::Eoi
+//         )
+//     }
+
+//     pub fn is_keyword(&self) -> bool {
+//         !self.is_not_keyword()
+//     }
+
+//     pub fn is_open_parenthesis(&self) -> bool {
+//         matches!(
+//             self,
+//             SymbolKind::OpenParenthesis | SymbolKind::OpenBracket | SymbolKind::OpenBrace
+//         )
+//     }
+
+//     pub fn is_close_parenthesis(&self) -> bool {
+//         matches!(
+//             self,
+//             SymbolKind::CloseParenthesis | SymbolKind::CloseBracket | SymbolKind::CloseBrace
+//         )
+//     }
+
+//     pub fn is_parenthesis(&self) -> bool {
+//         self.is_open_parenthesis() || self.is_close_parenthesis()
+//     }
+
+//     pub fn is_space(&self) -> bool {
+//         matches!(
+//             self,
+//             SymbolKind::Newline | SymbolKind::Whitespace | SymbolKind::Eoi
+//         )
+//     }
+// }
+
 /// Symbol representation of literals found in Unimarkup document.
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Symbol<'a> {
@@ -172,6 +273,8 @@ pub enum SymbolKind {
     Dollar,
     /// A percentage literal (`%`),
     Percentage,
+    /// An ampersand literal (`&`)
+    Ampersand,
     /// A colon literal (`:`) is used as marker (e.g. for alias substitutions `::heart::`).
     Colon,
     /// A dot literal (`.`).
@@ -265,6 +368,7 @@ impl From<&str> for SymbolKind {
             "'" => Self::SingleQuote,
             "$" => Self::Dollar,
             "%" => Self::Percentage,
+            "&" => Self::Ampersand,
             ":" => Self::Colon,
             "." => Self::Dot,
             "," => Self::Comma,
@@ -366,6 +470,7 @@ impl SymbolKind {
             SymbolKind::ForwardSlash => "/",
             SymbolKind::SingleQuote => "'",
             SymbolKind::Percentage => "%",
+            SymbolKind::Ampersand => "&",
             SymbolKind::Comma => ",",
             SymbolKind::Semicolon => ";",
             SymbolKind::ExclamationMark => "!",

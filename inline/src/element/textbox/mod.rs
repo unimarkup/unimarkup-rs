@@ -9,20 +9,18 @@ use unimarkup_commons::{
     },
     lexer::{
         position::Position,
-        token::{
-            iterator::{EndMatcher, PeekingNext},
-            TokenKind,
-        },
+        token::{iterator::EndMatcher, TokenKind},
     },
     parsing::Parser,
 };
 
 use crate::{parser::InlineParser, tokenize::kind::InlineTokenKind};
 
-use self::hyperlink::Hyperlink;
+use self::{citation::Citation, hyperlink::Hyperlink};
 
 use super::{Inline, InlineElement};
 
+pub mod citation;
 pub mod hyperlink;
 
 /// Represents the text box element.
@@ -66,7 +64,7 @@ impl TextBox {
 pub(crate) fn parse<'slice, 'input>(
     mut parser: InlineParser<'slice, 'input>,
 ) -> (InlineParser<'slice, 'input>, Option<Inline>) {
-    let open_token_opt = parser.iter.peeking_next(|_| true);
+    let open_token_opt = parser.iter.next(); // Consume open bracket
     if open_token_opt.is_none() {
         return (parser, None);
     }
@@ -80,26 +78,24 @@ pub(crate) fn parse<'slice, 'input>(
         open_token.kind
     );
 
-    let (mut scoped_parser, outer_open_formats) =
-        parser.nest_scoped(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
-            matcher.consumed_matches(&[TokenKind::CloseBracket])
-        })));
-
-    let checkpoint = scoped_parser.iter.checkpoint();
-    let (updated_parser, box_variant_opt) = parse_box_variant(scoped_parser);
-    scoped_parser = updated_parser;
+    let checkpoint = parser.iter.checkpoint();
+    let (updated_parser, box_variant_opt) = parse_box_variant(parser);
+    parser = updated_parser;
 
     match box_variant_opt {
         Some(box_variant) => {
-            return (scoped_parser.unfold(outer_open_formats), Some(box_variant));
+            return (parser, Some(box_variant));
         }
         None => {
-            scoped_parser.iter.rollback(checkpoint);
-            scoped_parser.iter.next(); // Consume open bracket
+            parser.iter.rollback(checkpoint);
         }
     }
 
     // No variant matched => must be regular textbox or hyperlink
+    let (mut scoped_parser, outer_open_formats) =
+        parser.nest_scoped(Some(Rc::new(|matcher: &mut dyn EndMatcher| {
+            matcher.consumed_matches(&[TokenKind::CloseBracket])
+        })));
 
     let (updated_parser, inner) = InlineParser::parse(scoped_parser);
     scoped_parser = updated_parser;
@@ -113,7 +109,7 @@ pub(crate) fn parse<'slice, 'input>(
             .expect("Inlines in textbox => previous token must exist.")
     };
     let end_reached = scoped_parser.iter.end_reached();
-    parser = scoped_parser.unfold(outer_open_formats);
+    parser = scoped_parser.unfold_scoped(outer_open_formats);
 
     let next_kind = parser.iter.peek_kind();
     let mut attributes = None;
@@ -155,7 +151,7 @@ pub(crate) fn parse<'slice, 'input>(
             )
         };
 
-        parser = link_parser.unfold(outer_open_formats);
+        parser = link_parser.unfold_scoped(outer_open_formats);
 
         return (
             parser,
@@ -181,7 +177,7 @@ pub(crate) fn parse<'slice, 'input>(
         let (attrb_iter, attrb_token_res) =
             AttributeTokenizer::new(nested_parser.iter.into(), AttributeContext::default()).parse();
         nested_parser.iter = attrb_iter.iter.into();
-        parser = nested_parser.unfold(outer_open_formats);
+        parser = nested_parser.unfold_scoped(outer_open_formats);
         attributes = attrb_token_res.ok();
     }
 
@@ -201,9 +197,12 @@ pub(crate) fn parse<'slice, 'input>(
 
 /// Tries to parse text box variants like literature referencing.
 fn parse_box_variant<'slice, 'input>(
-    parser: InlineParser<'slice, 'input>,
+    mut parser: InlineParser<'slice, 'input>,
 ) -> (InlineParser<'slice, 'input>, Option<Inline>) {
-    //TODO: implement box variants like media insert...
+    let kind = parser.iter.peek_kind();
+    if kind == Some(InlineTokenKind::Cite) {
+        return Citation::parse(parser);
+    }
 
     (parser, None)
 }

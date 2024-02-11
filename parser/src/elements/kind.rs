@@ -116,6 +116,7 @@ impl From<TokenKind> for PossibleBlockStart {
             | TokenKind::Colon(_)
             | TokenKind::Dot(_)
             | TokenKind::DoubleQuote
+            | TokenKind::Ampersand(_)
             | TokenKind::OpenParenthesis
             | TokenKind::CloseParenthesis
             | TokenKind::CloseBracket

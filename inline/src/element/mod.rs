@@ -1,5 +1,6 @@
 //! Contains all Unimarkup [`Inline`] elements.
 
+use crate::element::substitution::DistinctReference;
 use unimarkup_commons::{
     lexer::{position::Position, span::Span},
     parsing::Element,
@@ -12,7 +13,7 @@ use self::{
         Superscript, Underline, Verbatim,
     },
     substitution::{named::NamedSubstitution, DirectUri, ImplicitSubstitution},
-    textbox::{hyperlink::Hyperlink, TextBox},
+    textbox::{citation::Citation, hyperlink::Hyperlink, TextBox},
 };
 
 mod helper;
@@ -65,7 +66,7 @@ pub enum Inline {
     /// Underlined content.
     Underline(Underline),
 
-    /// Content in a subscript.   
+    /// Content in a subscript.
     Subscript(Subscript),
 
     /// Content in a superscript.
@@ -91,6 +92,9 @@ pub enum Inline {
 
     /// Hyperlink element `[link text](url)`.
     Hyperlink(Hyperlink),
+
+    /// Citation element `[&&cite-id]`
+    Citation(Citation),
 
     /// Named substitution ( i.e. `::heart::`).
     NamedSubstitution(NamedSubstitution),
@@ -122,6 +126,9 @@ pub enum Inline {
 
     /// Direct URI
     DirectUri(DirectUri),
+
+    /// Distinct reference
+    DistinctReference(DistinctReference),
 }
 
 impl Inline {
@@ -143,6 +150,7 @@ impl Inline {
             Inline::Math(_) => "Math",
             Inline::TextBox(_) => "TextBox",
             Inline::Hyperlink(_) => "Hyperlink",
+            Inline::Citation(_) => "Citation",
             Inline::Verbatim(_) => "Verbatim",
             Inline::Newline(_) => "Newline",
             Inline::ImplicitNewline(_) => "ImplicitNewline",
@@ -153,6 +161,7 @@ impl Inline {
             Inline::DirectUri(_) => "DirectUri",
             Inline::NamedSubstitution(_) => "NamedSubstitution",
             Inline::ImplicitSubstitution(_) => "ImplicitSubstitution",
+            Inline::DistinctReference(_) => "DistinctReference",
         }
     }
 }
@@ -172,6 +181,7 @@ impl InlineElement for Inline {
             Inline::Math(inline) => inline.as_unimarkup(),
             Inline::TextBox(inline) => inline.as_unimarkup(),
             Inline::Hyperlink(inline) => inline.as_unimarkup(),
+            Inline::Citation(inline) => inline.as_unimarkup(),
             Inline::Verbatim(inline) => inline.as_unimarkup(),
             Inline::Newline(inline) => inline.as_unimarkup(),
             Inline::ImplicitNewline(inline) => inline.as_unimarkup(),
@@ -181,6 +191,7 @@ impl InlineElement for Inline {
             Inline::EscapedPlain(inline) => inline.as_unimarkup(),
             Inline::DirectUri(inline) => inline.as_unimarkup(),
             Inline::ImplicitSubstitution(inline) => inline.as_unimarkup(),
+            Inline::DistinctReference(inline) => inline.as_unimarkup(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }
@@ -200,6 +211,7 @@ impl InlineElement for Inline {
             Inline::Math(inline) => inline.start(),
             Inline::TextBox(inline) => inline.start(),
             Inline::Hyperlink(inline) => inline.start(),
+            Inline::Citation(inline) => inline.start(),
             Inline::Verbatim(inline) => inline.start(),
             Inline::Newline(inline) => inline.start(),
             Inline::ImplicitNewline(inline) => inline.start(),
@@ -209,6 +221,7 @@ impl InlineElement for Inline {
             Inline::EscapedPlain(inline) => inline.start(),
             Inline::DirectUri(inline) => inline.start(),
             Inline::ImplicitSubstitution(inline) => inline.start(),
+            Inline::DistinctReference(inline) => inline.start(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }
@@ -228,6 +241,7 @@ impl InlineElement for Inline {
             Inline::Math(inline) => inline.end(),
             Inline::TextBox(inline) => inline.end(),
             Inline::Hyperlink(inline) => inline.end(),
+            Inline::Citation(inline) => inline.end(),
             Inline::Verbatim(inline) => inline.end(),
             Inline::Newline(inline) => inline.end(),
             Inline::ImplicitNewline(inline) => inline.end(),
@@ -237,6 +251,7 @@ impl InlineElement for Inline {
             Inline::EscapedPlain(inline) => inline.end(),
             Inline::DirectUri(inline) => inline.end(),
             Inline::ImplicitSubstitution(inline) => inline.end(),
+            Inline::DistinctReference(inline) => inline.end(),
 
             Inline::NamedSubstitution(_) => todo!(),
         }

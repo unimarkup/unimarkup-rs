@@ -30,6 +30,7 @@ pub enum HtmlTag {
     Ul,
     Li,
     A,
+    Script,
 }
 
 impl HtmlTag {
@@ -59,6 +60,7 @@ impl HtmlTag {
             HtmlTag::Ul => "ul",
             HtmlTag::Li => "li",
             HtmlTag::A => "a",
+            HtmlTag::Script => "script",
         }
     }
 }

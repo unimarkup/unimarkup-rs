@@ -89,7 +89,23 @@ impl<'input> Token<'input> {
     /// Returns the underlying content the given slice spans.
     ///
     /// **Note:** The tokens must have the same input.
-    pub fn flatten(tokens: &[Self]) -> Option<&str> {
+    pub fn flatten(tokens: &[Self]) -> Option<&'input str> {
+        let (first, last) = (tokens.first()?, tokens.last()?);
+
+        debug_assert!(std::ptr::eq(first.input, last.input));
+
+        let input = first.input;
+
+        let start = first.offset.start;
+        let end = last.offset.end;
+
+        Some(&input[start..end])
+    }
+
+    /// Returns the underlying content the given slice spans.
+    ///
+    /// **Note:** The tokens must have the same input.
+    pub fn flatten_ref(tokens: &[&Self]) -> Option<&'input str> {
         let (first, last) = (tokens.first()?, tokens.last()?);
 
         debug_assert!(std::ptr::eq(first.input, last.input));

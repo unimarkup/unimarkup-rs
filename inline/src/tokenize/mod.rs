@@ -63,6 +63,9 @@ impl<'input> InlineToken<'input> {
             | InlineTokenKind::DoubleQuote
             | InlineTokenKind::SingleQuote
             | InlineTokenKind::Strikethrough
+            | InlineTokenKind::Dot
+            | InlineTokenKind::Cite
+            | InlineTokenKind::Comma
             | InlineTokenKind::NamedSubstitution
             | InlineTokenKind::OpenBrace
             | InlineTokenKind::OpenBracket
@@ -93,5 +96,21 @@ impl<'input> InlineToken<'input> {
                 ""
             }
         }
+    }
+
+    /// Returns the underlying content the given slice spans.
+    ///
+    /// **Note:** The tokens must have the same input.
+    pub fn flatten(tokens: &[Self]) -> Option<&str> {
+        let (first, last) = (tokens.first()?, tokens.last()?);
+
+        debug_assert!(std::ptr::eq(first.input, last.input));
+
+        let input = first.input;
+
+        let start = first.offset.start;
+        let end = last.offset.end;
+
+        Some(&input[start..end])
     }
 }

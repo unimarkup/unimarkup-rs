@@ -1,0 +1,22 @@
+---
+source: inline/tests/parser/mod.rs
+info: "Test 'distinct-reference-with-one-field' from 'markup\\distinct_reference.yml'"
+---
+Plain @ (1:1)->(1:30) (
+    Text with distinct reference 
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+)
+DistinctReference @ (1:30)->(1:44) (
+    id-1.title
+)
+Plain @ (1:44)->(1:62) (
+     with field title.
+    ^^^^^^^^^^^^^^^^^^
+)
+
+---
+With input:
+
+Text with distinct reference &&id-1.title&& with field title.
+
+

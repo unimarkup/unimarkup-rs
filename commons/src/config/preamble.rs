@@ -5,7 +5,7 @@ use std::{
 
 use clap::Args;
 use icu_locid::Locale;
-use logid::err;
+use logid::{err, log};
 use serde::{Deserialize, Serialize};
 
 use super::{locale, log_id::ConfigErr, parse_to_hashset, ConfigFns, ReplaceIfNone};
@@ -42,19 +42,25 @@ impl ConfigFns for Preamble {
     }
 }
 
+pub fn default_locale() -> Locale {
+    icu_locid::locale!("en")
+}
+
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct I18n {
     #[arg(long, value_parser = locale::clap::parse_locale, default_value = "en")]
-    #[serde(with = "locale::serde::single")]
-    pub lang: Locale,
+    #[serde(with = "locale::serde::optional")]
+    pub lang: Option<Locale>,
 
     #[arg(long, value_parser = parse_to_hashset::<Locale>, required = false, default_value = "")]
-    #[serde(with = "locale::serde::multiple")]
+    #[serde(with = "locale::serde::multiple", default)]
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
     pub output_langs: HashSet<Locale>,
 }
 
 impl ConfigFns for I18n {
     fn merge(&mut self, other: Self) {
+        self.lang.replace_none(other.lang);
         self.output_langs.extend(other.output_langs);
     }
 
@@ -68,12 +74,18 @@ impl ConfigFns for I18n {
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RenderConfig {
     #[arg(long = "ignore-file", value_parser = parse_ignore_file, required = false, default_value = "")]
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default)]
     pub ignore: HashSet<String>,
     #[arg(long, value_parser = parse_parameter, required = false, default_value = "")]
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default)]
     pub parameter: HashMap<String, String>,
     #[arg(long)]
+    #[serde(default)]
     pub keep_comments: bool,
     #[arg(long)]
+    #[serde(default)]
     pub allow_unsafe: bool,
 }
 
@@ -81,6 +93,8 @@ impl ConfigFns for RenderConfig {
     fn merge(&mut self, other: Self) {
         self.ignore.extend(other.ignore);
         self.parameter.extend(other.parameter);
+        self.keep_comments |= other.keep_comments;
+        self.allow_unsafe |= other.allow_unsafe;
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
@@ -95,20 +109,64 @@ impl ConfigFns for RenderConfig {
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Citedata {
     #[arg(long = "citation-style")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub style: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default)]
     pub references: HashSet<PathBuf>,
+    /// Optional files containing locale information to render citations.
+    #[clap(skip)]
+    #[serde(with = "locale::serde::hashmap", default)]
+    pub citation_locales: HashMap<Locale, PathBuf>,
+
+    #[arg(long = "csl-locale", value_parser = parse_locale_path_buf, required = false, default_value = "")]
+    #[serde(skip)]
+    pub csl_locales: Vec<(Locale, PathBuf)>,
+}
+
+fn parse_locale_path_buf(s: &str) -> Result<(Locale, PathBuf), clap::Error> {
+    if s.is_empty() {
+        return Ok((locale!("en"), PathBuf::default()));
+    }
+    let pos = s.find('=').ok_or_else(|| {
+        clap::Error::raw(
+            clap::error::ErrorKind::InvalidValue,
+            format!("invalid KEY=value: no `=` found in `{s}`"),
+        )
+    })?;
+    let mut locale = locale!("en");
+    match s[..pos].parse::<Locale>() {
+        Ok(l) => locale = l,
+        Err(e) => {
+            log!(
+                ConfigErr::InvalidFile,
+                format!("Parsing the locale failed with error: '{:?}'", e)
+            );
+        }
+    };
+    let path_buf: PathBuf = s[pos + 1..].parse().unwrap();
+    Ok((locale, path_buf))
 }
 
 impl ConfigFns for Citedata {
     fn merge(&mut self, other: Self) {
         self.style.replace_none(other.style);
         self.references.extend(other.references);
+        for (locale, pathbuf) in self.csl_locales.clone() {
+            self.citation_locales.insert(locale, pathbuf);
+        }
+        for (locale, pathbuf) in other.csl_locales.clone() {
+            self.citation_locales.insert(locale, pathbuf);
+        }
+        self.citation_locales.extend(other.citation_locales);
     }
 
     fn validate(&self) -> Result<(), ConfigErr> {
         if let Some(file) = &self.style {
             if !file.exists() {
+                // TODO: check for included styles
                 return err!(
                     ConfigErr::InvalidFile,
                     format!("Citation Style Language file not found: {:?}", file)
@@ -125,6 +183,8 @@ impl ConfigFns for Citedata {
             }
         }
 
+        // TODO: ensure locale is available for citations
+
         Ok(())
     }
 }
@@ -132,14 +192,24 @@ impl ConfigFns for Citedata {
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Metadata {
     #[arg(long)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub title: Option<String>,
     #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default)]
     pub authors: HashSet<String>,
     #[arg(long)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub description: Option<String>,
     #[arg(long)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub base: Option<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    #[serde(skip_serializing_if = "HashSet::is_empty")]
+    #[serde(default)]
     pub fonts: HashSet<PathBuf>,
 }
 
@@ -177,8 +247,10 @@ pub fn parse_parameter(_s: &str) -> Result<HashMap<String, String>, clap::Error>
 #[derive(Args, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HtmlSpecificParameter {
     #[arg(long, value_parser = parse_to_hashset::<PathBuf>, required = false, default_value = "")]
+    #[serde(default)]
     pub favicons: HashSet<PathBuf>,
     #[arg(long, value_parser = parse_to_hashset::<String>, required = false, default_value = "")]
+    #[serde(default)]
     pub keywords: HashSet<String>,
 }
 

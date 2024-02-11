@@ -57,7 +57,7 @@ fn run_spec_test(case: test_runner::test_file::TestCase) {
             let input = test.input.trim_end();
             let um = Unimarkup::parse(input, cfg);
             test_file::TestOutputs {
-                html: Some(um.render_html().unwrap().to_string()),
+                html: Some(um.render_html(false).unwrap().to_string()),
                 um: Some(test.input.clone()),
             }
         },
@@ -65,12 +65,13 @@ fn run_spec_test(case: test_runner::test_file::TestCase) {
 }
 
 fn run_snap_test(case: test_runner::test_file::TestCase) {
-    let mut cfg = unimarkup_commons::config::Config::default();
-
     let tokens = unimarkup_commons::lexer::token::lex_str(&case.test.input);
 
     let mut snap_runner = SnapTestRunner::with_fn::<_, _>(&case.test.name, &tokens, |_input| {
-        let um = unimarkup_core::parser::parse_unimarkup(&case.test.input, &mut cfg);
+        let um = unimarkup_core::parser::parse_unimarkup(
+            &case.test.input,
+            unimarkup_commons::config::Config::default(),
+        );
 
         Snapshot(um.blocks).as_snapshot()
     })

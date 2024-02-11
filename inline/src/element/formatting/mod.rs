@@ -149,6 +149,58 @@ pub(crate) fn parse_quote_format<'s, 'i>(
     )
 }
 
+macro_rules! inline_elements {
+    ($($format:ident),+) => {
+        $(
+            impl InlineElement for $format {
+                fn as_unimarkup(&self) -> String {
+                    format!(
+                        "{}{}{}",
+                        InlineTokenKind::$format.as_str(),
+                        self.inner.as_unimarkup(),
+                        if self.implicit_end {
+                            ""
+                        } else {
+                            InlineTokenKind::$format.as_str()
+                        }
+                    )
+                }
+
+                fn start(&self) -> Position {
+                    self.start
+                }
+
+                fn end(&self) -> Position {
+                    self.end
+                }
+            }
+        )+
+    };
+}
+
+impl InlineElement for DoubleQuote {
+    fn as_unimarkup(&self) -> String {
+        format!(
+            "{}{}{}",
+            InlineTokenKind::DoubleQuote.as_str().repeat(2),
+            self.inner.as_unimarkup(),
+            if self.implicit_end {
+                String::default()
+            } else {
+                InlineTokenKind::DoubleQuote.as_str().repeat(2)
+            }
+        )
+    }
+
+    fn start(&self) -> Position {
+        self.start
+    }
+
+    fn end(&self) -> Position {
+        self.end
+    }
+}
+
 macro_rules! inline_formats {
     ($($format:ident),+) => {
         $(
@@ -164,20 +216,6 @@ macro_rules! inline_formats {
         impl From<$format> for Inline {
             fn from(value: $format) -> Self {
                 Inline::$format(value)
-            }
-        }
-
-        impl InlineElement for $format {
-            fn as_unimarkup(&self) -> String {
-                format!("{}{}{}", InlineTokenKind::$format.as_str(), self.inner.as_unimarkup(), if self.implicit_end {""} else {InlineTokenKind::$format.as_str()})
-            }
-
-            fn start(&self) -> Position {
-                self.start
-            }
-
-            fn end(&self) -> Position {
-                self.end
             }
         }
 
@@ -253,6 +291,19 @@ macro_rules! format_to_inline{
         }
     }
 }
+
+inline_elements!(
+    Bold,
+    Italic,
+    Underline,
+    Subscript,
+    Superscript,
+    Strikethrough,
+    Highlight,
+    Overline,
+    Verbatim,
+    Math
+);
 
 inline_formats!(
     Bold,

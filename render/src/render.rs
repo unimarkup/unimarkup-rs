@@ -1,13 +1,23 @@
 //! Contains the [`Render`] trait definition.
 
-use unimarkup_commons::{config::icu_locid::Locale, lexer::span::Span};
+use crate::csl_json::csl_types::CslData;
+use crate::html::citeproc::{get_csl_data, CiteprocWrapper};
+use logid::log;
+use serde_json::Value;
+use unimarkup_commons::config::output::OutputFormatKind;
+use unimarkup_commons::config::Config;
+use unimarkup_commons::{
+    config::icu_locid::{locale, Locale},
+    lexer::span::Span,
+};
+use unimarkup_inline::element::substitution::DistinctReference;
 use unimarkup_inline::element::{
     base::{EscapedNewline, EscapedPlain, EscapedWhitespace, Newline, Plain},
     formatting::{
         Bold, DoubleQuote, Highlight, Italic, Math, Overline, Strikethrough, Subscript,
         Superscript, Underline, Verbatim,
     },
-    textbox::{hyperlink::Hyperlink, TextBox},
+    textbox::{citation::Citation, hyperlink::Hyperlink, TextBox},
     Inline,
 };
 use unimarkup_parser::{
@@ -20,27 +30,115 @@ use unimarkup_parser::{
     },
 };
 
-use crate::log_id::RenderError;
+use crate::log_id::{GeneralWarning, RenderError};
 
 pub struct Context<'a> {
-    doc: &'a Document,
+    pub doc: &'a Document,
+    pub(crate) rendered_citations: Vec<String>,
+    pub footnotes: Option<String>,
+    pub bibliography: Option<String>,
+    pub csl_data: CslData,
 }
 
 impl<'a> Context<'a> {
     /// Returns the locale for the natural language that is the main language for this rendering.
-    pub fn get_lang(&self) -> &Locale {
-        &self.doc.config.preamble.i18n.lang
+    pub fn get_lang(&self) -> Locale {
+        self.doc
+            .config
+            .preamble
+            .i18n
+            .lang
+            .clone()
+            .unwrap_or(locale!("en"))
+    }
+
+    pub fn rendered_citation(&self, index: usize) -> Option<&String> {
+        self.rendered_citations.get(index)
+    }
+
+    fn new(doc: &'a Document, format: OutputFormatKind) -> Self {
+        let csl_data = get_csl_data(&doc.config.preamble.cite.references);
+        if doc.citations.is_empty() {
+            return Context {
+                doc,
+                rendered_citations: vec![],
+                footnotes: None,
+                bibliography: None,
+                csl_data,
+            };
+        }
+        let rendered_citations: Vec<String>;
+        let footnotes: Option<String>;
+        let bibliography: Option<String>;
+
+        match CiteprocWrapper::new() {
+            Ok(mut citeproc) => {
+                let for_pagedjs = matches!(format, OutputFormatKind::Html);
+                let citation_ids = doc
+                    .citations
+                    .clone()
+                    .into_iter()
+                    .map(|c| match serde_json::to_value::<Vec<String>>(c) {
+                        Ok(citation_ids) => citation_ids,
+                        Err(e) => {
+                            log!(
+                                GeneralWarning::JSONSerialization,
+                                format!("JSON serialization failed with error: '{:?}'", e)
+                            );
+                            serde_json::to_value::<Vec<String>>(vec![]).unwrap()
+                        }
+                    })
+                    .collect::<Value>();
+                rendered_citations =
+                    match citeproc.get_citation_strings(doc, &[citation_ids], for_pagedjs) {
+                        Ok(rendered_citations) => rendered_citations,
+                        Err(e) => {
+                            log!(e);
+                            vec![
+                                "########### CITATION ERROR ###########".to_string();
+                                doc.citations.len()
+                            ]
+                        }
+                    };
+                footnotes = citeproc.get_footnotes().ok();
+                bibliography = citeproc.get_bibliography().ok();
+            }
+            Err(e) => {
+                log!(e);
+                rendered_citations =
+                    vec!["########### CITATION ERROR ###########".to_string(); doc.citations.len()];
+                footnotes = None;
+                bibliography = None;
+            }
+        }
+
+        Context {
+            doc,
+            rendered_citations,
+            footnotes,
+            bibliography,
+            csl_data: csl_data.clone(),
+        }
+    }
+
+    pub fn get_config(&self) -> &Config {
+        &self.doc.config
     }
 }
 
 pub fn render<T: OutputFormat>(
     doc: &Document,
+    format: OutputFormatKind,
     mut renderer: impl Renderer<T>,
 ) -> Result<T, RenderError> {
-    let context = Context { doc };
+    let context = Context::new(doc, format);
     let mut t = T::new(&context);
 
     t.append(renderer.render_blocks(&doc.blocks, &context)?)?;
+
+    // TODO: replace once logic is implemented
+    t.append(renderer.render_footnotes(&context)?)?;
+    t.append(renderer.render_bibliography(&context)?)?;
 
     Ok(t)
 }
@@ -54,6 +152,12 @@ pub trait OutputFormat: Default {
 /// The [`Renderer`] trait allows to create custom output formats for a Unimarkup [`unimarkup_parser::document::Document`].
 pub trait Renderer<T: OutputFormat> {
     // Note: Default implementation with `Err(RenderError::Unimplemented)` prevents breaking changes when adding new functions to this trait.
+
+    /// Returns the [`OutputFormat`] for the [`Renderer`]. <br>
+    /// May be used to set custom modifications in the output format
+    fn get_target(&mut self) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
 
     //--------------------------------- BLOCKS ---------------------------------
 
@@ -119,6 +223,30 @@ pub trait Renderer<T: OutputFormat> {
         _hyperlink: &Hyperlink,
         _context: &Context,
     ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    fn render_citation(
+        &mut self,
+        _citation: &Citation,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    fn render_distinct_reference(
+        &mut self,
+        _distinct_reference: &DistinctReference,
+        _context: &Context,
+    ) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    fn render_bibliography(&mut self, _context: &Context) -> Result<T, RenderError> {
+        Err(RenderError::Unimplemented)
+    }
+
+    fn render_footnotes(&mut self, _context: &Context) -> Result<T, RenderError> {
         Err(RenderError::Unimplemented)
     }
 
@@ -255,7 +383,7 @@ pub trait Renderer<T: OutputFormat> {
 
     /// Render Unimarkup [`Block`s](Block) to the output format `T`.
     fn render_blocks(&mut self, blocks: &[Block], context: &Context) -> Result<T, RenderError> {
-        let mut t = T::default();
+        let mut t = self.get_target()?;
 
         for block in blocks {
             let rendered_block = match self.render_block(block, context) {
@@ -353,7 +481,11 @@ pub trait Renderer<T: OutputFormat> {
             Inline::Math(math) => self.render_inline_math(math, context),
             Inline::TextBox(textbox) => self.render_textbox(textbox, context),
             Inline::Hyperlink(hyperlink) => self.render_hyperlink(hyperlink, context),
+            Inline::Citation(citation) => self.render_citation(citation, context),
 
+            Inline::DistinctReference(distinct_reference) => {
+                self.render_distinct_reference(distinct_reference, context)
+            }
             Inline::NamedSubstitution(_) => todo!(),
             Inline::ImplicitSubstitution(_) => todo!(),
             Inline::DirectUri(_) => todo!(),

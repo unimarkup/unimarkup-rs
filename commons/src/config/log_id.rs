@@ -1,4 +1,4 @@
-use logid::ErrLogId;
+use logid::{ErrLogId, WarnLogId};
 use thiserror::Error;
 
 /// Log-ids for config errors
@@ -19,4 +19,11 @@ pub enum ConfigErr {
     /// Log-id denoting provided locales are not included in default locales data
     #[error("Given locale is not in default locales data. Please provide data or use one of supported default locales: en-US, de-AT, bs-BA")]
     BadLocaleUsed,
+}
+
+/// Log-ids for config warnings
+#[derive(Debug, Clone, WarnLogId)]
+pub enum ConfigWarning {
+    /// Log-id denoting an invalid output_lang
+    InvalidOutputLang,
 }

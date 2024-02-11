@@ -120,7 +120,7 @@ impl VerbatimBlock {
         content_parser = updated_content_parser;
         let implicit_closed = !content_parser.iter.end_reached();
 
-        parser = content_parser.unfold();
+        parser = content_parser.into_inner();
         parser.context.flags = prev_context_flags;
 
         // block end before attrb parsing for correct syntax highlighting
@@ -145,7 +145,7 @@ impl VerbatimBlock {
             .parse();
             parser.iter = attrb_iter.iter;
             attrb_tokens = attrb_token_res.ok();
-        } else if let Some(TokenKind::Plus(nr_plus)) = next_kind {
+        } else if let Some(TokenKind::Plus(_nr_plus)) = next_kind {
             // scoped decorator parsing
         }
 

@@ -25,7 +25,7 @@ impl AsSnapshot for Snapshot<Blocks> {
     fn as_snapshot(&self) -> String {
         if self.len() > 1 {
             let content: String = self.0.iter().fold(String::new(), |s, block| {
-                s + &Snapshot(block).as_snapshot() + "\n"
+                format!("{}{}\n", s, Snapshot(block).as_snapshot())
             });
 
             content.rsplit_once('\n').unwrap().0.to_string()

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use self::{log_id::ConfigErr, output::Output, preamble::Preamble};
 
 pub use icu_locid;
+use icu_locid::locale;
 
 pub mod locale;
 pub mod log_id;
