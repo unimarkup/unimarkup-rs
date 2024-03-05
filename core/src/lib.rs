@@ -65,8 +65,4 @@ impl Unimarkup {
     pub fn render_pdf(&self) -> Result<Vec<u8>, RenderError> {
         render_pdf(&self.render_html(true)?.to_string())
     }
-
-    pub fn render_pdf(&self) -> Result<Vec<u8>, RenderError> {
-        render_pdf(&self.render_html()?.to_string())
-    }
 }
