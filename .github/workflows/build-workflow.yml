@@ -33,7 +33,7 @@ jobs:
         run: cargo build ${{ inputs.release && '--release' || '' }}
       - name: upload archive
         if: ${{ inputs.upload-artifacts }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: unimarkup-${{matrix.os}}
           path: ./target/release/unimarkup${{ matrix.os == 'windows-latest' && '.exe' || '' }}
