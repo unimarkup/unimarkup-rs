@@ -38,8 +38,11 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository_owner }}/${{ github.event.repository.name }}
         run: |
-          mv unimarkup-ubuntu-latest/unimarkup ./unimarkup-linux
-          mv unimarkup-windows-latest/unimarkup.exe ./unimarkup-win.exe
-          mv unimarkup-macos-latest/unimarkup ./unimarkup-macos
-          gh release upload ${{ steps.release.outputs.tag_name }} unimarkup-linux unimarkup-win.exe unimarkup-macos
+          ls -la
+          mv -v unimarkup-ubuntu-latest/unimarkup ./unimarkup-linux
+          mv -v unimarkup-windows-latest/unimarkup.exe ./unimarkup-win.exe
+          mv -v unimarkup-macos-latest/unimarkup ./unimarkup-macos
+          ls -la
+          gh release upload ${{ steps.release.outputs.tag_name }} ./unimarkup-linux ./unimarkup-win.exe ./unimarkup-macos
