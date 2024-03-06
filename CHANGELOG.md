@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.5.0](https://www.github.com/unimarkup/unimarkup-rs/compare/v0.4.0...v0.5.0) (2024-02-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* improve unimarkup-inline API and implementation (#97)
+
+### Features
+
+* add bullet list element parsing and rendering ([#111](https://www.github.com/unimarkup/unimarkup-rs/issues/111)) ([ff6f3af](https://www.github.com/unimarkup/unimarkup-rs/commit/ff6f3afc5ea7b7daf41c476214e853ba6f609608))
+* add citation element ([#120](https://www.github.com/unimarkup/unimarkup-rs/issues/120)) ([b133fb6](https://www.github.com/unimarkup/unimarkup-rs/commit/b133fb6de88499c051d324dccce1a2907e8f936a))
+* add distinct references ([#127](https://www.github.com/unimarkup/unimarkup-rs/issues/127)) ([5d8ffef](https://www.github.com/unimarkup/unimarkup-rs/commit/5d8ffef05a5daa3ee37f01b4ea7c16419cc94ec3))
+* add initial pdf support ([#114](https://www.github.com/unimarkup/unimarkup-rs/issues/114)) ([498ca1f](https://www.github.com/unimarkup/unimarkup-rs/commit/498ca1f3d7b06dd4d73de620249e8b83387284ed))
+* add log filter ([#98](https://www.github.com/unimarkup/unimarkup-rs/issues/98)) ([987d1af](https://www.github.com/unimarkup/unimarkup-rs/commit/987d1affb49178e8da1c851829bc58cb4ec8702b))
+* add rendering for inline math ([#124](https://www.github.com/unimarkup/unimarkup-rs/issues/124)) ([53ec8c6](https://www.github.com/unimarkup/unimarkup-rs/commit/53ec8c62816c785e7c3abab332bfdea895eaef29))
+* add rendering for textbox and hyperlink ([#119](https://www.github.com/unimarkup/unimarkup-rs/issues/119)) ([10bbdf0](https://www.github.com/unimarkup/unimarkup-rs/commit/10bbdf0ff9ee46fdcaddac494f5f057bfe5b227c))
+* add spec_test macro ([6065aab](https://www.github.com/unimarkup/unimarkup-rs/commit/6065aab8a33da3c058791ac5ea5753d8c44ae5f6))
+* create SymbolIterator for block parsing ([#106](https://www.github.com/unimarkup/unimarkup-rs/issues/106)) ([dd98ae2](https://www.github.com/unimarkup/unimarkup-rs/commit/dd98ae249043938bb023956b8ead54845cc95dbe))
+* impl visitor pattern for rendering ([#90](https://www.github.com/unimarkup/unimarkup-rs/issues/90)) ([c75a841](https://www.github.com/unimarkup/unimarkup-rs/commit/c75a841750e334a319d518ec7e952f7f2cbc0bf3))
+* implement initial umi format rendering ([#117](https://www.github.com/unimarkup/unimarkup-rs/issues/117)) ([6ca03cd](https://www.github.com/unimarkup/unimarkup-rs/commit/6ca03cd0677eebbe71aa638565e0d0813b9e2c61))
+* move to new logid approach ([#88](https://www.github.com/unimarkup/unimarkup-rs/issues/88)) ([e86d9b5](https://www.github.com/unimarkup/unimarkup-rs/commit/e86d9b58e302b2823720a0a989230b7ee100449c))
+* remove icu_datagen ([#104](https://www.github.com/unimarkup/unimarkup-rs/issues/104)) ([bcdd1ef](https://www.github.com/unimarkup/unimarkup-rs/commit/bcdd1ef003c4fd9b49d1b8bbbe82512b13b86da3))
+* run snapshot tests dynamically in unimarkup-core crate ([#105](https://www.github.com/unimarkup/unimarkup-rs/issues/105)) ([94148b3](https://www.github.com/unimarkup/unimarkup-rs/commit/94148b36dd8306a765c7207fbaa1e8cf3e09c960))
+* update parser to use iterators for blocks and inlines ([#118](https://www.github.com/unimarkup/unimarkup-rs/issues/118)) ([c1a4827](https://www.github.com/unimarkup/unimarkup-rs/commit/c1a48276a9de077aac832e4accc2f7cf09ce1ded))
+
+
+### Bug Fixes
+
+* abstract scanning of symbols with a scanner  ([#89](https://www.github.com/unimarkup/unimarkup-rs/issues/89)) ([e330a56](https://www.github.com/unimarkup/unimarkup-rs/commit/e330a5630e76e80c1b45ebb294ff98e107f0e1a0))
+* add issue templates ([bc74610](https://www.github.com/unimarkup/unimarkup-rs/commit/bc74610de05e0be5fce8080909ea05ed3ee857c7))
+* avoid collecting iterator during token resolving ([#112](https://www.github.com/unimarkup/unimarkup-rs/issues/112)) ([5c9db5a](https://www.github.com/unimarkup/unimarkup-rs/commit/5c9db5ae1aa330e21acb69c20f060a9b900c8886))
+* change to Apache 2.0 license and general cleanup ([#109](https://www.github.com/unimarkup/unimarkup-rs/issues/109)) ([10acfb0](https://www.github.com/unimarkup/unimarkup-rs/commit/10acfb0c5623d904d55fd171b927f7d02fdfca06))
+* do not panic when config validation fails ([#96](https://www.github.com/unimarkup/unimarkup-rs/issues/96)) ([d247922](https://www.github.com/unimarkup/unimarkup-rs/commit/d247922f5cd12c795e0fa73016fc3acda841a680))
+* fallback to release-please v2 due to monorepo ([6ff4562](https://www.github.com/unimarkup/unimarkup-rs/commit/6ff45629395f2fef4d90dad698bfd91e9111debb))
+* improve unimarkup-inline API and implementation ([#97](https://www.github.com/unimarkup/unimarkup-rs/issues/97)) ([eb39b7b](https://www.github.com/unimarkup/unimarkup-rs/commit/eb39b7b8da5554a7f7f26b9662ee5c367ad788a8))
+* make test_runner macros filepath independent ([d4b4091](https://www.github.com/unimarkup/unimarkup-rs/commit/d4b4091793bbfd7edcb06e3a9a78126535784270))
+* remove release-please title pattern ([e6ee2cd](https://www.github.com/unimarkup/unimarkup-rs/commit/e6ee2cd7313f7ca7a0951231cc59dc154d033b44))
+* update release-please version ([efc0a9c](https://www.github.com/unimarkup/unimarkup-rs/commit/efc0a9c2c0987e73ccd7a0ad7c39aeb80ceac273))
+* use commons Symbol in inlines crate ([#86](https://www.github.com/unimarkup/unimarkup-rs/issues/86)) ([e1b2a53](https://www.github.com/unimarkup/unimarkup-rs/commit/e1b2a53b1f6e6a4b8c2c7f2ea0704dbf009cf962))
+
 ## [0.4.0](https://www.github.com/unimarkup/unimarkup-rs/compare/v0.3.0...v0.4.0) (2023-04-23)
 
 
