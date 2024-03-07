@@ -1,0 +1,39 @@
+on:
+  workflow_call:
+    inputs:
+      os:
+        type: string
+        default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+      release:
+        type: boolean
+        default: false
+      enable-caching:
+        type: boolean
+        default: false
+      upload-artifacts:
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    name: Build project
+    strategy:
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: cache
+        uses: Swatinem/rust-cache@v2
+        if: ${{ inputs.enable-caching }} && matrix.os == 'ubuntu-latest'
+        with:
+          shared-key: "build-files"
+      - name: Build unimarkup
+        run: cargo build ${{ inputs.release && '--release' || '' }}
+      - name: upload archive
+        if: ${{ inputs.upload-artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unimarkup-${{matrix.os}}
+          path: ./target/release/unimarkup${{ matrix.os == 'windows-latest' && '.exe' || '' }}
