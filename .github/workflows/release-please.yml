@@ -17,20 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: release-build
     steps:
-      - uses: GoogleCloudPlatform/release-please-action@v2
+      - uses: GoogleCloudPlatform/release-please-action@v4
         id: release
-        with:
-          release-type: rust
-          package-name: unimarkup-rs
-          # Breaking changes might happen frequently before 1.0.0 => only bump minor
-          bump-minor-pre-major: true
-          changelog-types: >
-            [
-            {"type":"feat","section":"Features","hidden":false},
-            {"type":"fix","section":"Bug Fixes","hidden":false},
-            {"type":"arch","section":"Architecture/Refactor","hidden":false},
-            {"type":"chore","section":"Miscellaneous","hidden":true}
-            ]
       - name: Download Artifacts
         if: ${{ steps.release.outputs.release_created }}
         uses: actions/download-artifact@v4
