@@ -1,13 +1,44 @@
 {
+  "release-type": "rust",
   "packages": {
     ".": {
-      "release-type": "rust"
+      "component": "root"
+    },
+    "cli": {
+      "component": "cli"
+    },
+    "commons": {
+      "component": "commons"
+    },
+    "core": {
+      "component": "core"
+    },
+    "inline": {
+      "component": "inline"
+    },
+    "parser": {
+      "component": "parser"
+    },
+    "render": {
+      "component": "render"
     }
   },
   "plugins": [
     {
       "type": "cargo-workspace",
-      "merge": true
+      "merge": false
+    },
+    {
+      "type": "linked-versions",
+      "groupName": "unimarkup",
+      "components": [
+        "root",
+        "cli",
+        "commons",
+        "inline",
+        "parser",
+        "render"
+      ]
     }
   ],
   "include-component-in-tag": false,
