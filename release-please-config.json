@@ -2,45 +2,9 @@
   "release-type": "rust",
   "packages": {
     ".": {
-      "component": "root"
-    },
-    "cli": {
-      "component": "cli"
-    },
-    "commons": {
-      "component": "commons"
-    },
-    "core": {
-      "component": "core"
-    },
-    "inline": {
-      "component": "inline"
-    },
-    "parser": {
-      "component": "parser"
-    },
-    "render": {
-      "component": "render"
+      "package-name": "unimarkup-rs"
     }
   },
-  "plugins": [
-    {
-      "type": "cargo-workspace",
-      "merge": false
-    },
-    {
-      "type": "linked-versions",
-      "groupName": "unimarkup",
-      "components": [
-        "root",
-        "cli",
-        "commons",
-        "inline",
-        "parser",
-        "render"
-      ]
-    }
-  ],
   "include-component-in-tag": false,
   "bump-minor-pre-major": true,
   "changelog-sections": [

@@ -18,8 +18,6 @@ jobs:
     steps:
       - uses: GoogleCloudPlatform/release-please-action@v4
         id: release
-        with:
-          release-type: rust
 
   release-build:
     name: Build unimarkup release
