@@ -2,7 +2,7 @@
 name = "unimarkup-core"
 description = "Core of the Unimarkup compiler."
 readme = "README.md"
-version.workspace = true
+version = "0.4.0"
 edition.workspace = true
 authors.workspace = true
 repository.workspace = true
