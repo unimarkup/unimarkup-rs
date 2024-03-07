@@ -1,8 +1,5 @@
 {
   "release-type": "rust",
-  "packages": {
-    "package-name": "unimarkup-rs"
-  },
   "bump-minor-pre-major": true,
   "changelog-sections": [
     {
