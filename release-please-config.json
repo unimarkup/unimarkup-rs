@@ -1,4 +1,15 @@
 {
+  "packages": {
+    ".": {
+      "release-type": "rust"
+    }
+  },
+  "plugins": [
+    {
+      "type": "cargo-workspace",
+      "merge": true
+    }
+  ],
   "include-component-in-tag": false,
   "bump-minor-pre-major": true,
   "changelog-sections": [
