@@ -15,7 +15,7 @@ jobs:
     uses: ./.github/workflows/build-workflow.yml
     with:
       os: ${{ github.ref == 'refs/heads/main' && '["ubuntu-latest", "windows-latest", "macos-latest"]' || '["ubuntu-latest"]'}}
-      enable-caching: true
+      enable-caching: false
 
   format:
     name: Check Formatting
