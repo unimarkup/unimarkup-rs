@@ -18,10 +18,6 @@ jobs:
     steps:
       - uses: GoogleCloudPlatform/release-please-action@v4
         id: release
-      - name: logging values
-        run: |
-          echo ${{ steps.release.outputs.unimarkup-rs--release_created }}
-          echo ${{ steps.release.outputs.unimarkup-rs--tag_name }}
 
   release-build:
     name: Build unimarkup release
