@@ -5,6 +5,11 @@
       "package-name": "unimarkup-rs"
     }
   },
+  "plugins": [
+    {
+      "type": "cargo-workspace"
+    }
+  ],
   "include-component-in-tag": false,
   "bump-minor-pre-major": true,
   "changelog-sections": [
