@@ -9,8 +9,8 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      release-created: ${{ steps.release.outputs.unimarkup--release_created }}
-      tag-name: ${{ steps.release.outputs.unimarkup--tag_name }}
+      release-created: ${{ steps.release.outputs.unimarkup-rs--release_created }}
+      tag-name: ${{ steps.release.outputs.unimarkup-rs--tag_name }}
     steps:
       - uses: GoogleCloudPlatform/release-please-action@v4
         id: release
