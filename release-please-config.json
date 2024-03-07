@@ -1,7 +1,6 @@
 {
   "packages": {
-    ".": {
-      "package-name": "unimarkup",
+    "../unimarkup-rs": {
       "release-type": "rust"
     }
   },
