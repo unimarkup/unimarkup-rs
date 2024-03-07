@@ -13,11 +13,23 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      release-created: ${{ steps.release.outputs.unimarkup-rs--release_created }}
-      tag-name: ${{ steps.release.outputs.unimarkup-rs--tag_name }}
+      release-created: ${{ steps.release.outputs.release_created }}
+      tag-name: ${{ steps.release.outputs.tag_name }}
     steps:
-      - uses: GoogleCloudPlatform/release-please-action@v4
+      - uses: GoogleCloudPlatform/release-please-action@v3
         id: release
+        with:
+          release-type: rust
+          package-name: unimarkup-rs
+          # Breaking changes might happen frequently before 1.0.0 => only bump minor
+          bump-minor-pre-major: true
+          changelog-types: >
+            [
+            {"type":"feat","section":"Features","hidden":false},
+            {"type":"fix","section":"Bug Fixes","hidden":false},
+            {"type":"arch","section":"Architecture/Refactor","hidden":false},
+            {"type":"chore","section":"Miscellaneous","hidden":true}
+            ]
 
   release-build:
     name: Build unimarkup release
