@@ -9,13 +9,15 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      release-created: ${{ steps.release.outputs.releases_created }}
+      release-created: ${{ steps.release.outputs.release_created }}
       tag-name: ${{ steps.release.outputs.tag-name }}
     steps:
       - uses: GoogleCloudPlatform/release-please-action@v4
         id: release
       - name: logging values
-        run: echo ${{ steps.release.outputs }}
+        run: |
+          - echo ${{ steps.release.outputs.release_created }}
+          - echo ${{ steps.release.outputs.tag-name }}
 
   release-build:
     name: Build unimarkup release
