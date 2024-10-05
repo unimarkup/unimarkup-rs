@@ -1,73 +1,69 @@
-use icu_segmenter::{GraphemeClusterBreakIteratorUtf8, GraphemeClusterSegmenter};
-
-use super::position::{Offset, Position as SymPos};
+use super::position::Span as SymPos;
 use crate::symbol::{Symbol, SymbolKind};
 
-pub(crate) struct SymbolStream<'segm, 'input> {
+/// Iterator of Unimarkup [`Symbol`]s over a given input.
+pub(crate) struct SymbolStream<'input> {
+    /// The input from which the Unimarkup symbols are to be scanned.
     input: &'input str,
-    graph_iter: GraphemeClusterBreakIteratorUtf8<'segm, 'input>,
-    curr_pos: SymPos,
-    prev_offset: usize,
+
+    /// Byte offset into the `self.input`. Input can't be larger than `2^32 B = 4 GB`
+    curr_offs: u32,
+
+    /// Code point offset
+    cp_offs: u32,
 }
 
-pub fn scan_str<'segm, 'input>(
-    input: &'input str,
-    segmenter: &'segm GraphemeClusterSegmenter,
-) -> SymbolStream<'segm, 'input> {
-    let mut graph_iter = segmenter.segment_str(input);
-    let curr_pos: SymPos = SymPos::default();
-    let prev_offset: usize = 0;
-
-    // skip 1 to ignore break at start of input
-    graph_iter.next();
-
-    SymbolStream {
-        input,
-        graph_iter,
-        curr_pos,
-        prev_offset,
+impl<'input> SymbolStream<'input> {
+    pub fn scan_str(input: &'input str) -> Self {
+        Self {
+            input,
+            curr_offs: 0,
+            cp_offs: 0,
+        }
     }
 }
 
-impl<'segm, 'input> Iterator for SymbolStream<'segm, 'input> {
+impl<'input> Iterator for SymbolStream<'input> {
     type Item = Symbol<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let offset = self.graph_iter.next()?;
+        debug_assert!(self.input.len() < (2usize.pow(32)));
 
-        let grapheme = self.input.get(self.prev_offset..offset)?;
+        let not_scanned = self.input.get((self.curr_offs as _)..self.input.len())?;
+        let mut chars = not_scanned.split("").skip(1);
 
-        let kind = SymbolKind::from(grapheme);
+        let next_char = chars.next()?;
 
-        let end_pos = if kind == SymbolKind::Newline {
-            SymPos {
-                line: (self.curr_pos.line + 1),
-                ..Default::default()
-            }
-        } else {
-            SymPos {
-                line: self.curr_pos.line,
-                col_utf8: (self.curr_pos.col_utf8 + grapheme.len()),
-                col_utf16: (self.curr_pos.col_utf16 + grapheme.encode_utf16().count()),
-                col_grapheme: (self.curr_pos.col_grapheme + 1),
-            }
+        if next_char.is_empty() {
+            // split with empty string returns iterator with first and last element being empty
+            // strings
+            return None;
+        }
+
+        let kind = SymbolKind::from(next_char);
+
+        let (byte_len, cp_count) = match (kind, next_char, chars.next()) {
+            // NOTE: \r\n is split into "\r" "\n", so we can check if the char was \r and if so,
+            // we can consume \n as well.
+            (SymbolKind::Newline, "\r", Some("\n")) => ("\n".len() + next_char.len(), 2),
+            _ => (next_char.len(), 1),
         };
 
-        let prev_offset = self.prev_offset;
-        let curr_pos = self.curr_pos;
+        let prev_offs = self.curr_offs;
+        let prev_cp_offs = self.cp_offs;
 
-        self.curr_pos = end_pos;
-        self.prev_offset = offset;
+        self.curr_offs += byte_len as u32;
+        self.cp_offs += cp_count as u32;
 
         Some(Symbol {
             input: self.input,
             kind,
-            offset: Offset {
-                start: prev_offset,
-                end: offset,
+            span: SymPos {
+                offs: prev_offs,
+                len: byte_len as u16,
+                cp_offs: prev_cp_offs,
+                cp_count,
             },
-            start: curr_pos,
-            end: end_pos,
         })
     }
 }

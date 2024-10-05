@@ -3,108 +3,50 @@
 
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-// use serde::{Deserialize, Serialize};
-
-use super::span::SpanLen;
-
-/// Indicates position of a symbol or token in a Unimarkup document. Both line and column
-/// counting starts from 1.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Position {
-    /// Line the symbol or token is found at
-    pub line: usize,
-    /// Column at which the symbol or token is located in line, when encoded as UTF8
-    pub col_utf8: usize,
-    /// Column at which the symbol or token is located in line, when encoded as UTF16
-    pub col_utf16: usize,
-    /// Column at which the symbol or token is located in line, when counting graphemes
-    pub col_grapheme: usize,
-}
-
-/// Symbol or token offset in the original input.
+/// Indicates position of a symbol or token in a Unimarkup document. Counting of both byte and code
+/// point offsets starts at zero.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Offset {
-    /// Start offset of a symbol or token, inclusive. This is the same as the end offset
-    /// of the previous symbol or token.
-    pub start: usize,
-    /// End offset of a symbol or token, exclusive. This is the same as the start offset
-    /// of the next symbol or token.
-    pub end: usize,
+pub struct Span {
+    /// Byte offset into the input where the symbol was found in. Note that input can't be larger
+    /// than `2^32 B = 4 GB`
+    pub offs: u32,
+
+    /// Code point offset into the input where the symbol was found in. Note that input can't have
+    /// more than 2^32 code points, which limits us to inputs up to 4 GB large.
+    pub cp_offs: u32,
+
+    // TODO: `len` and `cp_count` can be calculated if we have two consecutive symbols, so maybe we
+    // don't need to store them at all times? We would need 4 bytes less per symbol in that case.
+    /// Length of the [`Span`] in bytes.
+    pub len: u16,
+
+    /// Number of code points this [`Span`] spreads over.
+    pub cp_count: u16,
 }
 
-impl Offset {
-    pub fn extend(&mut self, other: Offset) {
-        debug_assert!(
-            self.start <= other.start,
-            "Tried to extend self by another offset that started earlier."
-        );
-
-        self.end = self.end.max(other.end)
-    }
-}
-
-impl Position {
-    pub fn new(line: usize, column: usize) -> Self {
-        Self {
-            line,
-            col_grapheme: column,
-            col_utf8: column,
-            col_utf16: column,
-        }
-    }
-}
-
-impl Default for Position {
-    fn default() -> Self {
-        Self {
-            line: 1,
-            col_utf8: 1,
-            col_utf16: 1,
-            col_grapheme: 1,
-        }
-    }
-}
-
-impl AddAssign for Position {
+impl AddAssign for Span {
     fn add_assign(&mut self, rhs: Self) {
-        self.line += rhs.line;
-        self.col_utf8 += rhs.col_utf8;
-        self.col_utf16 += rhs.col_utf16;
-        self.col_grapheme += rhs.col_grapheme;
+        self.offs += rhs.offs;
+        self.cp_offs += rhs.cp_offs;
+        self.len += rhs.len;
+        self.cp_count += rhs.cp_count;
     }
 }
 
-impl AddAssign<SpanLen> for Position {
-    fn add_assign(&mut self, rhs: SpanLen) {
-        self.col_utf8 += rhs.len_utf8;
-        self.col_utf16 += rhs.len_utf16;
-        self.col_grapheme += rhs.len_grapheme;
+impl AddAssign<(u32, u16)> for Span {
+    fn add_assign(&mut self, (offs, len): (u32, u16)) {
+        self.offs += offs;
+        self.cp_offs += offs;
+        self.len += len;
+        self.cp_count += len;
     }
 }
 
-impl AddAssign<Option<SpanLen>> for Position {
-    fn add_assign(&mut self, rhs: Option<SpanLen>) {
-        if let Some(rhs) = rhs {
-            self.col_utf8 += rhs.len_utf8;
-            self.col_utf16 += rhs.len_utf16;
-            self.col_grapheme += rhs.len_grapheme;
-        }
-    }
-}
-
-impl AddAssign<usize> for Position {
-    fn add_assign(&mut self, rhs: usize) {
-        self.col_utf8 += rhs;
-        self.col_utf16 += rhs;
-        self.col_grapheme += rhs;
-    }
-}
-
-impl<T> Add<T> for Position
+impl<T> Add<T> for Span
 where
-    Position: AddAssign<T>,
+    Span: AddAssign<T>,
 {
-    type Output = Position;
+    type Output = Span;
 
     fn add(mut self, rhs: T) -> Self::Output {
         self += rhs;
@@ -112,46 +54,29 @@ where
     }
 }
 
-impl SubAssign for Position {
+impl SubAssign for Span {
     fn sub_assign(&mut self, rhs: Self) {
-        self.line -= rhs.line;
-        self.col_utf8 -= rhs.col_utf8;
-        self.col_utf16 -= rhs.col_utf16;
-        self.col_grapheme -= rhs.col_grapheme;
+        self.offs -= rhs.offs;
+        self.cp_offs -= rhs.cp_offs;
+        self.len -= rhs.len;
+        self.cp_count -= rhs.cp_count;
     }
 }
 
-impl SubAssign<SpanLen> for Position {
-    fn sub_assign(&mut self, rhs: SpanLen) {
-        self.col_utf8 -= rhs.len_utf8;
-        self.col_utf16 -= rhs.len_utf16;
-        self.col_grapheme -= rhs.len_grapheme;
+impl SubAssign<(u32, u16)> for Span {
+    fn sub_assign(&mut self, (offs, len): (u32, u16)) {
+        self.offs -= offs;
+        self.cp_offs -= offs;
+        self.len -= len;
+        self.cp_count -= len;
     }
 }
 
-impl SubAssign<Option<SpanLen>> for Position {
-    fn sub_assign(&mut self, rhs: Option<SpanLen>) {
-        if let Some(rhs) = rhs {
-            self.col_utf8 -= rhs.len_utf8;
-            self.col_utf16 -= rhs.len_utf16;
-            self.col_grapheme -= rhs.len_grapheme;
-        }
-    }
-}
-
-impl SubAssign<usize> for Position {
-    fn sub_assign(&mut self, rhs: usize) {
-        self.col_utf8 -= rhs;
-        self.col_utf16 -= rhs;
-        self.col_grapheme -= rhs;
-    }
-}
-
-impl<T> Sub<T> for Position
+impl<T> Sub<T> for Span
 where
-    Position: SubAssign<T>,
+    Span: SubAssign<T>,
 {
-    type Output = Position;
+    type Output = Span;
 
     fn sub(mut self, rhs: T) -> Self::Output {
         self -= rhs;

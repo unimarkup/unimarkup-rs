@@ -1,6 +1,6 @@
-use super::token_kind::TokenKind;
+use crate::position::Span;
 
-use crate::position::{Offset, Position};
+use super::token_kind::TokenKind;
 
 /// Token lexed from grapheme [`Symbol`]s of the given input.
 ///
@@ -10,24 +10,31 @@ use crate::position::{Offset, Position};
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Token<'input> {
     pub input: &'input str,
-    pub offset: Offset,
     pub kind: TokenKind,
-    pub start: Position,
-    pub end: Position,
+    pub span: Span,
 }
 
 impl std::fmt::Debug for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let start = self.span.offs as usize;
+        let end = self.span.offs as usize + self.span.len as usize;
+
         f.debug_struct("Token")
             .field("input", &self.input)
-            .field(
-                "output",
-                &self.input[self.offset.start..self.offset.end].to_string(),
-            )
-            .field("offset", &self.offset)
+            .field("output", &self.input[start..end].to_string())
             .field("kind", &self.kind)
-            .field("start", &self.start)
-            .field("end", &self.end)
+            .field("offs", &self.span.offs)
+            .field("cp_offs", &self.span.cp_offs)
+            .field("len", &self.span.len)
+            .field("cp_count", &self.span.cp_count)
             .finish()
+    }
+}
+
+impl<'input> Token<'input> {
+    pub fn as_input_str(&self) -> &'input str {
+        let start = self.span.offs as usize;
+        let end = self.span.offs as usize + self.span.len as usize;
+        &self.input[start..end]
     }
 }

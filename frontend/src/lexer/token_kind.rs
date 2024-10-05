@@ -1,6 +1,4 @@
-use crate::lexer::symbol::SymbolKind;
-
-use super::implicit::ImplicitSubstitutionKind;
+use crate::symbol::SymbolKind;
 
 pub const COMMENT_TOKEN_LEN: usize = 2;
 
@@ -38,6 +36,7 @@ pub enum TokenKind {
     Newline,
     Blankline,
     Eoi,
+    Indentation(usize),
 
     // Escaped
     EscapedPlain,
@@ -54,7 +53,7 @@ pub enum TokenKind {
         // Set to `true` if comment was implicitly closed at end of line
         implicit_close: bool,
     },
-    ImplicitSubstitution(ImplicitSubstitutionKind),
+    // ImplicitSubstitution(ImplicitSubstitutionKind),
     DirectUri,
 
     // For matching
@@ -83,7 +82,6 @@ impl TokenKind {
                 | TokenKind::Plain
                 | TokenKind::TerminalPunctuation
                 | TokenKind::Comment { .. }
-                | TokenKind::ImplicitSubstitution(_)
                 | TokenKind::DirectUri
                 | TokenKind::Any
                 | TokenKind::Space
@@ -187,7 +185,7 @@ impl From<TokenKind> for String {
             | TokenKind::TerminalPunctuation
             | TokenKind::EscapedPlain
             | TokenKind::EscapedWhitespace
-            | TokenKind::ImplicitSubstitution(_)
+            // | TokenKind::ImplicitSubstitution(_)
             | TokenKind::Comment { .. }
             | TokenKind::DirectUri
             | TokenKind::PossibleAttributes
@@ -205,6 +203,7 @@ impl From<TokenKind> for String {
                 #[cfg(not(debug_assertions))]
                 String::new()
             }
+            TokenKind::Indentation(indent) => " ".repeat(indent),
         }
     }
 }
@@ -239,6 +238,7 @@ impl From<SymbolKind> for TokenKind {
             SymbolKind::CloseBracket => TokenKind::CloseBracket,
             SymbolKind::OpenBrace => TokenKind::OpenBrace,
             SymbolKind::CloseBrace => TokenKind::CloseBrace,
+            SymbolKind::Space => TokenKind::Indentation(1),
         }
     }
 }
@@ -276,6 +276,7 @@ impl From<(SymbolKind, usize)> for TokenKind {
             SymbolKind::CloseBracket => TokenKind::CloseBracket,
             SymbolKind::OpenBrace => TokenKind::OpenBrace,
             SymbolKind::CloseBrace => TokenKind::CloseBrace,
+            SymbolKind::Space => TokenKind::Indentation(1),
         }
     }
 }

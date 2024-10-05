@@ -4,7 +4,7 @@ use core::fmt;
 
 use icu_properties::sets::CodePointSetDataBorrowed;
 
-use super::position::{Offset, Position};
+use super::position::Span;
 
 // pub mod iterator;
 
@@ -119,13 +119,10 @@ impl SymbolKind {
 pub struct Symbol<'a> {
     /// Original input the symbol is found in.
     pub input: &'a str,
-    pub offset: Offset,
     /// Kind of the symbol, e.g. a hash (#)
     pub kind: SymbolKind,
-    /// Start position of the symbol in input.
-    pub start: Position,
-    /// End position of the symbol in input.
-    pub end: Position,
+
+    pub span: Span,
 }
 
 impl fmt::Debug for Symbol<'_> {
@@ -137,18 +134,19 @@ impl fmt::Debug for Symbol<'_> {
         };
 
         let output = {
-            let start = self.offset.start;
-            let end = self.offset.end;
+            let start = self.span.offs as usize;
+            let end = self.span.offs as usize + self.span.len as usize;
             &self.input[start..end]
         };
 
         f.debug_struct("Symbol")
             .field("input", &input)
             .field("output", &output)
-            .field("offset", &self.offset)
             .field("kind", &self.kind)
-            .field("start", &self.start)
-            .field("end", &self.end)
+            .field("offs", &self.span.offs)
+            .field("len", &self.span.len)
+            .field("cp_offs", &self.span.cp_offs)
+            .field("cp_count", &self.span.cp_count)
             .finish()
     }
 }
@@ -161,9 +159,11 @@ impl Symbol<'_> {
 
     /// Returns the original string representation of the symbol.
     pub fn as_str(&self) -> &str {
+        let start = self.span.offs as usize;
+        let end = self.span.offs as usize + self.span.len as usize;
+
         match self.kind {
-            SymbolKind::Plain => &self.input[self.offset.start..self.offset.end],
-            SymbolKind::Whitespace => &self.input[self.offset.start..self.offset.end],
+            SymbolKind::Plain | SymbolKind::Whitespace => &self.input[start..end],
             _ => self.kind.as_str(),
         }
     }
@@ -177,16 +177,6 @@ impl Symbol<'_> {
     /// might panic (guaranteed in debug) if inputs are not the same and last [`Symbol`] in slice
     /// references input that is longer than the one referenced in the first [`Symbol`].
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use unimarkup_commons::lexer::{scan_str, symbol::Symbol};
-    ///
-    /// let input = "This is a string";
-    /// let symbols: Vec<_> = scan_str(input);
-    ///
-    /// assert_eq!(input, Symbol::flatten(&symbols).unwrap());
-    /// ```
     pub fn flatten(symbols: &[Self]) -> Option<&str> {
         let (first, last) = (symbols.first()?, symbols.last()?);
 
@@ -194,8 +184,8 @@ impl Symbol<'_> {
 
         let input = first.input;
 
-        let start = first.offset.start;
-        let end = last.offset.end;
+        let start = first.span.offs as usize;
+        let end = last.span.offs as usize + last.span.len as usize;
 
         Some(&input[start..end])
     }
@@ -211,7 +201,7 @@ impl Symbol<'_> {
 
         #[cfg(debug_assertions)]
         let last = std::iter::once(first).chain(iter).reduce(|prev, curr| {
-            debug_assert!(prev.end.col_grapheme == curr.start.col_grapheme);
+            debug_assert!(prev.span.cp_offs + prev.span.cp_count as u32 == curr.span.cp_offs);
             curr
         })?;
 
@@ -220,8 +210,8 @@ impl Symbol<'_> {
 
         let input = first.input;
 
-        let start = first.offset.start;
-        let end = last.offset.end;
+        let start = first.span.offs as usize;
+        let end = last.span.offs as usize + last.span.len as usize;
 
         Some(&input[start..end])
     }
@@ -231,7 +221,7 @@ impl From<&str> for SymbolKind {
     fn from(value: &str) -> Self {
         match value {
             "#" => SymbolKind::Hash,
-            "\n" | "\r\n" => SymbolKind::Newline,
+            "\n" | "\r" => SymbolKind::Newline,
             "`" => SymbolKind::Tick,
             "\\" => SymbolKind::Backslash,
             "*" => SymbolKind::Star,
@@ -254,6 +244,7 @@ impl From<&str> for SymbolKind {
             "." => SymbolKind::Dot,
             "&" => SymbolKind::Ampersand,
             "," => SymbolKind::Comma,
+            " " => SymbolKind::Space,
             symbol
                 if symbol != "\n"
                     && symbol != "\r\n"
@@ -315,6 +306,7 @@ impl SymbolKind {
             SymbolKind::Dot => ".",
             SymbolKind::Ampersand => "&",
             SymbolKind::Comma => ",",
+            SymbolKind::Space => " ",
         }
     }
 }
