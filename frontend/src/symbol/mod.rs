@@ -147,11 +147,13 @@ impl fmt::Debug for Symbol<'_> {
 
 impl Symbol<'_> {
     // TODO: extension trait in core?
+    #[allow(dead_code)]
     pub fn is_not_keyword(&self) -> bool {
         self.kind.is_not_keyword()
     }
 
     /// Returns the original string representation of the symbol.
+    #[allow(dead_code)]
     pub fn as_str(&self) -> &str {
         let start = self.span.offs as usize;
         let end = self.span.offs as usize + self.span.len as usize;
@@ -170,7 +172,7 @@ impl Symbol<'_> {
     /// It's assumed that all [`Symbol`]s in slice reference the same input. If not, the function
     /// might panic (guaranteed in debug) if inputs are not the same and last [`Symbol`] in slice
     /// references input that is longer than the one referenced in the first [`Symbol`].
-    ///
+    #[allow(dead_code)]
     pub fn flatten(symbols: &[Self]) -> Option<&str> {
         let (first, last) = (symbols.first()?, symbols.last()?);
 
@@ -190,12 +192,13 @@ impl Symbol<'_> {
     /// It is assumed (and checked in debug release) that the symbols are in contiguous order.
     ///
     /// Returns `None` if the referenced input is not same in all symbols.
+    #[allow(dead_code)]
     pub fn flatten_iter<'s>(mut iter: impl Iterator<Item = &'s Symbol<'s>>) -> Option<&'s str> {
         let first = iter.next()?;
 
         #[cfg(debug_assertions)]
         let last = std::iter::once(first).chain(iter).reduce(|prev, curr| {
-            debug_assert!(prev.span.offs + prev.span.len as u32 == curr.span.offs);
+            debug_assert!(prev.span.offs + prev.span.len == curr.span.offs);
             curr
         })?;
 
@@ -214,55 +217,6 @@ impl Symbol<'_> {
         self.span.len
     }
 }
-
-// impl From<&str> for SymbolKind {
-//     fn from(value: &str) -> Self {
-//         match value {
-//             "#" => SymbolKind::Hash,
-//             "\n" | "\r" => SymbolKind::Newline,
-//             "`" => SymbolKind::Tick,
-//             "\\" => SymbolKind::Backslash,
-//             "*" => SymbolKind::Star,
-//             "-" => SymbolKind::Minus,
-//             "+" => SymbolKind::Plus,
-//             "_" => SymbolKind::Underline,
-//             "^" => SymbolKind::Caret,
-//             "|" => SymbolKind::Pipe,
-//             "~" => SymbolKind::Tilde,
-//             "\"" => SymbolKind::Quote,
-//             "$" => SymbolKind::Dollar,
-//             "(" => SymbolKind::OpenParenthesis,
-//             ")" => SymbolKind::CloseParenthesis,
-//             "[" => SymbolKind::OpenBracket,
-//             "]" => SymbolKind::CloseBracket,
-//             "{" => SymbolKind::OpenBrace,
-//             "}" => SymbolKind::CloseBrace,
-//             ":" => SymbolKind::Colon,
-//             "." => SymbolKind::Dot,
-//             "&" => SymbolKind::Ampersand,
-//             "," => SymbolKind::Comma,
-//             " " => SymbolKind::Space,
-//             symbol
-//                 if symbol != "\n"
-//                     && symbol != "\r\n"
-//                     && symbol.starts_with(char::is_whitespace) =>
-//             {
-//                 SymbolKind::Whitespace
-//             }
-//             _ => {
-//                 let mut kind = SymbolKind::Plain;
-//
-//                 if let Some(c) = value.chars().next() {
-//                     if TERMINAL_PUNCTUATION.contains() {
-//                         kind = SymbolKind::TerminalPunctuation;
-//                     }
-//                 }
-//
-//                 kind
-//             }
-//         }
-//     }
-// }
 
 impl From<u8> for SymbolKind {
     fn from(value: u8) -> Self {

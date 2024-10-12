@@ -1,4 +1,4 @@
 pub mod lexer;
 mod scanner;
-mod span;
+pub mod span;
 mod symbol;
