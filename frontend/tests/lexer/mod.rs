@@ -39,7 +39,7 @@ pub(crate) fn collect_snapshot_tests() -> Vec<Trial> {
 }
 
 fn run_snap_test(case: test_runner::test_file::TestCase) {
-    let runner = SnapTestRunner::with_fn_any(&case.test.name, &case.test.input, |input_str| {
+    let runner = SnapTestRunner::with_fn(&case.test.name, &case.test.input, |input_str| {
         let token_stream = unimarkup_frontend::lexer::TokenStream::tokenize(input_str);
 
         let token_snaps = token_stream

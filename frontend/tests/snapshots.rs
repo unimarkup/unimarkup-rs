@@ -11,4 +11,3 @@ fn main() {
 
     libtest_mimic::run(&args, lexer_tests).exit();
 }
-
