@@ -19,6 +19,9 @@ impl<'input> SymbolStream<'input> {
     pub fn scan_str(input: &'input str) -> Self {
         let bytes = input.bytes().peekable();
 
+        // make sure the input does not exceed the maximum size.
+        debug_assert!(bytes.len() < (2usize.pow(32)));
+
         Self {
             input,
             bytes,
@@ -31,8 +34,6 @@ impl<'input> Iterator for SymbolStream<'input> {
     type Item = Symbol<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        debug_assert!(self.bytes.len() < (2usize.pow(32)));
-
         let next_byte = self.bytes.next()?;
 
         let kind = SymbolKind::from(next_byte);
