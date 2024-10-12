@@ -2,7 +2,7 @@
 
 use core::{fmt, str};
 
-use super::position::Span;
+use super::span::Span;
 
 // pub mod iterator;
 

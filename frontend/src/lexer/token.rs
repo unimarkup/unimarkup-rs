@@ -1,4 +1,4 @@
-use crate::position::Span;
+use crate::span::Span;
 
 use super::token_kind::TokenKind;
 

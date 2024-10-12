@@ -1,6 +1,6 @@
 use std::{iter::Peekable, str::Bytes};
 
-use super::position::Span as SymPos;
+use super::span::Span as SymPos;
 use crate::symbol::{Symbol, SymbolKind};
 
 /// Iterator of Unimarkup [`Symbol`]s over a given input.
