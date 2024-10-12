@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-mod token;
-mod token_kind;
+pub mod token;
+pub mod token_kind;
 
 use ribbon::{Enroll, Ribbon, Tape};
 use token::Token;
@@ -34,13 +34,6 @@ fn indentation<'input>(
         kind: TokenKind::Indentation(indent),
         span,
     }
-}
-
-fn dot<'input>(
-    _start_sym: &Symbol<'input>,
-    _sym_stream: &mut Tape<SymbolStream<'input>>,
-) -> Token<'input> {
-    todo!()
 }
 
 fn identifier<'input>(
@@ -84,10 +77,104 @@ fn punctuation<'input>(
     }
 }
 
+fn whitespace<'input>(
+    start_sym: &Symbol<'input>,
+    sym_stream: &mut Tape<SymbolStream<'input>>,
+) -> Token<'input> {
+    let mut span = start_sym.span;
+
+    sym_stream.expand_while(|s| s.kind == SymbolKind::Whitespace);
+
+    while let Some(sym) = sym_stream.pop_front() {
+        span.len += sym.len();
+    }
+
+    Token {
+        input: start_sym.input,
+        kind: TokenKind::Whitespace,
+        span,
+    }
+}
+
+fn title<'input>(
+    start_sym: &Symbol<'input>,
+    sym_stream: &mut Tape<SymbolStream<'input>>,
+) -> Token<'input> {
+    let mut span = start_sym.span;
+
+    sym_stream.expand_while(|s| s.kind == SymbolKind::Hash);
+
+    while let Some(sym) = sym_stream.pop_front() {
+        span.len += sym.len();
+    }
+
+    Token {
+        input: start_sym.input,
+        kind: TokenKind::Hash(span.len),
+        span,
+    }
+}
+
+fn plain<'input>(
+    start_sym: &Symbol<'input>,
+    sym_stream: &mut Tape<SymbolStream<'input>>,
+) -> Token<'input> {
+    let mut span = start_sym.span;
+
+    sym_stream.expand_while(|s| s.kind == start_sym.kind);
+
+    while let Some(sym) = sym_stream.pop_front() {
+        span.len += sym.len();
+    }
+
+    Token {
+        input: start_sym.input,
+        kind: TokenKind::Plain,
+        span,
+    }
+}
+
+fn repeated<'input>(
+    start_sym: &Symbol<'input>,
+    sym_stream: &mut Tape<SymbolStream<'input>>,
+) -> Token<'input> {
+    let mut span = start_sym.span;
+
+    sym_stream.expand_while(|symbol| symbol.kind == start_sym.kind);
+
+    while let Some(sym) = sym_stream.pop_front() {
+        span.len += sym.len();
+    }
+
+    Token {
+        input: start_sym.input,
+        kind: TokenKind::from((start_sym.kind, span.len)),
+        span,
+    }
+}
+
+fn escaped<'input>(
+    start_sym: &Symbol<'input>,
+    sym_stream: &mut Tape<SymbolStream<'input>>,
+) -> Token<'input> {
+    let mut span = start_sym.span;
+
+    sym_stream.expand();
+
+    let sym = sym_stream.pop_front().expect("Unexpected EOI after '\\'");
+    span.len += sym.len();
+
+    Token {
+        input: start_sym.input,
+        kind: TokenKind::Plain,
+        span,
+    }
+}
+
 pub struct TokenStream<'input> {
     input: &'input str,
     sym_stream: Tape<SymbolStream<'input>>,
-    is_newline: bool,
+    last_newline_offs: u32,
 }
 
 impl<'input> TokenStream<'input> {
@@ -97,7 +184,7 @@ impl<'input> TokenStream<'input> {
         Self {
             input,
             sym_stream,
-            is_newline: true,
+            last_newline_offs: 0,
         }
     }
 }
@@ -109,11 +196,9 @@ impl<'input> Iterator for TokenStream<'input> {
         loop {
             let sym = self.sym_stream.next()?;
 
-            let mut was_newline = false;
-
             match sym.kind {
                 SymbolKind::Space => {
-                    if self.is_newline {
+                    if sym.span.offs.saturating_sub(self.last_newline_offs) <= 1 {
                         return Some(indentation(&sym, &mut self.sym_stream));
                     } else {
                         return Some(Token {
@@ -124,12 +209,8 @@ impl<'input> Iterator for TokenStream<'input> {
                     }
                 }
 
-                SymbolKind::Dot => {
-                    return Some(dot(&sym, &mut self.sym_stream));
-                }
-
                 SymbolKind::Newline => {
-                    was_newline = true;
+                    self.last_newline_offs = sym.span.offs;
                 }
 
                 SymbolKind::Backslash => {
@@ -143,8 +224,9 @@ impl<'input> Iterator for TokenStream<'input> {
                         })
                     ) {
                         // skip the newline!
-                        self.is_newline = false;
                         self.sym_stream.pop_front();
+                    } else {
+                        return Some(escaped(&sym, &mut self.sym_stream));
                     }
                 }
 
@@ -152,56 +234,40 @@ impl<'input> Iterator for TokenStream<'input> {
                     return Some(punctuation(&sym, &mut self.sym_stream))
                 }
 
+                SymbolKind::Whitespace => return Some(whitespace(&sym, &mut self.sym_stream)),
+
+                SymbolKind::Eoi => return None,
+
+                SymbolKind::Hash => {
+                    return Some(repeated(&sym, &mut self.sym_stream));
+                }
+
+                SymbolKind::Star
+                | SymbolKind::Tick
+                | SymbolKind::Tilde
+                | SymbolKind::Underline
+                | SymbolKind::Caret
+                | SymbolKind::Quote
+                | SymbolKind::Dollar
+                | SymbolKind::Colon
+                | SymbolKind::Pipe
+                | SymbolKind::Plus
+                | SymbolKind::Dot
+                | SymbolKind::Ampersand
+                | SymbolKind::Comma
+                | SymbolKind::OpenParenthesis
+                | SymbolKind::CloseParenthesis
+                | SymbolKind::OpenBracket
+                | SymbolKind::CloseBracket
+                | SymbolKind::OpenBrace
+                | SymbolKind::CloseBrace => return Some(repeated(&sym, &mut self.sym_stream)),
+
+                SymbolKind::Plain => return Some(plain(&sym, &mut self.sym_stream)),
+
                 _other => {
                     return Some(identifier(&sym, &mut self.sym_stream));
-                } /*
-                              SymbolKind::Plain => todo!(),
-                              SymbolKind::Whitespace => todo!(),
-                              SymbolKind::Newline => todo!(),
-                              SymbolKind::Eoi => todo!(),
-                              SymbolKind::Backslash => {
-                                  if let Some(next) = sym_stream.next() {
-                                      match next.kind {
-                                          SymbolKind::Newline => {
-                                              todo!("create an escaped newline token");
-                                          }
-                                          SymbolKind::Whitespace | SymbolKind::Space => {
-                                              todo!("create an escaped whitespace");
-                                          }
-                                          _ => {
-                                              todo!("handle more cases");
-                                          }
-                                      }
-                                  } else {
-                                      todo!("Unexpected EOI?");
-                                  }
-                              }
-                              SymbolKind::Hash => todo!(),
-                              SymbolKind::Star => todo!(),
-                              SymbolKind::Minus => todo!(),
-                              SymbolKind::Plus => todo!(),
-                              SymbolKind::Underline => todo!(),
-                              SymbolKind::Caret => todo!(),
-                              SymbolKind::Tick => todo!(),
-                              SymbolKind::Overline => todo!(),
-                              SymbolKind::Pipe => todo!(),
-                              SymbolKind::Tilde => todo!(),
-                              SymbolKind::Quote => todo!(),
-                              SymbolKind::Dollar => todo!(),
-                              SymbolKind::Colon => todo!(),
-                              SymbolKind::Dot => todo!(),
-                              SymbolKind::Ampersand => todo!(),
-                              SymbolKind::Comma => todo!(),
-                              SymbolKind::OpenParenthesis => todo!(),
-                              SymbolKind::CloseParenthesis => todo!(),
-                              SymbolKind::OpenBracket => todo!(),
-                              SymbolKind::CloseBracket => todo!(),
-                              SymbolKind::OpenBrace => todo!(),
-                              SymbolKind::CloseBrace => todo!(),
-                  */
+                }
             }
-
-            self.is_newline = was_newline;
         }
     }
 }
@@ -242,7 +308,7 @@ mod tests {
     #[test]
     fn multi_line_indent() {
         let input = "    hello\n      there";
-        let tokens: Vec<_> = super::TokenStream::tokenize(input).collect();
+        let tokens: Vec<_> = dbg!(super::TokenStream::tokenize(input).collect());
 
         assert_eq!(tokens.len(), 4);
 
@@ -381,5 +447,34 @@ mod tests {
         ));
 
         assert_eq!(second.as_input_str(), "there");
+    }
+
+    #[test]
+    fn headline() {
+        let input = "## Hello there";
+
+        let tokens: Vec<_> = dbg!(TokenStream::tokenize(input).collect());
+
+        assert_eq!(tokens.len(), 5);
+
+        let first = &tokens[0];
+        assert_eq!(first.kind, TokenKind::Hash(2));
+        assert_eq!(first.as_input_str(), "##");
+
+        let second = &tokens[1];
+        assert_eq!(second.kind, TokenKind::Whitespace);
+        assert_eq!(second.as_input_str(), " ");
+
+        let third = &tokens[2];
+        assert_eq!(third.kind, TokenKind::Plain);
+        assert_eq!(third.as_input_str(), "Hello");
+
+        let fourth = &tokens[3];
+        assert_eq!(fourth.kind, TokenKind::Whitespace);
+        assert_eq!(fourth.as_input_str(), " ");
+
+        let fifth = &tokens[4];
+        assert_eq!(fifth.kind, TokenKind::Plain);
+        assert_eq!(fifth.as_input_str(), "there");
     }
 }

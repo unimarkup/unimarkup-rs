@@ -50,14 +50,14 @@ impl<'input> Iterator for SymbolStream<'input> {
 
         let prev_offs = self.curr_offs;
 
-        self.curr_offs += byte_len as u32;
+        self.curr_offs += byte_len;
 
         Some(Symbol {
             input: self.input,
             kind,
             span: SymPos {
                 offs: prev_offs,
-                len: byte_len as u16,
+                len: byte_len,
             },
         })
     }

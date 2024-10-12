@@ -1,0 +1,35 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'ambiguous-start' from 'markup/bold.yml'"
+---
+The next ***word** is bolditalic.
+
+The
+^^^ - Plain @ (0 -> 3)
+    
+   ^ - Whitespace @ (3 -> 4)
+    next
+    ^^^^ - Plain @ (4 -> 8)
+         
+        ^ - Whitespace @ (8 -> 9)
+         ***
+         ^^^ - Star(3) @ (9 -> 12)
+            word
+            ^^^^ - Plain @ (12 -> 16)
+                **
+                ^^ - Star(2) @ (16 -> 18)
+                   
+                  ^ - Whitespace @ (18 -> 19)
+                   is
+                   ^^ - Plain @ (19 -> 21)
+                      
+                     ^ - Whitespace @ (21 -> 22)
+                      bolditalic
+                      ^^^^^^^^^^ - Plain @ (22 -> 32)
+                                .
+                                ^ - Dot(1) @ (32 -> 33)
+
+---
+With input:
+
+The next ***word** is bolditalic.

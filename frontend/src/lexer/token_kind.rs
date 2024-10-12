@@ -6,21 +6,21 @@ pub const COMMENT_TOKEN_LEN: usize = 2;
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenKind {
     // Keywords
-    Star(usize),
-    Hash(usize),
-    Minus(usize),
-    Plus(usize),
-    Underline(usize),
-    Caret(usize),
-    Tick(usize),
-    Pipe(usize),
-    Tilde(usize),
-    Quote(usize),
-    Dollar(usize),
-    Colon(usize),
-    Dot(usize),
-    Ampersand(usize),
-    Comma(usize),
+    Star(u32),
+    Hash(u32),
+    Minus(u32),
+    Plus(u32),
+    Underline(u32),
+    Caret(u32),
+    Tick(u32),
+    Pipe(u32),
+    Tilde(u32),
+    Quote(u32),
+    Dollar(u32),
+    Colon(u32),
+    Dot(u32),
+    Ampersand(u32),
+    Comma(u32),
 
     // parenthesis
     OpenParenthesis,
@@ -35,7 +35,7 @@ pub enum TokenKind {
     Newline,
     Blankline,
     Eoi,
-    Indentation(usize),
+    Indentation(u32),
 
     // Escaped
     EscapedPlain,
@@ -123,21 +123,21 @@ impl TokenKind {
 impl From<TokenKind> for String {
     fn from(value: TokenKind) -> Self {
         match value {
-            TokenKind::Star(len) => SymbolKind::Star.as_str().repeat(len),
-            TokenKind::Hash(len) => SymbolKind::Hash.as_str().repeat(len),
-            TokenKind::Minus(len) => SymbolKind::Minus.as_str().repeat(len),
-            TokenKind::Plus(len) => SymbolKind::Plus.as_str().repeat(len),
-            TokenKind::Underline(len) => SymbolKind::Underline.as_str().repeat(len),
-            TokenKind::Caret(len) => SymbolKind::Caret.as_str().repeat(len),
-            TokenKind::Tick(len) => SymbolKind::Tick.as_str().repeat(len),
-            TokenKind::Pipe(len) => SymbolKind::Pipe.as_str().repeat(len),
-            TokenKind::Tilde(len) => SymbolKind::Tilde.as_str().repeat(len),
-            TokenKind::Quote(len) => SymbolKind::Quote.as_str().repeat(len),
-            TokenKind::Dollar(len) => SymbolKind::Dollar.as_str().repeat(len),
-            TokenKind::Colon(len) => SymbolKind::Colon.as_str().repeat(len),
-            TokenKind::Dot(len) => SymbolKind::Dot.as_str().repeat(len),
-            TokenKind::Ampersand(len) => SymbolKind::Ampersand.as_str().repeat(len),
-            TokenKind::Comma(len) => SymbolKind::Comma.as_str().repeat(len),
+            TokenKind::Star(len) => SymbolKind::Star.as_str().repeat(len as _),
+            TokenKind::Hash(len) => SymbolKind::Hash.as_str().repeat(len as _),
+            TokenKind::Minus(len) => SymbolKind::Minus.as_str().repeat(len as _),
+            TokenKind::Plus(len) => SymbolKind::Plus.as_str().repeat(len as _),
+            TokenKind::Underline(len) => SymbolKind::Underline.as_str().repeat(len as _),
+            TokenKind::Caret(len) => SymbolKind::Caret.as_str().repeat(len as _),
+            TokenKind::Tick(len) => SymbolKind::Tick.as_str().repeat(len as _),
+            TokenKind::Pipe(len) => SymbolKind::Pipe.as_str().repeat(len as _),
+            TokenKind::Tilde(len) => SymbolKind::Tilde.as_str().repeat(len as _),
+            TokenKind::Quote(len) => SymbolKind::Quote.as_str().repeat(len as _),
+            TokenKind::Dollar(len) => SymbolKind::Dollar.as_str().repeat(len as _),
+            TokenKind::Colon(len) => SymbolKind::Colon.as_str().repeat(len as _),
+            TokenKind::Dot(len) => SymbolKind::Dot.as_str().repeat(len as _),
+            TokenKind::Ampersand(len) => SymbolKind::Ampersand.as_str().repeat(len as _),
+            TokenKind::Comma(len) => SymbolKind::Comma.as_str().repeat(len as _),
             TokenKind::OpenParenthesis => {
                 let mut s = String::with_capacity(SymbolKind::OpenParenthesis.as_str().len());
                 s.push_str(SymbolKind::OpenParenthesis.as_str());
@@ -201,7 +201,7 @@ impl From<TokenKind> for String {
                 #[cfg(not(debug_assertions))]
                 String::new()
             }
-            TokenKind::Indentation(indent) => " ".repeat(indent),
+            TokenKind::Indentation(indent) => " ".repeat(indent as _),
         }
     }
 }
@@ -240,8 +240,8 @@ impl From<SymbolKind> for TokenKind {
     }
 }
 
-impl From<(SymbolKind, usize)> for TokenKind {
-    fn from(value: (SymbolKind, usize)) -> Self {
+impl From<(SymbolKind, u32)> for TokenKind {
+    fn from(value: (SymbolKind, u32)) -> Self {
         let kind = value.0;
         let len = value.1;
 

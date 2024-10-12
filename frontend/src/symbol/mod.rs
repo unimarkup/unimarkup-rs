@@ -209,6 +209,10 @@ impl Symbol<'_> {
 
         Some(&input[start..end])
     }
+
+    pub fn len(&self) -> u32 {
+        self.span.len
+    }
 }
 
 // impl From<&str> for SymbolKind {
@@ -287,11 +291,7 @@ impl From<u8> for SymbolKind {
             b'&' => SymbolKind::Ampersand,
             b',' => SymbolKind::Comma,
             b' ' => SymbolKind::Space,
-            symbol
-                if symbol != b'\n'
-                    && symbol != b'\r'
-                    && char::try_from(value).is_ok_and(char::is_whitespace) =>
-            {
+            symbol if symbol != b'\n' && symbol != b'\r' && char::from(value).is_whitespace() => {
                 SymbolKind::Whitespace
             }
             _ => {
@@ -313,8 +313,7 @@ impl SymbolKind {
             SymbolKind::Plain | SymbolKind::TerminalPunctuation => {
                 #[cfg(debug_assertions)]
                 panic!(
-                    "Tried to create &str from '{:?}', which has undefined &str representation.",
-                    self
+                    "Tried to create &str from '{self:?}', which has undefined &str representation."
                 );
 
                 #[cfg(not(debug_assertions))]

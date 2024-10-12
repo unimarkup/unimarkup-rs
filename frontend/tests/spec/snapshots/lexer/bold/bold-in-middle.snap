@@ -1,0 +1,35 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'bold-in-middle' from 'markup/bold.yml'"
+---
+The next **word** is bold.
+
+The
+^^^ - Plain @ (0 -> 3)
+    
+   ^ - Whitespace @ (3 -> 4)
+    next
+    ^^^^ - Plain @ (4 -> 8)
+         
+        ^ - Whitespace @ (8 -> 9)
+         **
+         ^^ - Star(2) @ (9 -> 11)
+           word
+           ^^^^ - Plain @ (11 -> 15)
+               **
+               ^^ - Star(2) @ (15 -> 17)
+                  
+                 ^ - Whitespace @ (17 -> 18)
+                  is
+                  ^^ - Plain @ (18 -> 20)
+                     
+                    ^ - Whitespace @ (20 -> 21)
+                     bold
+                     ^^^^ - Plain @ (21 -> 25)
+                         .
+                         ^ - Dot(1) @ (25 -> 26)
+
+---
+With input:
+
+The next **word** is bold.

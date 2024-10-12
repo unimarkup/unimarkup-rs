@@ -1,0 +1,25 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'implicit-closed-bold' from 'markup/bold.yml'"
+---
+**implicit bold **close
+
+**
+^^ - Star(2) @ (0 -> 2)
+  implicit
+  ^^^^^^^^ - Plain @ (2 -> 10)
+           
+          ^ - Whitespace @ (10 -> 11)
+           bold
+           ^^^^ - Plain @ (11 -> 15)
+                
+               ^ - Whitespace @ (15 -> 16)
+                **
+                ^^ - Star(2) @ (16 -> 18)
+                  close
+                  ^^^^^ - Plain @ (18 -> 23)
+
+---
+With input:
+
+**implicit bold **close

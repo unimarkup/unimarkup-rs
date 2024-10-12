@@ -1,0 +1,23 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'not-opened-bold' from 'markup/bold.yml'"
+---
+** not bold**
+
+**
+^^ - Star(2) @ (0 -> 2)
+   
+  ^ - Whitespace @ (2 -> 3)
+   not
+   ^^^ - Plain @ (3 -> 6)
+       
+      ^ - Whitespace @ (6 -> 7)
+       bold
+       ^^^^ - Plain @ (7 -> 11)
+           **
+           ^^ - Star(2) @ (11 -> 13)
+
+---
+With input:
+
+** not bold**

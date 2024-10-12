@@ -1,0 +1,29 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'ambiguous-close' from 'markup/bold.yml'"
+---
+**bold *+italic*** plain
+
+**
+^^ - Star(2) @ (0 -> 2)
+  bold
+  ^^^^ - Plain @ (2 -> 6)
+       
+      ^ - Whitespace @ (6 -> 7)
+       *
+       ^ - Star(1) @ (7 -> 8)
+        +
+        ^ - Plus(1) @ (8 -> 9)
+         italic
+         ^^^^^^ - Plain @ (9 -> 15)
+               ***
+               ^^^ - Star(3) @ (15 -> 18)
+                   
+                  ^ - Whitespace @ (18 -> 19)
+                   plain
+                   ^^^^^ - Plain @ (19 -> 24)
+
+---
+With input:
+
+**bold *+italic*** plain

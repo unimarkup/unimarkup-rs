@@ -14,7 +14,7 @@ pub struct Span {
     // TODO: `len` and `cp_count` can be calculated if we have two consecutive symbols, so maybe we
     // don't need to store them at all times? We would need 4 bytes less per symbol in that case.
     /// Length of the [`Span`] in bytes.
-    pub len: u16,
+    pub len: u32,
 }
 
 impl AddAssign for Span {
@@ -24,8 +24,8 @@ impl AddAssign for Span {
     }
 }
 
-impl AddAssign<(u32, u16)> for Span {
-    fn add_assign(&mut self, (offs, len): (u32, u16)) {
+impl AddAssign<(u32, u32)> for Span {
+    fn add_assign(&mut self, (offs, len): (u32, u32)) {
         self.offs += offs;
         self.len += len;
     }
@@ -50,8 +50,8 @@ impl SubAssign for Span {
     }
 }
 
-impl SubAssign<(u32, u16)> for Span {
-    fn sub_assign(&mut self, (offs, len): (u32, u16)) {
+impl SubAssign<(u32, u32)> for Span {
+    fn sub_assign(&mut self, (offs, len): (u32, u32)) {
         self.offs -= offs;
         self.len -= len;
     }

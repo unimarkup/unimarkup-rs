@@ -1,0 +1,106 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: plain
+description: Test lexing of text with bold formatting.
+
+tests:
+  - name: simple-bold
+    description: |
+      Simple bold text.
+
+    input: |
+      **Bold**
+
+    html: |
+      <strong>Bold</strong>
+
+  - name: bold-not-bold
+    description: |
+      Bold combined with plain.
+
+    input: |
+      **Bold** not bold.
+
+    html: |
+      <strong>Bold</strong> not bold.
+
+  - name: not-bold
+    description: |
+      Bold that's not correctly opened nor closed.
+
+    input: |
+      ** not bold **
+
+    html: |
+      ** not bold **
+
+  - name: implicit-closed-bold
+    description: |
+      Bold that's implicitly closed after invalid closing sequence.
+
+    input: |
+      **implicit bold **close
+
+    html: |
+      <strong>implicit bold **close</strong>
+
+  - name: not-opened-bold
+    description: |
+      Bold that's not correctly opened.
+
+    input: |
+      ** not bold**
+
+    html: |
+      ** not bold**
+
+  - name: escaped-bold
+    description: |
+      Bold that's escaped.
+
+    input: |
+      \*\*not bold\*\*
+
+    html: |
+      **not bold**
+
+  - name: bold-in-middle
+    description: |
+      Bold that's found in middle of a text.
+
+    input: |
+      The next **word** is bold.
+
+    html: |
+      The next <strong>word</strong> is bold.
+
+  - name: ambiguous-start
+    description: |
+      Ambiguous token with inner bold and implicit closed italic.
+
+    input: |
+      The next ***word** is bolditalic.
+
+    html: |
+      The next <em><strong>word</strong> is bolditalic.</em>
+
+  - name: ambiguous-end
+    description: |
+      Bold that's ended with an ambiguous token.
+
+    input: |
+      The next **word*** is bold.
+
+    html: |
+      The next <strong>word</strong>* is bold.
+
+  - name: ambiguous-close
+    description: |
+      BoldItalic that's closed with an ambiguous token.
+
+    input: |
+      **bold *+italic*** plain
+
+    html: |
+      <strong>bold <em>+italic</em></strong> plain
