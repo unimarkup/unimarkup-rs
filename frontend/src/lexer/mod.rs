@@ -26,7 +26,6 @@ fn indentation<'input>(
         if sym.kind == SymbolKind::Space {
             indent += 1;
             span.len += sym.span.len;
-            span.cp_count += sym.span.cp_count;
         }
     }
 
@@ -54,12 +53,33 @@ fn identifier<'input>(
 
     while let Some(sym) = sym_stream.pop_front() {
         pos_info.len += sym.span.len;
-        pos_info.cp_count += sym.span.cp_count;
     }
 
     Token {
         input: start_sym.input,
         kind: TokenKind::Plain,
+        span: pos_info,
+    }
+}
+
+fn punctuation<'input>(
+    start_sym: &Symbol<'input>,
+    sym_stream: &mut Tape<SymbolStream<'input>>,
+) -> Token<'input> {
+    let mut pos_info = start_sym.span;
+
+    sym_stream.expand_while(|s| s.kind == SymbolKind::TerminalPunctuation);
+
+    while let Some(sym) = sym_stream.pop_front() {
+        // TODO: how do we handle multiple punctuation symbols? Should it be one symbol?
+        //       e.g.: This sentence ends with three dots...
+        //                                               ^^^ - should this be one token?
+        pos_info.len += sym.span.len;
+    }
+
+    Token {
+        input: start_sym.input,
+        kind: TokenKind::TerminalPunctuation,
         span: pos_info,
     }
 }
@@ -128,11 +148,14 @@ impl<'input> Iterator for TokenStream<'input> {
                     }
                 }
 
+                SymbolKind::TerminalPunctuation => {
+                    return Some(punctuation(&sym, &mut self.sym_stream))
+                }
+
                 _other => {
                     return Some(identifier(&sym, &mut self.sym_stream));
                 } /*
                               SymbolKind::Plain => todo!(),
-                              SymbolKind::TerminalPunctuation => todo!(),
                               SymbolKind::Whitespace => todo!(),
                               SymbolKind::Newline => todo!(),
                               SymbolKind::Eoi => todo!(),

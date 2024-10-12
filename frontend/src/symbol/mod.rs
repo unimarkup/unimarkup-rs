@@ -1,15 +1,13 @@
 //! Symbol and helper types for structurization of Unimarkup input.
 
-use core::fmt;
-
-use icu_properties::sets::CodePointSetDataBorrowed;
+use core::{fmt, str};
 
 use super::position::Span;
 
 // pub mod iterator;
 
-pub const TERMINAL_PUNCTUATION: CodePointSetDataBorrowed<'static> =
-    icu_properties::sets::terminal_punctuation();
+// TODO: add more terminal punctuation symbols
+pub const TERMINAL_PUNCTUATION: &[u8] = b".?!";
 
 /// Possible kinds of Symbol found in Unimarkup document.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -43,8 +41,6 @@ pub enum SymbolKind {
     Caret,
     /// The tick (`` ` ``) literal is used for verbatim blocks and formatting.
     Tick,
-    /// The overline (`‾`) literal is used for overline formatting.
-    Overline,
     /// The pipe (`|`) literal is used for highlight formatting.
     Pipe,
     /// The tilde (`~`) literal is used for strikethrough formatting.
@@ -145,8 +141,6 @@ impl fmt::Debug for Symbol<'_> {
             .field("kind", &self.kind)
             .field("offs", &self.span.offs)
             .field("len", &self.span.len)
-            .field("cp_offs", &self.span.cp_offs)
-            .field("cp_count", &self.span.cp_count)
             .finish()
     }
 }
@@ -201,7 +195,7 @@ impl Symbol<'_> {
 
         #[cfg(debug_assertions)]
         let last = std::iter::once(first).chain(iter).reduce(|prev, curr| {
-            debug_assert!(prev.span.cp_offs + prev.span.cp_count as u32 == curr.span.cp_offs);
+            debug_assert!(prev.span.offs + prev.span.len as u32 == curr.span.offs);
             curr
         })?;
 
@@ -217,48 +211,94 @@ impl Symbol<'_> {
     }
 }
 
-impl From<&str> for SymbolKind {
-    fn from(value: &str) -> Self {
+// impl From<&str> for SymbolKind {
+//     fn from(value: &str) -> Self {
+//         match value {
+//             "#" => SymbolKind::Hash,
+//             "\n" | "\r" => SymbolKind::Newline,
+//             "`" => SymbolKind::Tick,
+//             "\\" => SymbolKind::Backslash,
+//             "*" => SymbolKind::Star,
+//             "-" => SymbolKind::Minus,
+//             "+" => SymbolKind::Plus,
+//             "_" => SymbolKind::Underline,
+//             "^" => SymbolKind::Caret,
+//             "|" => SymbolKind::Pipe,
+//             "~" => SymbolKind::Tilde,
+//             "\"" => SymbolKind::Quote,
+//             "$" => SymbolKind::Dollar,
+//             "(" => SymbolKind::OpenParenthesis,
+//             ")" => SymbolKind::CloseParenthesis,
+//             "[" => SymbolKind::OpenBracket,
+//             "]" => SymbolKind::CloseBracket,
+//             "{" => SymbolKind::OpenBrace,
+//             "}" => SymbolKind::CloseBrace,
+//             ":" => SymbolKind::Colon,
+//             "." => SymbolKind::Dot,
+//             "&" => SymbolKind::Ampersand,
+//             "," => SymbolKind::Comma,
+//             " " => SymbolKind::Space,
+//             symbol
+//                 if symbol != "\n"
+//                     && symbol != "\r\n"
+//                     && symbol.starts_with(char::is_whitespace) =>
+//             {
+//                 SymbolKind::Whitespace
+//             }
+//             _ => {
+//                 let mut kind = SymbolKind::Plain;
+//
+//                 if let Some(c) = value.chars().next() {
+//                     if TERMINAL_PUNCTUATION.contains() {
+//                         kind = SymbolKind::TerminalPunctuation;
+//                     }
+//                 }
+//
+//                 kind
+//             }
+//         }
+//     }
+// }
+
+impl From<u8> for SymbolKind {
+    fn from(value: u8) -> Self {
         match value {
-            "#" => SymbolKind::Hash,
-            "\n" | "\r" => SymbolKind::Newline,
-            "`" => SymbolKind::Tick,
-            "\\" => SymbolKind::Backslash,
-            "*" => SymbolKind::Star,
-            "-" => SymbolKind::Minus,
-            "+" => SymbolKind::Plus,
-            "_" => SymbolKind::Underline,
-            "^" => SymbolKind::Caret,
-            "‾" => SymbolKind::Overline,
-            "|" => SymbolKind::Pipe,
-            "~" => SymbolKind::Tilde,
-            "\"" => SymbolKind::Quote,
-            "$" => SymbolKind::Dollar,
-            "(" => SymbolKind::OpenParenthesis,
-            ")" => SymbolKind::CloseParenthesis,
-            "[" => SymbolKind::OpenBracket,
-            "]" => SymbolKind::CloseBracket,
-            "{" => SymbolKind::OpenBrace,
-            "}" => SymbolKind::CloseBrace,
-            ":" => SymbolKind::Colon,
-            "." => SymbolKind::Dot,
-            "&" => SymbolKind::Ampersand,
-            "," => SymbolKind::Comma,
-            " " => SymbolKind::Space,
+            b'#' => SymbolKind::Hash,
+            b'\n' | b'\r' => SymbolKind::Newline,
+            b'`' => SymbolKind::Tick,
+            b'\\' => SymbolKind::Backslash,
+            b'*' => SymbolKind::Star,
+            b'-' => SymbolKind::Minus,
+            b'+' => SymbolKind::Plus,
+            b'_' => SymbolKind::Underline,
+            b'^' => SymbolKind::Caret,
+            b'|' => SymbolKind::Pipe,
+            b'~' => SymbolKind::Tilde,
+            b'\'' => SymbolKind::Quote,
+            b'$' => SymbolKind::Dollar,
+            b'(' => SymbolKind::OpenParenthesis,
+            b')' => SymbolKind::CloseParenthesis,
+            b'[' => SymbolKind::OpenBracket,
+            b']' => SymbolKind::CloseBracket,
+            b'{' => SymbolKind::OpenBrace,
+            b'}' => SymbolKind::CloseBrace,
+            b':' => SymbolKind::Colon,
+            b'.' => SymbolKind::Dot,
+            b'&' => SymbolKind::Ampersand,
+            b',' => SymbolKind::Comma,
+            b' ' => SymbolKind::Space,
             symbol
-                if symbol != "\n"
-                    && symbol != "\r\n"
-                    && symbol.starts_with(char::is_whitespace) =>
+                if symbol != b'\n'
+                    && symbol != b'\r'
+                    && char::try_from(value).is_ok_and(char::is_whitespace) =>
             {
                 SymbolKind::Whitespace
             }
             _ => {
                 let mut kind = SymbolKind::Plain;
 
-                if let Some(c) = value.chars().next() {
-                    if TERMINAL_PUNCTUATION.contains(c) {
-                        kind = SymbolKind::TerminalPunctuation;
-                    }
+                if TERMINAL_PUNCTUATION.contains(&value) {
+                    kind = SymbolKind::TerminalPunctuation;
                 }
 
                 kind
@@ -291,7 +331,6 @@ impl SymbolKind {
             SymbolKind::Plus => "+",
             SymbolKind::Underline => "_",
             SymbolKind::Caret => "^",
-            SymbolKind::Overline => "‾",
             SymbolKind::Pipe => "|",
             SymbolKind::Tilde => "~",
             SymbolKind::Quote => "\"",

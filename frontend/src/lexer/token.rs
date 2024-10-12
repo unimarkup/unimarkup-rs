@@ -24,9 +24,7 @@ impl std::fmt::Debug for Token<'_> {
             .field("output", &self.input[start..end].to_string())
             .field("kind", &self.kind)
             .field("offs", &self.span.offs)
-            .field("cp_offs", &self.span.cp_offs)
             .field("len", &self.span.len)
-            .field("cp_count", &self.span.cp_count)
             .finish()
     }
 }
