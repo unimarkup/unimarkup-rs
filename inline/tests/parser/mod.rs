@@ -65,11 +65,12 @@ fn run_spec_test(case: test_runner::test_file::TestCase) {
 }
 
 fn run_snap_test(case: test_runner::test_file::TestCase) {
-    let tokens = unimarkup_commons::lexer::token::lex_str(&case.test.input);
+    let runner = SnapTestRunner::with_fn(&case.test.name, &case.test.input, |input| {
+        let slice: &[_] = &unimarkup_commons::lexer::token::lex_str(input);
+        let token_iterator = slice.into();
 
-    let runner = SnapTestRunner::with_fn(&case.test.name, &tokens, |slice| {
         let (_, _, parsed_inlines) = unimarkup_inline::parser::parse_inlines(
-            slice.into(),
+            token_iterator,
             InlineContext::default(),
             None,
             None,

@@ -65,20 +65,19 @@ fn run_spec_test(case: test_runner::test_file::TestCase) {
 }
 
 fn run_snap_test(case: test_runner::test_file::TestCase) {
-    let tokens = unimarkup_commons::lexer::token::lex_str(&case.test.input);
+    let mut snap_runner =
+        SnapTestRunner::with_fn::<_, _>(&case.test.name, &case.test.input, |_input| {
+            let um = unimarkup_core::parser::parse_unimarkup(
+                &case.test.input,
+                unimarkup_commons::config::Config::default(),
+            );
 
-    let mut snap_runner = SnapTestRunner::with_fn::<_, _>(&case.test.name, &tokens, |_input| {
-        let um = unimarkup_core::parser::parse_unimarkup(
-            &case.test.input,
-            unimarkup_commons::config::Config::default(),
-        );
-
-        Snapshot(um.blocks).as_snapshot()
-    })
-    .with_info(format!(
-        "Test '{}' from: {}",
-        case.test.name, case.file_path
-    ));
+            Snapshot(um.blocks).as_snapshot()
+        })
+        .with_info(format!(
+            "Test '{}' from: {}",
+            case.test.name, case.file_path
+        ));
 
     if let Some(ref description) = case.test.description {
         snap_runner = snap_runner.with_description(description);
