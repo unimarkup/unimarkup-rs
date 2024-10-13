@@ -2,9 +2,6 @@
 source: frontend/tests/parser/mod.rs
 info: "Test 'multi-line-level-1' from 'markup/block/heading.yml'"
 ---
-# This is a heading
-  in two lines.
-
 Heading(level-1) @ (1 -> 36) {
   This is a heading
   in two lines.

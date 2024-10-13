@@ -2,8 +2,6 @@
 source: frontend/tests/parser/mod.rs
 info: "Test 'single-line-level-1' from 'markup/block/heading.yml'"
 ---
-# This is a simple heading.
-
 Heading(level-1) @ (1 -> 28) {
   This is a simple heading.
 }

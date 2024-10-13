@@ -2,8 +2,6 @@
 source: frontend/tests/parser/mod.rs
 info: "Test 'simple-bold' from 'markup/bold.yml'"
 ---
-**Bold**
-
 Paragraph @ (0 -> 9) {
   **Bold**
 }

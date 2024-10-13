@@ -2,8 +2,6 @@
 source: frontend/tests/parser/mod.rs
 info: "Test 'single-line' from 'markup/block/paragraph.yml'"
 ---
-This is a simple paragraph.
-
 Paragraph @ (0 -> 28) {
   This is a simple paragraph.
 }

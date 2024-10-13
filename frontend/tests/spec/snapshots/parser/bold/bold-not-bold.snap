@@ -2,8 +2,6 @@
 source: frontend/tests/parser/mod.rs
 info: "Test 'bold-not-bold' from 'markup/bold.yml'"
 ---
-**Bold** not bold.
-
 Paragraph @ (0 -> 19) {
   **Bold** not bold.
 }

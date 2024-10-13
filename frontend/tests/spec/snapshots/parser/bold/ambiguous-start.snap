@@ -2,8 +2,6 @@
 source: frontend/tests/parser/mod.rs
 info: "Test 'ambiguous-start' from 'markup/bold.yml'"
 ---
-The next ***word** is bolditalic.
-
 Paragraph @ (0 -> 34) {
   The next ***word** is bolditalic.
 }

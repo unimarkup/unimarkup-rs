@@ -2,8 +2,6 @@
 source: frontend/tests/parser/mod.rs
 info: "Test 'ambiguous-end' from 'markup/bold.yml'"
 ---
-The next **word*** is bold.
-
 Paragraph @ (0 -> 28) {
   The next **word*** is bold.
 }

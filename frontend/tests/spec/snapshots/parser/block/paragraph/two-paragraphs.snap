@@ -2,10 +2,6 @@
 source: frontend/tests/parser/mod.rs
 info: "Test 'two-paragraphs' from 'markup/block/paragraph.yml'"
 ---
-This is the first paragraph.
-
-And this should be the second one.
-
 Paragraph @ (0 -> 29) {
   This is the first paragraph.
 }

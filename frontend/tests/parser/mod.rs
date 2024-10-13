@@ -49,7 +49,7 @@ fn run_snap_test(case: test_runner::test_file::TestCase) {
                 agg
             });
 
-        format!("{input_str}\n{block_snaps}")
+        format!("{block_snaps}")
     })
     .with_info(format!(
         "Test '{}' from '{}'",
