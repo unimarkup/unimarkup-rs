@@ -1,0 +1,13 @@
+---
+source: frontend/tests/parser/mod.rs
+info: "Test 'simple-bold' from 'markup/bold.yml'"
+---
+Paragraph @ (0 -> 9) {
+  **Bold**
+}
+
+
+---
+With input:
+
+**Bold**

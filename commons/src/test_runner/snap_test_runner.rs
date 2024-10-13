@@ -1,4 +1,3 @@
-use crate::lexer::token::Token;
 use serde::Serialize;
 
 pub use insta::{assert_snapshot, Settings};
@@ -14,17 +13,17 @@ pub struct SnapTestRunner<'a, I = ()> {
 }
 
 impl<'a> SnapTestRunner<'a> {
-    pub fn with_fn<S, PF>(name: &str, input: &'a S, mut parser: PF) -> SnapTestRunner<'a, ()>
+    pub fn with_fn<I, F>(name: &str, input: &'a I, mut func: F) -> SnapTestRunner<'a, ()>
     where
-        S: AsRef<[Token<'a>]>,
-        PF: for<'s, 'i> FnMut(&'s [Token<'i>]) -> String,
+        I: AsRef<str>,
+        F: FnMut(&I) -> String,
     {
-        let snapshot = parser(input.as_ref());
+        let snapshot = func(input);
 
         SnapTestRunner {
             info: None,
             desc: None,
-            input: Token::flatten(input.as_ref()),
+            input: Some(input.as_ref()),
             name: name.into(),
             sub_path: None,
             snapshot,

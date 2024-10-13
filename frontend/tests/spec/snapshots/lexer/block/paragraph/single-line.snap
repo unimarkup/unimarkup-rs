@@ -1,0 +1,33 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'single-line' from 'markup/block/paragraph.yml'"
+---
+This is a simple paragraph.
+
+This
+^^^^ - Plain @ (0 -> 4)
+     
+    ^ - Whitespace @ (4 -> 5)
+     is
+     ^^ - Plain @ (5 -> 7)
+        
+       ^ - Whitespace @ (7 -> 8)
+        a
+        ^ - Plain @ (8 -> 9)
+          
+         ^ - Whitespace @ (9 -> 10)
+          simple
+          ^^^^^^ - Plain @ (10 -> 16)
+                 
+                ^ - Whitespace @ (16 -> 17)
+                 paragraph
+                 ^^^^^^^^^ - Plain @ (17 -> 26)
+                          .
+                          ^ - Dot(1) @ (26 -> 27)
+                           ␊
+                           ^ - Newline @ (27 -> 28)
+
+---
+With input:
+
+This is a simple paragraph.

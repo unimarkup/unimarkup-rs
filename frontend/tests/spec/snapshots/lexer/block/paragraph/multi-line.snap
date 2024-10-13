@@ -1,0 +1,49 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'multi-line' from 'markup/block/paragraph.yml'"
+---
+This is a paragraph
+that spans multiple
+lines.
+
+This
+^^^^ - Plain @ (0 -> 4)
+     
+    ^ - Whitespace @ (4 -> 5)
+     is
+     ^^ - Plain @ (5 -> 7)
+        
+       ^ - Whitespace @ (7 -> 8)
+        a
+        ^ - Plain @ (8 -> 9)
+          
+         ^ - Whitespace @ (9 -> 10)
+          paragraph
+          ^^^^^^^^^ - Plain @ (10 -> 19)
+                   ␊
+                   ^ - Newline @ (19 -> 20)
+that
+^^^^ - Plain @ (20 -> 24)
+     
+    ^ - Whitespace @ (24 -> 25)
+     spans
+     ^^^^^ - Plain @ (25 -> 30)
+           
+          ^ - Whitespace @ (30 -> 31)
+           multiple
+           ^^^^^^^^ - Plain @ (31 -> 39)
+                   ␊
+                   ^ - Newline @ (39 -> 40)
+lines
+^^^^^ - Plain @ (40 -> 45)
+     .
+     ^ - Dot(1) @ (45 -> 46)
+      ␊
+      ^ - Newline @ (46 -> 47)
+
+---
+With input:
+
+This is a paragraph
+that spans multiple
+lines.

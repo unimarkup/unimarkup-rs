@@ -1,0 +1,13 @@
+---
+source: frontend/tests/parser/mod.rs
+info: "Test 'escaped-bold' from 'markup/bold.yml'"
+---
+Paragraph @ (0 -> 17) {
+  \*\*not bold\*\*
+}
+
+
+---
+With input:
+
+\*\*not bold\*\*

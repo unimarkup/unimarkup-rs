@@ -1,0 +1,25 @@
+[package]
+name = "unimarkup-frontend"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+license.workspace = true
+
+[[test]]
+name="unimarkup-frontend"
+path="tests/snapshots.rs"
+harness=false
+
+[dependencies]
+icu_properties = "1.3.2"
+ribbon = "0.7.0"
+strum = "0.22.0"
+strum_macros = "0.22.0"
+
+[dev-dependencies]
+unimarkup-commons = { path ="../commons/", version = "0", features = ["test_runner"] }
+libtest-mimic = "0.6.1"

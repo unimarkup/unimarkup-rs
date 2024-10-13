@@ -1,0 +1,29 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'bold-not-bold' from 'markup/bold.yml'"
+---
+**Bold** not bold.
+
+**
+^^ - Star(2) @ (0 -> 2)
+  Bold
+  ^^^^ - Plain @ (2 -> 6)
+      **
+      ^^ - Star(2) @ (6 -> 8)
+         
+        ^ - Whitespace @ (8 -> 9)
+         not
+         ^^^ - Plain @ (9 -> 12)
+             
+            ^ - Whitespace @ (12 -> 13)
+             bold
+             ^^^^ - Plain @ (13 -> 17)
+                 .
+                 ^ - Dot(1) @ (17 -> 18)
+                  ␊
+                  ^ - Newline @ (18 -> 19)
+
+---
+With input:
+
+**Bold** not bold.

@@ -1,0 +1,13 @@
+---
+source: frontend/tests/parser/mod.rs
+info: "Test 'bold-in-middle' from 'markup/bold.yml'"
+---
+Paragraph @ (0 -> 27) {
+  The next **word** is bold.
+}
+
+
+---
+With input:
+
+The next **word** is bold.

@@ -2,7 +2,7 @@
 members = [
     "cli",
     "commons",
-    "core",
+    "core", "frontend",
     "inline",
     "parser",
     "render",

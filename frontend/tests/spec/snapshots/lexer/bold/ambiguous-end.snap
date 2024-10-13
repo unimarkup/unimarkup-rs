@@ -1,0 +1,37 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'ambiguous-end' from 'markup/bold.yml'"
+---
+The next **word*** is bold.
+
+The
+^^^ - Plain @ (0 -> 3)
+    
+   ^ - Whitespace @ (3 -> 4)
+    next
+    ^^^^ - Plain @ (4 -> 8)
+         
+        ^ - Whitespace @ (8 -> 9)
+         **
+         ^^ - Star(2) @ (9 -> 11)
+           word
+           ^^^^ - Plain @ (11 -> 15)
+               ***
+               ^^^ - Star(3) @ (15 -> 18)
+                   
+                  ^ - Whitespace @ (18 -> 19)
+                   is
+                   ^^ - Plain @ (19 -> 21)
+                      
+                     ^ - Whitespace @ (21 -> 22)
+                      bold
+                      ^^^^ - Plain @ (22 -> 26)
+                          .
+                          ^ - Dot(1) @ (26 -> 27)
+                           ␊
+                           ^ - Newline @ (27 -> 28)
+
+---
+With input:
+
+The next **word*** is bold.

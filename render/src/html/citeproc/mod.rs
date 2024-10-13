@@ -73,7 +73,7 @@ impl CiteprocWrapper {
         match self.init_processor(doc, for_pagedjs) {
             Ok(_) => self
                 .module
-                .call("getCitationStrings", citation_id_vectors)
+                .call("getCitationStrings", &citation_id_vectors)
                 .map_err(|_| CiteError::CitationError),
             Err(e) => Err(e),
         }

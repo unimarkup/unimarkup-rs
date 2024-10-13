@@ -1,0 +1,17 @@
+---
+source: frontend/tests/parser/mod.rs
+info: "Test 'multi-line' from 'markup/block/paragraph.yml'"
+---
+Paragraph @ (0 -> 47) {
+  This is a paragraph
+  that spans multiple
+  lines.
+}
+
+
+---
+With input:
+
+This is a paragraph
+that spans multiple
+lines.
