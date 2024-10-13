@@ -1,0 +1,40 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: paragraph-block
+description: Test parsing of paragraph.
+
+tests:
+  - name: single-line
+    description: |
+      Single line paragraph.
+
+    input: |
+      This is a simple paragraph.
+
+    html: |
+      <p>This is a simple paragraph.</p>
+
+  - name: multi-line
+    description: |
+      Paragraph over multiple lines.
+
+    input: |
+      This is a paragraph
+      that spans multiple
+      lines.
+
+    html: |
+      <p>This is a paragraph that spans multiple lines.</p>
+
+  - name: two-paragraphs
+    description: |
+      Two paragraphs separated by a blank line.
+
+    input: |
+      This is the first paragraph.
+
+      And this should be the second one.
+
+    html: |
+      <p>This is the first paragraph.</p><p>And this should be the second one.</p>

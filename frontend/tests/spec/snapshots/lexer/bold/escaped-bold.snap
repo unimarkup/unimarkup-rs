@@ -18,6 +18,8 @@ info: "Test 'escaped-bold' from 'markup/bold.yml'"
             ^^ - Plain @ (12 -> 14)
               \*
               ^^ - Plain @ (14 -> 16)
+                ␊
+                ^ - Newline @ (16 -> 17)
 
 ---
 With input:

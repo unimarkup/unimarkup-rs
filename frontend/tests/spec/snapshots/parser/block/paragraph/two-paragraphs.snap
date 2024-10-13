@@ -1,0 +1,23 @@
+---
+source: frontend/tests/parser/mod.rs
+info: "Test 'two-paragraphs' from 'markup/block/paragraph.yml'"
+---
+This is the first paragraph.
+
+And this should be the second one.
+
+Paragraph @ (0 -> 29) {
+  This is the first paragraph.
+}
+
+Paragraph @ (30 -> 65) {
+  And this should be the second one.
+}
+
+
+---
+With input:
+
+This is the first paragraph.
+
+And this should be the second one.

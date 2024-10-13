@@ -1,0 +1,18 @@
+---
+source: frontend/tests/parser/mod.rs
+info: "Test 'multi-line-level-6' from 'markup/block/heading.yml'"
+---
+###### This is a heading
+       in multiple lines.
+
+Heading(level-6) @ (6 -> 51) {
+  This is a heading
+  in multiple lines.
+}
+
+
+---
+With input:
+
+###### This is a heading
+       in multiple lines.

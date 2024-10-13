@@ -1,0 +1,15 @@
+---
+source: frontend/tests/parser/mod.rs
+info: "Test 'implicit-closed-bold' from 'markup/bold.yml'"
+---
+**implicit bold **close
+
+Paragraph @ (0 -> 24) {
+  **implicit bold **close
+}
+
+
+---
+With input:
+
+**implicit bold **close

@@ -1,0 +1,37 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'single-line-level-1' from 'markup/block/heading.yml'"
+---
+# This is a simple heading.
+
+#
+^ - Hash(1) @ (0 -> 1)
+  
+ ^ - Whitespace @ (1 -> 2)
+  This
+  ^^^^ - Plain @ (2 -> 6)
+       
+      ^ - Whitespace @ (6 -> 7)
+       is
+       ^^ - Plain @ (7 -> 9)
+          
+         ^ - Whitespace @ (9 -> 10)
+          a
+          ^ - Plain @ (10 -> 11)
+            
+           ^ - Whitespace @ (11 -> 12)
+            simple
+            ^^^^^^ - Plain @ (12 -> 18)
+                   
+                  ^ - Whitespace @ (18 -> 19)
+                   heading
+                   ^^^^^^^ - Plain @ (19 -> 26)
+                          .
+                          ^ - Dot(1) @ (26 -> 27)
+                           ␊
+                           ^ - Newline @ (27 -> 28)
+
+---
+With input:
+
+# This is a simple heading.

@@ -18,6 +18,8 @@ info: "Test 'not-bold' from 'markup/bold.yml'"
            ^ - Whitespace @ (11 -> 12)
             **
             ^^ - Star(2) @ (12 -> 14)
+              ␊
+              ^ - Newline @ (14 -> 15)
 
 ---
 With input:

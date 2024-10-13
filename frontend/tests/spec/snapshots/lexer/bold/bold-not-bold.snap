@@ -20,6 +20,8 @@ info: "Test 'bold-not-bold' from 'markup/bold.yml'"
              ^^^^ - Plain @ (13 -> 17)
                  .
                  ^ - Dot(1) @ (17 -> 18)
+                  ␊
+                  ^ - Newline @ (18 -> 19)
 
 ---
 With input:

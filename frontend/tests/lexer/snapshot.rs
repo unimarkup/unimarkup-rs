@@ -9,9 +9,16 @@ impl AsSnapshot for Snapshot<Token<'_>> {
     fn as_snapshot(&self) -> String {
         let token = self.0;
 
-        let indent_len = get_indent(token.input, token.span.offs as usize);
+        let indent_len = crate::get_indent(token.input, token.span.offs);
 
-        let orig_input = token.as_input_str();
+        let mut orig_input = token.as_input_str();
+
+        if orig_input == "\n" {
+            orig_input = "␊";
+        } else if orig_input == "\r\n" {
+            orig_input = "␍";
+        }
+
         let marker = "^".repeat(token.span.len as usize);
         let indent = " ".repeat(indent_len);
         let kind = Snapshot(token.kind).as_snapshot();
@@ -30,6 +37,7 @@ impl AsSnapshot for Snapshot<Token<'_>> {
 
 impl AsSnapshot for Snapshot<TokenKind> {
     fn as_snapshot(&self) -> String {
+        #[allow(clippy::useless_format)]
         match self.0 {
             TokenKind::Star(r) => format!("Star({r})"),
             TokenKind::Hash(r) => format!("Hash({r})"),
@@ -77,12 +85,4 @@ impl AsSnapshot for Snapshot<TokenKind> {
             TokenKind::PossibleDecorator => format!("PossibleDecorator"),
         }
     }
-}
-
-fn get_indent(input: &str, offs: usize) -> usize {
-    input[0..offs]
-        .bytes()
-        .rev()
-        .position(|byte| byte == b'\n')
-        .unwrap_or(offs)
 }

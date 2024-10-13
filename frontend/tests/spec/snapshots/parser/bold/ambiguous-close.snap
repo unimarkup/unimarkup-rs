@@ -1,0 +1,15 @@
+---
+source: frontend/tests/parser/mod.rs
+info: "Test 'ambiguous-close' from 'markup/bold.yml'"
+---
+**bold *+italic*** plain
+
+Paragraph @ (0 -> 25) {
+  **bold *+italic*** plain
+}
+
+
+---
+With input:
+
+**bold *+italic*** plain

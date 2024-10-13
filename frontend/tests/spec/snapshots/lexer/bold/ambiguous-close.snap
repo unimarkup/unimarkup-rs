@@ -22,6 +22,8 @@ info: "Test 'ambiguous-close' from 'markup/bold.yml'"
                   ^ - Whitespace @ (18 -> 19)
                    plain
                    ^^^^^ - Plain @ (19 -> 24)
+                        ␊
+                        ^ - Newline @ (24 -> 25)
 
 ---
 With input:

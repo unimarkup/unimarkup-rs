@@ -1,0 +1,15 @@
+---
+source: frontend/tests/parser/mod.rs
+info: "Test 'single-line-level-6' from 'markup/block/heading.yml'"
+---
+###### This is a heading.
+
+Heading(level-6) @ (6 -> 26) {
+  This is a heading.
+}
+
+
+---
+With input:
+
+###### This is a heading.

@@ -1,0 +1,69 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'two-paragraphs' from 'markup/block/paragraph.yml'"
+---
+This is the first paragraph.
+
+And this should be the second one.
+
+This
+^^^^ - Plain @ (0 -> 4)
+     
+    ^ - Whitespace @ (4 -> 5)
+     is
+     ^^ - Plain @ (5 -> 7)
+        
+       ^ - Whitespace @ (7 -> 8)
+        the
+        ^^^ - Plain @ (8 -> 11)
+            
+           ^ - Whitespace @ (11 -> 12)
+            first
+            ^^^^^ - Plain @ (12 -> 17)
+                  
+                 ^ - Whitespace @ (17 -> 18)
+                  paragraph
+                  ^^^^^^^^^ - Plain @ (18 -> 27)
+                           .
+                           ^ - Dot(1) @ (27 -> 28)
+                            ␊
+                            ^ - Newline @ (28 -> 29)
+␊
+^ - Blankline @ (29 -> 30)
+And
+^^^ - Plain @ (30 -> 33)
+    
+   ^ - Whitespace @ (33 -> 34)
+    this
+    ^^^^ - Plain @ (34 -> 38)
+         
+        ^ - Whitespace @ (38 -> 39)
+         should
+         ^^^^^^ - Plain @ (39 -> 45)
+                
+               ^ - Whitespace @ (45 -> 46)
+                be
+                ^^ - Plain @ (46 -> 48)
+                   
+                  ^ - Whitespace @ (48 -> 49)
+                   the
+                   ^^^ - Plain @ (49 -> 52)
+                       
+                      ^ - Whitespace @ (52 -> 53)
+                       second
+                       ^^^^^^ - Plain @ (53 -> 59)
+                              
+                             ^ - Whitespace @ (59 -> 60)
+                              one
+                              ^^^ - Plain @ (60 -> 63)
+                                 .
+                                 ^ - Dot(1) @ (63 -> 64)
+                                  ␊
+                                  ^ - Newline @ (64 -> 65)
+
+---
+With input:
+
+This is the first paragraph.
+
+And this should be the second one.

@@ -11,7 +11,7 @@ use crate::symbol::{Symbol, SymbolKind};
 
 /// Lexes the indentation token. Indentation is defined as some number of spaces at the beginning
 /// of a line.
-fn indentation<'input>(
+fn indentation_or_blankline<'input>(
     start_sym: &Symbol<'input>,
     sym_stream: &mut Tape<SymbolStream<'input>>,
 ) -> Token<'input> {
@@ -29,10 +29,24 @@ fn indentation<'input>(
         }
     }
 
-    Token {
-        input: start_sym.input,
-        kind: TokenKind::Indentation(indent),
-        span,
+    sym_stream.expand();
+
+    match sym_stream.peek_front() {
+        Some(sym) if sym.kind == SymbolKind::Newline => {
+            // indentation means there was a newline, then spaces
+            // and now again a newline, meaning we found a line that's blank
+            span.len += sym.len();
+            Token {
+                input: start_sym.input,
+                kind: TokenKind::Blankline,
+                span,
+            }
+        }
+        _ => Token {
+            input: start_sym.input,
+            kind: TokenKind::Indentation(indent),
+            span,
+        },
     }
 }
 
@@ -96,25 +110,6 @@ fn whitespace<'input>(
     }
 }
 
-fn title<'input>(
-    start_sym: &Symbol<'input>,
-    sym_stream: &mut Tape<SymbolStream<'input>>,
-) -> Token<'input> {
-    let mut span = start_sym.span;
-
-    sym_stream.expand_while(|s| s.kind == SymbolKind::Hash);
-
-    while let Some(sym) = sym_stream.pop_front() {
-        span.len += sym.len();
-    }
-
-    Token {
-        input: start_sym.input,
-        kind: TokenKind::Hash(span.len),
-        span,
-    }
-}
-
 fn plain<'input>(
     start_sym: &Symbol<'input>,
     sym_stream: &mut Tape<SymbolStream<'input>>,
@@ -171,6 +166,38 @@ fn escaped<'input>(
     }
 }
 
+fn whitespace_or_blankline<'input>(
+    start_sym: &Symbol<'input>,
+    sym_stream: &mut Tape<SymbolStream<'input>>,
+) -> Token<'input> {
+    let mut span = start_sym.span;
+
+    sym_stream.expand_while(|s| s.kind == start_sym.kind);
+
+    while let Some(sym) = sym_stream.pop_front() {
+        span.len += sym.len();
+    }
+
+    sym_stream.expand();
+
+    match sym_stream.peek_front() {
+        Some(sym) if sym.kind == SymbolKind::Newline => {
+            span.len += sym.len();
+            Token {
+                input: start_sym.input,
+                kind: TokenKind::Blankline,
+                span,
+            }
+        }
+
+        _ => Token {
+            input: start_sym.input,
+            kind: TokenKind::Whitespace,
+            span,
+        },
+    }
+}
+
 pub struct TokenStream<'input> {
     input: &'input str,
     sym_stream: Tape<SymbolStream<'input>>,
@@ -198,8 +225,8 @@ impl<'input> Iterator for TokenStream<'input> {
 
             match sym.kind {
                 SymbolKind::Space => {
-                    if sym.span.offs.saturating_sub(self.last_newline_offs) <= 1 {
-                        return Some(indentation(&sym, &mut self.sym_stream));
+                    if self.is_start_of_line(&sym) {
+                        return Some(indentation_or_blankline(&sym, &mut self.sym_stream));
                     } else {
                         return Some(Token {
                             input: self.input,
@@ -210,7 +237,17 @@ impl<'input> Iterator for TokenStream<'input> {
                 }
 
                 SymbolKind::Newline => {
+                    let input = self.input;
+                    let span = sym.span;
+
+                    let kind = if self.is_start_of_line(&sym) {
+                        TokenKind::Blankline
+                    } else {
+                        TokenKind::Newline
+                    };
+
                     self.last_newline_offs = sym.span.offs;
+                    return Some(Token { input, kind, span });
                 }
 
                 SymbolKind::Backslash => {
@@ -234,7 +271,13 @@ impl<'input> Iterator for TokenStream<'input> {
                     return Some(punctuation(&sym, &mut self.sym_stream))
                 }
 
-                SymbolKind::Whitespace => return Some(whitespace(&sym, &mut self.sym_stream)),
+                SymbolKind::Whitespace => {
+                    if self.is_start_of_line(&sym) {
+                        return Some(whitespace_or_blankline(&sym, &mut self.sym_stream));
+                    } else {
+                        return Some(whitespace(&sym, &mut self.sym_stream));
+                    }
+                }
 
                 SymbolKind::Eoi => return None,
 
@@ -272,9 +315,19 @@ impl<'input> Iterator for TokenStream<'input> {
     }
 }
 
+impl TokenStream<'_> {
+    fn is_start_of_line(&self, sym: &Symbol<'_>) -> bool {
+        if self.last_newline_offs == 0 {
+            sym.span.offs == 0
+        } else {
+            sym.span.offs.saturating_sub(self.last_newline_offs) == 1
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::lexer::{token::Token, token_kind::TokenKind};
+    use crate::lexer::token_kind::TokenKind;
 
     use super::TokenStream;
 
@@ -284,24 +337,10 @@ mod tests {
         let tokens: Vec<_> = super::TokenStream::tokenize(input).collect();
 
         assert_eq!(tokens.len(), 2);
-        assert!(matches!(
-            tokens.first(),
-            Some(&Token {
-                kind: TokenKind::Indentation(4),
-                ..
-            })
-        ));
-
-        assert!(matches!(
-            tokens.get(1),
-            Some(&Token {
-                kind: TokenKind::Plain,
-                ..
-            })
-        ));
+        assert_eq!(tokens.first().unwrap().kind, TokenKind::Indentation(4));
 
         let second = tokens.get(1).unwrap();
-
+        assert_eq!(second.kind, TokenKind::Plain);
         assert_eq!(second.as_input_str(), "hello");
     }
 
@@ -310,47 +349,25 @@ mod tests {
         let input = "    hello\n      there";
         let tokens: Vec<_> = dbg!(super::TokenStream::tokenize(input).collect());
 
-        assert_eq!(tokens.len(), 4);
+        assert_eq!(tokens.len(), 5);
 
-        assert!(matches!(
-            tokens.first(),
-            Some(&Token {
-                kind: TokenKind::Indentation(4),
-                ..
-            })
-        ));
+        let first = tokens.first().unwrap();
+        assert_eq!(first.kind, TokenKind::Indentation(4));
 
         let second = tokens.get(1).unwrap();
-
-        assert!(matches!(
-            second,
-            &Token {
-                kind: TokenKind::Plain,
-                ..
-            }
-        ));
-
-        assert!(matches!(second.as_input_str(), "hello"));
+        assert_eq!(second.kind, TokenKind::Plain);
+        assert_eq!(second.as_input_str(), "hello");
 
         let third = tokens.get(2).unwrap();
-        assert!(matches!(
-            third,
-            &Token {
-                kind: TokenKind::Indentation(6),
-                ..
-            }
-        ));
+
+        assert_eq!(third.kind, TokenKind::Newline);
 
         let fourth = tokens.get(3).unwrap();
-        assert!(matches!(
-            fourth,
-            &Token {
-                kind: TokenKind::Plain,
-                ..
-            }
-        ));
+        assert_eq!(fourth.kind, TokenKind::Indentation(6));
 
-        assert!(matches!(fourth.as_input_str(), "there"));
+        let fifth = tokens.get(4).unwrap();
+        assert_eq!(fifth.kind, TokenKind::Plain);
+        assert_eq!(fifth.as_input_str(), "there");
     }
 
     #[test]
@@ -359,30 +376,20 @@ mod tests {
 
         let tokens: Vec<_> = dbg!(TokenStream::tokenize(input).collect());
 
-        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens.len(), 3);
 
         let first = tokens.first().unwrap();
-        assert!(matches!(
-            first,
-            &Token {
-                kind: TokenKind::Plain,
-                ..
-            }
-        ));
+        assert_eq!(first.kind, TokenKind::Plain);
 
-        // newline is not present
         assert_eq!(first.as_input_str(), "hello");
 
         let second = tokens.get(1).unwrap();
-        assert!(matches!(
-            second,
-            &Token {
-                kind: TokenKind::Plain,
-                ..
-            }
-        ));
+        assert_eq!(second.kind, TokenKind::Newline);
 
-        assert_eq!(second.as_input_str(), "there");
+        let third = tokens.get(2).unwrap();
+        assert_eq!(third.kind, TokenKind::Plain);
+
+        assert_eq!(third.as_input_str(), "there");
     }
 
     #[test]
@@ -391,30 +398,20 @@ mod tests {
 
         let tokens: Vec<_> = dbg!(TokenStream::tokenize(input).collect());
 
-        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens.len(), 3);
 
         let first = tokens.first().unwrap();
-        assert!(matches!(
-            first,
-            &Token {
-                kind: TokenKind::Plain,
-                ..
-            }
-        ));
+        assert!(first.kind == TokenKind::Plain);
 
-        // newline is not present
         assert_eq!(first.as_input_str(), "hello");
 
         let second = tokens.get(1).unwrap();
-        assert!(matches!(
-            second,
-            &Token {
-                kind: TokenKind::Plain,
-                ..
-            }
-        ));
+        assert!(second.kind == TokenKind::Newline);
 
-        assert_eq!(second.as_input_str(), "there");
+        let third = tokens.get(2).unwrap();
+        assert!(third.kind == TokenKind::Plain);
+
+        assert_eq!(third.as_input_str(), "there");
     }
 
     #[test]
@@ -423,30 +420,20 @@ mod tests {
 
         let tokens: Vec<_> = dbg!(TokenStream::tokenize(input).collect());
 
-        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens.len(), 3);
 
         let first = tokens.first().unwrap();
-        assert!(matches!(
-            first,
-            &Token {
-                kind: TokenKind::Plain,
-                ..
-            }
-        ));
+        assert!(first.kind == TokenKind::Plain);
 
-        // newline is not present
         assert_eq!(first.as_input_str(), "hello");
 
         let second = tokens.get(1).unwrap();
-        assert!(matches!(
-            second,
-            &Token {
-                kind: TokenKind::Plain,
-                ..
-            }
-        ));
+        assert!(dbg!(second.kind) == TokenKind::Newline);
 
-        assert_eq!(second.as_input_str(), "there");
+        let third = tokens.get(2).unwrap();
+        assert!(third.kind == TokenKind::Plain);
+
+        assert_eq!(third.as_input_str(), "there");
     }
 
     #[test]

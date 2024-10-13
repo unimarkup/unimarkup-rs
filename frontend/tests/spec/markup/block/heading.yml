@@ -1,0 +1,48 @@
+# Unimarkup specification version
+spec: "0.0.1"
+
+name: heading-block
+description: Test parsing of heading.
+
+tests:
+  - name: single-line-level-1
+    description: |
+      Single line level 1 heading.
+
+    input: |
+      # This is a simple heading.
+
+    html: |
+      <h1>This is a simple paragraph.</h1>
+
+  - name: multi-line-level-1
+    description: |
+      Heading over multiple lines.
+
+    input: |
+      # This is a heading
+        in two lines.
+
+    html: |
+      <h1>This is a heading in two lines.</h1>
+
+  - name: single-line-level-6
+    description: |
+      Level 6 heading in a single line.
+
+    input: |
+      ###### This is a heading.
+
+    html: |
+      <h1>This is a heading</h1>
+
+  - name: multi-line-level-6
+    description: |
+      Level 6 heading in multiple lines.
+
+    input: |
+      ###### This is a heading
+             in multiple lines.
+
+    html: |
+      <h1>This is a heading in multiple lines.</h1>

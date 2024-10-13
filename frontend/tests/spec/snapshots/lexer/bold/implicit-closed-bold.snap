@@ -18,6 +18,8 @@ info: "Test 'implicit-closed-bold' from 'markup/bold.yml'"
                 ^^ - Star(2) @ (16 -> 18)
                   close
                   ^^^^^ - Plain @ (18 -> 23)
+                       ␊
+                       ^ - Newline @ (23 -> 24)
 
 ---
 With input:

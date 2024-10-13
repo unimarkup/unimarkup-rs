@@ -1,0 +1,49 @@
+---
+source: frontend/tests/lexer/mod.rs
+info: "Test 'multi-line-level-6' from 'markup/block/heading.yml'"
+---
+###### This is a heading
+       in multiple lines.
+
+######
+^^^^^^ - Hash(6) @ (0 -> 6)
+       
+      ^ - Whitespace @ (6 -> 7)
+       This
+       ^^^^ - Plain @ (7 -> 11)
+            
+           ^ - Whitespace @ (11 -> 12)
+            is
+            ^^ - Plain @ (12 -> 14)
+               
+              ^ - Whitespace @ (14 -> 15)
+               a
+               ^ - Plain @ (15 -> 16)
+                 
+                ^ - Whitespace @ (16 -> 17)
+                 heading
+                 ^^^^^^^ - Plain @ (17 -> 24)
+                        ␊
+                        ^ - Newline @ (24 -> 25)
+       
+^^^^^^^ - Indentation(7) @ (25 -> 32)
+       in
+       ^^ - Plain @ (32 -> 34)
+          
+         ^ - Whitespace @ (34 -> 35)
+          multiple
+          ^^^^^^^^ - Plain @ (35 -> 43)
+                   
+                  ^ - Whitespace @ (43 -> 44)
+                   lines
+                   ^^^^^ - Plain @ (44 -> 49)
+                        .
+                        ^ - Dot(1) @ (49 -> 50)
+                         ␊
+                         ^ - Newline @ (50 -> 51)
+
+---
+With input:
+
+###### This is a heading
+       in multiple lines.
